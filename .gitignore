@@ -1,0 +1,22 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.development
+.env.production
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Backend
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/__pycache__/
+backend/staticfiles/
