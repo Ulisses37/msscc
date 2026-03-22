@@ -1,13 +1,13 @@
 import React from 'react';
 
-export default function HomePage() {
+export default function SupportPage() {
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans">
 
       {/* WEBSITE HEADER */}
       <header className="text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
-          Home Page
+          Support Page
         </h1>
       </header>
 
