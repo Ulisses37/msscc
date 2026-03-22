@@ -1,0 +1,7 @@
+import React from 'react';
+
+export default function EventsPage() {
+  return (
+    <h1>Membership Page</h1>
+  );
+}
