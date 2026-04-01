@@ -2,26 +2,267 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─── Google Fonts ─────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400&family=Almarai:wght@300;400;700&display=swap");
+/* Noto Serif JP is loaded conditionally for Japanese-language content only.
+   Add this import to any page/component that renders Japanese text:
+   @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap"); */
 
-@media (prefers-color-scheme: dark) {
+@layer base {
+  /* ─── CSS Custom Properties (design tokens) ─────────────── */
+  /* theme() is only reliable for simple scalar paths in CSS.
+     Font stacks and fontSize tuples are declared as literals here
+     so every var() reference below works without issues.          */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Teal family */
+    --color-teal:       theme(colors.msscc.teal.DEFAULT);
+    --color-teal-dark:  theme(colors.msscc.teal.dark);
+    --color-teal-light: theme(colors.msscc.teal.light);
+
+    /* Pink / Camellia family — admin-only */
+    --color-pink:       theme(colors.msscc.pink.DEFAULT);
+    --color-pink-dark:  theme(colors.msscc.pink.dark);
+    --color-pink-light: theme(colors.msscc.pink.light);
+    --color-pink-faint: theme(colors.msscc.pink.faint);
+
+    /* Neutral palette */
+    --color-white:      theme(colors.msscc.white);
+    --color-gray-dark:  theme(colors.msscc.gray.dark);
+    --color-gray-mid:   theme(colors.msscc.gray.mid);
+    --color-gray-light: theme(colors.msscc.gray.light);
+    --color-gray-faint: theme(colors.msscc.gray.faint);
+
+    /* Danger */
+    --color-danger:     theme(colors.msscc.danger);
+
+    /* Border radius */
+    --radius-sm: 3px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+
+    /* Focus rings */
+    --shadow-focus-public: 0 0 0 3px rgba(38, 70, 83, 0.1);
+    --shadow-focus-admin:  0 0 0 3px rgba(145, 89, 136, 0.15);
+
+    /* Font families — declared as literals; comma lists break theme() in CSS */
+    --font-heading: "Libre Baskerville", Georgia, serif;
+    --font-body:    "Almarai", sans-serif;
+    --font-jp:      "Noto Serif JP", serif;
+    --font-mono:    "Courier New", Courier, monospace;
+
+    /* Font sizes (style-guide type scale) */
+    --fs-display:    2rem;      /* 32px — H1 */
+    --fs-heading-2:  1.375rem;  /* 22px — H2 */
+    --fs-heading-3:  1.125rem;  /* 18px — H3 */
+    --fs-body:       1rem;      /* 16px */
+    --fs-body-sm:    0.875rem;  /* 14px */
+    --fs-nav:        0.8125rem; /* 13px */
+    --fs-nav-admin:  0.75rem;   /* 12px */
+    --fs-btn:        0.875rem;  /* 14px */
+    --fs-caption:    0.75rem;   /* 12px */
+    --fs-eyebrow:    0.625rem;  /* 10px */
+    --fs-label:      0.6875rem; /* 11px */
+
+    /* Spacing (style-guide scale) */
+    --space-1:  0.25rem;  /* 4px  */
+    --space-2:  0.5rem;   /* 8px  */
+    --space-3:  0.75rem;  /* 12px */
+    --space-4:  1rem;     /* 16px */
+    --space-6:  1.5rem;   /* 24px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-20: 5rem;     /* 80px */
   }
-}
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+  /* ─── Root typography & scroll ──────────────────────────── */
+  html {
+    /* Base font size — 15px (style-guide body default; browser default is 16px) */
+    font-size: 15px;
+    line-height: 1.7;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* ─── Box model reset ───────────────────────────────────── */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ─── Body ──────────────────────────────────────────────── */
+  body {
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: 1.7;
+    color: var(--color-gray-dark);
+    /* Style guide: white is the page bg; cream/off-white is explicitly forbidden */
+    background-color: var(--color-white);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ─── Heading defaults ──────────────────────────────────── */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-teal);
+    line-height: 1.2;
+  }
+
+  h1 { font-size: var(--fs-display); }
+  h2 { font-size: var(--fs-heading-2); line-height: 1.3; }
+  h3 { font-size: var(--fs-heading-3); line-height: 1.4; }
+
+  /* ─── Paragraph & body copy ─────────────────────────────── */
+  p {
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: 1.7;
+    color: var(--color-gray-dark);
+  }
+
+  /* ─── Anchor styles ─────────────────────────────────────── */
+  a {
+    color: var(--color-teal);
+    text-decoration: none;
+    transition: color 0.15s ease, opacity 0.15s ease;
+  }
+
+  a:hover {
+    opacity: 0.87;
+  }
+
+  /* Visited links — subtle distinction, stays on-brand */
+  a:visited {
+    color: var(--color-teal-light);
+  }
+
+  /* ─── Focus-visible (keyboard accessibility) ────────────── */
+  /* Public context: teal focus ring */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus-public);
+    border-radius: var(--radius-md);
+  }
+
+  /* Admin context: pink focus ring.
+     Apply .admin-context to the <body> or layout root when user is an authenticated admin. */
+  .admin-context :focus-visible {
+    box-shadow: var(--shadow-focus-admin);
+  }
+
+  /* ─── Interactive elements ──────────────────────────────── */
+  button,
+  [role="button"] {
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+
+  /* ─── Form elements ─────────────────────────────────────── */
+  input,
+  select,
+  textarea {
+    font-family: var(--font-body);
+    font-size: var(--fs-body-sm);
+    color: var(--color-gray-dark);
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-light);
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--color-teal);
+    box-shadow: var(--shadow-focus-public);
+  }
+
+  /* Error state */
+  input[aria-invalid="true"],
+  select[aria-invalid="true"],
+  textarea[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  /* ─── Code / monospace ──────────────────────────────────── */
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem; /* 11px */
+    background-color: var(--color-gray-faint);
+    border: 0.5px solid var(--color-gray-light);
+    border-radius: var(--radius-sm);
+    padding: 0.125rem 0.4375rem; /* 2px 7px */
+    color: var(--color-teal);
+  }
+
+  pre {
+    padding: var(--space-4);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* ─── Images ─────────────────────────────────────────────── */
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Board member portrait circles */
+  img[data-variant="avatar"] {
+    border-radius: 50%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+
+  /* ─── Lists ──────────────────────────────────────────────── */
+  ul,
+  ol {
+    padding-left: var(--space-4);
+    color: var(--color-gray-dark);
+    line-height: 1.6;
+  }
+
+  /* ─── HR / Dividers ──────────────────────────────────────── */
+  hr {
+    border: none;
+    border-top: 0.5px solid var(--color-gray-light);
+    margin: var(--space-6) 0;
+  }
+
+  /* ─── Selection ──────────────────────────────────────────── */
+  ::selection {
+    background-color: var(--color-teal);
+    color: var(--color-white);
+  }
+
+  /* ─── Reduced motion ─────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
