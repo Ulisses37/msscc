@@ -13,12 +13,12 @@ export default function AdminMembershipsPage() {
           <tbody className="min-w-full">
             {sampleMembershipData.map((membership, index) => (
               <tr key={index} className="border-b border-gray-200">
-                <td className="px-4 py-2">col 1</td>
-                <td className="px-4 py-2">col 2</td>
-                <td className="px-4 py-2">col 3</td>
-                <td className="px-4 py-2">col 4</td>
-                <td className="px-4 py-2">col 5</td>
-                <td className="px-4 py-2">col 6</td>
+                <td className="px-4 py-2">{membership.date}</td>
+                <td className="px-4 py-2">{membership.name}</td>
+                <td className="px-4 py-2">{membership.paymentMethod}</td>
+                <td className="px-4 py-2">{membership.level}</td>
+                <td className="px-4 py-2">{membership.amount}</td>
+                <td className="px-4 py-2">{membership.status}</td>
               </tr>
             ))}
           </tbody>
