@@ -1,4 +1,5 @@
 import React from "react";
+import { sampleMembershipData } from "./sampleData";
 
 export default function AdminMembershipsPage() {
   return(
@@ -10,23 +11,16 @@ export default function AdminMembershipsPage() {
       <main>
         <table className="overflow-x-auto rounded border border-gray-300">
           <tbody className="min-w-full">
-            <tr className="border-b border-gray-200">
-              <td className="px-4 py-2">col 1</td>
-              <td className="px-4 py-2">col 2</td>
-              <td className="px-4 py-2">col 3</td>
-              <td className="px-4 py-2">col 4</td>
-              <td className="px-4 py-2">col 5</td>
-              <td className="px-4 py-2">col 6</td>
-            </tr>
-
-            <tr className="border-b border-gray-200">
-              <td className="px-4 py-2">col 1</td>
-              <td className="px-4 py-2">col 2</td>
-              <td className="px-4 py-2">col 3</td>
-              <td className="px-4 py-2">col 4</td>
-              <td className="px-4 py-2">col 5</td>
-              <td className="px-4 py-2">col 6</td>
-            </tr>
+            {sampleMembershipData.map((membership, index) => (
+              <tr key={index} className="border-b border-gray-200">
+                <td className="px-4 py-2">col 1</td>
+                <td className="px-4 py-2">col 2</td>
+                <td className="px-4 py-2">col 3</td>
+                <td className="px-4 py-2">col 4</td>
+                <td className="px-4 py-2">col 5</td>
+                <td className="px-4 py-2">col 6</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </main>
