@@ -1,0 +1,10 @@
+{
+  "Navbar": {
+    "home": "Home",
+    "about": "About|Board",
+    "membership": "Membership",
+    "support": "Support",
+    "events": "Program|Events",
+    "partners": "Partners"
+  }
+}
