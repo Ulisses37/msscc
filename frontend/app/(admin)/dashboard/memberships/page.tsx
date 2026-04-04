@@ -4,7 +4,7 @@ export default function AdminMembershipsPage() {
   return(
     <div>
       <header>
-        <h1>Title</h1>
+        <h1>View Memberships</h1>
       </header>
     </div>
   );
