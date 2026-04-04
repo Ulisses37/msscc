@@ -4,7 +4,7 @@ export default function MembershipPage() {
   return (
     <div>
       <header>
-        <h1>Title</h1>
+        <h1>Membership</h1>
       </header>
     </div>
   );
