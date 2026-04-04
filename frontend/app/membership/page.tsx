@@ -2,6 +2,10 @@ import React from 'react';
 
 export default function MembershipPage() {
   return (
-    <h1>Membership Page</h1>
+    <div>
+      <header>
+        <h1>Title</h1>
+      </header>
+    </div>
   );
 }
