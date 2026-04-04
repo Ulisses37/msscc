@@ -4,7 +4,7 @@ export default function AdminDonationsPage() {
   return(
     <div>
       <header>
-        <h1>Title</h1>
+        <h1>View Donations</h1>
       </header>
     </div>
   );
