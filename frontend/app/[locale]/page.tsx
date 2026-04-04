@@ -1,14 +1,24 @@
 import React from 'react';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { useTranslations } from 'next-intl';
 
 export default function HomePage() {
+  const t = useTranslations('HomePageTest');
+
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans">
 
       {/* WEBSITE HEADER */}
       <header className="text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
-          Home Page
+          {/* Dynamically swaps 'Home' based on the current locale */}
+          {t('home')} Page
         </h1>
+
+      {/* TEST: Adding the language toggle button to the right side to see if viewable */}
+        <div className="flex justify-end w-full">
+          <LanguageToggle />
+        </div>
       </header>
 
       {/* WELCOME SECTION*/}

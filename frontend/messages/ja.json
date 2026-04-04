@@ -1,4 +1,8 @@
 {
+  "HomePageTest": {
+    "home": "ホーム"
+  },
+
   "Navbar": {
     "home": "ホーム",
     "about": "当団体について|理事会",

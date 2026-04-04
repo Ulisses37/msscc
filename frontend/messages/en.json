@@ -1,4 +1,8 @@
 {
+  "HomePageTest": {
+    "home": "Home"
+  },
+
   "Navbar": {
     "home": "Home",
     "about": "About|Board",
