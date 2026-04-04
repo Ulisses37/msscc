@@ -6,6 +6,12 @@ export default function AdminMembershipsPage() {
       <header className="mb-6">
         <h1>View Memberships</h1>
       </header>
+
+      <main>
+        <table>
+
+        </table>
+      </main>
     </div>
   );
 }
