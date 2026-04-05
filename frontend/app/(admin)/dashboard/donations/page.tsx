@@ -13,11 +13,11 @@ export default function AdminDonationsPage() {
           <tbody>
             {sampleDonationData.map((donation, index) => (
               <tr key={index} className="border-b border-gray-200">
-                <td className="px-4 py-2">col 1</td>
-                <td className="px-4 py-2">col 2</td>
-                <td className="px-4 py-2">col 3</td>
-                <td className="px-4 py-2">col 4</td>
-                <td className="px-4 py-2">col 5</td>
+                <td className="px-4 py-2">{donation.date}</td>
+                <td className="px-4 py-2">{donation.name}</td>
+                <td className="px-4 py-2">{donation.paymentMethod}</td>
+                <td className="px-4 py-2">{donation.frequency}</td>
+                <td className="px-4 py-2">{donation.amount}</td>
               </tr>
             ))}
           </tbody>
