@@ -23,6 +23,16 @@ export default function AdminMembershipsPage() {
 
         <div className="inline-block rounded border border-gray-300 bg-gray-50 p-2">
           <table className="w-auto border-separate border-spacing-y-1">
+            <thead>
+              <tr>
+                <th className="px-2 py-2 text-sm font-semibold">col title 1</th>
+                <th className="px-2 py-2 text-sm font-semibold">col title 2</th>
+                <th className="px-2 py-2 text-sm font-semibold">col title 3</th>
+                <th className="px-2 py-2 text-sm font-semibold">col title 4</th>
+                <th className="px-2 py-2 text-sm font-semibold">col title 5</th>
+                <th className="px-2 py-2 text-sm font-semibold">col title 6</th>
+              </tr>
+            </thead>
             <tbody>
               {sampleMembershipData.map((membership, index) => (
                 <tr key={index} className="bg-white hover:bg-gray-50">
