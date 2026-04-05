@@ -4,6 +4,7 @@ import React from 'react';
 // Third-party
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 // Components
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
@@ -20,6 +21,9 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <div className="flex min-h-screen flex-col">
+            {/* Navbar Section. Banner content goes above this. */}
+            <LanguageToggle />
+
             {/* Navbar Section. Banner content goes above this. */}
             <PublicNavbar />
 

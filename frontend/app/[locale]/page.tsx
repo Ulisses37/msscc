@@ -1,6 +1,11 @@
+// Third-Party
 import React from 'react';
-import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useTranslations } from 'next-intl';
+
+/**
+ * This is the general view home page
+ *
+ */
 
 export default function HomePage() {
   const t = useTranslations('HomePageTest');
@@ -14,11 +19,6 @@ export default function HomePage() {
           {/* Dynamically swaps 'Home' based on the current locale */}
           {t('home')} Page
         </h1>
-
-      {/* TEST: Adding the language toggle button to the right side to see if viewable */}
-        <div className="flex justify-end w-full">
-          <LanguageToggle />
-        </div>
       </header>
 
       {/* WELCOME SECTION*/}
