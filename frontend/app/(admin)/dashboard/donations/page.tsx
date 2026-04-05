@@ -13,6 +13,17 @@ export default function AdminDonationsPage() {
         <div className="overflow-x-auto">
           <div className="inline-block rounded border border-gray-300 bg-gray-50 p-2">
             <table className="w-auto border-separate border-spacing-y-1">
+              <thead>
+                <tr>
+                  <td>col title 1</td>
+                  <td>col title 2</td>
+                  <td>col title 3</td>
+                  <td>col title 4</td>
+                  <td>col title 5</td>
+                </tr>
+
+              </thead>
+
               <tbody>
                 {sampleDonationData.map((donation, index) => (
                   <tr key={index} className="bg-white hover:bg-gray-50">
