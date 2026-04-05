@@ -1,0 +1,14 @@
+{
+  "HomePageTest": {
+    "home": "ホーム"
+  },
+
+  "Navbar": {
+    "home": "ホーム",
+    "about": "当団体について|理事会",
+    "membership": "会員登録",
+    "support": "支援・寄付",
+    "events": "プログラム|イベント",
+    "partners": "パートナー"
+  }
+}
