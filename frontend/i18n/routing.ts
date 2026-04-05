@@ -16,10 +16,9 @@ export const routing = defineRouting({
     // Navbar Links
     '/about': '/about',
     '/events': '/events',
-    '/donate': '/donate',
+    '/support': '/support',
     '/membership': '/membership',
     '/partners': '/partners',
-    '/volunteer': '/volunteer',
 
     // In case other pages are created, create the pathnames below this comment
   },
