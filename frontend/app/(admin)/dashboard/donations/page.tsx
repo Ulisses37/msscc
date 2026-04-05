@@ -1,4 +1,5 @@
 import React from "react";
+import { sampleDonationData } from "./sampleData";
 
 export default function AdminDonationsPage() {
   return(
@@ -10,21 +11,15 @@ export default function AdminDonationsPage() {
       <main>
         <table>
           <tbody>
-            <tr className="border-b border-gray-200">
-              <td className="px-4 py-2">col 1</td>
-              <td className="px-4 py-2">col 2</td>
-              <td className="px-4 py-2">col 3</td>
-              <td className="px-4 py-2">col 4</td>
-              <td className="px-4 py-2">col 5</td>
-            </tr>
-
-            <tr className="border-b border-gray-200">
-              <td className="px-4 py-2">col 1</td>
-              <td className="px-4 py-2">col 2</td>
-              <td className="px-4 py-2">col 3</td>
-              <td className="px-4 py-2">col 4</td>
-              <td className="px-4 py-2">col 5</td>
-            </tr>
+            {sampleDonationData.map((donation, index) => (
+              <tr key={index} className="border-b border-gray-200">
+                <td className="px-4 py-2">col 1</td>
+                <td className="px-4 py-2">col 2</td>
+                <td className="px-4 py-2">col 3</td>
+                <td className="px-4 py-2">col 4</td>
+                <td className="px-4 py-2">col 5</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </main>
