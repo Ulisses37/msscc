@@ -24,7 +24,7 @@ export default function AdminMembershipsPage() {
         <div className="inline-block rounded border border-gray-300 bg-gray-50 p-2">
           <table className="w-auto border-separate border-spacing-y-1">
             <thead>
-              <tr>
+              <tr className="text-left">
                 <th className="px-6 py-2 text-sm font-semibold">Date</th>
                 <th className="px-6 py-2 text-sm font-semibold">Name</th>
                 <th className="px-6 py-2 text-sm font-semibold">Payment Method</th>
