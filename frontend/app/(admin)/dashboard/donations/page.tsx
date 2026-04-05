@@ -6,6 +6,12 @@ export default function AdminDonationsPage() {
       <header className="mb-6">
         <h1>View Donations</h1>
       </header>
+
+      <main>
+        <table>
+
+        </table>
+      </main>
     </div>
   );
 }
