@@ -15,13 +15,26 @@ export default function AdminDonationsPage() {
             <table className="w-auto border-separate border-spacing-y-1">
               <thead>
                 <tr>
-                  <td>col title 1</td>
-                  <td>col title 2</td>
-                  <td>col title 3</td>
-                  <td>col title 4</td>
-                  <td>col title 5</td>
-                </tr>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                    Date
+                  </th>
 
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                    Name
+                  </th>
+
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                    Payment Method
+                  </th>
+
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                    Frequency
+                  </th>
+
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                    Amount
+                  </th>
+                </tr>
               </thead>
 
               <tbody>
