@@ -1,5 +1,7 @@
 // Third-Party
 import React from 'react';
+import Image from 'next/image';
+import img from '/./src/assets/illustration.jpg';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -35,6 +37,26 @@ export default function HomePage() {
           traditions—creating lasting relationships, lifelong memories, and a
           stronger global community.
         </p>
+
+        {/* Image Content for Welcome Section */}
+        <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center">
+          {/**
+           * Supplys image from database
+           * By Calling a function that pulls, given distinct ID
+           */}
+          <div className="md:w-3/4">
+            <Image
+              src={img}
+              alt="img"
+            />
+          </div>
+          <div className="md:w-1/4">
+            <p className="text-sm text-[#555]">
+              A glimpse of our vibrant cultural exchange programs in action.
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
   );
