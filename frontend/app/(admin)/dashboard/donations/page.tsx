@@ -13,26 +13,36 @@ export default function AdminDonationsPage() {
         <div className="overflow-x-auto">
           <div className="inline-block rounded border border-gray-300 bg-gray-50 p-2">
             <table className="w-auto border-separate border-spacing-y-1">
+              <thead>
+                <tr className="text-left">
+                  <th className="px-6 py-2 text-sm font-semibold">Date</th>
+                  <th className="px-6 py-2 text-sm font-semibold">Name</th>
+                  <th className="px-6 py-2 text-sm font-semibold">Payment Method</th>
+                  <th className="px-6 py-2 text-sm font-semibold">Frequency</th>
+                  <th className="px-6 py-2 text-sm font-semibold">Amount</th>
+                </tr>
+              </thead>
+
               <tbody>
                 {sampleDonationData.map((donation, index) => (
                   <tr key={index} className="bg-white hover:bg-gray-50">
-                    <td className="px-4 py-3 border-y border-l border-gray-300 rounded-l-md">
+                    <td className="px-6 py-3 border-y border-l border-gray-300 rounded-l-md">
                       {donation.date}
                     </td>
 
-                    <td className="px-4 py-3 border-y border-gray-300">
+                    <td className="px-6 py-3 border-y border-gray-300">
                       {donation.name}
                     </td>
 
-                    <td className="px-4 py-3 border-y border-gray-300">
+                    <td className="px-6 py-3 border-y border-gray-300">
                       {donation.paymentMethod}
                     </td>
 
-                    <td className="px-4 py-3 border-y border-gray-300 capitalize">
+                    <td className="px-6 py-3 border-y border-gray-300 capitalize">
                       {donation.frequency}
                     </td>
 
-                    <td className="px-4 py-3 border-y border-r border-gray-300 rounded-r-md">
+                    <td className="px-6 py-3 border-y border-r border-gray-300 rounded-r-md">
                       {formatCurrency(donation.amount)}
                     </td>
                   </tr>
