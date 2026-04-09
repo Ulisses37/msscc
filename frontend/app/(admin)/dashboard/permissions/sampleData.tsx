@@ -9,6 +9,8 @@ export type AdminRecord = {
   eventsManipulation: boolean;
   sendEmails: boolean;
   viewMemberRecords: boolean;
+  pageEdit: boolean;
+  translationEdit: boolean;
 };
 
 export const SampleAdminRecordData: AdminRecord[] = [
@@ -20,6 +22,8 @@ export const SampleAdminRecordData: AdminRecord[] = [
     eventsManipulation: true,
     sendEmails: true,
     viewMemberRecords: true,
+    pageEdit: true,
+    translationEdit: true,
   },
   {
     name: "Alex Nguyen",
@@ -29,6 +33,8 @@ export const SampleAdminRecordData: AdminRecord[] = [
     eventsManipulation: true,
     sendEmails: false,
     viewMemberRecords: false,
+    pageEdit: false,
+    translationEdit: false,
   },
   {
     name: "John Smith",
@@ -38,5 +44,7 @@ export const SampleAdminRecordData: AdminRecord[] = [
     eventsManipulation: false,
     sendEmails: true,
     viewMemberRecords: false,
+    pageEdit: false,
+    translationEdit: false,
   },
 ];
