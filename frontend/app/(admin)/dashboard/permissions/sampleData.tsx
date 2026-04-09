@@ -1,50 +1,47 @@
 "use client";
+
+export type PermissionRecord = {
+  permissionName: string;
+  hasPermission: boolean;
+};
+
 export type AdminRecord = {
   name: string;
   email: string;
   executive: boolean;
-
-  // Individual permissions
-  // Subject to change
-  eventsManipulation: boolean;
-  sendEmails: boolean;
-  viewMemberRecords: boolean;
-  pageEdit: boolean;
-  translationEdit: boolean;
+  permissionsList: PermissionRecord[];
 };
+
+const PERMISSION_LABELS = [
+  "Events Manipulation",
+  "Send Emails",
+  "View Member Records",
+  "Page Edit",
+  "Translation Edit",
+];
+
+
+function makePermissions(values: boolean[]): PermissionRecord[] {
+  return PERMISSION_LABELS.map((permissionName, i) => ({ permissionName, hasPermission: values[i] }));
+}
 
 export const SampleAdminRecordData: AdminRecord[] = [
   {
     name: "Jane Doe",
     email: "JaneDoe@gmail.com",
     executive: true,
-
-    eventsManipulation: true,
-    sendEmails: true,
-    viewMemberRecords: true,
-    pageEdit: true,
-    translationEdit: true,
+    permissionsList: makePermissions([true,  true,  true,  true,  true ])
   },
   {
     name: "Alex Nguyen",
     email: "AlexNguyen@gmail.com",
     executive: false,
-
-    eventsManipulation: true,
-    sendEmails: false,
-    viewMemberRecords: false,
-    pageEdit: false,
-    translationEdit: false,
+    permissionsList: makePermissions([true,  false, false, false, false])
   },
   {
     name: "John Smith",
     email: "JohnSmith@gmail.com",
     executive: false,
-
-    eventsManipulation: false,
-    sendEmails: true,
-    viewMemberRecords: false,
-    pageEdit: false,
-    translationEdit: false,
+    permissionsList: makePermissions([false, true,  false, false, false])
   },
 ];
