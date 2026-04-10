@@ -1,6 +1,8 @@
 'use client';
 
+import { parse } from 'path';
 import { ChangeEvent } from 'react';
+import { number } from 'zod';
 
 interface IntegerInputProps {
   value: number | '';
@@ -39,7 +41,16 @@ export function IntegerInput({
       return;
     }
 
-    onChange(Number(raw));
+    //Needs Positive Values for Donation amount.
+    if (!/^\d+$/.test(raw)) {
+      return;
+    }
+
+    let parsed = Number(raw);
+    if (min !== undefined && parsed < min) parsed = min;
+    if (max !== undefined && parsed > max) parsed = max;
+
+    onChange(parsed);
   };
 
 
@@ -73,6 +84,12 @@ export function IntegerInput({
         aria-describedby={error ? `${inputId}-error` : undefined}
 
       />
+
+      {error && (
+        <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
