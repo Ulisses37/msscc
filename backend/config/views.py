@@ -25,20 +25,15 @@ def upload_image(request):
         return JsonResponse({'error': 'Invalid file type'}, status=400)
 
     # Save the file
-    # For simplicity, save to media/images/
+    # For simplicity, save to media/public/
     media_root = settings.MEDIA_ROOT
-    images_dir = os.path.join(media_root, 'images')
+    images_dir = os.path.join(media_root, 'public')
     os.makedirs(images_dir, exist_ok=True)
 
-    file_path = os.path.join(images_dir, image.name)
-    with open(file_path, 'wb+') as destination:
-        for chunk in image.chunks():
-            destination.write(chunk)
-
-    #make unique filename
+    # Make Unique Filename
     name, ext = os.path.splitext(image.name)
     safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
-    # Limit filename to 30 characters max before adding suffix
+    # Cap Character Length to 30 to avoid long filenames
     if len(safe_name) > 30:
         safe_name = safe_name[:30]
     new_filename = f"{safe_name}_{short_id()}{ext}"
