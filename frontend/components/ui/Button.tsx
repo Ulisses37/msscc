@@ -2,15 +2,19 @@
 
 import React, { useState } from 'react';
 
+// Customizable Button
 interface ButtonProps {
   text: string;
   padding?: string;
   fontSize?: string;
+  width?: string;
+  height?: string;
   onClick?: () => void;
 }
 
 // Default Button Size
-export default function Button({ text, padding = '10px 18px', fontSize = '12px', onClick }: ButtonProps) {
+export default function Button({ text, padding = '10px 18px', fontSize = '12px',
+  width, height, onClick }: ButtonProps) {
   const [hovered, setHovered] = useState(false);
 
   const containerStyle: React.CSSProperties = {
@@ -26,6 +30,8 @@ export default function Button({ text, padding = '10px 18px', fontSize = '12px',
     cursor: 'pointer',
     padding,
     fontSize,
+    width,
+    height,
     transition: 'background-color 0.15s ease',
     alignSelf: 'flex-start'
   };

@@ -10,6 +10,7 @@ export default function MembershipPage() {
       <div style={{ display: 'flex', gap: '12px' }}>
         <Button text="View Event →" padding="6px 10px"/>
         <Button text="Printable Membership Button" padding="15px 30px" fontSize="14px"/>
+        <Button text="REALLLLLLY LOONNGGGG TEXTTTTTT" width="103px" height="86px"/>
       </div>
     </div>
   );
