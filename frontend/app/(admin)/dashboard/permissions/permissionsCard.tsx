@@ -6,8 +6,7 @@ import { AdminRecord, PermissionRecord } from "./sampleData";
 export default function PermissionCard ({ adminInformation, currentUserInformation }: {adminInformation:AdminRecord, currentUserInformation: AdminRecord | null }) {
   console.log("Rendering PermissionCard for:", adminInformation, "Current User Executive Status:", currentUserInformation);
   return (
-    <div className = "border rounded-md p-6 flex divide-x bg-msscc-white h-32 items-center">
-      <div className = "basis-2/12">
+<div className={`border rounded-md p-6 flex divide-x h-32 items-center ${currentUserInformation?.email === adminInformation.email ? 'bg-yellow-100' : 'bg-white'}`}>      <div className = "basis-2/12">
         <h1 className = "text-black text-3xl">{adminInformation.name}</h1>
         {adminInformation.executive && <p className = "text-gray-500">Executive</p>}
       </div>
@@ -41,6 +40,12 @@ function PermissionIcon({currentPermission, isExecutiveView}: {currentPermission
     if (currentPermission.hasPermission) {
       return (
           <span className="text-green-600 font-bold border-2 p-1 text-lg border-green-600 rounded-sm inline-block h-10 text-center">{currentPermission.permissionName}</span>
+      )
+    }else{
+      return (
+        <span className="invisible border-2 p-1 text-lg rounded-sm inline-block h-10 text-center">
+          {currentPermission.permissionName}
+        </span>
       )
     }
   }
