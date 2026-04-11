@@ -9,7 +9,7 @@ export default function AdminPermissionPage() {
 
   return (
     <div className="flex justify-center min-h-screen">
-      <div className="border w-[70%] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
+      <div className="border w-full md:w-[70%] max-w-[1400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
           <button
             onClick={() => setCurrentLogIn(getCurrentUser("JaneDoe@gmail.com"))}
             className="bg-green-500 text-white py-2 px-4 m-2">
