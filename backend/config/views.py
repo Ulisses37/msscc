@@ -3,6 +3,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import os
 from django.conf import settings
+import secrets
+import string
+import re
+
+
+def short_id(n=6):
+    chars = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(n))
 
 @csrf_exempt
 @require_POST
@@ -27,6 +35,18 @@ def upload_image(request):
         for chunk in image.chunks():
             destination.write(chunk)
 
-    # Return the URL
-    image_url = f"{settings.MEDIA_URL}images/{image.name}"
+    #make unique filename
+    name, ext = os.path.splitext(image.name)
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+    # Limit filename to 30 characters max before adding suffix
+    if len(safe_name) > 30:
+        safe_name = safe_name[:30]
+    new_filename = f"{safe_name}_{short_id()}{ext}"
+
+    file_path = os.path.join(images_dir, new_filename)
+    with open(file_path, 'wb+') as destination:
+        for chunk in image.chunks():
+            destination.write(chunk)
+
+    image_url = f"{settings.MEDIA_URL}public/{new_filename}"
     return JsonResponse({'url': image_url})

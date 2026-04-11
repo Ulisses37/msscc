@@ -9,39 +9,45 @@ export default function Dashboard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
+  const uploadImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/upload-image/`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.error || 'Upload failed');
+  }
+
+  return response.json();
+};
+
   const handleSubmit = async () => {
-    if (!selectedFile) {
-      setSubmitError('Please select an image before submitting.');
-      return;
-    }
+  if (!selectedFile) {
+    setSubmitError('Please select an image before submitting.');
+    return;
+  }
 
-    setSubmitError(null);
-    setIsSubmitting(true);
-    setUploadedUrl(null);
+  setIsSubmitting(true);
+  setSubmitError(null);
+  setUploadedUrl(null);
 
-    const formData = new FormData();
-    formData.append('image', selectedFile);
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload-image/`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const message = errorData?.error || 'Upload failed. Please try again.';
-        throw new Error(message);
-      }
-
-      const data = await response.json();
-      setUploadedUrl(data.url);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  try {
+    const data = await uploadImage(selectedFile);
+    setUploadedUrl(data.url);
+  } catch (error) {
+    setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
@@ -60,7 +66,6 @@ export default function Dashboard() {
             <ImportImage
               onChange={(file) => setSelectedFile(file)}
               label="Upload an image"
-              autoUpload={false}
             />
           </div>
 
