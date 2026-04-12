@@ -1,16 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useState }from 'react';
 import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
 import { samplePartnerLinks } from './sampleData';
 
-// Shared link styles from global style guide
-const externalLinkStyle: React.CSSProperties = {
-  color: 'var(--color-gray-dark)',
-  textDecoration: 'none',
-  transition: 'color 0.15s ease, opacity 0.15s ease',
-  fontFamily: 'var(--font-body)',
-};
+interface PartnerLinkProps {
+  name: string;
+  href: string;
+}
+
+function PartnerLink({ name, href }: PartnerLinkProps) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="partner-link"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        fontFamily: 'var(--font-body)',
+        color: hovered ? 'var(--color-teal)' : 'var(--color-gray-dark)',
+        textDecoration: 'underline',
+        textUnderlineOffset: '3px',
+        cursor: 'pointer',
+        transition: 'color 0.15s ease',
+      }}
+    >
+      {name}
+    </Link>
+  );
+}
 
 export default function PartnersPage() {
   return (
@@ -24,34 +46,7 @@ export default function PartnersPage() {
 
       {/* Connecting with the Community */}
       <section style={{
-        padding: 'var(--space-10) var(--space-6)',
-        maxWidth: '75rem',
-        width: '100%',
-        margin: '0 auto',
-      }}>
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          color: '#dc2626',
-          fontSize: 'var(--fs-heading-2)',
-          marginBottom: 'var(--space-4)',
-        }}>
-          Connecting with the Community
-        </h2>
-        <p style={{
-          fontSize: 'var(--fs-body)',
-          color: 'var(--color-gray-dark)',
-          maxWidth: '56.25rem',
-          lineHeight: 1.7,
-        }}>
-          Partners are the foundation of the Matsuyama-Sacramento Sister City Corporation, helping to
-          strengthen cultural connections and educational exchanges between our communities. Their support
-          ensures that we continue fostering mutual understanding, global citizenship, and meaningful
-          opportunities for individuals to engage with and represent our region abroad.
-        </p>
-      </section>
-      {/* Connecting with the Community */}
-      <section style={{
-        padding: 'var(--space-10) var(--space-6)',
+        padding: 'var(--space-6) var(--space-6)',
         maxWidth: '75rem',
         width: '100%',
         margin: '0 auto',
@@ -98,14 +93,7 @@ export default function PartnersPage() {
         <ul style={{ listStyle: 'disc', paddingLeft: 'var(--space-10)', lineHeight: 1.7 }}>
           {samplePartnerLinks.map((partner) => (
             <li key={partner.name} style={{ marginBottom: 'var(--space-2)' }}>
-              <Link
-                href={partner.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={externalLinkStyle}
-              >
-                {partner.name}
-              </Link>
+              <PartnerLink name={partner.name} href={partner.href} />
 
               {/* If this partner has a pair, render it separated by "and" */}
               {partner.pair && (
@@ -115,14 +103,7 @@ export default function PartnersPage() {
                     fontFamily: 'var(--font-body)',
                     margin: '0 var(--space-2)'}}
                     >and</span>
-                  <Link
-                    href={partner.pair.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={externalLinkStyle}
-                  >
-                    {partner.pair.name}
-                  </Link>
+                  <PartnerLink name={partner.name} href={partner.href} />
                 </>
               )}
             </li>
