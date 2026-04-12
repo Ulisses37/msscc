@@ -1,12 +1,21 @@
+'use client';
 
-import React from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 
 import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
 
-export const Banner = () => {
+import { LoginButton } from '@/components/ui/Loginbutton';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
+
+export const Banner = () =>{
+
+  const handleLoginClick = () => {
+    // TODO(ulisses): Open LoginModal once SCRUM-4 is built
+  };
+
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
       {/* Background */}
@@ -33,6 +42,14 @@ export const Banner = () => {
           />
         </div>
       </div>
+
+      {/* Bottom-right actions: social media buttons will go left of LoginButton */}
+      <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
+        <LanguageToggle />
+        <LoginButton onLoginClick={handleLoginClick} />
+      </div>
+
+
     </div>
   );
 };

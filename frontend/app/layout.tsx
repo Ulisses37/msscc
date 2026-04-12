@@ -18,18 +18,22 @@ export const metadata: Metadata = {
   description: 'Cultural exchange and international friendship since 1981.',
 };
 
+import { AuthProvider } from '@/context/AuthContext';
+
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+    <body
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+    >
+    <AuthProvider>
+      {children}
+    </AuthProvider>
+    </body>
     </html>
   );
 }
