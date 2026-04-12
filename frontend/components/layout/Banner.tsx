@@ -5,7 +5,9 @@ import Image from 'next/image';
 
 import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
+
 import { LoginButton } from '@/components/ui/Loginbutton';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 export const Banner = () =>{
 
@@ -40,8 +42,11 @@ export const Banner = () =>{
 
       {/* Bottom-right actions: social media buttons will go left of LoginButton */}
       <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
+        <LanguageToggle />
         <LoginButton onLoginClick={handleLoginClick} />
       </div>
+
+
     </div>
   );
 };
