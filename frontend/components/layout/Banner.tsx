@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
@@ -14,6 +15,9 @@ export const Banner = () =>{
   const handleLoginClick = () => {
     // TODO(ulisses): Open LoginModal once SCRUM-4 is built
   };
+
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith('/admin');
 
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
@@ -42,7 +46,7 @@ export const Banner = () =>{
 
       {/* Bottom-right actions: social media buttons will go left of LoginButton */}
       <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
-        <LanguageToggle />
+        {!isAdminRoute && <LanguageToggle />}
         <LoginButton onLoginClick={handleLoginClick} />
       </div>
 
