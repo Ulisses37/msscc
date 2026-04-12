@@ -8,6 +8,7 @@ import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 // Components
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { Banner } from '@/components/layout/Banner';
 
 export default async function LocaleLayout({
   children,
@@ -21,6 +22,8 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <div className="flex min-h-screen flex-col">
+            {/* Banner Section.*/}
+            <Banner />
             {/* Navbar Section. Banner content goes above this. */}
             <LanguageToggle />
 
