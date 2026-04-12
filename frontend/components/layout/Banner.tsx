@@ -8,13 +8,9 @@ import mssccLogo from '@/public/images/msscc-logo.png';
 import { LoginButton } from '@/components/ui/Loginbutton';
 
 export const Banner = () =>{
-  // const [isModalOpen, setIsModalOpen] = useState(false);
-  const [setIsModalOpen] = useState(false);
-
 
   const handleLoginClick = () => {
-    setIsModalOpen(true);
-    // TODO(ulisses): Uncomment and pass isModalOpen to LoginModal once SCRUM-4 is built
+    // TODO(ulisses): Open LoginModal once SCRUM-4 is built
   };
 
   return (

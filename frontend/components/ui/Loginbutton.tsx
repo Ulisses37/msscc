@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +12,7 @@ export function LoginButton({ onLoginClick }: LoginButtonProps) {
     return (
       <Link
         href="/admin"
-        className="rounded bg-teal-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-800"
+        className="rounded-sm bg-msscc-teal px-4 py-2 text-btn tracking-btn text-msscc-white transition-colors hover:bg-msscc-teal-dark"
       >
         Admin
       </Link>
@@ -25,7 +23,7 @@ export function LoginButton({ onLoginClick }: LoginButtonProps) {
     <button
       type="button"
       onClick={onLoginClick}
-      className="rounded bg-teal-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-800"
+      className="rounded-sm bg-msscc-teal px-4 py-2 text-btn tracking-btn text-msscc-white transition-colors hover:bg-msscc-teal-dark"
     >
       Login
     </button>
