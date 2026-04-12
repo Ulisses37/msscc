@@ -10,44 +10,44 @@ export default function Dashboard() {
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
   const uploadImage = async (file: File) => {
-  const formData = new FormData();
-  formData.append('image', file);
+    const formData = new FormData();
+    formData.append('image', file);
 
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/upload-image/`,
-    {
-      method: 'POST',
-      body: formData,
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/upload-image/`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Upload failed');
     }
-  );
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.error || 'Upload failed');
-  }
-
-  return response.json();
-};
+    return response.json();
+  };
 
   const handleSubmit = async () => {
-  if (!selectedFile) {
-    setSubmitError('Please select an image before submitting.');
-    return;
-  }
+    if (!selectedFile) {
+      setSubmitError('Please select an image before submitting.');
+      return;
+    }
 
-  setIsSubmitting(true);
-  setSubmitError(null);
-  setUploadedUrl(null);
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setUploadedUrl(null);
 
-  try {
-    const data = await uploadImage(selectedFile);
-    setUploadedUrl(data.url);
-  } catch (error) {
-    setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    try {
+      const data = await uploadImage(selectedFile);
+      setUploadedUrl(data.url);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
@@ -91,6 +91,27 @@ export default function Dashboard() {
             </p>
           )}
         </div>
+      </section>
+
+      <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-medium">Import Images</h2>
+          <p className="text-sm text-slate-600 mt-2">
+            Delete an image from storage
+          </p>
+        </div>
+        {/*  placeholder for delete image functionality
+        <button
+              type="button"
+              onClick={handleRetrieve}
+              disabled={!selectedFile || isSubmitting}
+              className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
+            >
+              {isSubmitting ? 'Submitting…' : 'Submit Image'}
+        </button>
+        */}
+
+
       </section>
     </main>
   );
