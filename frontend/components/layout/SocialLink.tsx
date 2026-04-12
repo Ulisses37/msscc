@@ -13,7 +13,8 @@ export const SocialIcon = () => {
       <Image 
         src={fbIcon} 
         alt="Facebook" 
-        className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg"
+        style={{ filter: 'brightness(0) invert(1)' }}
+        className="w-8 h-8 md:w-10 md:h-10"
       />
     </a>
   );
