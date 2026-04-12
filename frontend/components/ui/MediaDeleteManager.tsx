@@ -1,0 +1,172 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from "react";
+
+type MediaItem = {
+  id: number;
+  file_name: string;
+  url: string | null;
+  uploaded_at: string;
+};
+
+type MediaDeleteManagerProps = {
+  onClose: () => void;
+};
+
+export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const fetchMedia = useCallback(async () => {
+    setError(null);
+    setMessage(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/media/`);
+      if (!response.ok) {
+        throw new Error('Failed to load media list.');
+      }
+      const items = (await response.json()) as MediaItem[];
+      setMediaItems(items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load images.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMedia();
+  }, [fetchMedia]);
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) {
+      setError('Please select at least one image to delete.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} selected image(s)? This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      for (const id of selectedIds) {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/media/${id}/`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const responseBody = await response.json().catch(() => null);
+          throw new Error(responseBody?.error || `Failed to delete image ${id}.`);
+        }
+      }
+
+      setMessage(`Deleted ${selectedIds.length} image(s).`);
+      setSelectedIds([]);
+      await fetchMedia();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to delete selected images.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="flex items-center justify-between border-b border-slate-200 p-5">
+          <div>
+            <h2 className="text-xl font-semibold">Image Deletion Manager</h2>
+            <p className="text-sm text-slate-600">Select stored image IDs from the database and confirm removal.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-5">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <button
+              onClick={fetchMedia}
+              disabled={isLoading || isDeleting}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-400"
+            >
+              {isLoading ? 'Refreshing…' : 'Refresh list'}
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={selectedIds.length === 0 || isDeleting || isLoading}
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-400"
+            >
+              {isDeleting ? 'Deleting…' : `Delete selected (${selectedIds.length})`}
+            </button>
+          </div>
+
+          {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+          {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="bg-slate-50 text-slate-700">
+                  <th className="px-4 py-3">Select</th>
+                  <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3">Filename</th>
+                  <th className="px-4 py-3">Uploaded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mediaItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                      {isLoading ? 'Loading images…' : 'No stored images found.'}
+                    </td>
+                  </tr>
+                ) : (
+                  mediaItems.map((item) => (
+                    <tr key={item.id} className="border-t border-slate-100">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleSelection(item.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium">{item.id}</td>
+                      <td className="px-4 py-3">{item.file_name}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {new Date(item.uploaded_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

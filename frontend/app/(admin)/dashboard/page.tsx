@@ -2,13 +2,20 @@
 
 import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
+import { MediaDeleteManager } from "@/components/ui/MediaDeleteManager";
+
+type UploadResponse = {
+  url: string;
+};
 
 export default function Dashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [showDeleteManager, setShowDeleteManager] = useState(false);
 
+  {/** Expect an image for transfer to storage */}
   const uploadImage = async (file: File) => {
     const formData = new FormData();
     formData.append('image', file);
@@ -26,9 +33,10 @@ export default function Dashboard() {
       throw new Error(errorData?.error || 'Upload failed');
     }
 
-    return response.json();
+    return response.json() as Promise<UploadResponse>;
   };
 
+  {/* Response to an image being submitted */}
   const handleSubmit = async () => {
     if (!selectedFile) {
       setSubmitError('Please select an image before submitting.');
@@ -49,10 +57,12 @@ export default function Dashboard() {
     }
   };
 
+  {/* Control for admins*/}
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
+    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
       <h1 className="text-3xl font-semibold mb-6">Administrative Dashboard</h1>
 
+      {/** Must have ability to upload images */}
       <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-4">
           <h2 className="text-xl font-medium">Import Images</h2>
@@ -93,26 +103,28 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/** Must have ability to delete images from storage */}
       <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-medium">Import Images</h2>
+          <h2 className="text-xl font-medium">Delete Stored Images</h2>
           <p className="text-sm text-slate-600 mt-2">
-            Delete an image from storage
+            Open the image deletion manager to select IDs from storage and confirm deletion.
           </p>
         </div>
-        {/*  placeholder for delete image functionality
+
         <button
-              type="button"
-              onClick={handleRetrieve}
-              disabled={!selectedFile || isSubmitting}
-              className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
-            >
-              {isSubmitting ? 'Submitting…' : 'Submit Image'}
+          type="button"
+          onClick={() => setShowDeleteManager(true)}
+          className="rounded-md bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
+        >
+          Delete Images from Storage
         </button>
-        */}
-
-
       </section>
+
+      {/** Reduce information for Cleaner UI */}
+      {showDeleteManager && (
+        <MediaDeleteManager onClose={() => setShowDeleteManager(false)} />
+      )}
     </main>
   );
 }
