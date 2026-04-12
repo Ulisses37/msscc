@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-//import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
+import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
 
 interface Partner {
   id: number;

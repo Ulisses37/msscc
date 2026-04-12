@@ -76,7 +76,7 @@
   /* ─── Root typography & scroll ──────────────────────────── */
   html {
     /* Base font size — 15px (style-guide body default; browser default is 16px) */
-    font-size: 15px;
+    font-size: 19px;
     line-height: 1.7;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
