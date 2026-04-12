@@ -29,7 +29,7 @@ export const PublicNavbar = () => {
   ] as const;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
+    <nav className="sticky top-0 z-50 w-full border-b bg-teal-900 shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-center space-x-8 px-4">
         {navLinks.map((link) => {
           // Check if the current path matches the link to highlight it
@@ -40,10 +40,10 @@ export const PublicNavbar = () => {
               key={link.href}
               href={link.href}
               // Highlight code
-              className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+              className={`text-sm font-medium transition-colors ${
                 isActive
-                  ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
-                  : 'text-gray-600'
+                  ? '!text-white border-b-2 border-white pb-1'
+                  : '!text-white/70 hover:text-white'
               }`}
             >
               {link.name}
