@@ -8,13 +8,13 @@ export const SocialIcon = () => {
       href="https://www.facebook.com/MSSCC1/"
       target="_blank"
       rel="noopener noreferrer"
-      className="absolute left-8 top-1/2 -translate-y-1/2 z-20"
+      className="absolute left-[clamp(8px,2vw,24px)] top-1/2 -translate-y-1/2 z-20"
     >
       <Image 
         src={fbIcon} 
         alt="Facebook" 
         style={{ filter: 'brightness(0) invert(1)' }}
-        className="w-8 h-8 md:w-10 md:h-10"
+        className="w-[clamp(0px,3vw,40px)] h-[clamp(0px,3vw,40px)]"
       />
     </a>
   );
