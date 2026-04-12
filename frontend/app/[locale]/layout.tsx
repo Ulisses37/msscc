@@ -1,27 +1,14 @@
-import type { Metadata } from 'next';
-import localFont from 'next/font/local';
-import '../globals.css'; // Note the ../
+// React/Next.js
+import React from 'react';
 
 // Third-party
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
-const geistSans = localFont({
-  src: '../fonts/GeistVF.woff',
-  variable: '--font-geist-sans',
-  weight: '100 900',
-});
-
-const geistMono = localFont({
-  src: '../fonts/GeistMonoVF.woff',
-  variable: '--font-geist-mono',
-  weight: '100 900',
-});
-
-export const metadata: Metadata = {
-  title: 'MSSCC | Matsuyama-Sacramento Sister City',
-  description: 'Cultural exchange and international friendship since 1981.',
-};
+// Components
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { Banner } from '@/components/layout/Banner';
 
 export default async function LocaleLayout({
   children,
@@ -33,12 +20,23 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          {children}
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages} locale={locale}>
+      <div className="flex min-h-screen flex-col">
+            {/* Banner Section.*/}
+            <Banner />
+            {/* Navbar Section. Banner content goes above this. */}
+            <LanguageToggle />
+
+            {/* Navbar Section. Banner content goes above this. */}
+            <PublicNavbar />
+
+            {/* Main content area */}
+            <main className="flex-grow">
+              {children}
+            </main>
+
+            {/* <Footer /> */}
+          </div>
+    </NextIntlClientProvider>
   );
 }
