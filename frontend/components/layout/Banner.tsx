@@ -8,9 +8,13 @@ import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
 
 import { LoginButton } from '@/components/ui/Loginbutton';
+import { LogoutButton } from "@/components/ui/Logoutbutton";
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { useAuth } from '@/context/AuthContext'
 
 export const Banner = () =>{
+
+  const { isAuthenticated } = useAuth();
 
   const handleLoginClick = () => {
     // TODO(ulisses): Open LoginModal once SCRUM-4 is built
@@ -47,7 +51,7 @@ export const Banner = () =>{
       {/* Bottom-right actions: social media buttons will go left of LoginButton */}
       <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
         {!isAdminRoute && <LanguageToggle />}
-        <LoginButton onLoginClick={handleLoginClick} />
+        {isAuthenticated ? <LogoutButton /> : <LoginButton onLoginClick={handleLoginClick} />}
       </div>
 
 
