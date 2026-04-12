@@ -1,3 +1,4 @@
+from django.core.files.storage import default_storage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -26,22 +27,21 @@ def upload_image(request):
 
     # Save the file
     # For simplicity, save to media/public/
-    media_root = settings.MEDIA_ROOT
-    images_dir = os.path.join(media_root, 'public')
-    os.makedirs(images_dir, exist_ok=True)
+    ##media_root = settings.MEDIA_ROOT
+    ##images_dir = os.path.join(media_root, 'public')
+    ##os.makedirs(images_dir, exist_ok=True)
 
-    # Make Unique Filename
+    ### Make Unique Filename
     name, ext = os.path.splitext(image.name)
-    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
-    # Cap Character Length to 30 to avoid long filenames
-    if len(safe_name) > 30:
-        safe_name = safe_name[:30]
-    new_filename = f"{safe_name}_{short_id()}{ext}"
+    safe_name = f"{re.sub(r'[^a-zA-Z0-9_-]', '_', name)}"
+    filename = f"{safe_name}{ext}"
+    ### Cap Character Length to 30 to avoid long filenames
+    ##if len(safe_name) > 30:
+    ##    safe_name = safe_name[:30]
+    ##new_filename = f"{safe_name}_{short_id()}{ext}"
 
-    file_path = os.path.join(images_dir, new_filename)
-    with open(file_path, 'wb+') as destination:
-        for chunk in image.chunks():
-            destination.write(chunk)
+    saved_path = default_storage.save(f"public/{filename}", image)
+    file_url = default_storage.url(saved_path)
+    print(default_storage.__class__)
 
-    image_url = f"{settings.MEDIA_URL}public/{new_filename}"
-    return JsonResponse({'url': image_url})
+    return JsonResponse({"url": file_url})

@@ -35,15 +35,18 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -120,6 +123,24 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# Media files
-MEDIA_URL = '/public/'
-MEDIA_ROOT = BASE_DIR / 'msscc-media'
+# S3 Configuration
+AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_DEFAULT_ACL = "public-read"
+AWS_QUERYSTRING_AUTH = False
+AWS_LOCATION = ""
+AWS_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY')
+AWS_SECRET_ACCESS_KEY = os.getenv('S3_SECRET_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('S3_BUCKET')
+AWS_S3_REGION_NAME = os.getenv('S3_REGION')
+AWS_S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+CORS_ALLOW_ALL_ORIGINS = True

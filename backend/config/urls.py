@@ -23,4 +23,4 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/upload-image/', views.upload_image, name='upload_image'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
