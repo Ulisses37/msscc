@@ -49,6 +49,33 @@ export default function PartnersPage() {
           opportunities for individuals to engage with and represent our region abroad.
         </p>
       </section>
+      {/* Connecting with the Community */}
+      <section style={{
+        padding: 'var(--space-10) var(--space-6)',
+        maxWidth: '75rem',
+        width: '100%',
+        margin: '0 auto',
+      }}>
+        <h2 style={{
+          fontFamily: 'var(--font-heading)',
+          color: '#dc2626',
+          fontSize: 'var(--fs-heading-2)',
+          marginBottom: 'var(--space-4)',
+        }}>
+          Connecting with the Community
+        </h2>
+        <p style={{
+          fontSize: 'var(--fs-body)',
+          color: 'var(--color-gray-dark)',
+          maxWidth: '56.25rem',
+          lineHeight: 1.7,
+        }}>
+          Partners are the foundation of the Matsuyama-Sacramento Sister City Corporation, helping to
+          strengthen cultural connections and educational exchanges between our communities. Their support
+          ensures that we continue fostering mutual understanding, global citizenship, and meaningful
+          opportunities for individuals to engage with and represent our region abroad.
+        </p>
+      </section>
 
       {/* Partner Links */}
       <section style={{
