@@ -5,8 +5,9 @@ export interface NavLink {
 
 export const adminNavLinks: NavLink[] = [
   { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Events', href: '/events' },
-  { label: 'Members', href: '/members' },
-  { label: 'Donations', href: '/donations' },
-  { label: 'Edit Pages', href: '/editpages' },
+  { label: 'Events', href: '/dashboard/events' },
+  { label: 'Members', href: '/dashboard/memberships' },
+  { label: 'Donations', href: '/dashboard/donations' },
+  { label: 'Edit Pages', href: '/dashboard/editpages' },
+  { label: 'Permissions Pages', href: '/dashboard/permissions' },
 ];
