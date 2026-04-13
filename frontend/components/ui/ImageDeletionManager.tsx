@@ -2,48 +2,50 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 
-type MediaItem = {
+type ImageItem = {
   id: number;
   file_name: string;
   url: string | null;
   uploaded_at: string;
 };
 
-type MediaDeleteManagerProps = {
+{/** Allows for Exiting UI*/}
+type ImageDeletionManagerProps = {
   onClose: () => void;
 };
 
-export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
+  const [imageItems, setImageItems] = useState<ImageItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const fetchMedia = useCallback(async () => {
+  const fetchImage = useCallback(async () => {
     setError(null);
     setMessage(null);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/media/`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`);
       if (!response.ok) {
-        throw new Error('Failed to load media list.');
+        throw new Error('Failed to load image list.');
       }
-      const items = (await response.json()) as MediaItem[];
-      setMediaItems(items);
+      const items = (await response.json()) as ImageItem[];
+      setImageItems(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load images.');
+      setError(err instanceof Error ? err.message : 'Unable to load image.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchMedia();
-  }, [fetchMedia]);
+    fetchImage();
+  }, [fetchImage]);
 
+  {/*Flexibility for selecting images*/}
   const toggleSelection = (id: number) => {
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
@@ -52,12 +54,12 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
 
   const handleDelete = async () => {
     if (selectedIds.length === 0) {
-      setError('Please select at least one image to delete.');
+      setError('Please select at least one image item to delete.');
       return;
     }
 
     const confirmed = window.confirm(
-      `Delete ${selectedIds.length} selected image(s)? This cannot be undone.`
+      `Delete ${selectedIds.length} selected image item(s)? This cannot be undone.`
     );
     if (!confirmed) {
       return;
@@ -69,7 +71,7 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
 
     try {
       for (const id of selectedIds) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/media/${id}/`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`, {
           method: 'DELETE',
         });
 
@@ -79,11 +81,11 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
         }
       }
 
-      setMessage(`Deleted ${selectedIds.length} image(s).`);
+      setMessage(`Deleted ${selectedIds.length} image item(s).`);
       setSelectedIds([]);
-      await fetchMedia();
+      await fetchImage();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to delete selected images.');
+      setError(err instanceof Error ? err.message : 'Unable to delete selected image items.');
     } finally {
       setIsDeleting(false);
     }
@@ -95,20 +97,20 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
         <div className="flex items-center justify-between border-b border-slate-200 p-5">
           <div>
             <h2 className="text-xl font-semibold">Image Deletion Manager</h2>
-            <p className="text-sm text-slate-600">Select stored image IDs from the database and confirm removal.</p>
+            <p className="text-sm text-slate-600">Select stored image items from the database and confirm removal.</p>
           </div>
           <button
             onClick={onClose}
             className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
           >
-            Close
+            X
           </button>
         </div>
 
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <button
-              onClick={fetchMedia}
+              onClick={fetchImage}
               disabled={isLoading || isDeleting}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-400"
             >
@@ -131,20 +133,21 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
               <thead>
                 <tr className="bg-slate-50 text-slate-700">
                   <th className="px-4 py-3">Select</th>
-                  <th className="px-4 py-3">ID</th>
+                  <th className="px-4 py-3">ID</th>   {/*Questionable inclusion*/}
                   <th className="px-4 py-3">Filename</th>
-                  <th className="px-4 py-3">Uploaded</th>
+                  <th className="px-4 py-3">Upload Date</th>
                 </tr>
               </thead>
               <tbody>
-                {mediaItems.length === 0 ? (
+                {imageItems.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
                       {isLoading ? 'Loading images…' : 'No stored images found.'}
                     </td>
                   </tr>
-                ) : (
-                  mediaItems.map((item) => (
+                ) :
+
+                (imageItems.map((item) => (
                     <tr key={item.id} className="border-t border-slate-100">
                       <td className="px-4 py-3">
                         <input
@@ -162,6 +165,7 @@ export function MediaDeleteManager({ onClose }: MediaDeleteManagerProps) {
                     </tr>
                   ))
                 )}
+
               </tbody>
             </table>
           </div>

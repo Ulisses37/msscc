@@ -2,11 +2,8 @@
 
 import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
-import { MediaDeleteManager } from "@/components/ui/MediaDeleteManager";
+import { ImageDeletionManager } from "@/components/ui/ImageDeletionManager";
 
-type UploadResponse = {
-  url: string;
-};
 
 export default function Dashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -21,7 +18,7 @@ export default function Dashboard() {
     formData.append('image', file);
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/upload-image/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
       {
         method: 'POST',
         body: formData,
@@ -33,7 +30,7 @@ export default function Dashboard() {
       throw new Error(errorData?.error || 'Upload failed');
     }
 
-    return response.json() as Promise<UploadResponse>;
+    return response.json();
   };
 
   {/* Response to an image being submitted */}
@@ -62,7 +59,7 @@ export default function Dashboard() {
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
       <h1 className="text-3xl font-semibold mb-6">Administrative Dashboard</h1>
 
-      {/** Must have ability to upload images */}
+      {/** Must have ability to upload images: Debug element */}
       <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-4">
           <h2 className="text-xl font-medium">Import Images</h2>
@@ -103,7 +100,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/** Must have ability to delete images from storage */}
+      {/** Must have ability to delete images from storage: Debug Element */}
       <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-4">
           <h2 className="text-xl font-medium">Delete Stored Images</h2>
@@ -123,7 +120,7 @@ export default function Dashboard() {
 
       {/** Reduce information for Cleaner UI */}
       {showDeleteManager && (
-        <MediaDeleteManager onClose={() => setShowDeleteManager(false)} />
+        <ImageDeletionManager onClose={() => setShowDeleteManager(false)} />
       )}
     </main>
   );
