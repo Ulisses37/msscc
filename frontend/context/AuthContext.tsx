@@ -20,7 +20,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // Comment out the above and uncomment the below to test with a fake user
-  // const [user, setUser] = useState<UserPayload | null>({ userId: 1, email: 'admin@msscc1.org' });
+  // const [user, setUser] = useState<UserPayload | null>({ userId: 1, email: 'admin@msscc1.org', firstName: 'Bryan' });
   // const [accessToken, setAccessToken] = useState<string | null>('fake-token');
 
   const router = useRouter();

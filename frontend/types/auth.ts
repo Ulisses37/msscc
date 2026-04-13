@@ -8,6 +8,7 @@ export interface AuthTokens {
 export interface UserPayload {
   userId: number;
   email: string;
+  firstName: string;
 }
 
 /** Shape of the value provided by AuthContext. */
