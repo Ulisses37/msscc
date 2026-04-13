@@ -114,7 +114,7 @@ export default function Dashboard() {
           onClick={() => setShowDeleteManager(true)}
           className="rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
         >
-          {isSubmitting ? 'Deleting…' : 'Click to Start'}
+          {showDeleteManager ? 'In Progress' : 'Click to Start'}
         </button>
       </section>
 
