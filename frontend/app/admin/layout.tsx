@@ -1,19 +1,17 @@
-import { AdminNavbar } from '@/components/layout/AdminNavbar';
-// may be changed to admin banner eventually
 import { Banner } from '@/components/layout/Banner';
 
 export default function AdminLayout({
-  children,
-}: {
+                                      children,
+                                    }: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Story 212: Renders below the admin banner */}
+    <div className="flex min-h-screen flex-col bg-msscc-white">
       <Banner />
-      <AdminNavbar />
 
-      <main className="flex-1 p-8 bg-gray-50">
+      <div className="border-b-2 border-msscc-pink" />
+
+      <main className="mx-auto w-full max-w-content flex-grow px-6 py-10">
         {children}
       </main>
     </div>
