@@ -29,7 +29,7 @@ export const PublicNavbar = () => {
   ] as const;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-teal-900 shadow-sm">
+    <nav className="sticky top-0 z-50 w-full border-b bg-msscc-teal shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-center space-x-8 px-4">
         {navLinks.map((link) => {
           // Check if the current path matches the link to highlight it
