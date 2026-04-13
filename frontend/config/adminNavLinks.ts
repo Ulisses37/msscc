@@ -4,10 +4,10 @@ export interface NavLink {
 }
 
 export const adminNavLinks: NavLink[] = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Events', href: '/dashboard/events' },
-  { label: 'Members', href: '/dashboard/memberships' },
-  { label: 'Donations', href: '/dashboard/donations' },
-  { label: 'Edit Pages', href: '/dashboard/editpages' },
-  { label: 'Permissions Pages', href: '/dashboard/permissions' },
+  { label: 'Dashboard', href: '/admin/dashboard' },
+  { label: 'Events', href: '/admin/events' },
+  { label: 'Members', href: '/admin/memberships' },
+  { label: 'Donations', href: '/admin/donations' },
+  { label: 'Edit Pages', href: '/admin/editpages' },
+  { label: 'Permissions Pages', href: '/admin/permissions' },
 ];

@@ -1,6 +1,6 @@
 import { AdminNavbar } from '@/components/layout/AdminNavbar';
 // may be changed to admin banner eventually
-import { Banner } from '@/components/layout/Banner'; 
+import { Banner } from '@/components/layout/Banner';
 
 export default function AdminLayout({
   children,
@@ -12,7 +12,7 @@ export default function AdminLayout({
       {/* Story 212: Renders below the admin banner */}
       <Banner />
       <AdminNavbar />
-      
+
       <main className="flex-1 p-8 bg-gray-50">
         {children}
       </main>

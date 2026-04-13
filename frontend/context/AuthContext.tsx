@@ -18,6 +18,11 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserPayload | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Comment out the above and uncomment the below to test with a fake user
+  // const [user, setUser] = useState<UserPayload | null>({ userId: 1, email: 'admin@msscc1.org' });
+  // const [accessToken, setAccessToken] = useState<string | null>('fake-token');
+
   const router = useRouter();
 
   const isAuthenticated = user !== null;
