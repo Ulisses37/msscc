@@ -105,16 +105,16 @@ export default function Dashboard() {
         <div className="mb-4">
           <h2 className="text-xl font-medium">Delete Stored Images</h2>
           <p className="text-sm text-slate-600 mt-2">
-            Open the image deletion manager to select IDs from storage and confirm deletion.
+            Open the image deletion manager to select IDs from storage.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setShowDeleteManager(true)}
-          className="rounded-md bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
+          className="rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
         >
-          Delete Images from Storage
+          {isSubmitting ? 'Deleting…' : 'Click to Start'}
         </button>
       </section>
 

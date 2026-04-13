@@ -96,8 +96,7 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
       <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
         <div className="flex items-center justify-between border-b border-slate-200 p-5">
           <div>
-            <h2 className="text-xl font-semibold">Image Deletion Manager</h2>
-            <p className="text-sm text-slate-600">Select stored image items from the database and confirm removal.</p>
+            <p className="text-sm text-slate-600">Select stored image items from the database.</p>
           </div>
           <button
             onClick={onClose}
@@ -109,13 +108,6 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
 
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <button
-              onClick={() => fetchImage()}
-              disabled={isLoading || isDeleting}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-400"
-            >
-              {isLoading ? 'Refreshing…' : 'Refresh list'}
-            </button>
             <button
               onClick={handleDelete}
               disabled={selectedIds.length === 0 || isDeleting || isLoading}
@@ -142,7 +134,6 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
               <thead>
                 <tr className="bg-slate-50 text-slate-700">
                   <th className="px-4 py-3">Select</th>
-                  <th className="px-4 py-3">ID</th>   {/*Questionable inclusion*/}
                   <th className="px-4 py-3">Filename</th>
                   <th className="px-4 py-3">Upload Date</th>
                 </tr>
@@ -166,7 +157,6 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
                           className="h-4 w-4 rounded border-slate-300 text-slate-900"
                         />
                       </td>
-                      <td className="px-4 py-3 font-medium">{item.id}</td>
                       <td className="px-4 py-3">{item.file_name}</td>
                       <td className="px-4 py-3 text-slate-600">
                         {new Date(item.uploaded_at).toLocaleString()}
