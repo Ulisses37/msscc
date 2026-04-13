@@ -1,4 +1,5 @@
 import { Banner } from '@/components/layout/Banner';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function AdminLayout({
                                       children,
@@ -12,7 +13,9 @@ export default function AdminLayout({
       <div className="border-b-2 border-msscc-pink" />
 
       <main className="mx-auto w-full max-w-content flex-grow px-6 py-10">
-        {children}
+        <ProtectedRoute>
+          {children}
+        </ProtectedRoute>
       </main>
     </div>
   );
