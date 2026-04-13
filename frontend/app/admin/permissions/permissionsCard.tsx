@@ -33,19 +33,19 @@ function PermissionIcon({currentPermission, isExecutiveView}: {currentPermission
     return (
       <button onClick={() => setActive(!active)}
         className={`${active ? "bg-green-500 hover:bg-green-700 border-green-500 hover:border-green-700": "bg-gray-500 hover:bg-gray-700 border-gray-500 hover:border-gray-500 opacity-50"}
-        text-white border-2 p-1 md:p-1.5 font-bold text-[clamp(0.5rem,1.2vw,1.125rem)] leading-none rounded-sm h-8 md:h-10 w-full text-center`}>
+        text-white border-2 p-1 md:p-1.5 text-[clamp(0.5rem,1.2vw,1.125rem)] rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center`}>
         {currentPermission.permissionName}
       </button>
     );
   }else{ // Non Executive view
     if (currentPermission.hasPermission) {
       return (
-          <span className="text-green-600 font-bold border-2 p-1 md:p-1.5 text-[clamp(0.5rem,1.2vw,1.125rem)]  border-green-600 rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center">
+          <span className="text-green-600 border-2 p-1 md:p-1.5 text-[clamp(0.5rem,1.2vw,1.125rem)]  border-green-600 rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center">
           {currentPermission.permissionName}</span>
       )
     }else{
       return (
-        <span className="invisible text-green-600 font-bold border-2 p-1 md:p-1.5 text-[clamp(0.5rem,1.2vw,1.125rem)]  border-green-600 rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center">
+        <span className="invisible text-green-600 border-2 p-1 md:p-1.5 text-[clamp(0.5rem,1.2vw,1.125rem)]  border-green-600 rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center">
           {currentPermission.permissionName}</span>
       )
     }

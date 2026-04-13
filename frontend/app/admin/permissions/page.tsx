@@ -28,18 +28,19 @@ export default function AdminPermissionPage() {
             Log out
           </button>
 
-        <div className="m-5 flex justify-between align-center">
-          <div className="w-32"/> {/* Spacing */}
-          <p className="text-6xl font-bold text-black font-serif">Permissions</p>
-          <div className="w-32">
-          {currentUserInformation?.executive ?
-            <button className="ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 self-right rounded"
-            onClick={() => updateDatabase()}>
-                Update
-            </button>
-          : <div className="w-32"/>}
+          <div className="m-5 flex items-center">
+            <div className="flex-1 shrink"/> {/* Spacing */}
+            <p className="text-[clamp(2.5rem,4vw,3.75rem)] font-bold text-black font-serif shrink-0">Permissions</p>
+            <div className="flex-1 shrink justify-end align-right flex">
+              {currentUserInformation?.executive &&
+              <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded whitespace-nowrap
+              text-[clamp(0.75rem,1.2vw,1rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] px-[clamp(0.75rem,1vw,1rem)]"
+              onClick={() => updateDatabase()}>
+              Update
+              </button>
+            }
+            </div>
           </div>
-        </div>
         {SampleAdminRecordData.map((record) => (
           <PermissionCard key={record.email} adminInformation={record} currentUserInformation={currentUserInformation ?? null} />
         ))}
