@@ -17,7 +17,7 @@ export const AdminFooter = () => {
             Documentation
           </Link>
           <Link 
-            href="#" 
+            href="/admin/help" 
             className="text-sm hover:underline hover:text-pink-100 transition-colors"
           >
             Help Support
