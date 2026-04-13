@@ -83,7 +83,7 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
 
       setMessage(`Deleted ${selectedIds.length} image item(s).`);
       setSelectedIds([]);
-      await fetchImage();
+      await fetchImage(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete selected image items.');
     } finally {
@@ -110,7 +110,7 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <button
-              onClick={fetchImage}
+              onClick={() => fetchImage()}
               disabled={isLoading || isDeleting}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:bg-slate-400"
             >
@@ -133,7 +133,6 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
           )}
           {message && (
             <div className="mb-4 flex items-center gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700 border border-emerald-200 shadow-md">
-              <span className="text-lg font-bold">✓</span>
               <span className="font-medium flex-1">{message}</span>
             </div>
           )}
