@@ -113,14 +113,102 @@ export default function PartnersPage() {
       </section>
 
       {/* Donors and Sponsors */}
+      {/* Section Header and description */}
       <section style={{
-        padding: 'var(--space-10) var(--space-6)',
+        padding: 'var(--space-6) var(--space-6)',
         maxWidth: '75rem',
         width: '100%',
       }}>
-        <PartnerCard name={sampleDonors[0].name} />
+        <h2 style={{
+          fontFamily: 'var(--font-heading)',
+          color: '#dc2626',
+          fontSize: 'var(--fs-heading-2)',
+          marginBottom: 'var(--space-4)',
+        }}>
+          Donor and Sponsor Acknowledgment
+        </h2>
+        <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
+          We extend our sincerest thanks to the generous members, individuals, businesses, and organizations that support our success.
+        </p>
       </section>
 
+      {/* Donors and Sponsors side by side */}
+      <section style={{
+        padding: 'var(--space-4) var(--space-6)',
+        maxWidth: '75rem',
+        width: '100%',
+        display: 'flex',
+        gap: 'var(--space-6)',
+      }}>
+
+        {/* Donors box */}
+        <div style={{
+          flex: 1,
+          alignSelf: 'flex-start',
+          border: '0.5px solid var(--color-gray-light)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-6)',
+          backgroundColor: 'var(--color-gray-faint)',
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            color: '#dc2626',
+            fontSize: 'var(--fs-heading-2)',
+            marginBottom: 'var(--space-4)',
+          }}>
+            Donors
+          </h2>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+          }}>
+            {sampleDonors.map((donor) => (
+              <PartnerCard
+                key={donor.name}
+                name={donor.name}
+                imageUrl={donor.imageUrl}
+                description={donor.description}
+                websiteUrl={donor.websiteUrl}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Sponsors box */}
+        <div style={{
+          flex: 1,
+          alignSelf: 'flex-start',
+          border: '0.5px solid var(--color-gray-light)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-6)',
+          backgroundColor: 'var(--color-gray-faint)',
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            color: '#dc2626',
+            fontSize: 'var(--fs-heading-2)',
+            marginBottom: 'var(--space-4)',
+          }}>
+            Sponsors
+          </h2>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)',
+          }}>
+            {sampleSponsors.map((sponsor) => (
+              <PartnerCard
+                key={sponsor.name}
+                name={sponsor.name}
+                imageUrl={sponsor.imageUrl}
+                description={sponsor.description}
+                websiteUrl={sponsor.websiteUrl}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
