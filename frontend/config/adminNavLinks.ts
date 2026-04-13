@@ -10,4 +10,6 @@ export const adminNavLinks: NavLink[] = [
   { label: 'Donations', href: '/admin/donations' },
   { label: 'Edit Pages', href: '/admin/editpages' },
   { label: 'Permissions Pages', href: '/admin/permissions' },
+  { label: 'documentation Pages', href: '/admin/documentation' },
+  { label: 'Help Pages', href: '/admin/help' },
 ];

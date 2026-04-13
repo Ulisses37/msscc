@@ -5,7 +5,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { WelcomeBanner } from "@/components/admin/WelcomeBanner";
 import { usePathname } from 'next/navigation';
 import { AdminNavbar } from "@/components/layout/AdminNavbar";
-
+import { AdminFooter } from "@/components/layout/AdminFooter";
 
 export default function AdminLayout({
                                       children,
@@ -31,6 +31,7 @@ export default function AdminLayout({
           {children}
         </ProtectedRoute>
       </main>
+      <AdminFooter />
     </div>
   );
 }
