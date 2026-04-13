@@ -22,9 +22,9 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const fetchImage = useCallback(async () => {
+  const fetchImage = useCallback(async (clearMessage = true) => {
     setError(null);
-    setMessage(null);
+    if (clearMessage) setMessage(null);
     setIsLoading(true);
 
     try {
@@ -125,8 +125,18 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
             </button>
           </div>
 
-          {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-          {message && <p className="mb-4 text-sm text-green-700">{message}</p>}
+          {error && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200 shadow-sm">
+              <span className="text-lg font-bold">✕</span>
+              <span>{error}</span>
+            </div>
+          )}
+          {message && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700 border border-emerald-200 shadow-md">
+              <span className="text-lg font-bold">✓</span>
+              <span className="font-medium flex-1">{message}</span>
+            </div>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full text-left text-sm">
