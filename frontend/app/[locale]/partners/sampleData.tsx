@@ -4,6 +4,20 @@ export type PartnerLink = {
   pair?: { name: string; href: string };
 };
 
+export type DonorRecord = {
+  name: string;
+  imageUrl?: string;
+  description?: string;
+  websiteUrl?: string;
+};
+
+export type SponsorRecord = {
+  name: string;
+  imageUrl?: string;
+  description?: string;
+  websiteUrl?: string;
+};
+
 export const samplePartnerLinks: PartnerLink[] = [
   { name: 'City of Sacramento',                           href: 'https://www.cityofsacramento.gov/mayor-council'                                },
   { name: 'Consulate-General of Japan, San Francisco',    href: 'https://www.sf.us.emb-japan.go.jp/itprtop_en/index.html'                      },
@@ -19,4 +33,24 @@ export const samplePartnerLinks: PartnerLink[] = [
     pair: { name: 'Rosemont High School',                 href: 'https://rosemont.scusd.edu' }                                                 },
   { name: 'Sacramento Tree Foundation',                   href: 'https://sactree.org',
     pair: { name: 'Hanami Line',                          href: 'https://sactree.org/hanami/' }                                                },
+];
+
+export const sampleDonors: DonorRecord[] = [
+  { name: 'Miko Sawamura' },
+  { name: 'Charles and Doris Kobayashi' },
+  { name: 'Mary Caniglia' },
+  { name: 'Christine Umeda' },
+  { name: 'Francis M. Lee' },
+  { name: 'Aileen Nishio' },
+  { name: 'Donald and Linda Honda' },
+  { name: 'Fusako and Henry Mizushima' },
+  { name: 'Michael and Janice Yamaoka-Luszczak' },
+];
+
+export const sampleSponsors: SponsorRecord[] = [
+  { name: 'Salad Cosomo' },
+  { name: 'Propp Christensen Caniglia LLP' },
+  { name: 'Freeport Bakery' },
+  { name: 'Kazumi Wines LLC' },
+  { name: 'North American Food Distributing Co., Inc.' },
 ];

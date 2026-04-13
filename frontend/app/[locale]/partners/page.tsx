@@ -2,7 +2,8 @@
 
 import React, { useState }from 'react';
 import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
-import { samplePartnerLinks } from './sampleData';
+import { samplePartnerLinks, sampleDonors, sampleSponsors } from './sampleData';
+import { PartnerCard } from './PartnerCard';
 
 interface PartnerLinkProps {
   name: string;
@@ -109,6 +110,15 @@ export default function PartnersPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Donors and Sponsors */}
+      <section style={{
+        padding: 'var(--space-10) var(--space-6)',
+        maxWidth: '75rem',
+        width: '100%',
+      }}>
+        <PartnerCard name={sampleDonors[0].name} />
       </section>
 
     </main>
