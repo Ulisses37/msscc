@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 
 import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
+import { SocialIcon } from './SocialLink'
 
 import { LoginButton } from '@/components/ui/Loginbutton';
 import { LogoutButton } from "@/components/ui/Logoutbutton";
@@ -33,6 +34,8 @@ export const Banner = () =>{
         priority
         className="object-cover"
       />
+      {/* FB ICON  */}
+      <SocialIcon />
 
       {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
       {/* Logo */}
