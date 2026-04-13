@@ -1,20 +1,35 @@
-import { AdminNavbar } from '@/components/layout/AdminNavbar';
-// may be changed to admin banner eventually
+'use client'
+
 import { Banner } from '@/components/layout/Banner';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { WelcomeBanner } from "@/components/admin/WelcomeBanner";
+import { usePathname } from 'next/navigation';
+import { AdminNavbar } from "@/components/layout/AdminNavbar";
+
 
 export default function AdminLayout({
-  children,
-}: {
+                                      children,
+                                    }: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
+  const pathname = usePathname();
+  const isDashboard = pathname === '/admin/dashboard';
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Story 212: Renders below the admin banner */}
+    <div className="flex min-h-screen flex-col bg-msscc-white">
       <Banner />
       <AdminNavbar />
 
-      <main className="flex-1 p-8 bg-gray-50">
-        {children}
+      <div className="border-b-2 border-msscc-pink" />
+
+
+
+      {isDashboard && <WelcomeBanner />}
+
+      <main className="mx-auto w-full max-w-content flex-grow px-6 py-10">
+        <ProtectedRoute>
+          {children}
+        </ProtectedRoute>
       </main>
     </div>
   );

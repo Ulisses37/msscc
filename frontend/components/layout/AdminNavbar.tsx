@@ -9,13 +9,13 @@ export const AdminNavbar = () => {
 
   return (
     /* bg-pink-500 provides the pink background, justify-center centers the links */
-    <nav className="w-full bg-pink-500">
+    <nav className="w-full bg-msscc-pink">
       <div className="container mx-auto flex h-16 items-center justify-center space-x-8 px-4">
         {adminNavLinks.map((link) => {
           // Fix: Check for exact match on the base dashboard path
-          const isActive = 
-            link.href === '/dashboard' 
-              ? pathname === '/dashboard' 
+          const isActive =
+            link.href === '/dashboard'
+              ? pathname === '/dashboard'
               : pathname.startsWith(link.href);
 
           return (

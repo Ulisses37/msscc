@@ -9,7 +9,7 @@ import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
 
 import { LoginButton } from '@/components/ui/Loginbutton';
-import { LogoutButton } from "@/components/ui/Logoutbutton";
+import { LogoutButton } from "@/components/admin/Logoutbutton";
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useAuth } from '@/context/AuthContext'
 

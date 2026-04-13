@@ -3,7 +3,7 @@ import type { AuthTokens, UserPayload } from '@/types/auth';
 const MOCK_DELAY_MS = 800;
 
 const MOCK_TOKENS: AuthTokens = {
-  access: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImFkbWluQG1zc2NjMS5vcmciLCJleHAiOjk5OTk5OTk5OTl9.mock_signature',
+  access: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImFkbWluQG1zc2NjMS5vcmciLCJmaXJzdF9uYW1lIjoiQnJ5YW4iLCJleHAiOjk5OTk5OTk5OTl9.mock_signature',
   refresh: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjk5OTk5OTk5OTl9.mock_refresh_signature',
 };
 
@@ -24,6 +24,7 @@ export function decodeTokenPayload(accessToken: string): UserPayload {
   return {
     userId: decoded.user_id,
     email: decoded.email,
+    firstName: decoded.first_name,
   };
 }
 
