@@ -37,6 +37,31 @@ export default function EditPagesPage() {
         setBlocks(blocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b)));
     };
 
+  // Deepl translate button handling
+  const handleTranslate = async (id: string, textToTranslate: string) => {
+    try {
+        // Send the text to be converted as a package
+        const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToTranslate }),
+        });
+
+        const data = await response.json();
+
+        // Ensure that the newly translated text is placed in the correct content block
+        if (data.translation) {
+            setBlocks((prevBlocks) => // Search the array in its current state
+                prevBlocks.map((block) =>
+                    block.id === id ? { ...block, contentJa: data.translation } : block // Search based on block id
+                )
+            );
+        }
+    } catch (error) {
+        console.error("Translation failed:", error);
+    }
+};
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
@@ -81,6 +106,7 @@ export default function EditPagesPage() {
                         valueJa={block.contentJa}
                         onUpdateEn={(val) => updateBlock({ ...block, contentEn: val })}
                         onUpdateJa={(val) => updateBlock({ ...block, contentJa: val })}
+                        onTranslate={() => handleTranslate(block.id, block.contentEn)}
                     />
                 ))}
 
