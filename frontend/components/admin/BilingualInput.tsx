@@ -12,6 +12,7 @@ interface BilingualInputProps {
     onUpdateJa: (val: string) => void;
     title?: string; // Optional title like "Header" or "Board Member Name"
     onTranslate: () => Promise<void>; // For deepl button
+    onDelete: () => void; // For delete button
 }
 
 /**
@@ -26,6 +27,7 @@ export default function BilingualInput({
     onUpdateJa,
     title,
     onTranslate,
+    onDelete,
 }: BilingualInputProps) {
     // State to show that the translation is processing
     const [isTranslating, setIsTranslating] = useState(false);
@@ -40,7 +42,20 @@ export default function BilingualInput({
     };
 
     return (
-      <div className="relative border border-msscc-gray-light p-6 rounded-md bg-white shadow-none">
+      <div className="group relative border border-msscc-gray-light p-6 rounded-md bg-white shadow-none">
+
+        {/* DELETE BUTTON */}
+        <button
+            onClick={onDelete}
+            className="absolute top-3 right-3 p-1.5 text-msscc-gray-mid hover:text-msscc-pink hover:bg-msscc-pink/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
+            title="Remove Block"
+            type="button"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
           {title && (
               <div className="flex justify-between items-center mb-6">
                   <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-pink font-bold">
