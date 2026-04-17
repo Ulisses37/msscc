@@ -6,7 +6,7 @@ type ImageItem = {
   id: number;
   file_name: string;
   url: string | null;
-  uploaded_at: string;
+  created_at: string;
 };
 
 {/** Allows for Exiting UI*/}
@@ -159,7 +159,7 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
                       </td>
                       <td className="px-4 py-3">{item.file_name}</td>
                       <td className="px-4 py-3 text-slate-600">
-                        {new Date(item.uploaded_at).toLocaleString()}
+                        {new Date(item.created_at).toLocaleString()}
                       </td>
                     </tr>
                   ))

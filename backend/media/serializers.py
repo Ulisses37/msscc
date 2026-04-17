@@ -1,14 +1,23 @@
 # backend/media/serializers.py
 from rest_framework import serializers
-from .models import FileModel
+from .models import MediaAsset
 
 #Serial allows for ease of access to the file's metadata and URL in the API responses.
 class MediaFileSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
 
     class Meta:
-        model = FileModel
-        fields = ["id", "file_name", "url", "uploaded_at"]
+        model = MediaAsset
+        fields = [
+            "id",
+            "file_name",
+            "file",
+            "url",
+            "file_type",
+            "alt_text",
+            "created_at",
+        ]
+        read_only_fields = ["id", "url", "created_at"]
 
     def get_url(self, obj):
         """
