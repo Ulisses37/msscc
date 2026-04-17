@@ -8,9 +8,9 @@ from .serializers import MediaFileSerializer
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
-@method_decorator(csrf_exempt, name='dispatch')
 
 # Must Upload via parsing multipart/form-data, not JSON. The file goes to MinIO automatically via django-storages + boto3.
+@method_decorator(csrf_exempt, name='dispatch')
 class MediaUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -45,6 +45,7 @@ class MediaUploadView(APIView):
         serializer = MediaFileSerializer(media)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
 # The list and detail views return the file's metadata plus a signed URL. The frontend uses this URL in <img> tags — the browser fetches the image directly
 # Basically Grabs URL references to the files in MinIO for security.
 class MediaListView(APIView):
@@ -53,10 +54,10 @@ class MediaListView(APIView):
         serializer = MediaFileSerializer(media_files, many=True, context={"request": request})
         return Response(serializer.data)
 
+
 #Must Delete from Reference given by URL,
 #Using this, Model and Backend Storage Deletes without touching files in storage directly.
 class MediaDetailView(APIView):
-
     def get(self, request, pk):
         """
         Return the file's metadata and a signed URL.
