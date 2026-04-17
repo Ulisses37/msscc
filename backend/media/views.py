@@ -3,14 +3,14 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import FileModel
+from .models import MediaAsset
 from .serializers import MediaFileSerializer
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
-@method_decorator(csrf_exempt, name='dispatch')
 
 # Must Upload via parsing multipart/form-data, not JSON. The file goes to MinIO automatically via django-storages + boto3.
+@method_decorator(csrf_exempt, name='dispatch')
 class MediaUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -35,26 +35,29 @@ class MediaUploadView(APIView):
 
         file.name = f"{safe_name}{ext}"
 
-        media = FileModel.objects.create(
+        media = MediaAsset.objects.create(
             file=file,
             file_name=file.name,
+            file_type=file.content_type or "",
+            alt_text=request.data.get("alt_text", ""),
         )
 
         serializer = MediaFileSerializer(media)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
 # The list and detail views return the file's metadata plus a signed URL. The frontend uses this URL in <img> tags — the browser fetches the image directly
 # Basically Grabs URL references to the files in MinIO for security.
 class MediaListView(APIView):
     def get(self, request):
-        media_files = FileModel.objects.order_by("-uploaded_at")
+        media_files = MediaAsset.objects.order_by("-created_at")
         serializer = MediaFileSerializer(media_files, many=True, context={"request": request})
         return Response(serializer.data)
+
 
 #Must Delete from Reference given by URL,
 #Using this, Model and Backend Storage Deletes without touching files in storage directly.
 class MediaDetailView(APIView):
-
     def get(self, request, pk):
         """
         Return the file's metadata and a signed URL.
@@ -62,8 +65,8 @@ class MediaDetailView(APIView):
         fetches the image directly from MinIO, not through Django.
         """
         try:
-            media = FileModel.objects.get(pk=pk)
-        except FileModel.DoesNotExist:
+            media = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         serializer = MediaFileSerializer(media)
@@ -71,8 +74,8 @@ class MediaDetailView(APIView):
 
     def delete(self, request, pk):
         try:
-            media = FileModel.objects.get(pk=pk)
-        except FileModel.DoesNotExist:
+            media = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         try:

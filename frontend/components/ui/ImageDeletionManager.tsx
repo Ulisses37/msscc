@@ -3,10 +3,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 type ImageItem = {
-  id: number;
+  media_asset_id: number;
+  file_key: string | null;
+  file_url: string | null;
   file_name: string;
-  url: string | null;
-  uploaded_at: string;
+  file_type: string;
+  alt_text: string;
+  created_at: string;
 };
 
 {/** Allows for Exiting UI*/}
@@ -148,18 +151,18 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
                 ) :
 
                 (imageItems.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-100">
+                    <tr key={item.media_asset_id} className="border-t border-slate-100">
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => toggleSelection(item.id)}
+                          checked={selectedIds.includes(item.media_asset_id)}
+                          onChange={() => toggleSelection(item.media_asset_id)}
                           className="h-4 w-4 rounded border-slate-300 text-slate-900"
                         />
                       </td>
                       <td className="px-4 py-3">{item.file_name}</td>
                       <td className="px-4 py-3 text-slate-600">
-                        {new Date(item.uploaded_at).toLocaleString()}
+                        {new Date(item.created_at).toLocaleString()}
                       </td>
                     </tr>
                   ))
