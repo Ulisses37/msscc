@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import FileModel
+from .models import MediaAsset
 from .serializers import MediaFileSerializer
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -35,9 +35,11 @@ class MediaUploadView(APIView):
 
         file.name = f"{safe_name}{ext}"
 
-        media = FileModel.objects.create(
+        media = MediaAsset.objects.create(
             file=file,
             file_name=file.name,
+            file_type=file.content_type or "",
+            alt_text=request.data.get("alt_text", ""),
         )
 
         serializer = MediaFileSerializer(media)
@@ -47,7 +49,7 @@ class MediaUploadView(APIView):
 # Basically Grabs URL references to the files in MinIO for security.
 class MediaListView(APIView):
     def get(self, request):
-        media_files = FileModel.objects.order_by("-uploaded_at")
+        media_files = MediaAsset.objects.order_by("-created_at")
         serializer = MediaFileSerializer(media_files, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -62,8 +64,8 @@ class MediaDetailView(APIView):
         fetches the image directly from MinIO, not through Django.
         """
         try:
-            media = FileModel.objects.get(pk=pk)
-        except FileModel.DoesNotExist:
+            media = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         serializer = MediaFileSerializer(media)
@@ -71,8 +73,8 @@ class MediaDetailView(APIView):
 
     def delete(self, request, pk):
         try:
-            media = FileModel.objects.get(pk=pk)
-        except FileModel.DoesNotExist:
+            media = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         try:
