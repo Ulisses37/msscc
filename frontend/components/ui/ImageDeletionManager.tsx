@@ -3,9 +3,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 type ImageItem = {
-  id: number;
+  media_asset_id: number;
+  file_key: string | null;
+  file_url: string | null;
   file_name: string;
-  url: string | null;
+  file_type: string;
+  alt_text: string;
   created_at: string;
 };
 
@@ -148,12 +151,12 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
                 ) :
 
                 (imageItems.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-100">
+                    <tr key={item.media_asset_id} className="border-t border-slate-100">
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => toggleSelection(item.id)}
+                          checked={selectedIds.includes(item.media_asset_id)}
+                          onChange={() => toggleSelection(item.media_asset_id)}
                           className="h-4 w-4 rounded border-slate-300 text-slate-900"
                         />
                       </td>
