@@ -20,5 +20,5 @@ class EventSerializer(serializers.ModelSerializer):
             "is_published",
             "created_at",
             "updated_at",
-            "media_asset_id",
+            "media_asset",
         ]

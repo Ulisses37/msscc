@@ -14,7 +14,12 @@ class Event(models.Model):
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    media_asset_id = models.PositiveIntegerField(blank=True, null=True)
+    media_asset = models.ForeignKey(
+        "media.MediaAsset",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering = ["start_datetime", "event_id"]
