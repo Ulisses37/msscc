@@ -1,7 +1,6 @@
 from django.db import models
 
 
-# serializer allows for easier access to event metadata
 class Event(models.Model):
     """Event record for activities shown on the site."""
 
