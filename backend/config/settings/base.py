@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'media',
+    "board_members",
     "partners",
 ]
 
