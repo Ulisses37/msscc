@@ -32,6 +32,16 @@ export default function EditPagesPage() {
     setBlocks([...blocks, newBlock]);
   };
 
+  // Removing ContentBlock from array.
+  const handleDeleteBlock = (id: string) => {
+    const isConfirmed = window.confirm("Are you sure you want to remove this block? This cannot be undone.");
+    
+    // Use filter() to create a new array without the block chosen for deletion
+    if (isConfirmed) {
+      setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
+    }
+  };
+
   // Updating blocks
   const updateBlock = (updatedBlock: ContentBlock) => {
         setBlocks(blocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b)));
@@ -107,6 +117,7 @@ export default function EditPagesPage() {
                         onUpdateEn={(val) => updateBlock({ ...block, contentEn: val })}
                         onUpdateJa={(val) => updateBlock({ ...block, contentJa: val })}
                         onTranslate={() => handleTranslate(block.id, block.contentEn)}
+                        onDelete={() => handleDeleteBlock(block.id)}
                     />
                 ))}
 
