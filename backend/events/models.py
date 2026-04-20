@@ -20,6 +20,7 @@ class Event(models.Model):
         blank=True,
         null=True,
     )
+    calendar_link = models.URLField(blank=True, null=True)
 
     class Meta:
         ordering = ["start_datetime", "event_id"]
