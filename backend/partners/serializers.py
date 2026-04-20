@@ -18,5 +18,5 @@ class PartnerSerializer(serializers.ModelSerializer):
             "display_order",
             "created_at",
             "updated_at",
-            "media_asset_id",
+            "media_asset",
         ]

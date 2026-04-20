@@ -8,7 +8,12 @@ class BoardMember(models.Model):
     display_name = models.TextField()
     display_order = models.PositiveIntegerField(default=0)
     external_link = models.URLField(blank=True, null=True)
-    media_asset_id = models.PositiveIntegerField(blank=True, null=True)
+    media_asset = models.ForeignKey(
+        "media.MediaAsset",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
     role = models.TextField()
     start_date = models.DateField()
     caption = models.TextField(blank=True)

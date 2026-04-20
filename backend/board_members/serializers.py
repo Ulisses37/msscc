@@ -13,7 +13,7 @@ class BoardMemberSerializer(serializers.ModelSerializer):
             "display_name",
             "display_order",
             "external_link",
-            "media_asset_id",
+            "media_asset",
             "role",
             "start_date",
             "caption",
