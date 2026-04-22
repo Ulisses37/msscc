@@ -1,5 +1,6 @@
 import type { Event } from '@/types/event';
 
+
 // TODO: Replace this mock data with a real fetch from /api/events/ once backend is connected
 export const sampleEvents: Event[] = [
   {
@@ -12,7 +13,10 @@ export const sampleEvents: Event[] = [
     volunteerSlots: 0,
     isPublished: true,
     calendarLink: 'http://www.google.com/calendar/event?action=TEMPLATE&text=MSSCC%20Summer%20Luncheon',
-    media: undefined,
+    media: {
+      fileUrl: '/images/cherry-blossom.jpg',
+      altText: 'Cherry blossoms at Capitol Park'
+    } ,
     createdAt: '2026-04-19T01:38:50.355787Z',
     updatedAt: '2026-04-19T01:38:50.355787Z',
   },
