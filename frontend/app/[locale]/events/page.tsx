@@ -1,6 +1,6 @@
 'use client';
 
-import { EventCard } from './EventCard';
+import { EventCard } from '../../../components/EventCard';
 import type { Event } from '@/types/event';
 import { sampleEvents } from './sampleData';
 
