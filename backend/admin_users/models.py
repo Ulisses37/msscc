@@ -30,7 +30,7 @@ class AdminUser(models.Model):
 
 
     class Meta:
-        ordering = ["is_executive", "created_at", "last_name", "first_name"]
+        ordering = ["-is_executive", "created_at", "last_name", "first_name"]
         db_table = "admin_user"
         verbose_name = "Admin User"
         verbose_name_plural = "Admin Users"

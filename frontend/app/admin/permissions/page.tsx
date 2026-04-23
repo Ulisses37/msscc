@@ -1,12 +1,26 @@
 "use client";
-import { AdminRecord, SampleAdminRecordData } from "./sampleData";
+import { AdminRecord} from "./adminRecord";
 import PermissionCard from "./permissionsCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+
 
 
 export default function AdminPermissionPage() {
+  const [adminRecords, setAdminRecords] = useState<AdminRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentUserInformation, setCurrentLogIn] = useState<AdminRecord | null>(null);
 
+  useEffect(() => {
+    fetch("http://localhost:8000/api/admins/")
+        .then(res => res.json())
+        .then((data: AdminRecord[]) => {
+            setAdminRecords(data);
+            setLoading(false);
+        });
+  }, []);
+
+  console.log("adminRecords:", adminRecords);
   return (
     <div className="flex justify-center min-h-screen">
       <div className="border w-full md:w-[70%] max-w-[1400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
@@ -32,7 +46,7 @@ export default function AdminPermissionPage() {
             <div className="flex-1 shrink"/> {/* Spacing */}
             <p className="text-[clamp(2.5rem,4vw,3.75rem)] font-bold text-black font-serif shrink-0">Permissions</p>
             <div className="flex-1 shrink justify-end align-right flex">
-              {currentUserInformation?.executive &&
+              {currentUserInformation?.is_executive &&
               <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded whitespace-nowrap
               text-[clamp(0.75rem,1.2vw,1rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] px-[clamp(0.75rem,1vw,1rem)]"
               onClick={() => updateDatabase()}>
@@ -41,12 +55,13 @@ export default function AdminPermissionPage() {
             }
             </div>
           </div>
-        {SampleAdminRecordData.map((record) => (
+        {adminRecords.map((record) => (
           <PermissionCard key={record.email} adminInformation={record} currentUserInformation={currentUserInformation ?? null} />
         ))}
       </div>
     </div>
   );
+
 
   function updateDatabase(){
       // Update database logic here
@@ -54,6 +69,6 @@ export default function AdminPermissionPage() {
   }
 
   function getCurrentUser(logInEmail: string){
-    return SampleAdminRecordData.find(record => record.email === logInEmail) ?? null;
+    return adminRecords.find(record => record.email === logInEmail) ?? null;
   }
 }
