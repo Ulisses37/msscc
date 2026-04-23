@@ -1,6 +1,8 @@
 from django.urls import path
+from admin_users import views
 
-from admin_users.views import AdminUserListView
 urlpatterns = [
-    path("", AdminUserListView.as_view(), name="admin-user-list"),
+    path("", views.list_admins),
+    path("<int:admin_user_id>/", views.get_admin),
+    path("<int:admin_user_id>/permissions/", views.update_permissions),
 ]
