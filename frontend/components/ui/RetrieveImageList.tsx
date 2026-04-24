@@ -98,14 +98,16 @@ export function RetrieveImageList({ modelType }: RetrieveImageListProps) {
     <div className="grid grid-cols-2 gap-4">
       {imageRecords.map((record) => (
         <div key={record.id} className="border rounded p-3">
-          {display_name in record ? (
-            <p className="text-sm font-medium">{record.display_name}</p>
-          ) : record.title ? (
-            <p className="text-sm font-medium">{record.title}</p>
+          <p className="text-sm font-medium mb-2">
+            {record.title || record.display_name || `ID: ${record.id}`}
+          </p>
+          {record.media_asset_id ? (
+            <PostImage mediaID={record.media_asset_id} />
           ) : (
-            <p className="text-sm font-medium text-slate-500">No title</p>
+            <div className="w-[300px] h-[300px] flex items-center justify-center bg-slate-100 text-slate-500 text-sm">
+              No image available
+            </div>
           )}
-          <PostImage mediaID={record.media_asset_id ?? 0} />
         </div>
       ))}
       {imageRecords.length === 0 && !isLoading && (
