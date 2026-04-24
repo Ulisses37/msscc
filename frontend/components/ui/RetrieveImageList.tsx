@@ -87,17 +87,24 @@ export function RetrieveImageList({ modelType }: RetrieveImageListProps) {
   }
 
   if (isLoading) {
-    return <div className="p-4 text-sm text-slate-500">Loading images…</div>;
+    return <div className="text-sm text-slate-500">Loading images…</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-sm text-red-600">Error: {error}</div>;
+    return <div className="text-sm text-red-600">Error: {error}</div>;
   }
 
   return (
     <div className="grid grid-cols-2 gap-4">
       {imageRecords.map((record) => (
         <div key={record.id} className="border rounded p-3">
+          {display_name in record ? (
+            <p className="text-sm font-medium">{record.display_name}</p>
+          ) : record.title ? (
+            <p className="text-sm font-medium">{record.title}</p>
+          ) : (
+            <p className="text-sm font-medium text-slate-500">No title</p>
+          )}
           <PostImage mediaID={record.media_asset_id ?? 0} />
         </div>
       ))}

@@ -29,9 +29,10 @@ async function fetchImageById(id: number): Promise<ImageItem> {
 
 type PostImageProps = {
   mediaID: number;
+  className?: string;
 };
 
-export default function PostImage({ mediaID }: PostImageProps) {
+export default function PostImage({ mediaID, className }: PostImageProps) {
   const [image, setImage] = useState<ImageItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,27 +59,23 @@ export default function PostImage({ mediaID }: PostImageProps) {
   }, [mediaID]);
 
   if (isLoading) {
-    return <div className="p-4">Loading…</div>;
+    return <div>Loading…</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">Error: {error}</div>;
+    return <div className="text-red-600">Error: {error}</div>;
   }
 
-  if (!image) {
+  if (!image || !image.file_url) {
     return null;
   }
 
   return (
-    <div className="p-4">
-      {image.file_url && (
-        <img
-          src={image.file_url}
-          alt={image.alt_text || image.file_name}
-          className="max-w-md border rounded"
-        />
-      )}
-    </div>
+    <img
+      src={image.file_url}
+      alt={image.alt_text || image.file_name}
+      className={className ?? "w-auto h-auto"}
+    />
   );
 }
 
