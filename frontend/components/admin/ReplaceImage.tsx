@@ -9,19 +9,20 @@
 
 import React, { useState, useEffect } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
-import PostImage from "@/components/ui/PostImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
 import Image from "next/image";
 
-type ModelType = "events" | "board-members" | "partners";
+type ModelType = "media" | "events" | "board-members" | "partners";
 
 export default function ReplaceImage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelType | null>(null);
+  const [imageMode, setImageMode] = useState<"upload" | "select" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<number | null>(null);
+  const [selectedReplacementId, setSelectedReplacementId] = useState<number | null>(null);
 
   {/** Expect an image for transfer to storage */}
   const uploadImage = async (file: File) => {
@@ -92,39 +93,52 @@ export default function ReplaceImage() {
             </button>
           )}
         </div>
+
+        <RetrieveImageList
+          modelType={selectedModel}
+          onSelect={(mediaAssetId) => setSelectedMediaAssetId(mediaAssetId)}
+          selectedId={selectedMediaAssetId}
+        />
         <div className="text-sm text-slate-600">
           {selectedModel ? `Pick an image` : "No category selected."}
-          <RetrieveImageList modelType={selectedModel} onSelect={(mediaAssetId) => setSelectedMediaAssetId(mediaAssetId)} />
+          <div className="grid grid-cols-2 divide-x divide-slate-300 border rounded-md overflow-hidden text-sm text-slate-600">
+            <button
+              onClick={() =>
+                setImageMode(prev => prev === "upload" ? null : "upload")
+              }
+              className={`flex items-center justify-center p-3 transition ${
+                imageMode === "upload" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"
+              }`}
+            >
+              Import New Image
+            </button>
+            <button
+              onClick={() =>
+                setImageMode(prev => prev === "select" ? null : "select")
+              }
+              className={`flex items-center justify-center p-3 transition ${
+                imageMode === "select" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"
+              }`}
+            >
+              Select Existing Image
+            </button>
+          </div>
         </div>
-        {/* Image upload component */}
-        <ImportImage
-             onChange={(file) => setSelectedFile(file)}
-             label="Upload a replacement image"
-        />
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!selectedFile || isSubmitting}
-            className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
-          >
-            {isSubmitting ? 'Submitting…' : 'Submit Image'}
-          </button>
-          <span className="text-sm text-slate-700">
-            {selectedFile ? selectedFile.name : 'No file selected.'}
-          </span>
-        </div>
-
-        {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-        {uploadedUrl && (
-          <p className="text-sm text-green-700">
-            Image uploaded successfully: <span className="underline">{uploadedUrl}</span>
-          </p>
+        {imageMode === "upload" && (
+          <ImportImage
+            onChange={(file) => setSelectedFile(file)}
+            label="Upload a replacement image"
+          />
         )}
-
+        {imageMode === "select" && (
+          <RetrieveImageList
+            modelType={"media"}
+            onSelect={(mediaAssetId) => setSelectedReplacementId(mediaAssetId)}
+            selectedId={selectedReplacementId}
+          />
+        )}
         {/* Display selected image for reference */}
-        {selectedFile && (
+        {selectedFile && imageMode === "upload" && (
            <div className="mt-6">
              <h4 className="text-lg font-medium mb-2">Selected Image:</h4>
              <Image
@@ -136,7 +150,28 @@ export default function ReplaceImage() {
               />
            </div>
         )}
+        {selectedReplacementId !== null && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!selectedFile || isSubmitting}
+              className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
+            >
+              {isSubmitting ? 'Submitting…' : 'Submit Image'}
+            </button>
+            <span className="text-sm text-slate-700">
+              {selectedFile ? selectedFile.name : 'No file selected.'}
+            </span>
+          </div>
+        )}
 
+        {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+        {uploadedUrl && (
+          <p className="text-sm text-green-700">
+            Image uploaded successfully: <span className="underline">{uploadedUrl}</span>
+          </p>
+        )}
       </div>
 
     </main>
