@@ -13,7 +13,7 @@ import PostImage from "@/components/ui/PostImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
 import Image from "next/image";
 
-type ModelType = "media" | "events" | "board-members" | "partners";
+type ModelType = "events" | "board-members" | "partners";
 
 export default function ReplaceImage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -73,12 +73,6 @@ export default function ReplaceImage() {
       <div className="flex flex-col items-center gap-6">
         Select where you would like to replace an image:
         <div className="flex gap-4">
-          {(selectedModel === "media" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            onClick={() => setSelectedModel(prev =>prev === "media" ? null : "media")}>
-              {selectedModel === null ? "Media" : "Cancel"}
-            </button>
-          )}
           {(selectedModel === "events" || selectedModel === null) && (
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={() => setSelectedModel(prev =>prev === "events" ? null : "events")}>
