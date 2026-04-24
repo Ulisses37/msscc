@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getEvents } from '@/services/eventService';
-import { EventCard } from '../../../components/EventCard';
+import { EventCard } from '../../../components/events/EventCard';
 import type { Event } from '@/types/event';
 
 export default function EventsPage() {
