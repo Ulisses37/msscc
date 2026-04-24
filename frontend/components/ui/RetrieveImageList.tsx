@@ -120,7 +120,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
           <div
             key={record.id}
             className={`border rounded p-3 cursor-pointer transition-all ${
-              isSelected && isModel
+              (isSelected && isModel) || (isSelected && modelType === "media")
                 ? 'ring-2 ring-blue-500 bg-blue-50'
                 : 'hover:ring-1 hover:ring-slate-300'
             }`}
