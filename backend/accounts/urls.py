@@ -1,7 +1,13 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.views import AdminTokenObtainPairView, LogoutView
+from accounts.views import (
+    AdminTokenObtainPairView,
+    LogoutView,
+    list_admins,
+    get_admin,
+    update_permissions,
+)
 
 urlpatterns = [
     path("login/", AdminTokenObtainPairView.as_view(), name="auth-login"),

@@ -10,7 +10,7 @@ function formatPermissionKey(key: string): string {
 
 export default function PermissionCard (
   { adminInformation, currentUserInformation, onPermissionToggle }:
-  {adminInformation:AdminRecord, currentUserInformation: AdminRecord | null, onPermissionToggle: (admin_user_id: number, permissionName: string) => void })
+  {adminInformation:AdminRecord, currentUserInformation: AdminRecord | null, onPermissionToggle: (id: number, permissionName: string) => void })
   {
 
   return (
@@ -29,7 +29,7 @@ export default function PermissionCard (
         {PermissionIcon({
             currentPermission: { permissionName, hasPermission },
             isExecutiveView: currentUserInformation?.is_executive ?? false,
-            onToggle: () => onPermissionToggle(adminInformation.admin_user_id, permissionName)
+            onToggle: () => onPermissionToggle(adminInformation.id, permissionName)
         })}
       </p>
       ))}

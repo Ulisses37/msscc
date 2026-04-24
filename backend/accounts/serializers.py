@@ -1,4 +1,7 @@
+from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from accounts.models import AdminUser
 
 
 class AdminTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -13,3 +16,20 @@ class AdminTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["first_name"] = user.first_name
 
         return token
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Serializer for admin user records on the permissions page."""
+
+    permissions = serializers.JSONField(source="permissions_data")
+
+    class Meta:
+        model = AdminUser
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "is_executive",
+            "permissions",
+        ]

@@ -61,7 +61,7 @@ export default function AdminPermissionPage() {
           </div>
         {adminRecords.map((record) => (
           <PermissionCard
-           key={record.admin_user_id}
+           key={record.id}
            adminInformation={record}
            currentUserInformation={currentUserInformation ?? null}
            onPermissionToggle={handlePermissionToggle}
@@ -75,7 +75,7 @@ export default function AdminPermissionPage() {
   function updateDatabase() {
     Promise.all(
         adminRecords.map(record =>
-            fetch(`http://localhost:8000/api/admins/${record.admin_user_id}/permissions/`, {
+            fetch(`http://localhost:8000/api/admins/${record.id}/permissions/`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ permissions: record.permissions }),
@@ -90,10 +90,10 @@ export default function AdminPermissionPage() {
     return adminRecords.find(record => record.email === logInEmail) ?? null;
   }
 
-  function handlePermissionToggle(admin_user_id: number, permissionName: string) {
+  function handlePermissionToggle(id: number, permissionName: string) {
     setAdminRecords(prev =>
         prev.map(record => {
-            if (record.admin_user_id !== admin_user_id) return record;
+            if (record.id !== id) return record;
             return {
                 ...record,
                 permissions: {
