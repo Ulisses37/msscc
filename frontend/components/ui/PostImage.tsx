@@ -12,11 +12,6 @@ type ImageItem = {
   created_at: string;
 };
 
-/**
- * Fetches a single image by ID from backend/media via MediaDetailView.
- * Calls GET /api/media/<id>/ to retrieve the MediaAsset record from the database.
- * Returns the file_url associated with the given ID.
- */
 async function fetchImageById(id: number): Promise<ImageItem> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`);
 

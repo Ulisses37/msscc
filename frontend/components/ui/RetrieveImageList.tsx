@@ -1,5 +1,3 @@
-//Retrieve image list for preview
-//Accept Modeltype for backend routing
 'use client';
 
 import React, { useEffect, useState } from "react";
@@ -108,12 +106,14 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
     return <div className="text-sm text-red-600">Error: {error}</div>;
   }
 
+  /* List for Clarity, Provides Objects given a ModelType */
   return (
     <div className="grid grid-cols-2 gap-4">
       {imageRecords.map((record) => {
         const mediaAssetId = record.media_asset_id ?? 0;
         const isSelected = selectedId === mediaAssetId;
 
+        // Recursively render image from model's media_asset_id
         return (
           <div
             key={record.id}
@@ -127,6 +127,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
             <p className="text-sm font-medium mb-2">
               {record.title || record.display_name || `ID: ${record.id}`}
             </p>
+
             {record.file_url ? (
               <img src={record.file_url} alt={record.display_name || 'Image'} className="w-[300px] h-[300px] object-cover rounded" />
             ) : record.media_asset_id ? (
@@ -136,6 +137,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
                 No image available
               </div>
             )}
+
           </div>
         );
       })}

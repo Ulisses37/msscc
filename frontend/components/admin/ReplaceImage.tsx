@@ -1,13 +1,6 @@
-//query Selected model >> Get {ID, media_asset_id, file_url, file_name}
-//Display file_url as image, for reference
-//insert new selected media_asset_id into Selected model
-//or import new image, which creates new media_asset_id, then insert that ID into Selected model
-//save Selected model to database
-//Display success message to user
-
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
 import Image from "next/image";
@@ -46,23 +39,25 @@ export default function ReplaceImage() {
     return response.json();
   };
 
-  {/* Response to an image being submitted */}
+  {/* Expect mediaId and modelId for changing old mediaIds*/}
   const handleSubmit = async () => {
     if (!selectedFile && !selectedReplacementId) {
       setSubmitError('Please select an image before submitting.');
       return;
     }
+
     let replacementId = selectedReplacementId;
+
     setIsSubmitting(true);
     setSubmitError(null);
     setUploadedUrl(null);
+
     if (selectedFile && imageMode === "upload") {
       try {
         const data = await uploadImage(selectedFile);
         setUploadedUrl(data.url);
         replacementId = data.media_asset_id;
         setSelectedReplacementId(replacementId); // Use the new media_asset_id for replacement
-        console.log("UPLOAD RESPONSE:", data);
       } catch (error) {
         setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
         setIsSubmitting(false);
@@ -70,9 +65,10 @@ export default function ReplaceImage() {
       }
     }
 
+    // Tightly coupled to API structure, but allows for flexibility in models and media replacement
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/${selectedModel}/${selectedModelId}/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/${selectedModel}/${selectedModelId}/`, //New Models needs APIK changes for PATCH method
         {
           method: 'PATCH',
           headers: {
@@ -130,6 +126,7 @@ export default function ReplaceImage() {
           }}
           selectedId={selectedMediaAssetId}
         />
+
         <div className="text-sm text-slate-600">
           {selectedModel ? `Pick an image` : "No category selected."}
           <div className="grid grid-cols-2 divide-x divide-slate-300 border rounded-md overflow-hidden text-sm text-slate-600">
@@ -155,12 +152,14 @@ export default function ReplaceImage() {
             </button>
           </div>
         </div>
+
         {imageMode === "upload" && (
           <ImportImage
             onChange={(file) => setSelectedFile(file)}
             label="Upload a replacement image"
           />
         )}
+
         {imageMode === "select" && (
           <RetrieveImageList
             modelType={"media"}
@@ -168,7 +167,8 @@ export default function ReplaceImage() {
             selectedId={selectedReplacementId}
           />
         )}
-        {/* Display selected image for reference */}
+
+        {/* Inactive will reduce UI clutter */}
         {selectedFile && imageMode === "upload" && (
            <div className="mt-6">
              <h4 className="text-lg font-medium mb-2">Selected Image:</h4>
@@ -181,6 +181,8 @@ export default function ReplaceImage() {
               />
            </div>
         )}
+
+        {/* Inactive will reduce UI clutter */}
         {imageMode !== null && (
           <div className="flex items-center gap-3">
             <button
