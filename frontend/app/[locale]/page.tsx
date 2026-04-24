@@ -1,7 +1,7 @@
 // Third-Party
 import React from 'react';
 import Image from 'next/image';
-import img from '/./src/assets/illustration.jpg';
+import img from '@/assets/Illustration.jpg';
 import { useTranslations } from 'next-intl';
 
 /**
