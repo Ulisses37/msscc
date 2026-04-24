@@ -8,7 +8,7 @@ import { EventDetail } from '@/components/events/EventDetails';
 import type { Event } from '@/types/event';
 
 export default function EventDetailPage() {
-  const { id } = useParams();
+  const { id, locale } = useParams();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -73,7 +73,7 @@ export default function EventDetailPage() {
           This event does not exist or is no longer available.
         </p>
         <Link
-          href="/events"
+          href={`/${locale}/events`}
           style={{
             color: 'var(--color-teal)',
             fontFamily: 'var(--font-body)',
@@ -95,6 +95,24 @@ export default function EventDetailPage() {
       margin: '0 auto',
       padding: 'var(--space-10) var(--space-6)',
     }}>
+
+      {/* Back to events link */}
+      <Link
+        href={`/${locale}/events`}
+        style={{
+          color: 'var(--color-teal)',
+          fontFamily: 'var(--font-body)',
+          fontSize: 'var(--fs-body-sm)',
+          textDecoration: 'none',
+          display: 'inline-block',
+          marginBottom: 'var(--space-6)',
+        }}
+        onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+        onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+      >
+        ← Back to events
+      </Link>
+
       {event && <EventDetail event={event} />}
     </main>
   );
