@@ -17,6 +17,7 @@ type RetrieveImageListProps = {
   modelType: ModelType | null;
   onSelect?: (mediaAssetId: number, modelId: number) => void;
   selectedId?: number | null;
+  selectedModelId?: number | null;
 };
 
 const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
@@ -26,7 +27,7 @@ const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
   "media": `${process.env.NEXT_PUBLIC_API_URL}/api/media/`,
 };
 
-export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveImageListProps) {
+export function RetrieveImageList({ modelType, onSelect, selectedId, selectedModelId }: RetrieveImageListProps) {
   const [imageRecords, setImageRecords] = useState<ImageRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,17 +109,18 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
 
   /* List for Clarity, Provides Objects given a ModelType */
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-4 justify-items-center">
       {imageRecords.map((record) => {
         const mediaAssetId = record.media_asset_id ?? 0;
         const isSelected = selectedId === mediaAssetId;
+        const isModel = selectedModelId === record.id;
 
         // Recursively render image from model's media_asset_id
         return (
           <div
             key={record.id}
             className={`border rounded p-3 cursor-pointer transition-all ${
-              isSelected
+              isSelected && isModel
                 ? 'ring-2 ring-blue-500 bg-blue-50'
                 : 'hover:ring-1 hover:ring-slate-300'
             }`}
@@ -133,8 +135,10 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
             ) : record.media_asset_id ? (
               <PostImage mediaID={record.media_asset_id} />
             ) : (
-              <div className="w-[300px] h-[300px] flex items-center justify-center bg-slate-100 text-slate-500 text-sm">
-                No image available
+              <div className="w-[300px] h-[150px] mx-auto flex items-center justify-center bg-slate-100 text-slate-500 text-sm overflow-hidden rounded">
+                <span className="px-4 text-center leading-snug">
+                  No image available
+                </span>
               </div>
             )}
 

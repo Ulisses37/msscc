@@ -125,6 +125,7 @@ export default function ReplaceImage() {
             setSelectedModelId(modelId);
           }}
           selectedId={selectedMediaAssetId}
+          selectedModelId={selectedModelId}
         />
 
         <div className="text-sm text-slate-600">
