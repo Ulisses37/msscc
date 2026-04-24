@@ -9,3 +9,11 @@ class PartnerListView(generics.ListAPIView):
 
     queryset = Partner.objects.all().order_by("display_order", "partner_id")
     serializer_class = PartnerSerializer
+
+
+class PartnerDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a single partner."""
+
+    queryset = Partner.objects.all()
+    serializer_class = PartnerSerializer
+    lookup_field = "partner_id"
