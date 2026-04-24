@@ -77,7 +77,7 @@ export function EventDetail({ event }: EventDetailProps) {
           color: 'var(--color-gray-mid)',
           margin: 0,
         }}>
-          🗓 {isSameDay(event.startDatetime, event.endDatetime)
+          {isSameDay(event.startDatetime, event.endDatetime)
             ? formatDateTime(event.startDatetime)
             : `${formatDateTime(event.startDatetime)} – ${formatDateTime(event.endDatetime)}`
           }
