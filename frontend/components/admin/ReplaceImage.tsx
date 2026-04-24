@@ -23,6 +23,7 @@ export default function ReplaceImage() {
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<number | null>(null);
   const [selectedReplacementId, setSelectedReplacementId] = useState<number | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
 
   {/** Expect an image for transfer to storage */}
   const uploadImage = async (file: File) => {
@@ -47,23 +48,47 @@ export default function ReplaceImage() {
 
   {/* Response to an image being submitted */}
   const handleSubmit = async () => {
-    if (!selectedFile) {
+    if (!selectedFile && !selectedReplacementId) {
       setSubmitError('Please select an image before submitting.');
       return;
     }
-
+    let replacementId = selectedReplacementId;
     setIsSubmitting(true);
     setSubmitError(null);
     setUploadedUrl(null);
+    if (selectedFile && imageMode === "upload") {
+      try {
+        const data = await uploadImage(selectedFile);
+        setUploadedUrl(data.url);
+        replacementId = data.media_asset_id;
+        setSelectedReplacementId(replacementId); // Use the new media_asset_id for replacement
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
+      }
+    }
 
     try {
-      const data = await uploadImage(selectedFile);
-      setUploadedUrl(data.url);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/${selectedModel}/${selectedModelId}/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ media_asset: selectedReplacementId }),
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to update record.');
+      }
+      setSubmitError(null);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
+      setSubmitError(error instanceof Error ? error.message : 'Failed to update record.');
     } finally {
       setIsSubmitting(false);
     }
+
   };
 
 
@@ -72,7 +97,7 @@ export default function ReplaceImage() {
       <h3 className="text-1xl mb-6">Replace Image</h3>
 
       <div className="flex flex-col items-center gap-6">
-        Select where you would like to replace an image:
+        Select what image you would like to replace:
         <div className="flex gap-4">
           {(selectedModel === "events" || selectedModel === null) && (
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -96,7 +121,10 @@ export default function ReplaceImage() {
 
         <RetrieveImageList
           modelType={selectedModel}
-          onSelect={(mediaAssetId) => setSelectedMediaAssetId(mediaAssetId)}
+          onSelect={(mediaAssetId, modelId) => {
+            setSelectedMediaAssetId(mediaAssetId);
+            setSelectedModelId(modelId);
+          }}
           selectedId={selectedMediaAssetId}
         />
         <div className="text-sm text-slate-600">
@@ -150,18 +178,25 @@ export default function ReplaceImage() {
               />
            </div>
         )}
-        {selectedReplacementId !== null && (
+        {imageMode !== null && (
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!selectedFile || isSubmitting}
+              disabled={
+                isSubmitting ||
+                (imageMode === "upload" && !selectedFile) ||
+                (imageMode === "select" && !selectedReplacementId)
+              }
               className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
             >
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
             <span className="text-sm text-slate-700">
               {selectedFile ? selectedFile.name : 'No file selected.'}
+              {selectedReplacementId && imageMode === "select" && (
+                <span className="ml-2">Selected: {selectedReplacementId}</span>
+              )}
             </span>
           </div>
         )}

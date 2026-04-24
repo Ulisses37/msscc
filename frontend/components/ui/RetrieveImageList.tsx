@@ -17,7 +17,7 @@ type ImageRecord = {
 
 type RetrieveImageListProps = {
   modelType: ModelType | null;
-  onSelect?: (mediaAssetId: number) => void;
+  onSelect?: (mediaAssetId: number, modelId: number) => void;
   selectedId?: number | null;
 };
 
@@ -111,9 +111,9 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
   return (
     <div className="grid grid-cols-2 gap-4">
       {imageRecords.map((record) => {
-        const mediaAssetId = record.media_asset_id ?? 0;
+        const mediaAssetId = record.media_asset_id;
         const isSelected = selectedId === mediaAssetId;
-
+        if (!mediaAssetId) return;
         return (
           <div
             key={record.id}
@@ -122,7 +122,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
                 ? 'ring-2 ring-blue-500 bg-blue-50'
                 : 'hover:ring-1 hover:ring-slate-300'
             }`}
-            onClick={() => onSelect?.(mediaAssetId)}
+            onClick={() => onSelect?.(mediaAssetId, record.id)}
           >
             <p className="text-sm font-medium mb-2">
               {record.title || record.display_name || `ID: ${record.id}`}
