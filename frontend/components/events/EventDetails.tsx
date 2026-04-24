@@ -66,9 +66,8 @@ export function EventDetail({ event }: EventDetailProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-2)',
-        marginBottom: 'var(--space-6)',
-        paddingBottom: 'var(--space-6)',
-        borderBottom: '0.5px solid var(--color-gray-light)',
+        marginBottom: 'var(--space-4)',
+        paddingBottom: 'var(--space-4)',
       }}>
 
         {/* Date — shows both start and end if they differ */}
