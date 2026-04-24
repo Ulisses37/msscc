@@ -45,12 +45,16 @@ INSTALLED_APPS = [
     'storages',
     'rest_framework',
 
+    'accounts',
+
     'media',
     "events",
     "board_members",
     "partners",
     "admin_users",
 ]
+
+AUTH_USER_MODEL = "accounts.AdminUser"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
