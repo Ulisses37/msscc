@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
 import { ImageDeletionManager } from "@/components/ui/ImageDeletionManager";
+import ReplaceImage from "@/components/admin/ReplaceImage";
 
 
 export default function Dashboard() {
@@ -122,6 +123,14 @@ export default function Dashboard() {
       {showDeleteManager && (
         <ImageDeletionManager onClose={() => setShowDeleteManager(false)} />
       )}
+
+      <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+        <h2 className="text-xl font-medium mb-4">Additional Admin Tools</h2>
+        <p className="text-sm text-slate-600">
+          Placeholder for future administrative functionalities.
+        </p>
+        <ReplaceImage />
+      </section>
     </main>
   );
 }
