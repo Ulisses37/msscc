@@ -3,15 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { getEventById } from '@/services/eventService';
+import { getEventById, getEvents } from '@/services/eventService';
 import { EventDetail } from '@/components/events/EventDetails';
 import type { Event } from '@/types/event';
+import { EventNavigation } from '@/components/events/EventNavigation';
 
 export default function EventDetailPage() {
   const { id, locale } = useParams();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [previousEvent, setPreviousEvent] = useState<Event | null>(null);
+  const [nextEvent, setNextEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -19,9 +22,23 @@ export default function EventDetailPage() {
 
       if (!data || !data.isPublished) {
         setNotFound(true);
-      } else {
-        setEvent(data);
+        setLoading(false);
+        return;
       }
+
+      setEvent(data);
+
+      // Fetch all published events, sort chronologically, find adjacent events
+      const allEvents = await getEvents();
+      const sorted = allEvents
+        .filter((e) => e.isPublished)
+        .sort((a, b) =>
+          new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
+        );
+
+      const currentIndex = sorted.findIndex((e) => e.id === Number(id));
+      setPreviousEvent(currentIndex > 0 ? sorted[currentIndex - 1] : null);
+      setNextEvent(currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null);
 
       setLoading(false);
     };
@@ -114,6 +131,13 @@ export default function EventDetailPage() {
       </Link>
 
       {event && <EventDetail event={event} />}
+
+      {/* Previous / next navigation */}
+      <EventNavigation
+        previousEvent={previousEvent}
+        nextEvent={nextEvent}
+      />
+
     </main>
   );
 }
