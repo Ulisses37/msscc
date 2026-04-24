@@ -62,8 +62,11 @@ export default function ReplaceImage() {
         setUploadedUrl(data.url);
         replacementId = data.media_asset_id;
         setSelectedReplacementId(replacementId); // Use the new media_asset_id for replacement
+        console.log("UPLOAD RESPONSE:", data);
       } catch (error) {
         setSubmitError(error instanceof Error ? error.message : 'Upload failed.');
+        setIsSubmitting(false);
+        return;
       }
     }
 
@@ -75,7 +78,7 @@ export default function ReplaceImage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ media_asset: selectedReplacementId }),
+          body: JSON.stringify({ media_asset: replacementId }),
         }
       );
       if (!response.ok) {

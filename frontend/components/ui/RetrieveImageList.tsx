@@ -111,9 +111,9 @@ export function RetrieveImageList({ modelType, onSelect, selectedId }: RetrieveI
   return (
     <div className="grid grid-cols-2 gap-4">
       {imageRecords.map((record) => {
-        const mediaAssetId = record.media_asset_id;
+        const mediaAssetId = record.media_asset_id ?? 0;
         const isSelected = selectedId === mediaAssetId;
-        if (!mediaAssetId) return;
+
         return (
           <div
             key={record.id}
