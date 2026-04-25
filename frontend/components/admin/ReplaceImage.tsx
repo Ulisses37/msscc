@@ -172,7 +172,6 @@ export default function ReplaceImage() {
         {/* Inactive will reduce UI clutter */}
         {selectedFile && imageMode === "upload" && (
            <div className="mt-6">
-             <h4 className="text-lg font-medium mb-2">Selected Image:</h4>
              <Image
                src={URL.createObjectURL(selectedFile)}
                alt="Selected for replacement"
