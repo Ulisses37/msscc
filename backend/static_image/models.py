@@ -6,7 +6,6 @@ class static_image(models.Model):
 
     static_image_id = models.AutoField(primary_key=True)
     label = models.TextField()
-    external_link = models.URLField(blank=True, null=True)
     media_asset = models.ForeignKey(
         "media.MediaAsset",
         on_delete=models.SET_NULL,

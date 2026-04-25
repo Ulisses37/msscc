@@ -1,9 +1,8 @@
 from django.urls import path
 
-from .views import
+from .views import StaticImageListView, StaticImageDetailView
 
 urlpatterns = [
-    path("", MediaListView.as_view()),
-    path("upload/", MediaUploadView.as_view()),
-    path("<int:pk>/", MediaDetailView.as_view()),
+    path("", StaticImageListView.as_view(), name="static-image-list"),
+    path("<int:static_image_id>/", StaticImageDetailView.as_view(), name="static-image-detail"),
 ]

@@ -1,6 +1,6 @@
 # backend/static_images/serializers.py
 from rest_framework import serializers
-from .models import static_images
+from .models import static_image
 
 # serializer allows for easier access to static image metadata
 class StaticImageSerializer(serializers.ModelSerializer):

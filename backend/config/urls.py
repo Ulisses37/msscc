@@ -28,4 +28,5 @@ urlpatterns = [
     path("api/partners/", include("partners.urls")),
     path("api/auth/", include("accounts.urls")),
     path("api/admins/", include("accounts.urls_admins")),
+    path("api/static-images/", include("static_image.urls")),
 ]
