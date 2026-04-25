@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
+import { isValidEmail } from '@/utils/emailValidation';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,16 +37,26 @@ export function LoginModal({ onClose }: LoginModalProps) {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
+  const canSubmit = email.length > 0 && password.length > 0 && !isSubmitting;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!canSubmit) return;
+
+    if (!isValidEmail(email)) {
+      setSubmitError('Please enter a valid email address');
+      return;
+    }
+
     setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
       await login(email, password);
       onClose();
       router.push('/admin/dashboard');
     } catch {
-      // SCRUM-83 will handle error display; for now just stop the spinner
+      setSubmitError('Invalid email or password');
       setIsSubmitting(false);
     }
   };
@@ -93,9 +105,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
             />
           </label>
 
+          {submitError && (
+            <span className="text-body-sm text-msscc-danger">{submitError}</span>
+          )}
+
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={!canSubmit}
             className="mt-2 rounded-sm bg-msscc-teal px-4 py-2 text-btn tracking-btn text-msscc-white transition-colors hover:bg-msscc-teal-dark disabled:opacity-60"
           >
             {isSubmitting ? 'Logging in…' : 'Log In'}

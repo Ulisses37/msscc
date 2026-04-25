@@ -15,6 +15,9 @@ interface AuthProviderProps {
 }
 
 // Dev User Details
+// TODO(pre-delivery): Remove the dev auto-login toggle before handing the
+// product to MSSCC. The DEV_AUTO_LOGIN block, DEV_USER constant, and the
+// NEXT_PUBLIC_DEV_AUTO_LOGIN env var should all go.
 const DEV_AUTO_LOGIN = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN === 'true';
 
 const DEV_USER: UserPayload = {
