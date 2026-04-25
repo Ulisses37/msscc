@@ -10,7 +10,7 @@ class ContentSerializer(serializers.ModelSerializer):
             "content_id",
             "page_id",
             "display_order",
-            "type",
+            "content_type",
             "media_asset",
             "content_en",
             "content_ja",
