@@ -19,7 +19,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [emailTouched, setEmailTouched] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,14 +37,16 @@ export function LoginModal({ onClose }: LoginModalProps) {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  const emailIsValid = isValidEmail(email);
-  const passwordIsValid = password.length > 0;
-  const canSubmit = emailIsValid && passwordIsValid && !isSubmitting;
-  const showEmailError = emailTouched && email.length > 0 && !emailIsValid;
+  const canSubmit = email.length > 0 && password.length > 0 && !isSubmitting;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSubmit) return;
+
+    if (!isValidEmail(email)) {
+      setSubmitError('Please enter a valid email address');
+      return;
+    }
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -88,16 +89,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              onBlur={() => setEmailTouched(true)}
-              aria-invalid={showEmailError}
               required
               className="px-3 py-2"
             />
-            {showEmailError && (
-              <span className="text-body-sm text-msscc-danger">
-                Please enter a valid email address
-              </span>
-            )}
           </label>
 
           <label className="flex flex-col gap-1">
