@@ -5,7 +5,7 @@ class Content(models.Model):
 
     content_id = models.AutoField(primary_key=True)
     page_id = models.ForeignKey(
-        "pages.Page",
+        "page.Page",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
