@@ -1,8 +1,6 @@
 import type { Event } from '@/types/event';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
-
-// TODO: Move API_BASE_URL to an environment variable before deploying to production
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 interface RawEvent {
   event_id: number;
   title: string;
