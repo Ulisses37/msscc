@@ -23,18 +23,20 @@ export function OfficerCard({
         <img
           src={boardMemberImageURL}
           alt={`${boardMemberName} portrait`}
-          className="mx-auto h-48 w-48 "
+          className="mx-auto h-24 w-24 sm:h-32 sm:w-32 md:h-48 md:w-48 lg:h-64 lg:w-64"
         />
       ) : (
-        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-slate-500">
+        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-white">
           No photo
         </div>
       )}
-      <p className="pb-3 pt-3 mt-2 font-serif text-white text-[clamp(0.75rem,2vw,1.5rem)]">
+      <p className="pb-3 pt-3 mt-2 font-serif text-white text-[clamp(0.75rem,2vw,1.75rem)]">
         <span className="block">{boardMemberName} -</span>
         <span className="block leading-tight">{boardMemberRole}</span>
       </p>
-      <p className="text-sm text-white font-serif text-[clamp(0.25rem,2vw,1.0rem)]">{boardMemberCaption}</p>
+      <p className="font-serif text-white text-[clamp(0.25rem,1.5vw,1.0rem)]">
+        {boardMemberCaption}
+      </p>
     </div>
   );
 }
@@ -44,22 +46,22 @@ export function DirectorCard({
   boardMemberImageURL
 }: DirectorCardProps) {
   return (
-    <div className="text-center align-middle">
+    <div className="text-center w-24 sm:w-32 md:w-40 lg:w-48">
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={boardMemberImageURL}
           alt={`${boardMemberName} portrait`}
-          className="mx-auto h-32 w-32 rounded-full object-cover"
+          className="mx-auto h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 lg:h-48 lg:w-48"
         />
       ) : (
-        <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-200 text-sm text-slate-500">
+        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-white">
           No photo
         </div>
       )}
-      <h1 className="mt-2 font-semibold">
+      <p className="mt-2 font-serif text-white text-[clamp(0.5rem,1.5vw,1.25rem)]">
         {boardMemberName}
-      </h1>
+      </p>
     </div>
   );
 }

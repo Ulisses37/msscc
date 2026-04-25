@@ -57,7 +57,16 @@ export default function AboutPage() {
       <div className="min-h-40">
         <h1 className="text-4xl font-bold text-center mt-6 mb-2">About Us</h1>
       </div>
+
       <div className="bg-msscc-teal p-0 m-0 min-h-screen">
+        <p className="text-6xl text-center font-serif text-white mb-6 pt-8">
+          Board of Directors
+        </p>
+
+        <p className="text-3xl text-center font-serif text-white mb-4">
+          Officers
+        </p>
+
         {/* Officers Section */}
         <div className="grid gap-2 grid-cols-6 justify-center text-center mb-6">
           <div className="col-span-1" /> {/* left spacer */}
@@ -78,7 +87,12 @@ export default function AboutPage() {
         <div className="col-span-1" /> {/* right spacer */}
 
         {/* Directors Section */}
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
+        <div className="text-center mt-12 mb-6">
+          <p className="text-3xl text-center font-serif text-white mb-4">
+            Directors
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center align-middle gap-12 mb-6 w-[70%] mx-auto">
           {boardMembers.map((member) => {
           if (member.boardMemberRole == "Director") {
             return (
