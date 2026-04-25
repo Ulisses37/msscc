@@ -8,6 +8,7 @@ from accounts.views import (
     get_admin,
     update_permissions,
     password_reset_request,
+    password_reset_confirm,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="auth-token-refresh"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("password-reset/", password_reset_request, name="auth-password-reset"),
+    path("password-reset/confirm/", password_reset_confirm, name="auth-password-reset-confirm"),
 ]
