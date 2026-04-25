@@ -9,6 +9,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from accounts.models import AdminUser
 from accounts.serializers import AdminTokenObtainPairSerializer, AdminUserSerializer
 
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.conf import settings
+
+from accounts.utils import send_password_reset_email
+
 
 class AdminTokenObtainPairView(TokenObtainPairView):
     """Return access and refresh tokens for valid admin credentials."""
@@ -49,3 +56,26 @@ def update_permissions(request, admin_id):
     admin.permissions_data = request.data["permissions"]
     admin.save()
     return Response({"success": True})
+
+@api_view(["POST"])
+def password_reset_request(request):
+    """Send a password reset link to the email if an account exists. Always returns 200."""
+    email = request.data.get("email", "").strip()
+
+    if email:
+        try:
+            user = AdminUser.objects.get(email=email)
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}&uid={uid}"
+
+            try:
+                send_password_reset_email(user.email, reset_link)
+            except Exception:
+                pass
+        except AdminUser.DoesNotExist:
+            pass
+
+    return Response(
+        {"detail": "If an account exists with that email, a reset link has been sent."}
+    )
