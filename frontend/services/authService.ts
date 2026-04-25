@@ -1,20 +1,6 @@
 import type { AuthTokens, UserPayload } from '@/types/auth';
 
-const MOCK_DELAY_MS = 800;
-
-const MOCK_TOKENS: AuthTokens = {
-  access: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6ImFkbWluQG1zc2NjMS5vcmciLCJmaXJzdF9uYW1lIjoiQnJ5YW4iLCJleHAiOjk5OTk5OTk5OTl9.mock_signature',
-  refresh: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjk5OTk5OTk5OTl9.mock_refresh_signature',
-};
-
-const MOCK_EMAIL = 'admin@msscc1.org';
-const MOCK_PASSWORD = 'admin123';
-
-function simulateDelay(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, MOCK_DELAY_MS);
-  });
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 /** Decode user payload from the middle segment of a JWT. */
 export function decodeTokenPayload(accessToken: string): UserPayload {
@@ -28,37 +14,37 @@ export function decodeTokenPayload(accessToken: string): UserPayload {
   };
 }
 
-/**
- * Simulate POST /api/auth/login/ (TokenObtainPairView).
- *
- * TODO(ulisses): Replace mock with real fetch to Django backend.
- */
+/** POST /api/auth/login/ — returns access and refresh tokens on success. */
 export async function loginRequest(
   email: string,
   password: string,
 ): Promise<AuthTokens> {
-  await simulateDelay();
+  const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
 
-  if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-    return MOCK_TOKENS;
+  if (!response.ok) {
+    throw new Error('Invalid credentials');
   }
 
-  throw new Error('Invalid credentials');
+  return response.json();
 }
 
-/**
- * Simulate POST /api/auth/token/refresh/ (TokenRefreshView).
- *
- * TODO(ulisses): Replace mock with real fetch to Django backend.
- */
+/** POST /api/auth/token/refresh/ — returns a new access token. */
 export async function refreshRequest(
   refreshToken: string,
 ): Promise<{ access: string }> {
-  await simulateDelay();
+  const response = await fetch(`${API_BASE_URL}/api/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
 
-  if (refreshToken === MOCK_TOKENS.refresh) {
-    return { access: MOCK_TOKENS.access };
+  if (!response.ok) {
+    throw new Error('Token refresh failed');
   }
 
-  throw new Error('Token refresh failed');
+  return response.json();
 }
