@@ -54,30 +54,45 @@ export default function AboutPage() {
 
   return (
     <main>
-      {boardMembers.map((member) => {
-        if (member.boardMemberRole !== "Director") {
-          return (
-            <OfficerCard
-              key={member.boardMemberName}
-              boardMemberName={member.boardMemberName}
-              boardMemberRole={member.boardMemberRole}
-              boardMemberCaption={member.boardMemberCaption ?? ""}
-              boardMemberImageURL={member.boardMemberImageURL}
-            />
-          );
-        }
-      })}
+      <div className="min-h-40">
+        <h1 className="text-4xl font-bold text-center mt-6 mb-2">About Us</h1>
+      </div>
+      <div className="bg-msscc-teal p-0 m-0 min-h-screen">
+        {/* Officers Section */}
+        <div className="grid gap-2 grid-cols-6 justify-center text-center mb-6">
+          <div className="col-span-1" /> {/* left spacer */}
             {boardMembers.map((member) => {
-        if (member.boardMemberRole == "Director") {
-          return (
-            <DirectorCard
-              key={member.boardMemberName}
-              boardMemberName={member.boardMemberName}
-              boardMemberImageURL={member.boardMemberImageURL}
-            />
-          );
-        }
-      })}
+            if (member.boardMemberRole !== "Director") {
+              return (
+                <OfficerCard
+                  key={member.boardMemberName}
+                  boardMemberName={member.boardMemberName}
+                  boardMemberRole={member.boardMemberRole}
+                  boardMemberCaption={member.boardMemberCaption ?? ""}
+                  boardMemberImageURL={member.boardMemberImageURL}
+                />
+              );
+            }
+          })}
+          </div>
+        <div className="col-span-1" /> {/* right spacer */}
+
+        {/* Directors Section */}
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {boardMembers.map((member) => {
+          if (member.boardMemberRole == "Director") {
+            return (
+              <DirectorCard
+                key={member.boardMemberName}
+                boardMemberName={member.boardMemberName}
+                boardMemberImageURL={member.boardMemberImageURL}
+                />
+              );
+            }
+          })}
+        </div>
+
+      </div>
     </main>
   );
 }
