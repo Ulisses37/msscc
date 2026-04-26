@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { useAuth } from '@/context/AuthContext';
 import { isValidEmail } from '@/utils/emailValidation';
@@ -108,6 +109,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
           {submitError && (
             <span className="text-body-sm text-msscc-danger">{submitError}</span>
           )}
+
+          <Link
+            href="/forgot-password"
+            onClick={onClose}
+            className="text-body-sm text-msscc-teal hover:underline"
+          >
+            Forgot password?
+          </Link>
 
           <button
             type="submit"
