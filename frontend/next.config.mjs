@@ -15,7 +15,19 @@ const nextConfig = {
 
   //enables images from external storage server
   images: {
-    domains: ["msscc-storage.uahomeserver.net"],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'msscc-storage.uahomeserver.net',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/**',
+      },
+    ],
   },
 
   // Used to make it so that Webpack only outputs errors when needed
