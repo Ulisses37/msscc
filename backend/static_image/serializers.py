@@ -10,6 +10,6 @@ class StaticImageSerializer(serializers.ModelSerializer):
         model = StaticImage
         fields = [
             "static_image_id",
-            "label",
+            "display_name",
             "media_asset",
         ]

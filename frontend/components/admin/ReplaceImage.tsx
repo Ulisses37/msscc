@@ -119,7 +119,7 @@ export default function ReplaceImage() {
           {(selectedModel === "static-images" || selectedModel === null) && (
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={() => setSelectedModel(prev =>prev === "static-images" ? null : "static-images")}>
-              {selectedModel === null ? "Static Images" : "Cancel"}
+              {selectedModel === null ? "Icons" : "Cancel"}
             </button>
           )}
         </div>

@@ -34,24 +34,37 @@ export default function PostStaticMedia({ staticImageId, className , configVaria
   const placeholder = 0; // ID of a default placeholder static image to use when no valid ID is provided
   const [staticImage, setStaticImage] = useState<StaticImageItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const fetchedId = staticImageId || placeholder; // Use provided ID or fallback to placeholder
     const fetchStaticObject = async () => {
       setError(null);
+      setIsLoading(true);
       try {
         const staticObject = await fetchStaticImageById(fetchedId);
         setStaticImage(staticObject);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Static Retrieval Error');
         setStaticImage(null);
+      } finally {
+        setIsLoading(false);
       }
+
     };
 
     fetchStaticObject();
   }, [staticImageId]);
 
-  if (error || !staticImage) {
+  if (isLoading) {
+    return <div>Loading.</div>;
+  }
+
+  if (error) {
     return <div>Error: {error}</div>;
+  }
+
+  if (!staticImage) {
+    return <div>No media asset associated with this static image.</div>;
   }
 
   return (
