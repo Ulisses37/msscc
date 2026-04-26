@@ -133,43 +133,45 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
           )}
 
           <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="min-w-full text-left text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-slate-700">
-                  <th className="px-4 py-3">Select</th>
-                  <th className="px-4 py-3">Filename</th>
-                  <th className="px-4 py-3">Upload Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {imageItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
-                      {isLoading ? 'Loading images…' : 'No stored images found.'}
-                    </td>
+            <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+              <table className="min-w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 z-10">
+                  <tr className="text-slate-700">
+                    <th className="px-4 py-3">Select</th>
+                    <th className="px-4 py-3">Filename</th>
+                    <th className="px-4 py-3">Upload Date</th>
                   </tr>
-                ) :
-
-                (imageItems.map((item) => (
-                    <tr key={item.media_asset_id} className="border-t border-slate-100">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.media_asset_id)}
-                          onChange={() => toggleSelection(item.media_asset_id)}
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                        />
-                      </td>
-                      <td className="px-4 py-3">{item.file_name}</td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {new Date(item.created_at).toLocaleString()}
+                </thead>
+                <tbody>
+                  {imageItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-10 text-center text-slate-500">
+                        {isLoading ? 'Loading images…' : 'No stored images found.'}
                       </td>
                     </tr>
-                  ))
-                )}
+                  ) :
 
-              </tbody>
-            </table>
+                  (imageItems.map((item) => (
+                      <tr key={item.media_asset_id} className="border-t border-slate-100">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(item.media_asset_id)}
+                            onChange={() => toggleSelection(item.media_asset_id)}
+                            className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                          />
+                        </td>
+                        <td className="px-4 py-3">{item.file_name}</td>
+                        <td className="px-4 py-3 text-slate-600">
+                          {new Date(item.created_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

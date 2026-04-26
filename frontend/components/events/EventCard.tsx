@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import type { Event } from '@/types/event';
+import { useParams } from 'next/navigation';
 
 interface EventCardProps {
   event: Event;
@@ -33,7 +34,8 @@ function truncate(text: string, maxLength: number = 100): string {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const eventUrl = `/events/${event.id}`;
+  const { locale } = useParams();
+  const eventUrl = `/${locale}/events/${event.id}`;
 
   return (
     <div

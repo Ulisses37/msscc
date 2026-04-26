@@ -28,4 +28,8 @@ urlpatterns = [
     path("api/partners/", include("partners.urls")),
     path("api/admins/", include("admin_users.urls")),
     path("api/admin/admin_support/", include("admin_support.urls")),
+    path("api/auth/", include("accounts.urls")),
+    path("api/admins/", include("accounts.urls_admins")),
+    path("api/page/", include("page.urls")),
+    path("api/content/", include("content.urls")),
 ]

@@ -9,3 +9,11 @@ class BoardMemberListView(generics.ListAPIView):
 
     queryset = BoardMember.objects.all().order_by("display_order", "board_member_id")
     serializer_class = BoardMemberSerializer
+
+
+class BoardMemberDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a single board member."""
+
+    queryset = BoardMember.objects.all()
+    serializer_class = BoardMemberSerializer
+    lookup_field = "board_member_id"
