@@ -3,8 +3,10 @@
 
 import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
+import SupportForm from '@/components/ui/SupportForm';
 
 export default function AdminDocumentationPage() {
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   //list of permisons with breif description of each
   const permissions = [
@@ -16,6 +18,7 @@ export default function AdminDocumentationPage() {
   ];
 
   return (
+    
     <div className="max-w-5xl mx-auto p-6 space-y-10">
       <h1>Documentation Page</h1>
 
@@ -75,10 +78,21 @@ export default function AdminDocumentationPage() {
           text="Contact Support" 
           padding="12px 32px"
           fontSize="16px"
+          onClick={() => setIsSupportModalOpen(true)} 
         />
       </section>
 
-      {/* Support Form to be implimented */}
+      {/* Support Form*/}
+      {isSupportModalOpen && (
+        <div 
+          className="fixed inset-0 z- flex items-center justify-center bg-black/40 backdrop-blur-md"
+          style={{ margin: 0, padding: 0 }} // Ensures no inherited spacing
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-[90%] max-w-lg overflow-hidden border border-gray-100">
+            <SupportForm onClose={() => setIsSupportModalOpen(false)} />
+          </div>
+        </div>
+      )}
       
     </div>
   );

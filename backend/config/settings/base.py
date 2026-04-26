@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "board_members",
     "partners",
     "admin_users",
+    'admin_support'
 ]
 
 MIDDLEWARE = [
