@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "events",
     "board_members",
     "partners",
+    "page",
+    "content",
     "static_image",
 ]
 
@@ -181,3 +183,8 @@ STORAGES = {
     },
 }
 
+# Resend Configuration
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")

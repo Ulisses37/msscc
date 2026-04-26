@@ -33,3 +33,10 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "is_executive",
             "permissions",
         ]
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Validates input for password reset confirmation."""
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)

@@ -12,14 +12,16 @@ import { LoginButton } from '@/components/ui/Loginbutton';
 import { LogoutButton } from "@/components/admin/Logoutbutton";
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useAuth } from '@/context/AuthContext'
+import { LoginModal } from '@/components/auth/LoginModal';
 import PostStaticMedia from '../ui/PostStaticMedia';
 
 export const Banner = () =>{
 
   const { isAuthenticated } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const handleLoginClick = () => {
-    // TODO(ulisses): Open LoginModal once SCRUM-4 is built
+    setIsLoginModalOpen(true);
   };
 
   const pathname = usePathname();
@@ -59,7 +61,7 @@ export const Banner = () =>{
         {isAuthenticated ? <LogoutButton /> : <LoginButton onLoginClick={handleLoginClick} />}
       </div>
 
-
+      {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
     </div>
   );
 };

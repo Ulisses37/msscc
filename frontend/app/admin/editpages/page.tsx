@@ -1,7 +1,7 @@
 'use client';
 
 // React
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 // uuid
 import { v4 as uuidv4 } from 'uuid';
@@ -16,6 +16,21 @@ import BilingualInput from '@/components/admin/BilingualInput';
  * Admin page for allowing client to dynamically add/edit content on their website
  * Content is managed as a list of ContentBlocks
  */
+
+
+// Page type
+type Page = {
+  page_id: number;
+  page_slug: string;
+  page_title: string;
+}
+
+type dbContentBlock = {
+  content_id: number;
+  content_type: BlockType;
+  content_en: string;
+  content_ja: string;
+};
 
 export default function EditPagesPage() {
   // Block array
@@ -35,7 +50,7 @@ export default function EditPagesPage() {
   // Removing ContentBlock from array.
   const handleDeleteBlock = (id: string) => {
     const isConfirmed = window.confirm("Are you sure you want to remove this block? This cannot be undone.");
-    
+
     // Use filter() to create a new array without the block chosen for deletion
     if (isConfirmed) {
       setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
@@ -70,17 +85,75 @@ export default function EditPagesPage() {
     } catch (error) {
         console.error("Translation failed:", error);
     }
-};
+  };
+
+  // Page state and list
+  const [pages, setPages] = useState<Page[]>([]);
+  const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/page/get-all/');
+        const data = await response.json();
+        setPages(data);
+      } catch (error) {
+        console.error("Failed to fetch pages:", error);
+      }
+    };
+    fetchPages();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPageId === null) return;
+    const fetchContent = async () => {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/content/page/${selectedPageId}/`);
+        const data = await response.json();
+        const loadedBlocks: ContentBlock[] = data.map((item: dbContentBlock) => ({
+          id: item.content_id.toString(),
+          type: item.content_type as BlockType,
+          contentEn: item.content_en,
+          contentJa: item.content_ja,
+        }));
+        setBlocks(loadedBlocks);
+      } catch (error) {
+        console.error("Failed to fetch content:", error);
+      }
+    };
+    fetchContent();
+  }, [selectedPageId]);
 
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
-
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
+                {/* Dropdown to select page to edit */}
+                <div className="mb-8">
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Select Page
+                  </label>
+                  <select
+                  className="border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white w-48"
+                  value={selectedPageId ?? ''}
+                  onChange={(e) => {
+                  setBlocks([]);
+                  setSelectedPageId(Number(e.target.value));
+                }}
+                >
+              <option value="" disabled>Select a page...</option>
+              {pages.map((page) => (
+                <option key={page.page_id} value={page.page_id}>
+                  {page.page_title}
+                </option>
+              ))}
+              </select>
+              </div>
+
                 <h2 className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                     Add Content
                 </h2>
