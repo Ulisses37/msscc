@@ -14,10 +14,12 @@ export function OfficerCardPreview({
   boardMemberName,
   boardMemberImageURL,
   boardMemberRole,
-  boardMemberCaption
+  boardMemberCaption,
+  onClick
 }: OfficerCardProps & { onClick?: () => void }) {
   return (
-    <div className="text-left align-middle basis-1/6 pt-2 w-full ml-1 mr-1 md:w-auto cursor-pointer hover:bg-gray-500 rounded transition-colors">
+    <div onClick={onClick}
+    className="text-left align-middle basis-1/6 pt-2 w-full ml-1 mr-1 md:w-auto cursor-pointer hover:bg-gray-500 rounded">
       <h2 className="text-2xl font-serif mb-2 pl-3 text-black">{boardMemberRole}</h2>
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -40,10 +42,12 @@ export function OfficerCardPreview({
 
 export function DirectorCardPreview({
   boardMemberName,
-  boardMemberImageURL
+  boardMemberImageURL,
+  onClick
 }: DirectorCardProps & { onClick?: () => void }) {
   return (
-    <div className="flex items-center gap-3 justify-left ml-3 pl-1 py-1 w-48 cursor-pointer hover:bg-gray-500 rounded transition-colors">
+    <div onClick={onClick}
+    className="flex items-center gap-3 justify-left ml-3 pl-1 py-1 w-48 cursor-pointer hover:bg-gray-500 rounded">
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

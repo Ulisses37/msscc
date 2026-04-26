@@ -63,6 +63,7 @@ export default function BoardOfDirectors() {
               boardMemberImageURL={member.boardMemberImageURL}
               boardMemberRole={member.boardMemberRole}
               boardMemberCaption={member.boardMemberCaption}
+              onClick={() => editOfficer()}
             />
           ))}
         </div>
@@ -79,10 +80,25 @@ export default function BoardOfDirectors() {
               key={member.boardMemberName}
               boardMemberName={member.boardMemberName}
               boardMemberImageURL={member.boardMemberImageURL}
+              onClick={() => editDirector()}
             />
           ))}
+          <span className="text-center">
+            <button onClick={(() => console.log("Add clicked"))}
+            className="py-3 mx-4 px-4 mt-3 bg-gray-500 text-white font-bold text-serif rounded hover:bg-gray-600">
+              Add Director
+            </button>
+          </span>
         </div>
       </div>
     </div>
   )
+}
+
+function editOfficer(){
+  console.log("Officer clicked");
+}
+
+function editDirector(){
+  console.log("Director clicked");
 }
