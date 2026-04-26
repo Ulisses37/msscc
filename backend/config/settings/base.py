@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "events",
     "board_members",
     "partners",
+    "admin_users",
+    'admin_support',
     "page",
     "content",
 ]
