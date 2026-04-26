@@ -25,6 +25,13 @@ type Page = {
   page_title: string;
 }
 
+type dbContentBlock = {
+  content_id: number;
+  content_type: BlockType;
+  content_en: string;
+  content_ja: string;
+};
+
 export default function EditPagesPage() {
   // Block array
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
@@ -103,7 +110,7 @@ export default function EditPagesPage() {
       try {
         const response = await fetch(`http://127.0.0.1:8000/api/content/page/${selectedPageId}/`);
         const data = await response.json();
-        const loadedBlocks: ContentBlock[] = data.map((item: any) => ({
+        const loadedBlocks: ContentBlock[] = data.map((item: dbContentBlock) => ({
           id: item.content_id.toString(),
           type: item.content_type as BlockType,
           contentEn: item.content_en,
@@ -116,8 +123,7 @@ export default function EditPagesPage() {
     };
     fetchContent();
   }, [selectedPageId]);
-  console.log("pages", pages);
-console.log("selectedPageId", selectedPageId);
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
@@ -126,6 +132,28 @@ console.log("selectedPageId", selectedPageId);
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
+                {/* Dropdown to select page to edit */}
+                <div className="mb-8">
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Select Page
+                  </label>
+                  <select
+                  className="border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white w-48"
+                  value={selectedPageId ?? ''}
+                  onChange={(e) => {
+                  setBlocks([]);
+                  setSelectedPageId(Number(e.target.value));
+                }}
+                >
+              <option value="" disabled>Select a page...</option>
+              {pages.map((page) => (
+                <option key={page.page_id} value={page.page_id}>
+                  {page.page_title}
+                </option>
+              ))}
+              </select>
+              </div>
+
                 <h2 className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                     Add Content
                 </h2>
