@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class static_image(models.Model):
+class StaticImage(models.Model):
     """Stores metadata for a static image."""
 
     static_image_id = models.AutoField(primary_key=True)

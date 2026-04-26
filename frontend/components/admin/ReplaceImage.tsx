@@ -5,7 +5,7 @@ import { ImportImage } from "@/components/ui/ImportImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
 import Image from "next/image";
 
-type ModelType = "media" | "events" | "board-members" | "partners";
+type ModelType = "media" | "events" | "board-members" | "partners" | "static-images";
 
 export default function ReplaceImage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -114,6 +114,12 @@ export default function ReplaceImage() {
             <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={() => setSelectedModel(prev =>prev === "partners" ? null : "partners")}>
               {selectedModel === null ? "Partners" : "Cancel"}
+            </button>
+          )}
+          {(selectedModel === "static-images" || selectedModel === null) && (
+            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={() => setSelectedModel(prev =>prev === "static-images" ? null : "static-images")}>
+              {selectedModel === null ? "Static Images" : "Cancel"}
             </button>
           )}
         </div>

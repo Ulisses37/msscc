@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import PostImage from "./PostImage";
+import Image from "next/image";
 
-type ModelType = "media" | "events" | "board-members" | "partners";
+type ModelType = "media" | "events" | "board-members" | "partners" | "static-images";
 
 type ImageRecord = {
   id: number;
@@ -25,6 +26,7 @@ const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
   "board-members": `${process.env.NEXT_PUBLIC_API_URL}/api/board-members/`,
   "partners": `${process.env.NEXT_PUBLIC_API_URL}/api/partners/`,
   "media": `${process.env.NEXT_PUBLIC_API_URL}/api/media/`,
+  "static-images": `${process.env.NEXT_PUBLIC_API_URL}/api/static-images/`,
 };
 
 export function RetrieveImageList({ modelType, onSelect, selectedId, selectedModelId }: RetrieveImageListProps) {
@@ -67,10 +69,11 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
             };
           }
 
-          // Other models: events, board-members, partners
+          // Other models: events, board-members, partners, static-images
           const id = modelType === "events" ? (record.event_id as number) :
                      modelType === "board-members" ? (record.board_member_id as number) :
-                     (record.partner_id as number);
+                     modelType === "partners" ? (record.partner_id as number) :
+                     (record.static_image_id as number);
 
           return {
             id,
@@ -131,7 +134,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
             </p>
 
             {record.file_url ? (
-              <img src={record.file_url} alt={record.display_name || 'Image'} className="w-[300px] h-[300px] object-cover rounded" />
+              <Image src={record.file_url} alt={record.display_name || 'Image'} className="w-[300px] h-[300px] object-cover rounded" />
             ) : record.media_asset_id ? (
               <PostImage mediaID={record.media_asset_id} />
             ) : (
