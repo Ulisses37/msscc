@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'admin_support',
     "page",
     "content",
+    "static_image",
 ]
 
 REST_FRAMEWORK = {
