@@ -17,3 +17,20 @@ class BoardMemberDetailView(generics.RetrieveUpdateAPIView):
     queryset = BoardMember.objects.all()
     serializer_class = BoardMemberSerializer
     lookup_field = "board_member_id"
+
+class BoardMemberCreateView(generics.CreateAPIView):
+    """Create a new board member."""
+    queryset = BoardMember.objects.all()
+    serializer_class = BoardMemberSerializer
+
+class BoardMemberDeleteView(generics.DestroyAPIView):
+    """Delete a single board member."""
+    queryset = BoardMember.objects.all()
+    serializer_class = BoardMemberSerializer
+    lookup_field = "board_member_id"
+
+class BoardMemberUpdateView(generics.UpdateAPIView):
+    """Update a single board member."""
+    queryset = BoardMember.objects.all()
+    serializer_class = BoardMemberSerializer
+    lookup_field = "board_member_id"
