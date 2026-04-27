@@ -57,10 +57,7 @@ export default function EventDetailPage() {
         margin: '0 auto',
         padding: 'var(--space-10) var(--space-6)',
       }}>
-        <p style={{
-          color: 'var(--color-gray-mid)',
-          fontSize: 'var(--fs-body)',
-        }}>
+        <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body)' }}>
           Loading event...
         </p>
       </main>
@@ -84,23 +81,10 @@ export default function EventDetailPage() {
         }}>
           Event Not Found
         </h1>
-        <p style={{
-          color: 'var(--color-gray-mid)',
-          fontSize: 'var(--fs-body)',
-          marginBottom: 'var(--space-6)',
-        }}>
+        <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body)', marginBottom: 'var(--space-6)' }}>
           This event does not exist or is no longer available.
         </p>
-        <Link
-          href={`/${locale}/events`}
-          style={{
-            color: 'var(--color-teal)',
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--fs-body-sm)',
-            textDecoration: 'underline',
-            textUnderlineOffset: '3px',
-          }}
-        >
+        <Link href={`/${locale}/events`} style={{ color: 'var(--color-teal)', textDecoration: 'underline' }}>
           ← Back to events
         </Link>
       </main>
@@ -149,10 +133,12 @@ export default function EventDetailPage() {
       )}
 
       {/* Previous / next navigation */}
-      <EventNavigation
-        previousEvent={previousEvent}
-        nextEvent={nextEvent}
-      />
+      <div style={{ marginTop: 'var(--space-12)' }}>
+        <EventNavigation
+          previousEvent={previousEvent}
+          nextEvent={nextEvent}
+        />
+      </div>
 
     </main>
   );

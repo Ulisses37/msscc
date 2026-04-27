@@ -126,6 +126,7 @@ export default function EventsPage() {
         ) : (
           <p style={{ textAlign: 'center', color: 'var(--color-gray-mid)' }}>
             No volunteer opportunities exist at this time.
+          </p>
         )}
       </div>
     </main>
