@@ -16,6 +16,7 @@ export function OfficerCardPreview({
   boardMemberName,
   boardMemberImageURL,
   boardMemberRole,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   boardMemberCaption,
   onClick
 }: OfficerCardProps & { onClick?: () => void }) {
@@ -92,10 +93,10 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               <img
                 src={edited.boardMemberImageURL}
                 alt="portrait"
-                className="h-32 w-32 hover:opacity-70 transition-opacity"
+                className="h-48 w-48 hover:opacity-70 transition-opacity"
               />
             ) : (
-              <div className="h-24 w-24 rounded-full bg-slate-200 flex items-center justify-center text-sm text-gray-500 hover:opacity-70 transition-opacity">
+              <div className="h-24 w-24 bg-slate-200 flex items-center justify-center text-sm text-gray-500 hover:opacity-70 transition-opacity">
                 Add photo
               </div>
             )}
@@ -137,11 +138,11 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 />
               </label>
               <label className="text-sm font-semibold">Caption
-                <input
-                  type="text"
-                  value={edited?.boardMemberCaption ?? ""}
-                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaption: e.target.value } : prev)}
-                  className="w-full border rounded px-2 py-1 mt-1 font-normal"
+                <textarea
+                value={edited?.boardMemberCaption ?? ""}
+                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaption: e.target.value } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal resize-none"
+                rows={4}
                 />
               </label>
             </>
@@ -166,7 +167,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             }}
             className="px-4 py-2 bg-green-500 text-white rounded"
           >
-            Update
+            {member?.boardMemberName ? "Update" : "Add"}
           </button>
         </div>
       </div>

@@ -74,11 +74,20 @@ export default function BoardOfDirectors() {
 
 
       <div className="border border-gray-300 my-8 py-4">
-        <span className="text-center flex">
-          <h2 className="text-2xl font-serif pl-2 pb-2">Directors</h2>
-          <button onClick={(() => console.log("Add clicked"))}
-          className="text-center w-8 h-8 mx-4 bg-green-500 text-white font-bold text-serif rounded hover:bg-green-600">
-              +
+        <span className="flex justify-between items-center px-2 pb-2">
+          <h2 className="text-2xl font-serif">Directors</h2>
+          <button
+            onClick={() => {
+            setSelectedMember({
+              boardMemberName: "",
+              boardMemberImageURL: null,
+              boardMemberRole: "Director",
+              boardMemberCaption: null,
+            });
+            setIsOpen("director");
+            }}
+            className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600">
+            +
           </button>
         </span>
 
