@@ -130,10 +130,32 @@ export default function BoardOfDirectors() {
 }
 
 async function updateMember(member: BoardMember | null) {
-  console.log("updated")
   if (!member) return;
-  const isNew = member.boardMemberId === 0;
-  await fetch(
+  const isNew = member.boardMemberId === -1;
+
+  let mediaAssetId: number | null = null;
+
+  if (member.boardMemberImageURL?.startsWith("blob:")) {
+    const response = await fetch(member.boardMemberImageURL);
+    const blob = await response.blob();
+    const formData = new FormData();
+    formData.append("image", blob, "upload.jpg");
+
+    const mediaRes = await fetch("http://localhost:8000/api/media/upload/", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!mediaRes.ok) {
+      alert("Image upload failed");
+      return;
+    }
+
+    const mediaData = await mediaRes.json();
+    mediaAssetId = mediaData.media_asset_id;
+  }
+
+  fetch(
     isNew
       ? `http://localhost:8000/api/board-members/create/`
       : `http://localhost:8000/api/board-members/${member.boardMemberId}/update/`,
@@ -143,16 +165,34 @@ async function updateMember(member: BoardMember | null) {
       body: JSON.stringify({
         display_name: member.boardMemberName,
         role: member.boardMemberRole,
-        caption: member.boardMemberCaption,
+        caption: member.boardMemberCaption || "",
+        display_order: 0,
+        start_date: new Date().toISOString().split("T")[0],
+        ...(mediaAssetId !== null && { media_asset: mediaAssetId }),
       }),
     }
-  );
-  window.location.reload();
+  )
+  .then(res => {
+    if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
+    window.location.reload();
+  })
+  .catch(err => {
+    alert("Network error, please try again.");
+    console.error(err);
+  });
 }
 
-async function deleteMember(member: BoardMember | null) {
+function deleteMember(member: BoardMember | null) {
   if (!member) return;
-  await fetch(`http://localhost:8000/api/board-members/${member.boardMemberId}/delete/`, {
+  fetch(`http://localhost:8000/api/board-members/${member.boardMemberId}/delete/`, {
     method: "DELETE",
+  })
+  .then(res => {
+    if (!res.ok) return res.json().then(err => { alert(`Failed to delete: ${JSON.stringify(err)}`); });
+    window.location.reload();
+  })
+  .catch(err => {
+    alert("Network error, please try again.");
+    console.error(err);
   });
 }
