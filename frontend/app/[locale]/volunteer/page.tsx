@@ -1,20 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation'; // Added useRouter and useParams
 import { getEvents } from '@/services/eventService';
-import { VolunteerSignupForm } from '@/components/volunteers/VolunteerSignupForm';
 import type { Event } from '@/types/event';
+import Button from '@/components/ui/Button'; // Using your Button component
 
 export default function VolunteerPage() {
-  // State management for event data, loading status, and modal visibility
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  
+  const router = useRouter();
+  const { locale } = useParams(); // Get current locale (e.g., 'en')
 
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
       const data = await getEvents();
-      // Filter for events with slots and that are published
       const needsVolunteers = data.filter(e => e.volunteerSlots > 0 && e.isPublished);
       setEvents(needsVolunteers);
       setLoading(false);
@@ -28,13 +29,11 @@ export default function VolunteerPage() {
         <h2 style={{ color: '#dc2626', fontSize: 'var(--fs-heading-2)' }}>Volunteer Opportunities</h2>
       </header>
 
-      {/* Loading & Empty States */}
       {loading && <p>Loading opportunities...</p>}
       {!loading && events.length === 0 && (
         <p style={{ color: 'var(--color-gray-mid)' }}>No Volunteers Needed at this time.</p>
       )}
 
-      {/* Events Grid Display */}
       <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
         {events.map((event) => (
           <div key={event.id} style={{ border: '1px solid var(--color-gray-light)', padding: 'var(--space-6)', borderRadius: '8px' }}>
@@ -42,23 +41,16 @@ export default function VolunteerPage() {
             <p><strong>Location:</strong> {event.location}</p>
             <p><strong>Time:</strong> {new Date(event.startDatetime).toLocaleString()}</p>
             <p><strong>Volunteers Needed:</strong> {event.volunteerSlots}</p>
-            {/* Trigger for the Signup Modal */}
-            <button 
-              onClick={() => setSelectedEvent(event)}
-              style={{ backgroundColor: '#dc2626', color: 'white', padding: '10px 20px', border: 'none', cursor: 'pointer' }}
-            >
-              Sign Up
-            </button>
+            
+            {/* Updated to use your Button component with a redirect */}
+            <Button 
+              text="Sign Up"
+              onClick={() => router.push(`/${locale}/volunteer/${event.id}`)}
+              padding="12px 24px"
+            />
           </div>
         ))}
       </div>
-      {/* Conditional Rendering of the Signup Form Overlay */}
-      {selectedEvent && (
-        <VolunteerSignupForm 
-          event={selectedEvent} 
-          onClose={() => setSelectedEvent(null)} 
-        />
-      )}
     </main>
   );
 }
