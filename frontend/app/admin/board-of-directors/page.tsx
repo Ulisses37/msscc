@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from "react";
-import {DirectorCardPreview, OfficerCardPreview} from "./BoardOfDirectorCards";
+import {DirectorCardPreview, OfficerCardPreview, MemberPopUp} from "./BoardOfDirectorCards";
 
 
-interface BoardMember {
+export interface BoardMember {
   boardMemberName: string;
   boardMemberImageURL: string | null;
   boardMemberRole: string | null;
@@ -14,6 +14,9 @@ interface BoardMember {
 
 export default function BoardOfDirectors() {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
+  const [isOpen, setIsOpen] = useState<"director" | "officer" | null>(null);
+
 
     useEffect(() => {
       Promise.all([
@@ -63,7 +66,7 @@ export default function BoardOfDirectors() {
               boardMemberImageURL={member.boardMemberImageURL}
               boardMemberRole={member.boardMemberRole}
               boardMemberCaption={member.boardMemberCaption}
-              onClick={() => editOfficer()}
+              onClick={() => {setIsOpen("officer"); setSelectedMember(member);}}
             />
           ))}
         </div>
@@ -71,7 +74,14 @@ export default function BoardOfDirectors() {
 
 
       <div className="border border-gray-300 my-8 py-4">
-        <h2 className="text-2xl font-serif pl-2 pb-2">Directors</h2>
+        <span className="text-center flex">
+          <h2 className="text-2xl font-serif pl-2 pb-2">Directors</h2>
+          <button onClick={(() => console.log("Add clicked"))}
+          className="text-center w-8 h-8 mx-4 bg-green-500 text-white font-bold text-serif rounded hover:bg-green-600">
+              +
+          </button>
+        </span>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {boardMembers
           .filter((member) => member.boardMemberRole === "Director")
@@ -80,25 +90,35 @@ export default function BoardOfDirectors() {
               key={member.boardMemberName}
               boardMemberName={member.boardMemberName}
               boardMemberImageURL={member.boardMemberImageURL}
-              onClick={() => editDirector()}
+              onClick={() => {setIsOpen("director"); setSelectedMember(member);}}
             />
           ))}
-          <span className="text-center">
-            <button onClick={(() => console.log("Add clicked"))}
-            className="py-3 mx-4 px-4 mt-3 bg-gray-500 text-white font-bold text-serif rounded hover:bg-gray-600">
-              Add Director
-            </button>
-          </span>
         </div>
       </div>
+
+      {isOpen === "officer" && <MemberPopUp
+        member={selectedMember}
+        type="officer"
+        onUpdate={() => updateMember}
+        onClose={setIsOpen}
+        onDelete={() => deleteMember}
+      />}
+
+      {isOpen === "director" && <MemberPopUp
+        member={selectedMember}
+        type="director"
+        onUpdate={() => updateMember}
+        onClose={setIsOpen}
+        onDelete={() => deleteMember}
+      />}
     </div>
   )
 }
 
-function editOfficer(){
-  console.log("Officer clicked");
+function updateMember(member: BoardMember | null){
+  console.log("updated " + member)
 }
 
-function editDirector(){
-  console.log("Director clicked");
+function deleteMember(member: BoardMember | null){
+  console.log("deleted " + member)
 }
