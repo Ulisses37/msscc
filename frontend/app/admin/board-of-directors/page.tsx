@@ -5,6 +5,7 @@ import {DirectorCardPreview, OfficerCardPreview, MemberPopUp} from "./BoardOfDir
 
 
 export interface BoardMember {
+  boardMemberId: number;
   boardMemberName: string;
   boardMemberImageURL: string | null;
   boardMemberRole: string | null;
@@ -24,12 +25,14 @@ export default function BoardOfDirectors() {
         fetch("http://localhost:8000/api/media/").then(res => res.json()),
       ])
         .then(([members, mediaAssets]: [unknown[], unknown[]]) => {
+          console.log("raw members:", members);
           const mediaById = new Map(
             (mediaAssets as {media_asset_id: number; file_url: string | null}[])
               .map(m => [m.media_asset_id, m])
           );
 
           const enriched: BoardMember[] = (members as {
+            board_member_id: number;
             display_name: string;
             display_order: number;
             media_asset: number | null;
@@ -38,6 +41,7 @@ export default function BoardOfDirectors() {
           }[])
             .sort((a, b) => a.display_order - b.display_order)
             .map(member => ({
+              boardMemberId: member.board_member_id,
               boardMemberName: member.display_name,
               boardMemberRole: member.role,
               boardMemberCaption: member.caption,
@@ -79,6 +83,7 @@ export default function BoardOfDirectors() {
           <button
             onClick={() => {
             setSelectedMember({
+              boardMemberId: -1,
               boardMemberName: "",
               boardMemberImageURL: null,
               boardMemberRole: "Director",
@@ -108,26 +113,46 @@ export default function BoardOfDirectors() {
       {isOpen === "officer" && <MemberPopUp
         member={selectedMember}
         type="officer"
-        onUpdate={() => updateMember}
+        onUpdate={(m) => updateMember(m)}
         onClose={setIsOpen}
-        onDelete={() => deleteMember}
+        onDelete={(m) => deleteMember(m)}
       />}
 
       {isOpen === "director" && <MemberPopUp
         member={selectedMember}
         type="director"
-        onUpdate={() => updateMember}
+        onUpdate={(m) => updateMember(m)}
         onClose={setIsOpen}
-        onDelete={() => deleteMember}
+        onDelete={(m) => deleteMember(m)}
       />}
     </div>
   )
 }
 
-function updateMember(member: BoardMember | null){
-  console.log("updated " + member)
+async function updateMember(member: BoardMember | null) {
+  console.log("updated")
+  if (!member) return;
+  const isNew = member.boardMemberId === 0;
+  await fetch(
+    isNew
+      ? `http://localhost:8000/api/board-members/create/`
+      : `http://localhost:8000/api/board-members/${member.boardMemberId}/update/`,
+    {
+      method: isNew ? "POST" : "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        display_name: member.boardMemberName,
+        role: member.boardMemberRole,
+        caption: member.boardMemberCaption,
+      }),
+    }
+  );
+  window.location.reload();
 }
 
-function deleteMember(member: BoardMember | null){
-  console.log("deleted " + member)
+async function deleteMember(member: BoardMember | null) {
+  if (!member) return;
+  await fetch(`http://localhost:8000/api/board-members/${member.boardMemberId}/delete/`, {
+    method: "DELETE",
+  });
 }
