@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; // Added useRouter for navigation
 import Link from 'next/link';
 import { getEventById, getEvents } from '@/services/eventService';
 import { EventDetail } from '@/components/events/EventDetails';
 import type { Event } from '@/types/event';
 import { EventNavigation } from '@/components/events/EventNavigation';
+import Button from '@/components/ui/Button'; // Import your Button component
 
 export default function EventDetailPage() {
   const { id, locale } = useParams();
+  const router = useRouter(); // Initialize the router
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -118,19 +120,33 @@ export default function EventDetailPage() {
         href={`/${locale}/events`}
         style={{
           color: 'var(--color-teal)',
-          fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
           textDecoration: 'none',
           display: 'inline-block',
           marginBottom: 'var(--space-6)',
         }}
-        onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-        onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
       >
         ← Back to events
       </Link>
 
       {event && <EventDetail event={event} />}
+
+      {/* Volunteer Button Logic */}
+      {/* Centered container with auto width for the button */}
+      {event && (event.volunteerSlots > 0 || (event as any).volunteer_slots > 0) && (
+        <div style={{ 
+          marginTop: 'var(--space-10)', 
+          display: 'flex', 
+          justifyContent: 'center' 
+        }}>
+          <Button 
+            text="Volunteer for this Event" 
+            width="auto" // Prevents the button from filling the screen width
+            padding="12px 24px"
+            onClick={() => router.push(`/${locale}/volunteer/${id}`)} // Redirects to specific volunteer subpage
+          />
+        </div>
+      )}
 
       {/* Previous / next navigation */}
       <EventNavigation
