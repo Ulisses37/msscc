@@ -72,12 +72,13 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
   {
     member: BoardMember | null,
     type: "officer" | "director",
-    onUpdate: (member: BoardMember | null) => void,
+    onUpdate: (member: BoardMember | null, file?: File | null) => void,
     onClose: (value: null) => void,
     onDelete: (member: BoardMember | null) => void
   }
 ) {
   const [edited, setEdited] = useState<BoardMember | null>(member);
+  const [editedFile, setEditedFile] = useState<File | null>(null);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -108,6 +109,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 const file = e.target.files?.[0];
                 if (file) {
                   const url = URL.createObjectURL(file);
+                  setEditedFile(file);
                   setEdited(prev => prev ? { ...prev, boardMemberImageURL: url } : prev);
                 }
               }}
@@ -162,7 +164,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 alert("Name cannot be empty");
                 return;
               }
-              onUpdate(edited);
+              onUpdate(edited, editedFile);
               onClose(null);
             }}
             className="px-4 py-2 bg-green-500 text-white rounded"

@@ -113,7 +113,7 @@ export default function BoardOfDirectors() {
       {isOpen === "officer" && <MemberPopUp
         member={selectedMember}
         type="officer"
-        onUpdate={(m) => updateMember(m)}
+        onUpdate={async (m, file) => await updateMember(m, file)}
         onClose={setIsOpen}
         onDelete={(m) => deleteMember(m)}
       />}
@@ -121,7 +121,7 @@ export default function BoardOfDirectors() {
       {isOpen === "director" && <MemberPopUp
         member={selectedMember}
         type="director"
-        onUpdate={(m) => updateMember(m)}
+        onUpdate={async (m, file) => await updateMember(m, file)}
         onClose={setIsOpen}
         onDelete={(m) => deleteMember(m)}
       />}
@@ -129,17 +129,15 @@ export default function BoardOfDirectors() {
   )
 }
 
-async function updateMember(member: BoardMember | null) {
+async function updateMember(member: BoardMember | null, file?: File | null) {
   if (!member) return;
   const isNew = member.boardMemberId === -1;
 
   let mediaAssetId: number | null = null;
 
-  if (member.boardMemberImageURL?.startsWith("blob:")) {
-    const response = await fetch(member.boardMemberImageURL);
-    const blob = await response.blob();
+  if (file) {
     const formData = new FormData();
-    formData.append("image", blob, "upload.jpg");
+    formData.append("image", file, file.name);  // use original filename
 
     const mediaRes = await fetch("http://localhost:8000/api/media/upload/", {
       method: "POST",
