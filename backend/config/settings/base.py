@@ -53,8 +53,13 @@ INSTALLED_APPS = [
     "events",
     "board_members",
     "partners",
+    "admin_users",
+    'admin_support',
     "page",
     "content",
+    "static_image",
+    'volunteer_slots',
+    'volunteer_signup',
 ]
 
 REST_FRAMEWORK = {

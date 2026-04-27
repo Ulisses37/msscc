@@ -26,8 +26,13 @@ urlpatterns = [
     path("api/events/", include("events.urls")),
     path("api/board-members/", include("board_members.urls")),
     path("api/partners/", include("partners.urls")),
+    path("api/admins/", include("admin_users.urls")),
+    path("api/admin/admin_support/", include("admin_support.urls")),
     path("api/auth/", include("accounts.urls")),
     path("api/admins/", include("accounts.urls_admins")),
     path("api/page/", include("page.urls")),
     path("api/content/", include("content.urls")),
+    path("api/static-images/", include("static_image.urls")),
+    path("api/volunteer_slots/", include("volunteer_slots.urls")),
+    path("api/volunteer_signup/", include("volunteer_signup.urls")),
 ]

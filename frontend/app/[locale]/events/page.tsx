@@ -4,14 +4,24 @@ import { useEffect, useState } from 'react';
 import { getEvents } from '@/services/eventService';
 import { EventCard } from '../../../components/events/EventCard';
 import type { Event } from '@/types/event';
+import Button from '@/components/ui/Button';
+import { useParams, useRouter } from 'next/navigation';
 
+/**
+ * EventsPage Component
+ * Displays a list of published events and a link to volunteer opportunities.
+ */
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const params = useParams();
+  const router = useRouter();
+  const locale = params?.locale;
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const data = await getEvents();
+      try {
+        const data = await getEvents();
 
       // Filter to published only, then sort by startDatetime ascending
       const sorted = data
@@ -20,12 +30,21 @@ export default function EventsPage() {
           new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
         );
 
-      setEvents(sorted);
-      setLoading(false);
+        setEvents(sorted);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchEvents();
   }, []);
+
+  // Check if there are any volunteer opportunities among the events
+  const hasVolunteerOpportunities = events.some(
+    (event) => event.volunteerSlots > 0
+  );
 
   return (
     <main style={{
@@ -89,7 +108,27 @@ export default function EventsPage() {
         </div>
       )}
 
+      {/* Volunteer Opportunities Section */}
+      <div style={{ marginTop: 'var(--space-10)', borderTop: '1px solid var(--color-gray-light)', paddingTop: 'var(--space-8)' }}>
+        {hasVolunteerOpportunities ? (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
+              Interested in helping out? We have positions available!
+            </p>
+            <Button
+              text="View Volunteer Opportunities"
+              width="300px" // Adjusted from 100% to look more professional
+              height="48px"
+              fontSize="14px"
+              onClick={() => router.push(`/${locale}/volunteer`)}
+            />
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: 'var(--color-gray-mid)' }}>
+            No volunteer opportunities exist at this time.
+          </p>
+        )}
+      </div>
     </main>
   );
 }
-

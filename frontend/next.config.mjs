@@ -13,6 +13,23 @@ const withNextIntl = createNextIntlPlugin(
 const nextConfig = {
   reactStrictMode: true,
 
+  //enables images from external storage server
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'msscc-storage.uahomeserver.net',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/**',
+      },
+    ],
+  },
+
   // Used to make it so that Webpack only outputs errors when needed
   webpack: (config, { dev }) => {
     if (dev) {

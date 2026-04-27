@@ -4,15 +4,16 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
-import bannerBg from '@/public/images/banner-background.png';
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
+import bannerBg from '@/public/images/banner-background.png';
 
 import { LoginButton } from '@/components/ui/Loginbutton';
 import { LogoutButton } from "@/components/admin/Logoutbutton";
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useAuth } from '@/context/AuthContext'
 import { LoginModal } from '@/components/auth/LoginModal';
+import PostStaticMedia from '../ui/PostStaticMedia';
 
 export const Banner = () =>{
 
@@ -28,14 +29,15 @@ export const Banner = () =>{
 
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
-      {/* Background */}
-      <Image
+      {/* Background Fallback*/}
+      {/*<Image
         src={bannerBg}
         alt="Banner Background"
         fill
         priority
         className="object-cover"
-      />
+      />*/}
+      <PostStaticMedia staticImageId={1} configVariant="banner" className="absolute inset-0 z-0" />
       {/* FB ICON  */}
       <SocialIcon />
 
