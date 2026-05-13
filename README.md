@@ -89,19 +89,43 @@ Beyond cost, the stack was chosen to match the project's specific requirements:
 
 ## Timeline
 
-The following milestones represent the remaining work through December 2026 delivery.
+The project timeline runs through December 2026 and is organized around nine sprint-based milestones. The plan begins with requirements and foundational setup, then moves into public site development, admin tooling, backend integration, and final MVP delivery.
 
-### Phase 1: Public Site Parity
+### Sprint 1: Requirements Review and Planning
 
-Reach feature parity with the existing Squarespace site. All public-facing pages live (Home, Events, About, Partners, Volunteer), bilingual EN/JP toggle functional, and donations and membership payment processing through Stripe fully tested and operational.
+Review the existing MSSCC site, confirm stakeholder needs, define the initial product scope, and organize the project backlog. This phase establishes the core requirements for replacing and extending the current Squarespace-based workflow.
 
-### Phase 2: Admin Portal
+### Sprint 2: Project Scaffolding and Public Site Foundation
 
-Administrative features beyond the current Squarespace site. Includes event creation and management, member records, donation history, content editing with DeepL translation workflow, and role-based account permissions for admin users.
+Set up the application structure, routing, shared layouts, and initial public-facing pages. This phase creates the foundation for the new site experience and establishes the frontend architecture used throughout later sprints.
 
-### Phase 3: Production Cutover
+### Sprint 3: Frontend and Admin Interface Development
 
-Environment swap from development services to live accounts (Cloudflare R2, Railway, Netlify), domain configuration, end-to-end testing, and stakeholder handoff to Bryan Fisher and Robert Martinez.
+Build out the initial admin-facing interface, public styling system, reusable tables, permission-aware UI patterns, and early media assets. This phase focuses on creating the visual and interaction foundation for both the public website and administrative tools.
+
+### Sprint 4: Backend, Authentication, and CMS Integration
+
+Set up the backend and database, implement authentication, begin page-editing functionality, support media retrieval, and connect public-facing pages to backend-managed content. This phase transitions the project from static frontend pages to a data-driven application.
+
+### Sprint 5: Backend Completion and Page Editing
+
+Finish core backend work and continue improving the page-editing workflow. The goal is to make site content manageable through the admin system rather than requiring direct code changes for routine updates.
+
+### Sprint 6: Site Content Management Flows
+
+Complete management flows for board members, partners, events, and media. This phase expands the admin portal so major public site sections can be created, edited, and maintained through structured backend data.
+
+### Sprint 7: Memberships and Donations Integration
+
+Extend admin and backend integration to the remaining major site sections, including memberships and donations. This phase focuses on connecting user-facing forms, administrative records, and payment-related workflows into the broader system.
+
+### Sprint 8: Remaining MVP Features
+
+Complete any remaining MVP functionality needed for the replacement site and admin portal. This includes closing feature gaps, improving integration between frontend and backend systems, and preparing the project for final stabilization.
+
+### Sprint 9: Bug Fixes, Polish, and Final MVP Delivery
+
+Resolve bugs, polish the user experience, complete final testing, and deliver the MVP. This phase prepares the project for stakeholder review, handoff, and eventual production readiness.
 
 ---
 
