@@ -206,7 +206,6 @@ erDiagram
 Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 - [Local Development and Testing Setup](./docs/MSSCC_Dev_Setup_Guide.md)
-- [Database Schema (ERD)](./docs/erd.mmd)
 - Deployment Guide (To be added next semester)
 
 ---
@@ -276,7 +275,7 @@ Set up the application structure, routing, shared layouts, and initial public-fa
 
 Build out the initial admin-facing interface, public styling system, reusable tables, permission-aware UI patterns, and early media assets. This phase focuses on creating the visual and interaction foundation for both the public website and administrative tools.
 
-### Sprint 4: Backend, Authentication, and CMS Integration
+### Sprint 4: Backend, Authentication, and Editable Content
 
 Set up the backend and database, implement authentication, begin page-editing functionality, support media retrieval, and connect public-facing pages to backend-managed content. This phase transitions the project from static frontend pages to a data-driven application.
 
