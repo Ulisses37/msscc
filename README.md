@@ -233,6 +233,12 @@ erDiagram
 
 ## Developer Instructions
 
+Note that this
+
+The project is split into a Django backend and a Next.js frontend. Full local setup instructions are maintained in the developer setup guide:
+
+- [MSSCC Developer Setup Guide](./docs/MSSCC_Dev_Setup_Guide.md)
+
 ### Prerequisites
 
 - Python 3.12
@@ -266,7 +272,7 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 ## Testing
 
-Testing will begin during the Fall 2026.
+Testing will begin during Fall 2026.
 
 ## Deployment
 
