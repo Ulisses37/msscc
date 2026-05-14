@@ -1,4 +1,4 @@
-![MSSCC Logo](./frontend/public/images/msscc-logo.png)
+![MSSCC Logo](./docs/images/msscc-logo.png)
 
 # MSSCC Website
 
