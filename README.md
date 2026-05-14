@@ -10,6 +10,9 @@ A bilingual (English/Japanese) website for the [Matsuyama-Sacramento Sister City
 - [Project Motivation](#project-motivation)
 - [Tech Stack](#tech-stack)
 - [Entity-Relationship Diagram](#entity-relationship-diagram)
+- [Product Preview](#product-preview)
+  - [Public Pages](#public-pages)
+  - [Admin Pages](#admin-pages)
 - [Developer Instructions](#developer-instructions)
   - [Prerequisites](#prerequisites)
   - [Repository Structure](#repository-structure)
@@ -230,6 +233,26 @@ erDiagram
 
 ```
 
+
+## Product Preview
+
+The images below are selected interface previous for the MSSCC public website and the admin portal.
+
+### Public Pages
+
+![Public Home Page](./docs/images/home_page.png)
+
+![Public Events Page](./docs/images/events_page.png)
+
+![Public Donor Page](./docs/images/donor_page.png)
+
+### Admin Pages
+
+![Admin Dashboard](./docs/images/admin_dashboard.png)
+
+![Admin Edit Pages Page](./docs/images/admin_edit_pages.png)
+
+![Admin Permissions Page](./docs/images/admin_permissions.png)
 
 ## Developer Instructions
 
