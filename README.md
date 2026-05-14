@@ -190,14 +190,32 @@ erDiagram
 
 ---
 
-## Prerequisites
+## Developer Instructions
+
+### Prerequisites
 
 - Python 3.12
 - Node.js 22 LTS
 - PostgreSQL 16
 - Docker (for local dev stack)
 
-## Documentation
+### Repository Structure
+
+```
+msscc/
+├── frontend/          # Next.js 14 app
+│   ├── app/           # App router pages
+│   ├── components/    # UI, layout, auth, admin, events, partners
+│   ├── context/       # AuthContext
+│   ├── services/      # API service layer
+│   ├── types/         # TypeScript types
+│   └── config/        # Shared config
+└── backend/           # Django project
+    ├── accounts/      # Auth app (JWT)
+    └── ...
+```
+
+### Documentation
 
 Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
@@ -219,24 +237,6 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 | Translation | DeepL API |
 | Frontend hosting | Netlify |
 | Backend hosting | Railway |
-
----
-
-## Repository Structure
-
-```
-msscc/
-├── frontend/          # Next.js 14 app
-│   ├── app/           # App router pages
-│   ├── components/    # UI, layout, auth, admin, events, partners
-│   ├── context/       # AuthContext
-│   ├── services/      # API service layer
-│   ├── types/         # TypeScript types
-│   └── config/        # Shared config
-└── backend/           # Django project
-    ├── accounts/      # Auth app (JWT)
-    └── ...
-```
 
 ---
 
