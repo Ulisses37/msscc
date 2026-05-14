@@ -291,7 +291,7 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 ## Testing
 
-Testing will begin during the Fall 2026.
+Testing will begin during Fall 2026.
 
 ## Deployment
 
