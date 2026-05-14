@@ -236,7 +236,7 @@ erDiagram
 
 ## Product Preview
 
-The images below are selected interface previous for the MSSCC public website and the admin portal.
+The images below are selected interface previews for the MSSCC public website and the admin portal.
 
 ### Public Pages
 
