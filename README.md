@@ -17,6 +17,22 @@ The project delivers two surfaces:
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS |
+| Backend | Django 5.1, Django REST Framework, SimpleJWT |
+| Database | PostgreSQL |
+| Storage | Cloudflare R2 (prod) / MinIO (dev) |
+| Payments | Stripe |
+| Email | Resend |
+| Translation | DeepL API |
+| Frontend hosting | Netlify |
+| Backend hosting | Railway |
+
+---
+
 ## Entity-Relationship Diagram
 
 ```mermaid
@@ -221,22 +237,6 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 - [Local Development and Testing Setup](./docs/MSSCC_Dev_Setup_Guide.md)
 - Deployment Guide (To be added next semester)
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS |
-| Backend | Django 5.1, Django REST Framework, SimpleJWT |
-| Database | PostgreSQL |
-| Storage | Cloudflare R2 (prod) / MinIO (dev) |
-| Payments | Stripe |
-| Email | Resend |
-| Translation | DeepL API |
-| Frontend hosting | Netlify |
-| Backend hosting | Railway |
 
 ---
 
