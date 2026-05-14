@@ -249,6 +249,15 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 - Deployment Guide (To be added next semester)
 
 
+## Testing
+
+Testing will begin during the Fall 2026.
+
+## Deployment
+
+Deployment instructions will be determined during Fall 2026.
+
+
 ## Timeline
 
 The project timeline runs through December 2026 and is organized around nine sprint-based milestones. The plan begins with requirements and foundational setup, then moves into public site development, admin tooling, backend integration, and final MVP delivery.
