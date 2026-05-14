@@ -4,6 +4,21 @@
 
 A bilingual (English/Japanese) website for the [Matsuyama-Sacramento Sister City Corporation](https://msscc1.org), replacing their existing Squarespace site. Built by **SCRUM Lords** as a CSUS Computer Science Senior Project (Spring 2026 to Fall 2026).
 
+## Table of Contents
+
+- [Project Synopsis](#project-synopsis)
+- [Project Motivation](#project-motivation)
+- [Tech Stack](#tech-stack)
+- [Entity-Relationship Diagram](#entity-relationship-diagram)
+- [Developer Instructions](#developer-instructions)
+  - [Prerequisites](#prerequisites)
+  - [Repository Structure](#repository-structure)
+  - [Documentation](#documentation)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Timeline](#timeline)
+- [Team](#team)
+- [License](#license)
 
 ## Project Synopsis
 
