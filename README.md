@@ -6,18 +6,14 @@ A bilingual (English/Japanese) website for the [Matsuyama-Sacramento Sister City
 
 ---
 
-## Project Status
-
-> **In active development.** Sprint 4 complete. Public site and admin portal are partially implemented. Expected delivery: December 2026.
-
----
-
-## Overview
+## Project Synopsis
 
 The project delivers two surfaces:
 
 - **Public site:** informational pages (Home, Events, About, Partners, Donations, Membership, Volunteer), bilingual EN/JP toggle, and Stripe-powered payment processing
 - **Admin portal:** event management, member records, donation history, content editing with automatic DeepL translation, and role-based account permissions
+
+**Status:** In active development. Sprint 4 complete. Public site and admin portal are partially implemented. Expected delivery: December 2026.
 
 ---
 
