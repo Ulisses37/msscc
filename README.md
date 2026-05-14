@@ -4,7 +4,6 @@
 
 A bilingual (English/Japanese) website for the [Matsuyama-Sacramento Sister City Corporation](https://msscc1.org), replacing their existing Squarespace site. Built by **SCRUM Lords** as a CSUS Computer Science Senior Project (Spring 2026 to Fall 2026).
 
----
 
 ## Project Synopsis
 
@@ -15,7 +14,6 @@ The project delivers two surfaces:
 
 **Status:** In active development. Sprint 4 complete. Public site and admin portal are partially implemented. Expected delivery: December 2026.
 
----
 
 ## Project Motivation
 
@@ -30,7 +28,6 @@ Beyond cost, the stack was chosen to match the project's specific requirements:
 - **Stripe:** explicit non-profit support with a discounted processing rate (~2.2% + $0.30) available to MSSCC upon verification
 - **Netlify + Railway:** both offer simple Git-based deploys appropriate for a student team handing off to a non-technical organization
 
----
 
 ## Tech Stack
 
@@ -46,7 +43,6 @@ Beyond cost, the stack was chosen to match the project's specific requirements:
 | Frontend hosting | Netlify |
 | Backend hosting | Railway |
 
----
 
 ## Entity-Relationship Diagram
 
@@ -219,7 +215,6 @@ erDiagram
 
 ```
 
----
 
 ## Developer Instructions
 
@@ -252,8 +247,6 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 - [Local Development and Testing Setup](./docs/MSSCC_Dev_Setup_Guide.md)
 - Deployment Guide (To be added next semester)
-
----
 
 
 ## Timeline
@@ -296,7 +289,6 @@ Complete any remaining MVP functionality needed for the replacement site and adm
 
 Resolve bugs, polish the user experience, complete final testing, and deliver the MVP. This phase prepares the project for stakeholder review, handoff, and eventual production readiness.
 
----
 
 ## Team
 
@@ -307,7 +299,6 @@ Gina Kim · Ulisses Arredondo · Lucas Bilyk · Keav'n Lor · Sang Nguyen · Dav
 **Product Owner:** Bryan Fisher, President, Matsuyama-Sacramento Sister City Corporation  
 **CTO:** Robert Martinez
 
----
 
 ## License
 
