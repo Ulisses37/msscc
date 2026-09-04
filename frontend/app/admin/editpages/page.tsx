@@ -53,7 +53,17 @@ export default function EditPagesPage() {
 
     // Use filter() to create a new array without the block chosen for deletion
     if (isConfirmed) {
-      setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
+      const contentId = Number(id);
+
+      // Store the selected block's id so that it can be deleted from the database later
+      if (!Number.isNaN(contentId)) {
+        setDeletedBlockIds((prevIds) => [...prevIds, contentId]);
+      }
+
+      // Remove the block from the page UI
+      setBlocks((prevBlocks) =>
+        prevBlocks.filter((block) => block.id !== id)
+      );
     }
   };
 
@@ -90,6 +100,9 @@ export default function EditPagesPage() {
   // Page state and list
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -124,11 +137,131 @@ export default function EditPagesPage() {
     fetchContent();
   }, [selectedPageId]);
 
+  const handleSave = async () => {
+    // Prevent saving if no page is selected
+    if (selectedPageId === null) return;
+
+    // Show the saving process visually
+    setIsSaving(true);
+    setSaveMessage('');
+
+    try {
+      const updatedBlocks = [...blocks];
+
+      for (let index = 0; index < updatedBlocks.length; index += 1) {
+        // Convert each block's id into a number
+        const block = updatedBlocks[index];
+        const contentId = Number(block.id);
+
+        const requestData = {
+          page_id: selectedPageId,
+          display_order: index,
+          content_type: block.type,
+          content_en: block.contentEn,
+          content_ja: block.contentJa,
+        };
+
+        // Perform POST to backend
+        if (Number.isNaN(contentId)) {
+          const response = await fetch(
+            'http://127.0.0.1:8000/api/content/create/',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestData),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to create content: ${response.status}`);
+          }
+
+          const createdContent = await response.json();
+
+          updatedBlocks[index] = {
+            ...block,
+            id: createdContent.content_id.toString(),
+          };
+        }
+
+        // Perform PATCH to backend
+        else {
+          const response = await fetch(
+            `http://127.0.0.1:8000/api/content/update/${contentId}/`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestData),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to update content: ${response.status}`);
+          }
+        }
+      }
+
+      // Perform DELETE to backend
+      for (const contentId of deletedBlockIds) {
+        const response = await fetch(
+          `http://127.0.0.1:8000/api/content/delete/${contentId}/`,
+          {
+            method: 'DELETE',
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete content: ${response.status}`);
+        }
+      }
+
+      // Sync currently active block ids
+      setBlocks(updatedBlocks);
+      setDeletedBlockIds([]);
+      setSaveMessage('Changes saved successfully.');
+    }
+
+    catch (error) {
+      console.error('Failed to save page content:', error);
+      setSaveMessage('Failed to save changes.');
+    }
+
+    // End saving process and proceed to show popup
+    finally {
+      setIsSaving(false);
+
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 5000);
+    }
+};
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
+        {/* Save Status Toast */}
+        {saveMessage && (
+          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-sm font-semibold text-msscc-gray-dark shadow-md">
+            {saveMessage}
+          </div>
+        )}
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
+        <div className="mb-8 flex justify-end">
+          {/* The Save Button */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || selectedPageId === null}
+            className="rounded-sm bg-msscc-pink px-5 py-2 text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
@@ -142,6 +275,7 @@ export default function EditPagesPage() {
                   value={selectedPageId ?? ''}
                   onChange={(e) => {
                   setBlocks([]);
+                  setDeletedBlockIds([]);
                   setSelectedPageId(Number(e.target.value));
                 }}
                 >

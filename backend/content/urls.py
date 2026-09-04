@@ -1,8 +1,10 @@
 from django.urls import path
-from content.views import get_content, get_content_for_page, update_content
+from content.views import get_content, get_content_for_page, update_content, create_content, delete_content
 
 urlpatterns = [
     path("get/<int:content_id>/", get_content, name="get_content"),
     path("update/<int:content_id>/", update_content, name="update_content"),
     path("page/<int:page_id>/", get_content_for_page, name="get_content_for_page"),
+    path("create/", create_content, name="create_content"),
+    path("delete/<int:content_id>/", delete_content, name="delete_content"),
 ]

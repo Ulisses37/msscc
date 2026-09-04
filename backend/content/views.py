@@ -28,3 +28,26 @@ def get_content_for_page(request, page_id):
     content = Content.objects.filter(page_id=page_id).order_by("display_order")
     serializer = ContentSerializer(content, many=True)
     return Response(serializer.data)
+
+@api_view(["POST"])
+def create_content(request):
+    """Create a content record."""
+    serializer = ContentSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["DELETE"])
+def delete_content(request, content_id):
+    """Delete a content record."""
+    try:
+        content = Content.objects.get(pk=content_id)
+    except Content.DoesNotExist:
+            return Response(
+                {"error": "Content not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+    content.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
