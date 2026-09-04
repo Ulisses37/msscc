@@ -90,6 +90,8 @@ export default function EditPagesPage() {
   // Page state and list
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -124,11 +126,42 @@ export default function EditPagesPage() {
     fetchContent();
   }, [selectedPageId]);
 
+  const handleSave = async () => {
+  setIsSaving(true);
+
+  // TODO: Implement POST, PATCH, and DELETE persistence in the save logic subtask.
+  setTimeout(() => {
+    setIsSaving(false);
+    setSaveMessage('Changes saved successfully.');
+
+    setTimeout(() => {
+      setSaveMessage('');
+    }, 3000);
+  }, 1000);
+};
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
+        {/* Save Status Toast */}
+        {saveMessage && (
+          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-sm font-semibold text-msscc-gray-dark shadow-md">
+            {saveMessage}
+          </div>
+        )}
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
+        <div className="mb-8 flex justify-end">
+          {/* The Save Button */}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || selectedPageId === null}
+            className="rounded-sm bg-msscc-pink px-5 py-2 text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
