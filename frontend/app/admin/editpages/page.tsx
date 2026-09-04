@@ -53,7 +53,17 @@ export default function EditPagesPage() {
 
     // Use filter() to create a new array without the block chosen for deletion
     if (isConfirmed) {
-      setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== id));
+      const contentId = Number(id);
+
+      // Store the selected block's id so that it can be deleted from the database later
+      if (!Number.isNaN(contentId)) {
+        setDeletedBlockIds((prevIds) => [...prevIds, contentId]);
+      }
+
+      // Remove the block from the page UI
+      setBlocks((prevBlocks) =>
+        prevBlocks.filter((block) => block.id !== id)
+      );
     }
   };
 
@@ -92,6 +102,7 @@ export default function EditPagesPage() {
   const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -127,17 +138,106 @@ export default function EditPagesPage() {
   }, [selectedPageId]);
 
   const handleSave = async () => {
-  setIsSaving(true);
+    // Prevent saving if no page is selected
+    if (selectedPageId === null) return;
 
-  // TODO: Implement POST, PATCH, and DELETE persistence in the save logic subtask.
-  setTimeout(() => {
-    setIsSaving(false);
-    setSaveMessage('Changes saved successfully.');
+    // Show the saving process visually
+    setIsSaving(true);
+    setSaveMessage('');
 
-    setTimeout(() => {
-      setSaveMessage('');
-    }, 3000);
-  }, 1000);
+    try {
+      const updatedBlocks = [...blocks];
+
+      for (let index = 0; index < updatedBlocks.length; index += 1) {
+        // Convert each block's id into a number
+        const block = updatedBlocks[index];
+        const contentId = Number(block.id);
+
+        const requestData = {
+          page_id: selectedPageId,
+          display_order: index,
+          content_type: block.type,
+          content_en: block.contentEn,
+          content_ja: block.contentJa,
+        };
+
+        // Perform POST to backend
+        if (Number.isNaN(contentId)) {
+          const response = await fetch(
+            'http://127.0.0.1:8000/api/content/create/',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestData),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to create content: ${response.status}`);
+          }
+
+          const createdContent = await response.json();
+
+          updatedBlocks[index] = {
+            ...block,
+            id: createdContent.content_id.toString(),
+          };
+        }
+
+        // Perform PATCH to backend
+        else {
+          const response = await fetch(
+            `http://127.0.0.1:8000/api/content/update/${contentId}/`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(requestData),
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to update content: ${response.status}`);
+          }
+        }
+      }
+
+      // Perform DELETE to backend
+      for (const contentId of deletedBlockIds) {
+        const response = await fetch(
+          `http://127.0.0.1:8000/api/content/delete/${contentId}/`,
+          {
+            method: 'DELETE',
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete content: ${response.status}`);
+        }
+      }
+
+      // Sync currently active block ids
+      setBlocks(updatedBlocks);
+      setDeletedBlockIds([]);
+      setSaveMessage('Changes saved successfully.');
+    }
+
+    catch (error) {
+      console.error('Failed to save page content:', error);
+      setSaveMessage('Failed to save changes.');
+    }
+
+    // End saving process and proceed to show popup
+    finally {
+      setIsSaving(false);
+
+      setTimeout(() => {
+        setSaveMessage('');
+      }, 5000);
+    }
 };
 
   return (
@@ -175,6 +275,7 @@ export default function EditPagesPage() {
                   value={selectedPageId ?? ''}
                   onChange={(e) => {
                   setBlocks([]);
+                  setDeletedBlockIds([]);
                   setSelectedPageId(Number(e.target.value));
                 }}
                 >
