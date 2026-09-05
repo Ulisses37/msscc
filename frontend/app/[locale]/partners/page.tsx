@@ -70,7 +70,7 @@ export default function PartnersPage() {
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
       {/* Display Staff-Editable Content Blocks */}
-      <section className="mb-10 w-full max-w-[1200px] space-y-6">
+      <section className="mx-auto max-w-content px-6 py-10">
         {contentBlocks.map((block) => (
           <ContentBlockRenderer
             key={block.content_id}
@@ -79,41 +79,6 @@ export default function PartnersPage() {
           />
         ))}
       </section>
-
-      {/* Header
-      <header className="w-full max-w-[1200px] text-center mb-16 pb-8 border-b border-[#1a1a1a]">
-        <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
-          Partner Page
-        </h1>
-      </header> */}
-
-      {/* Connecting with the Community
-      <section style={{
-        padding: 'var(--space-6) var(--space-6)',
-        maxWidth: '75rem',
-        width: '100%',
-        margin: '0 auto',
-      }}>
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          color: '#dc2626',
-          fontSize: 'var(--fs-heading-2)',
-          marginBottom: 'var(--space-4)',
-        }}>
-          Connecting with the Community
-        </h2>
-        <p style={{
-          fontSize: 'var(--fs-body)',
-          color: 'var(--color-gray-dark)',
-          maxWidth: '56.25rem',
-          lineHeight: 1.7,
-        }}>
-          Partners are the foundation of the Matsuyama-Sacramento Sister City Corporation, helping to
-          strengthen cultural connections and educational exchanges between our communities. Their support
-          ensures that we continue fostering mutual understanding, global citizenship, and meaningful
-          opportunities for individuals to engage with and represent our region abroad.
-        </p>
-      </section> */}
 
       {/* Partner Links */}
       <section style={{

@@ -82,8 +82,9 @@ export default function AboutPage() {
 
   return (
     <main>
+
       {/* Display Staff-Editable Content Blocks */}
-      <section className="mb-10 space-y-6">
+      <section className="mx-auto max-w-content px-6 py-10">
         {contentBlocks.map((block) => (
           <ContentBlockRenderer
             key={block.content_id}
@@ -92,10 +93,6 @@ export default function AboutPage() {
           />
         ))}
       </section>
-
-      {/* <div className="min-h-40">
-        <h1 className="text-4xl font-bold text-center mt-6 mb-2">About Us</h1>
-      </div> */}
 
       <div className="bg-msscc-teal p-0 m-0 min-h-screen">
         <p className="text-6xl text-center font-serif text-white mb-6 pt-8">

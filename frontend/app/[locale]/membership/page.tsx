@@ -69,16 +69,18 @@ export default function MembershipPage() {
 
   return (
     <div>
-      {/* Display Staff-Editable Content Blocks */}
-      <section className="mb-10 space-y-6">
-        {contentBlocks.map((block) => (
-          <ContentBlockRenderer
-            key={block.content_id}
-            block={block}
-            locale={String(locale)}
-          />
-        ))}
-      </section>
+      <main>
+        {/* Display Staff-Editable Content Blocks */}
+        <section className="mx-auto max-w-content px-6 py-10">
+          {contentBlocks.map((block) => (
+            <ContentBlockRenderer
+              key={block.content_id}
+              block={block}
+              locale={String(locale)}
+            />
+          ))}
+        </section>
+      </main>
 
       <h1>Membership Page</h1>
       {/* text elements to be added later */}
