@@ -1,8 +1,19 @@
-// Third-Party
-import React from 'react';
+'use client';
+
+// React and Next Imports
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import img from '@/assets/Illustration.jpg';
-import { useTranslations } from 'next-intl';
+
+// Components
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
+
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
 
 /**
  * This is the general view home page
@@ -10,33 +21,45 @@ import { useTranslations } from 'next-intl';
  */
 
 export default function HomePage() {
-  const t = useTranslations('HomePageTest');
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('home');
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
+
+    loadPageContent();
+  }, []);
 
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans">
+    <main>
+      {/* Display Staff-Editable Content Blocks */}
+      <section className="mx-auto max-w-content px-6 py-10">
+        {contentBlocks.map((block) => (
+          <ContentBlockRenderer
+            key={block.content_id}
+            block={block}
+            locale={String(locale)}
+          />
+        ))}
+      </section>
 
-      {/* WEBSITE HEADER */}
       <header className="text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
           {/* Dynamically swaps 'Home' based on the current locale */}
-          {t('home')} Page
         </h1>
       </header>
 
       {/* WELCOME SECTION*/}
       <section className="max-w-[800px] text-left">
-        <h2 className="text-[#8b2020] text-3xl font-semibold mb-6">
-          Welcome
-        </h2>
-
-        <p className="text-lg leading-relaxed text-[#171717]">
-          Since 1981, the <span className="font-bold">Matsuyama–Sacramento Sister City Corporation (MSSCC)</span> has
-          been a vibrant community built on cultural exchange and international friendship.
-          Founded by dedicated citizens, we connect Sacramento, California and Matsuyama,
-          Japan through programs that immerse participants in each city’s unique
-          traditions—creating lasting relationships, lifelong memories, and a
-          stronger global community.
-        </p>
 
         {/* Image Content for Welcome Section */}
         <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center">

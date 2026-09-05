@@ -1,17 +1,45 @@
 'use client';
 
-import React from 'react';
+// React and Next.js Imports
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+
+// Components
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import Button from '@/components/ui/Button';
 
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
+
 export default function MembershipPage() {
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('membership');
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
+
+    loadPageContent();
+  }, []);
 
   const handleDownload = async () => {
     try {
-      // 1. Fetch the list from the API 
+      // 1. Fetch the list from the API
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`);
       if (!response.ok) throw new Error('Failed to fetch media list');
       const items = await response.json();
-      
+
       // 2. Find the specific membership form item
       const formItem = items.find((item: any) => item.file_name === "Printable_Membership_Form.pdf");
       if (!formItem || !formItem.file_url) {
@@ -23,24 +51,37 @@ export default function MembershipPage() {
       const fileResponse = await fetch(formItem.file_url);
       const blob = await fileResponse.blob();
       const url = window.URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'Membership_Form.pdf'); 
+      link.setAttribute('download', 'Membership_Form.pdf');
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
     } catch (error) {
       console.error("Download failed:", error);
-    } 
+    }
   };
 
   return (
     <div>
+      <main>
+        {/* Display Staff-Editable Content Blocks */}
+        <section className="mx-auto max-w-content px-6 py-10">
+          {contentBlocks.map((block) => (
+            <ContentBlockRenderer
+              key={block.content_id}
+              block={block}
+              locale={String(locale)}
+            />
+          ))}
+        </section>
+      </main>
+
       <h1>Membership Page</h1>
       {/* text elements to be added later */}
 
@@ -49,11 +90,11 @@ export default function MembershipPage() {
         <Button text="View Event →" padding="6px 10px" onClick= {() => console.log('Button clicked!')}/>
         <Button text="REALLLLLLY LOONNGGGG TEXTTTTTT" width="103px" height="86px"/>
       </div>
-      
+
       {/* Printable Membership Form Button */}
         <div style={{ textAlign: 'center' }}>
-          <Button 
-            text="Print Membership Form" 
+          <Button
+            text="Print Membership Form"
             padding="12px 24px"
             fontSize="16px"
             onClick={handleDownload}
@@ -62,6 +103,6 @@ export default function MembershipPage() {
 
         {/* Payment interface to be implemented later */}
     </div>
-    
+
   );
 }

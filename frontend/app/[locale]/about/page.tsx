@@ -1,7 +1,18 @@
 'use client';
 
+// React and Next Imports
 import { useEffect, useState } from "react";
+import { useParams } from 'next/navigation';
+
+// Components
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { OfficerCard, DirectorCard } from "./BoardOfDirectorCards";
+
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
 
 interface BoardMember {
   boardMemberName: string;
@@ -14,6 +25,23 @@ export default function AboutPage() {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('about');
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
+
+    loadPageContent();
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -54,9 +82,17 @@ export default function AboutPage() {
 
   return (
     <main>
-      <div className="min-h-40">
-        <h1 className="text-4xl font-bold text-center mt-6 mb-2">About Us</h1>
-      </div>
+
+      {/* Display Staff-Editable Content Blocks */}
+      <section className="mx-auto max-w-content px-6 py-10">
+        {contentBlocks.map((block) => (
+          <ContentBlockRenderer
+            key={block.content_id}
+            block={block}
+            locale={String(locale)}
+          />
+        ))}
+      </section>
 
       <div className="bg-msscc-teal p-0 m-0 min-h-screen">
         <p className="text-6xl text-center font-serif text-white mb-6 pt-8">
