@@ -12,3 +12,15 @@ export interface ContentBlock{
   contentEn: string;
   contentJa: string;
 }
+
+/**
+ * Defines the structure the data received from the backend will become
+ */
+export interface DbContentBlock {
+  content_id: number;
+  page_id: number;
+  display_order: number;
+  content_type: BlockType;
+  content_en: string;
+  content_ja: string;
+}
