@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useState }from 'react';
+// React and Next Imports
+import React, { useEffect, useState }from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
+
+
+// Components
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { samplePartnerLinks, sampleDonors, sampleSponsors } from './sampleData';
 import { PartnerCard } from './PartnerCard';
+
+
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Utils Imports
+import { fetchPageContent } from '@/utils/content';
 
 interface PartnerLinkProps {
   name: string;
@@ -36,16 +49,45 @@ function PartnerLink({ name, href }: PartnerLinkProps) {
 }
 
 export default function PartnersPage() {
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('partners');
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
+
+    loadPageContent();
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
-      {/* Header */}
+      {/* Display Staff-Editable Content Blocks */}
+      <section className="mb-10 w-full max-w-[1200px] space-y-6">
+        {contentBlocks.map((block) => (
+          <ContentBlockRenderer
+            key={block.content_id}
+            block={block}
+            locale={String(locale)}
+          />
+        ))}
+      </section>
+
+      {/* Header
       <header className="w-full max-w-[1200px] text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
           Partner Page
         </h1>
-      </header>
+      </header> */}
 
-      {/* Connecting with the Community */}
+      {/* Connecting with the Community
       <section style={{
         padding: 'var(--space-6) var(--space-6)',
         maxWidth: '75rem',
@@ -71,7 +113,7 @@ export default function PartnersPage() {
           ensures that we continue fostering mutual understanding, global citizenship, and meaningful
           opportunities for individuals to engage with and represent our region abroad.
         </p>
-      </section>
+      </section> */}
 
       {/* Partner Links */}
       <section style={{

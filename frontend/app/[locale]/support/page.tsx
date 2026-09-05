@@ -1,20 +1,58 @@
 'use client';
 
-// React Imports
-import React, { useState } from 'react';
+// React and Next.js Imports
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 
-// Component Imports
+// Components
 import { IntegerInput } from '@/components/ui/IntegerInput';
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
+
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
 
 export default function SupportPage() {
   {/*
     * Placeholder for IntegerInput component to demo functionality. Will be replaced with actual payment form/functionality in the future.
   */}
   const [donation, setDonation] = useState<number | ''>('');
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+  const loadPageContent = async () => {
+    try {
+      const data = await fetchPageContent('support');
+      setContentBlocks(data);
+    } catch (error) {
+      console.error('Error fetching page content:', error);
+    }
+  };
+
+  loadPageContent();
+}, []);
 
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
+    {/* Display Staff-Editable Content Blocks */}
+    <section className="mb-10 w-full max-w-[1200px] space-y-6">
+      {contentBlocks.map((block) => (
+        <ContentBlockRenderer
+          key={block.content_id}
+          block={block}
+          locale={String(locale)}
+        />
+      ))}
+    </section>
 
+      {/* The following code is unneeded now. Should be deleted later. */}
+      {false && (
+        <>
       {/* WEBSITE HEADER */}
       <header className="w-full max-w-[1200px] text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
@@ -70,6 +108,8 @@ export default function SupportPage() {
 
         </article>
       </section>
+        </>
+      )}
 
       <section className="w-full mt-16 pl-6 pr-6">
           <h2 className="text-2xl font-bold text-[#264653] mt-16 mb-6">

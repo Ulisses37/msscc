@@ -1,8 +1,19 @@
-// Third-Party
-import React from 'react';
+'use client';
+
+// React and Next Imports
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import img from '@/assets/Illustration.jpg';
-import { useTranslations } from 'next-intl';
+
+// Components
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
+
+// Types
+import type { DbContentBlock } from '@/types/content';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
 
 /**
  * This is the general view home page
@@ -10,16 +21,40 @@ import { useTranslations } from 'next-intl';
  */
 
 export default function HomePage() {
-  const t = useTranslations('HomePageTest');
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const params = useParams();
+  const locale = params?.locale;
+
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('home');
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
+
+    loadPageContent();
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans">
+      {/* Display Staff-Editable Content Blocks */}
+      <section className="mx-auto max-w-prose space-y-6">
+        {contentBlocks.map((block) => (
+          <ContentBlockRenderer
+            key={block.content_id}
+            block={block}
+            locale={String(locale)}
+          />
+        ))}
+      </section>
 
-      {/* WEBSITE HEADER */}
       <header className="text-center mb-16 pb-8 border-b border-[#1a1a1a]">
         <h1 className="text-4xl md:text-5xl font-bold mb-2 text-[#264653]">
           {/* Dynamically swaps 'Home' based on the current locale */}
-          {t('home')} Page
         </h1>
       </header>
 

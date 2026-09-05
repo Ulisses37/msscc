@@ -1,11 +1,21 @@
 'use client';
 
+// React and Next Imports
 import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+
+// Components
 import { getEvents } from '@/services/eventService';
 import { EventCard } from '../../../components/events/EventCard';
 import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button';
-import { useParams, useRouter } from 'next/navigation';
+import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
+
+// Project Utilities
+import { fetchPageContent } from '@/utils/content';
+
+// Types
+import type { DbContentBlock } from '@/types/content';
 
 /**
  * EventsPage Component
@@ -14,6 +24,7 @@ import { useParams, useRouter } from 'next/navigation';
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;
@@ -41,6 +52,20 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
+  // Fetch text content from the database to display on page
+  useEffect(() => {
+  const loadPageContent = async () => {
+    try {
+      const data = await fetchPageContent('events');
+      setContentBlocks(data);
+    } catch (error) {
+      console.error('Error fetching page content:', error);
+    }
+  };
+
+  loadPageContent();
+}, []);
+
   // Check if there are any volunteer opportunities among the events
   const hasVolunteerOpportunities = events.some(
     (event) => event.volunteerSlots > 0
@@ -53,6 +78,17 @@ export default function EventsPage() {
       margin: '0 auto',
       padding: 'var(--space-10) var(--space-6)',
     }}>
+
+    {/* Display Staff-Editable Content Blocks */}
+    <section className="mb-10 space-y-6">
+      {contentBlocks.map((block) => (
+        <ContentBlockRenderer
+          key={block.content_id}
+          block={block}
+          locale={String(locale)}
+        />
+      ))}
+    </section>
 
       {/* Header */}
       <header style={{
