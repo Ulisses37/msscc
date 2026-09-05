@@ -12,7 +12,7 @@ export async function fetchPageContent(
   pageSlug: string,
 ): Promise<DbContentBlock[]> {
   const response = await fetch(
-    `http://127.0.0.1:8000/api/page/get-by-slug/${pageSlug}/`,
+    `${process.env.NEXT_PUBLIC_API_URL}/api/page/get-by-slug/${pageSlug}/`,
     {
       cache: 'no-store',
     },
