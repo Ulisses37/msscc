@@ -10,11 +10,14 @@ class BoardMemberSerializer(serializers.ModelSerializer):
         model = BoardMember
         fields = [
             "board_member_id",
-            "display_name",
+            "display_name_en",
+            "display_name_ja",
             "display_order",
             "external_link",
             "media_asset",
-            "role",
+            "role_en",
+            "role_ja",
             "start_date",
-            "caption",
+            "caption_en",
+            "caption_ja",
         ]

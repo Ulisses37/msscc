@@ -117,13 +117,21 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           </label>
         </div>
 
-        {/* Editable fields */}
+          {/* Editable fields */}
         <div className="flex flex-col gap-3">
-          <label className="text-sm font-semibold">Name
+          <label className="text-sm font-semibold">Name (English)
             <input
               type="text"
-              value={edited?.boardMemberName ?? ""}
-              onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberName: e.target.value } : prev)}
+              value={edited?.boardMemberNameEn ?? ""}
+              onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameEn: e.target.value } : prev)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+          </label>
+          <label className="text-sm font-semibold">Name (Japanese)
+            <input
+              type="text"
+              value={edited?.boardMemberNameJa ?? ""}
+              onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameJa: e.target.value } : prev)}
               className="w-full border rounded px-2 py-1 mt-1 font-normal"
             />
           </label>
@@ -131,18 +139,34 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           {/* Officer*/}
           {type === "officer" && (
             <>
-              <label className="text-sm font-semibold">Role
+              <label className="text-sm font-semibold">Role (English)
                 <input
                   type="text"
-                  value={edited?.boardMemberRole ?? ""}
-                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRole: e.target.value } : prev)}
+                  value={edited?.boardMemberRoleEn ?? ""}
+                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleEn: e.target.value } : prev)}
                   className="w-full border rounded px-2 py-1 mt-1 font-normal"
                 />
               </label>
-              <label className="text-sm font-semibold">Caption
+              <label className="text-sm font-semibold">Role (Japanese)
+                <input
+                  type="text"
+                  value={edited?.boardMemberRoleJa ?? ""}
+                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleJa: e.target.value } : prev)}
+                  className="w-full border rounded px-2 py-1 mt-1 font-normal"
+                />
+              </label>
+              <label className="text-sm font-semibold">Caption (English)
                 <textarea
-                value={edited?.boardMemberCaption ?? ""}
-                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaption: e.target.value } : prev)}
+                value={edited?.boardMemberCaptionEn ?? ""}
+                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionEn: e.target.value } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal resize-none"
+                rows={4}
+                />
+              </label>
+              <label className="text-sm font-semibold">Caption (Japanese)
+                <textarea
+                value={edited?.boardMemberCaptionJa ?? ""}
+                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionJa: e.target.value } : prev)}
                 className="w-full border rounded px-2 py-1 mt-1 font-normal resize-none"
                 rows={4}
                 />
@@ -160,8 +184,8 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           </button>
           <button
             onClick={() => {
-              if (!edited?.boardMemberName?.trim()) {
-                alert("Name cannot be empty");
+              if (!edited?.boardMemberNameEn?.trim()) {
+                alert("English name cannot be empty");
                 return;
               }
               onUpdate(edited, editedFile);
@@ -169,7 +193,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             }}
             className="px-4 py-2 bg-green-500 text-white rounded"
           >
-            {member?.boardMemberName ? "Update" : "Add"}
+            {member?.boardMemberNameEn ? "Update" : "Add"}
           </button>
         </div>
       </div>

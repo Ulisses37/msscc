@@ -17,8 +17,9 @@ import { fetchPageContent } from '@/utils/content';
 interface BoardMember {
   boardMemberName: string;
   boardMemberImageURL: string | null;
-  boardMemberRole: string | null;
+  boardMemberRole: string;
   boardMemberCaption: string | null;
+  isDirector: boolean;
 }
 
 export default function AboutPage() {
@@ -28,6 +29,7 @@ export default function AboutPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
   const params = useParams();
   const locale = params?.locale;
+  const isJapanese = locale === 'ja';
 
   // Fetch text content from the database to display on page
   useEffect(() => {
@@ -55,17 +57,21 @@ export default function AboutPage() {
         );
 
         const enriched: BoardMember[] = (members as {
-          display_name: string;
+          display_name_en: string;
+          display_name_ja: string;
           display_order: number;
           media_asset: number | null;
-          role: string;
-          caption: string;
+          role_en: string;
+          role_ja: string;
+          caption_en: string;
+          caption_ja: string;
         }[])
           .sort((a, b) => a.display_order - b.display_order)
           .map(member => ({
-            boardMemberName: member.display_name,
-            boardMemberRole: member.role,
-            boardMemberCaption: member.caption,
+            boardMemberName: isJapanese && member.display_name_ja ? member.display_name_ja : member.display_name_en,
+            boardMemberRole: isJapanese && member.role_ja ? member.role_ja : member.role_en,
+            boardMemberCaption: isJapanese && member.caption_ja ? member.caption_ja : member.caption_en,
+            isDirector: member.role_en === "Director",
             boardMemberImageURL: member.media_asset
               ? mediaById.get(member.media_asset)?.file_url ?? null
               : null,
@@ -75,7 +81,7 @@ export default function AboutPage() {
       })
       .catch(err => setError(err instanceof Error ? err.message : "Something went wrong"))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [isJapanese]);
 
   if (isLoading) return <main className="p-6">Loading...</main>;
   if (error) return <main className="p-6 text-red-600">{error}</main>;
@@ -107,7 +113,7 @@ export default function AboutPage() {
         <div className="grid gap-2 grid-cols-6 justify-center text-center mb-6">
           <div className="col-span-1" /> {/* left spacer */}
             {boardMembers.map((member) => {
-            if (member.boardMemberRole !== "Director") {
+            if (!member.isDirector) {
               return (
                 <OfficerCard
                   key={member.boardMemberName}
@@ -130,7 +136,7 @@ export default function AboutPage() {
         </div>
         <div className="flex flex-wrap justify-center align-middle gap-12 mb-6 w-[70%] mx-auto">
           {boardMembers.map((member) => {
-          if (member.boardMemberRole == "Director") {
+          if (member.isDirector) {
             return (
               <DirectorCard
                 key={member.boardMemberName}

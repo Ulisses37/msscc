@@ -5,7 +5,8 @@ class BoardMember(models.Model):
     """Board member record for people shown on the site."""
 
     board_member_id = models.AutoField(primary_key=True)
-    display_name = models.TextField()
+    display_name_en = models.TextField()
+    display_name_ja = models.TextField(blank=True)
     display_order = models.PositiveIntegerField(default=0)
     external_link = models.URLField(blank=True, null=True)
     media_asset = models.ForeignKey(
@@ -14,9 +15,11 @@ class BoardMember(models.Model):
         blank=True,
         null=True,
     )
-    role = models.TextField()
+    role_en = models.TextField()
+    role_ja = models.TextField(blank=True)
     start_date = models.DateField()
-    caption = models.TextField(blank=True)
+    caption_en = models.TextField(blank=True)
+    caption_ja = models.TextField(blank=True)
 
     class Meta:
         ordering = ["display_order", "board_member_id"]
