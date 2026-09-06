@@ -241,6 +241,24 @@ export default function EditPagesPage() {
     }
 };
 
+  const handleViewLivePage = () => {
+    if (selectedPageId === null) return;
+
+    const selectedPage = pages.find(
+      (page) => page.page_id === selectedPageId,
+    );
+
+    if (!selectedPage) return;
+
+    const pagePath =
+      selectedPage.page_slug === 'home'
+        ? '/en'
+        : `/en/${selectedPage.page_slug}`;
+
+    // Open the selcted page in a new tab
+    window.open(pagePath, '_blank');
+  };
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         {/* Save Status Toast */}
@@ -252,7 +270,7 @@ export default function EditPagesPage() {
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
-        <div className="mb-8 flex justify-end">
+        <div className="mb-8 flex flex-col items-end gap-3">
           {/* The Save Button */}
           <button
             type="button"
@@ -261,6 +279,15 @@ export default function EditPagesPage() {
             className="rounded-sm bg-msscc-pink px-5 py-2 text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : 'Save'}
+          </button>
+          {/* View Live Page Button */}
+          <button
+            type="button"
+            onClick={handleViewLivePage}
+            disabled={selectedPageId === null}
+            className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            View Live Page
           </button>
         </div>
         <div className="flex flex-col md:flex-row gap-10">
