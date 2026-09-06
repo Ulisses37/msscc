@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button'; // Using your Button component
 export default function VolunteerPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const router = useRouter();
   const { locale } = useParams(); // Get current locale (e.g., 'en')
 
@@ -37,13 +37,13 @@ export default function VolunteerPage() {
       <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
         {events.map((event) => (
           <div key={event.id} style={{ border: '1px solid var(--color-gray-light)', padding: 'var(--space-6)', borderRadius: '8px' }}>
-            <h3>{event.title}</h3>
-            <p><strong>Location:</strong> {event.location}</p>
+            <h3>{locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn}</h3>
+            <p><strong>Location:</strong> {locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn}</p>
             <p><strong>Time:</strong> {new Date(event.startDatetime).toLocaleString()}</p>
             <p><strong>Volunteers Needed:</strong> {event.volunteerSlots}</p>
-            
+
             {/* Updated to use your Button component with a redirect */}
-            <Button 
+            <Button
               text="Sign Up"
               onClick={() => router.push(`/${locale}/volunteer/${event.id}`)}
               padding="12px 24px"

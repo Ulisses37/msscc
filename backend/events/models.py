@@ -5,9 +5,12 @@ class Event(models.Model):
     """Event record for activities shown on the site."""
 
     event_id = models.AutoField(primary_key=True)
-    title = models.TextField()
-    description = models.TextField(blank=True)
-    location = models.TextField()
+    title_en = models.TextField()
+    title_ja = models.TextField(blank=True)
+    description_en = models.TextField(blank=True)
+    description_ja = models.TextField(blank=True)
+    location_en = models.TextField()
+    location_ja = models.TextField(blank=True)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
     volunteer_slots = models.PositiveIntegerField(default=0)

@@ -3,9 +3,12 @@ import type { Event } from '@/types/event';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 interface RawEvent {
   event_id: number;
-  title: string;
-  description: string;
-  location: string;
+  title_en: string;
+  title_ja: string;
+  description_en: string;
+  description_ja: string;
+  location_en: string;
+  location_ja: string;
   start_datetime: string;
   end_datetime: string;
   volunteer_slots: number;
@@ -19,9 +22,12 @@ interface RawEvent {
 function mapEvent(raw: RawEvent): Event {
   return {
     id:             raw.event_id,
-    title:          raw.title,
-    description:    raw.description,
-    location:       raw.location,
+    titleEn:        raw.title_en,
+    titleJa:        raw.title_ja,
+    descriptionEn:  raw.description_en,
+    descriptionJa:  raw.description_ja,
+    locationEn:     raw.location_en,
+    locationJa:     raw.location_ja,
     startDatetime:  raw.start_datetime,
     endDatetime:    raw.end_datetime,
     volunteerSlots: raw.volunteer_slots,

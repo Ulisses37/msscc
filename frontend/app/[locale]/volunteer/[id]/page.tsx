@@ -3,22 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getEventById } from '@/services/eventService'; 
-import { getSlotsByEventId, submitVolunteerSignup } from '@/services/volunteerService'; 
+import { getEventById } from '@/services/eventService';
+import { getSlotsByEventId, submitVolunteerSignup } from '@/services/volunteerService';
 import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button';
 
 export default function VolunteerSignupPage() {
   const { id, locale } = useParams();
   const router = useRouter();
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedData, setSubmittedData] = useState<any | null>(null);
-  
+
   const [selectedSlotId, setSelectedSlotId] = useState<number | ''>('');
   const [formData, setFormData] = useState({
     first_name: '',
@@ -65,7 +65,7 @@ export default function VolunteerSignupPage() {
     }
 
     setIsSubmitting(true);
-    const payload = { 
+    const payload = {
       first_name: formData.first_name,
       last_name: formData.last_name,
       email: formData.email,
@@ -81,7 +81,7 @@ export default function VolunteerSignupPage() {
         throw new Error(JSON.stringify(errorData) || "Submission failed.");
       }
       const successData = await res.json();
-      setSubmittedData(successData); 
+      setSubmittedData(successData);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setSubmitError(err.message);
@@ -92,9 +92,13 @@ export default function VolunteerSignupPage() {
 
   if (loading) return <main style={{ padding: '4rem', textAlign: 'center' }}>Loading...</main>;
 
+  if (!event) return <main style={{ padding: '4rem', textAlign: 'center' }}>Event not found. </main>;
+
+  const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
+
   return (
     <main style={{ maxWidth: '75rem', margin: '0 auto', padding: 'var(--space-10) var(--space-6)', fontFamily: 'var(--font-body)' }}>
-      
+
       {/* SUCCESS CONFIRMATION MODAL */}
       {submittedData && (
         <div style={modalOverlayStyle}>
@@ -103,7 +107,7 @@ export default function VolunteerSignupPage() {
             <p style={{ marginBottom: '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>Please save this information:</p>
             <div style={infoBoxStyle}>
               <p><strong>Signup ID:</strong> <span style={{ color: '#d72638', fontWeight: 800 }}>{submittedData.volunteer_signup_id}</span></p>
-              <p><strong>Event:</strong> {event?.title}</p>
+              <p><strong>Event:</strong> {title}</p>
               <p><strong>Name:</strong> {submittedData.first_name} {submittedData.last_name}</p>
               <p><strong>Email:</strong> {submittedData.email}</p>
               <p><strong>Phone:</strong> {submittedData.phone || 'N/A'}</p>
@@ -119,14 +123,14 @@ export default function VolunteerSignupPage() {
 
       <section style={{ marginTop: 'var(--space-8)' }}>
         <h1 style={{ color: '#d72638' }}>Volunteer Signup</h1>
-        <h2>{event?.title}</h2>
+        <h2>{title}</h2>
       </section>
 
       <hr style={{ border: '0.5px solid var(--color-gray-light)', margin: 'var(--space-10) 0' }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
+
           {submitError && (
             <div style={{ padding: '1rem', backgroundColor: '#fff5f5', border: '1px solid #fc8181', borderRadius: '8px', color: '#c53030' }}>
               {submitError}
@@ -146,22 +150,22 @@ export default function VolunteerSignupPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <input required placeholder="First Name" style={inputStyle} value={formData.first_name}
              onChange={e => setFormData({...formData, first_name: e.target.value})} />
-            <input required placeholder="Last Name" style={inputStyle} value={formData.last_name} 
+            <input required placeholder="Last Name" style={inputStyle} value={formData.last_name}
             onChange={e => setFormData({...formData, last_name: e.target.value})} />
           </div>
 
           <input type="email" required placeholder="Email" style={inputStyle} value={formData.email}
            onChange={e => setFormData({...formData, email: e.target.value})} />
-          
+
           {/* Phone Input with validation and hover tooltip */}
           <div>
-            <input 
-              type="tel" 
+            <input
+              type="tel"
               required
-              placeholder="Phone Number (e.g. 123-456-7890)" 
-              style={inputStyle} 
-              value={formData.phone} 
-              onChange={e => setFormData({...formData, phone: e.target.value})} 
+              placeholder="Phone Number (e.g. 123-456-7890)"
+              style={inputStyle}
+              value={formData.phone}
+              onChange={e => setFormData({...formData, phone: e.target.value})}
               title="Please enter a 10-digit phone number (e.g., 123-456-7890)"
             />
           </div>
@@ -180,10 +184,10 @@ const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border
 const modalOverlayStyle: React.CSSProperties =
  { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)',
    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' };
-const modalContentStyle: React.CSSProperties = 
+const modalContentStyle: React.CSSProperties =
 { backgroundColor: 'white', padding: '3rem', borderRadius: '12px', maxWidth: '42rem', width: '100%',
    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', textAlign: 'left' };
 const modalHeadingStyle: React.CSSProperties =
  { color: '#d72638', marginBottom: '2rem', textAlign: 'center', fontSize: '2.5rem', fontWeight: 800 };
-const infoBoxStyle: React.CSSProperties = 
+const infoBoxStyle: React.CSSProperties =
 { backgroundColor: '#f8f9fa', padding: '2rem', borderRadius: '8px', marginBottom: '2rem', lineHeight: '2.2', fontSize: '1.1rem' };
