@@ -68,6 +68,28 @@ export default function EditPagesPage() {
     }
   };
 
+  // Move ContentBlocks up or down
+  const moveBlock = (index: number, direction: 'up' | 'down') => {
+  const newBlocks = [...blocks];
+
+  // Change target block's index based on inputted direction
+  const targetIndex =
+    direction === 'up'
+      ? index - 1
+      : index + 1;
+
+  // Prevent content blocks from being placed out of bounds
+  if (targetIndex < 0 || targetIndex >= newBlocks.length) return;
+
+  // Perform the swapping of indexes
+  [newBlocks[index], newBlocks[targetIndex]] = [
+    newBlocks[targetIndex],
+    newBlocks[index],
+  ];
+
+  setBlocks(newBlocks);
+};
+
   // Updating blocks
   const updateBlock = (updatedBlock: ContentBlock) => {
         setBlocks(blocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b)));
@@ -341,7 +363,30 @@ export default function EditPagesPage() {
 
             {/* Loop through blocks array to show each created block */}
             <div className="flex-1 space-y-6">
-                {blocks.map((block) => (
+                {blocks.map((block, index) => (
+                  <div key={block.id} className="space-y-2">
+                    <div className="flex justify-end gap-2">
+                      {/* Up and Down Control Buttons */}
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(index, 'up')}
+                        // Disable Up button if it is the first content block
+                        disabled={index === 0}
+                        className="rounded-sm border border-msscc-gray-light px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        ↑ Move Up
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(index, 'down')}
+                        // Disable Down button if it is the last content block
+                        disabled={index === blocks.length - 1}
+                        className="rounded-sm border border-msscc-gray-light px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        ↓ Move Down
+                      </button>
+                    </div>
                     <BilingualInput
                         key={block.id}
                         title={block.type}
@@ -354,6 +399,7 @@ export default function EditPagesPage() {
                         onTranslate={() => handleTranslate(block.id, block.contentEn)}
                         onDelete={() => handleDeleteBlock(block.id)}
                     />
+                  </div>
                 ))}
 
                 {blocks.length === 0 && (
