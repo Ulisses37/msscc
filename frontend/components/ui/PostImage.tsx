@@ -10,7 +10,8 @@ type ImageItem = {
   file_url: string | null;
   file_name: string;
   file_type: string;
-  alt_text: string;
+  alt_text_en: string;
+  alt_text_ja: string;
   created_at: string;
 };
 
@@ -72,7 +73,7 @@ export default function PostImage({ mediaID, className, configVariant }: PostIma
   return (
     <Image
       src={image.file_url}
-      alt={image.alt_text || image.file_name}
+      alt={image.alt_text_en || image.file_name}
       fill={layout.mode === "fill"}
       width={layout.mode !== "fill" ? layout.width : undefined}
       height={layout.mode !== "fill" ? layout.height : undefined}

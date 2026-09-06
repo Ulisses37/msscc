@@ -7,7 +7,8 @@ class MediaAsset(models.Model):
     file_name = models.CharField(max_length=255)
     file = models.FileField(upload_to='public/')
     file_type = models.CharField(max_length=100)
-    alt_text = models.CharField(max_length=255, blank=True)
+    alt_text_en = models.CharField(max_length=255, blank=True)
+    alt_text_ja = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

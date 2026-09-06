@@ -16,7 +16,8 @@ class MediaFileSerializer(serializers.ModelSerializer):
             "file_url",
             "file_name",
             "file_type",
-            "alt_text",
+            "alt_text_en",
+            "alt_text_ja",
             "created_at",
         ]
         read_only_fields = [
