@@ -12,6 +12,7 @@ type ImageRecord = {
   display_name?: string;
   display_name_en?: string;
   title?: string;
+  title_en?: string;
 };
 
 type RetrieveImageListProps = {
@@ -79,6 +80,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
             display_name: record.display_name as string | undefined,
             display_name_en: record.display_name_en as string | undefined,
             title: record.title as string | undefined,
+            title_en: record.title_en as string | undefined,
           };
         });
 
@@ -136,7 +138,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
             {/* Grid items populates here begins here*/}
             <div className="p-3 pb-2">
               <p className="text-sm font-medium truncate">
-                {record.title || record.display_name || record.display_name_en || `ID: ${record.id}`}
+                {record.title || record.title_en || record.display_name || record.display_name_en || `ID: ${record.id}`}
               </p>
             </div>
 

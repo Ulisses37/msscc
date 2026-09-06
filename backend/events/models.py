@@ -33,4 +33,4 @@ class Event(models.Model):
 
     def __str__(self):
         """Return the event title."""
-        return self.title
+        return self.title_en
