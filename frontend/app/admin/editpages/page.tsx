@@ -241,6 +241,24 @@ export default function EditPagesPage() {
     }
 };
 
+  const handleViewLivePage = () => {
+    if (selectedPageId === null) return;
+
+    const selectedPage = pages.find(
+      (page) => page.page_id === selectedPageId,
+    );
+
+    if (!selectedPage) return;
+
+    const pagePath =
+      selectedPage.page_slug === 'home'
+        ? '/en'
+        : `/en/${selectedPage.page_slug}`;
+
+    // Open the selcted page in a new tab
+    window.open(pagePath, '_blank');
+  };
+
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         {/* Save Status Toast */}
@@ -265,6 +283,7 @@ export default function EditPagesPage() {
           {/* View Live Page Button */}
           <button
             type="button"
+            onClick={handleViewLivePage}
             disabled={selectedPageId === null}
             className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
