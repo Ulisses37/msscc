@@ -8,7 +8,6 @@ import Link from 'next/link';  // To be used if partner objects have links to th
 
 // Components
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
-import { samplePartnerLinks, sampleDonors, sampleSponsors } from './sampleData';
 import { PartnerCard } from './PartnerCard';
 
 
@@ -21,6 +20,15 @@ import { fetchPageContent } from '@/utils/content';
 interface PartnerLinkProps {
   name: string;
   href: string;
+}
+
+interface PartnerRecord {
+  id: number;
+  name: string;
+  categoryEn: string;
+  category: string;
+  imageUrl?: string;
+  websiteUrl?: string;
 }
 
 function PartnerLink({ name, href }: PartnerLinkProps) {
@@ -50,8 +58,10 @@ function PartnerLink({ name, href }: PartnerLinkProps) {
 
 export default function PartnersPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [partners, setPartners] = useState<PartnerRecord[]>([]);
   const params = useParams();
   const locale = params?.locale;
+  const isJapanese = locale === 'ja';
 
   // Fetch text content from the database to display on page
   useEffect(() => {
@@ -66,6 +76,56 @@ export default function PartnersPage() {
 
     loadPageContent();
   }, []);
+
+  // fetch partners and images from database instead of relying on sampleData
+  useEffect(() => {
+    Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`).then(res => res.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
+    ])
+      .then(([partnerRecords, mediaAssets]: [unknown[], unknown[]]) => {
+        const mediaById = new Map(
+          (mediaAssets as {media_asset_id: number; file_url: string | null}[])
+            .map(m => [m.media_asset_id, m])
+        );
+
+        const mappedPartners: PartnerRecord[] = (partnerRecords as {
+          partner_id: number;
+          display_name_en: string;
+          display_name_ja: string;
+          category_en: string;
+          category_ja: string;
+          website_url: string | null;
+          is_visible: boolean;
+          display_order: number;
+          media_asset: number | null;
+        }[])
+          .filter(partner => partner.is_visible)
+          .sort((a, b) => a.display_order - b.display_order)
+          .map(partner => ({
+            id: partner.partner_id,
+            name: isJapanese && partner.display_name_ja ? partner.display_name_ja : partner.display_name_en,
+            categoryEn: partner.category_en,
+            category: isJapanese && partner.category_ja ? partner.category_ja : partner.category_en,
+            websiteUrl: partner.website_url ?? undefined,
+            imageUrl: partner.media_asset
+              ? mediaById.get(partner.media_asset)?.file_url ?? undefined
+              : undefined,
+          }));
+
+        setPartners(mappedPartners);
+      })
+      .catch(error => console.error('Error fetching partners:', error));
+  // refetch data every time the locale changes
+  }, [isJapanese]);
+
+  const partnerLinks = partners.filter(
+    (partner): partner is PartnerRecord & { websiteUrl: string } =>
+      ['partner', 'partners'].includes(partner.categoryEn.toLowerCase()) &&
+      Boolean(partner.websiteUrl)
+  );
+  const donors = partners.filter(partner => ['donor', 'donors'].includes(partner.categoryEn.toLowerCase()));
+  const sponsors = partners.filter(partner => ['sponsor', 'sponsors'].includes(partner.categoryEn.toLowerCase()));
 
   return (
     <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
@@ -99,21 +159,9 @@ export default function PartnersPage() {
           We are proud to celebrate our partner organizations and sponsors.
         </p>
         <ul style={{ listStyle: 'disc', paddingLeft: 'var(--space-10)', lineHeight: 1.7 }}>
-          {samplePartnerLinks.map((partner) => (
-            <li key={partner.name} style={{ marginBottom: 'var(--space-2)' }}>
-              <PartnerLink name={partner.name} href={partner.href} />
-
-              {/* If this partner has a pair, render it separated by "and" */}
-              {partner.pair && (
-                <>
-                  <span style={{
-                    color: 'var(--color-gray-dark)',
-                    fontFamily: 'var(--font-body)',
-                    margin: '0 var(--space-2)'}}
-                    >and</span>
-                  <PartnerLink name={partner.name} href={partner.href} />
-                </>
-              )}
+          {partnerLinks.map((partner) => (
+            <li key={partner.id} style={{ marginBottom: 'var(--space-2)' }}>
+              <PartnerLink name={partner.name} href={partner.websiteUrl} />
             </li>
           ))}
         </ul>
@@ -170,12 +218,11 @@ export default function PartnersPage() {
             flexDirection: 'column',
             gap: 'var(--space-3)',
           }}>
-            {sampleDonors.map((donor) => (
+            {donors.map((donor) => (
               <PartnerCard
-                key={donor.name}
+                key={donor.id}
                 name={donor.name}
                 imageUrl={donor.imageUrl}
-                description={donor.description}
                 websiteUrl={donor.websiteUrl}
               />
             ))}
@@ -204,12 +251,11 @@ export default function PartnersPage() {
             flexDirection: 'column',
             gap: 'var(--space-3)',
           }}>
-            {sampleSponsors.map((sponsor) => (
+            {sponsors.map((sponsor) => (
               <PartnerCard
-                key={sponsor.name}
+                key={sponsor.id}
                 name={sponsor.name}
                 imageUrl={sponsor.imageUrl}
-                description={sponsor.description}
                 websiteUrl={sponsor.websiteUrl}
               />
             ))}

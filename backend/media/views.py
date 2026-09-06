@@ -39,7 +39,8 @@ class MediaUploadView(APIView):
             file=file,
             file_name=file.name,
             file_type=file.content_type or "",
-            alt_text=request.data.get("alt_text", ""),
+            alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
+            alt_text_ja=request.data.get("alt_text_ja", ""),
         )
 
         serializer = MediaFileSerializer(media)

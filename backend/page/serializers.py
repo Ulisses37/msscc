@@ -10,7 +10,8 @@ class PageSerializer(serializers.ModelSerializer):
         fields = [
             "page_id",
             "page_slug",
-            "page_title",
+            "page_title_en",
+            "page_title_ja",
             "created_at",
             "updated_at",
             "content",

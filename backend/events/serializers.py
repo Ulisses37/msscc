@@ -11,9 +11,12 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             "event_id",
-            "title",
-            "description",
-            "location",
+            "title_en",
+            "title_ja",
+            "description_en",
+            "description_ja",
+            "location_en",
+            "location_ja",
             "start_datetime",
             "end_datetime",
             "volunteer_slots",

@@ -36,6 +36,8 @@ function truncate(text: string, maxLength: number = 100): string {
 export function EventCard({ event }: EventCardProps) {
   const { locale } = useParams();
   const eventUrl = `/${locale}/events/${event.id}`;
+  const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
+  const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
 
   return (
     <div
@@ -55,7 +57,7 @@ export function EventCard({ event }: EventCardProps) {
         {event.media?.fileUrl ? (
           <Image
             src={event.media.fileUrl}
-            alt={event.media.altText ?? event.title}
+            alt={event.media.altText ?? title}
             width={400}
             height={300}
             style={{ width: '400px', height: '100%', objectFit: 'cover' }}
@@ -129,7 +131,7 @@ export function EventCard({ event }: EventCardProps) {
             lineHeight: 1.3,
           }}
         >
-          {event.title}
+          {title}
         </Link>
 
         {/* Time range */}
@@ -143,7 +145,7 @@ export function EventCard({ event }: EventCardProps) {
         </p>
 
         {/* Truncated description */}
-        {event.description && (
+        {description && (
           <p style={{
             fontFamily: 'var(--font-body)',
             fontSize: 'var(--fs-body-sm)',
@@ -151,7 +153,7 @@ export function EventCard({ event }: EventCardProps) {
             margin: 0,
             lineHeight: 1.6,
           }}>
-            {truncate(event.description)}
+            {truncate(description)}
           </p>
         )}
 

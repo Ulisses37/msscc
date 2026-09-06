@@ -5,9 +5,12 @@ export interface MediaAsset {
 
 export interface Event {
   id: number;
-  title: string;
-  description: string;
-  location: string;
+  titleEn: string;
+  titleJa: string;
+  descriptionEn: string;
+  descriptionJa: string;
+  locationEn: string;
+  locationJa: string;
   startDatetime: string;
   endDatetime: string;
   volunteerSlots: number;

@@ -1,5 +1,7 @@
 import Image from 'next/image';
 import type { Event } from '@/types/event';
+import { useParams } from 'next/navigation';
+
 
 interface EventDetailProps {
   event: Event;
@@ -23,6 +25,10 @@ function isSameDay(a: string, b: string): boolean {
 }
 
 export function EventDetail({ event }: EventDetailProps) {
+  const { locale } = useParams();
+  const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
+  const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
+  const location = locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn;
   return (
     <article style={{
       maxWidth: '75rem',
@@ -42,7 +48,7 @@ export function EventDetail({ event }: EventDetailProps) {
         }}>
           <Image
             src={event.media.fileUrl}
-            alt={event.media.altText ?? event.title}
+            alt={event.media.altText ?? title}
             fill
             style={{ objectFit: 'cover' }}
             priority
@@ -58,7 +64,7 @@ export function EventDetail({ event }: EventDetailProps) {
         marginBottom: 'var(--space-6)',
         lineHeight: 1.2,
       }}>
-        {event.title}
+        {title}
       </h1>
 
       {/* Metadata */}
@@ -90,7 +96,7 @@ export function EventDetail({ event }: EventDetailProps) {
           color: 'var(--color-gray-mid)',
           margin: 0,
         }}>
-          📍 {event.location}
+          📍 {location}
         </p>
 
         {/* Volunteer slots */}
@@ -127,14 +133,14 @@ export function EventDetail({ event }: EventDetailProps) {
       </div>
 
       {/* Full description — preserves line breaks */}
-      {event.description && (
+      {description && (
         <div style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body)',
           color: 'var(--color-gray-dark)',
           lineHeight: 1.7,
         }}>
-          {event.description.split('\n').map((paragraph, index) => (
+          {description.split('\n').map((paragraph, index) => (
             <p key={index} style={{ marginBottom: 'var(--space-4)' }}>
               {paragraph}
             </p>

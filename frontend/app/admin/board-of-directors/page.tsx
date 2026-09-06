@@ -6,10 +6,13 @@ import {DirectorCardPreview, OfficerCardPreview, MemberPopUp} from "./BoardOfDir
 
 export interface BoardMember {
   boardMemberId: number;
-  boardMemberName: string;
+  boardMemberNameEn: string;
+  boardMemberNameJa: string;
   boardMemberImageURL: string | null;
-  boardMemberRole: string | null;
-  boardMemberCaption: string | null;
+  boardMemberRoleEn: string;
+  boardMemberRoleJa: string;
+  boardMemberCaptionEn: string;
+  boardMemberCaptionJa: string;
 }
 
 
@@ -33,18 +36,24 @@ export default function BoardOfDirectors() {
 
           const enriched: BoardMember[] = (members as {
             board_member_id: number;
-            display_name: string;
+            display_name_en: string;
+            display_name_ja: string;
             display_order: number;
             media_asset: number | null;
-            role: string;
-            caption: string;
+            role_en: string;
+            role_ja: string;
+            caption_en: string;
+            caption_ja: string;
           }[])
             .sort((a, b) => a.display_order - b.display_order)
             .map(member => ({
               boardMemberId: member.board_member_id,
-              boardMemberName: member.display_name,
-              boardMemberRole: member.role,
-              boardMemberCaption: member.caption,
+              boardMemberNameEn: member.display_name_en,
+              boardMemberNameJa: member.display_name_ja,
+              boardMemberRoleEn: member.role_en,
+              boardMemberRoleJa: member.role_ja,
+              boardMemberCaptionEn: member.caption_en,
+              boardMemberCaptionJa: member.caption_ja,
               boardMemberImageURL: member.media_asset
                 ? mediaById.get(member.media_asset)?.file_url ?? null
                 : null,
@@ -62,14 +71,14 @@ export default function BoardOfDirectors() {
         <h2 className="text-2xl font-serif pl-2">Officers</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {boardMembers
-          .filter((member) => member.boardMemberRole !== "Director")
+          .filter((member) => member.boardMemberRoleEn !== "Director")
           .map((member) => (
             <OfficerCardPreview
-              key={member.boardMemberName}
-              boardMemberName={member.boardMemberName}
+              key={member.boardMemberId}
+              boardMemberName={member.boardMemberNameEn}
               boardMemberImageURL={member.boardMemberImageURL}
-              boardMemberRole={member.boardMemberRole}
-              boardMemberCaption={member.boardMemberCaption}
+              boardMemberRole={member.boardMemberRoleEn}
+              boardMemberCaption={member.boardMemberCaptionEn}
               onClick={() => {setIsOpen("officer"); setSelectedMember(member);}}
             />
           ))}
@@ -84,10 +93,13 @@ export default function BoardOfDirectors() {
             onClick={() => {
             setSelectedMember({
               boardMemberId: -1,
-              boardMemberName: "",
+              boardMemberNameEn: "",
+              boardMemberNameJa: "",
               boardMemberImageURL: null,
-              boardMemberRole: "Director",
-              boardMemberCaption: null,
+              boardMemberRoleEn: "Director",
+              boardMemberRoleJa: "",
+              boardMemberCaptionEn: "",
+              boardMemberCaptionJa: "",
             });
             setIsOpen("director");
             }}
@@ -98,11 +110,11 @@ export default function BoardOfDirectors() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {boardMembers
-          .filter((member) => member.boardMemberRole === "Director")
+          .filter((member) => member.boardMemberRoleEn === "Director")
           .map((member) => (
             <DirectorCardPreview
-              key={member.boardMemberName}
-              boardMemberName={member.boardMemberName}
+              key={member.boardMemberId}
+              boardMemberName={member.boardMemberNameEn}
               boardMemberImageURL={member.boardMemberImageURL}
               onClick={() => {setIsOpen("director"); setSelectedMember(member);}}
             />
@@ -161,9 +173,12 @@ async function updateMember(member: BoardMember | null, file?: File | null) {
       method: isNew ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        display_name: member.boardMemberName,
-        role: member.boardMemberRole,
-        caption: member.boardMemberCaption || "",
+        display_name_en: member.boardMemberNameEn,
+        display_name_ja: member.boardMemberNameJa,
+        role_en: member.boardMemberRoleEn,
+        role_ja: member.boardMemberRoleJa,
+        caption_en: member.boardMemberCaptionEn,
+        caption_ja: member.boardMemberCaptionJa,
         display_order: 0,
         start_date: new Date().toISOString().split("T")[0],
         ...(mediaAssetId !== null && { media_asset: mediaAssetId }),

@@ -5,7 +5,8 @@ class Page(models.Model):
 
     page_id = models.AutoField(primary_key=True)
     page_slug = models.SlugField(max_length=255, unique=True)
-    page_title = models.CharField(max_length=255)
+    page_title_en = models.CharField(max_length=255)
+    page_title_ja = models.CharField(max_length=255, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -18,4 +19,4 @@ class Page(models.Model):
 
     def __str__(self):
         """Return a string representation of the page."""
-        return f"Page {self.page_id}: {self.page_title}"
+        return f"Page {self.page_id}: {self.page_title_en}"

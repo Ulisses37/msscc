@@ -30,6 +30,7 @@ interface NavLinkProps {
 function NavLink({ event, direction, locale }: NavLinkProps) {
   const [hovered, setHovered] = useState(false);
   const isPrevious = direction === 'previous';
+  const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
 
   return (
     <Link
@@ -67,7 +68,7 @@ function NavLink({ event, direction, locale }: NavLinkProps) {
         transition: 'color 0.15s ease',
         textAlign: isPrevious ? 'left' : 'right',
       }}>
-        {event.title}
+        {title}
       </span>
 
       {/* Formatted start date */}

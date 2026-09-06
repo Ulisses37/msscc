@@ -8,7 +8,8 @@ type ImageItem = {
   file_url: string | null;
   file_name: string;
   file_type: string;
-  alt_text: string;
+  alt_text_en: string;
+  alt_text_ja: string;
   created_at: string;
 };
 
