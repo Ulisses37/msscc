@@ -26,8 +26,19 @@ class EventDetailView(generics.RetrieveUpdateAPIView):
 
 
 class VolunteerSlotViewSet(viewsets.ModelViewSet):
-    queryset = VolunteerSlot.objects.all()
     serializer_class = VolunteerSlotSerializer
+
+    def get_queryset(self):
+        queryset = VolunteerSlot.objects.all()
+        event_id = self.request.query_params.get("event_id")
+        event = self.request.query_params.get("event")
+
+        if event_id:
+            queryset = queryset.filter(event_id=event_id)
+        elif event:
+            queryset = queryset.filter(event_id=event)
+
+        return queryset.order_by("start_datetime", "volunteer_slot_id")
 
 
 class VolunteerSignupViewSet(viewsets.ModelViewSet):
