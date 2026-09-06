@@ -22,7 +22,8 @@ import BilingualInput from '@/components/admin/BilingualInput';
 type Page = {
   page_id: number;
   page_slug: string;
-  page_title: string;
+  page_title_en: string;
+  page_title_ja: string;
 }
 
 type dbContentBlock = {
@@ -282,7 +283,7 @@ export default function EditPagesPage() {
               <option value="" disabled>Select a page...</option>
               {pages.map((page) => (
                 <option key={page.page_id} value={page.page_id}>
-                  {page.page_title}
+                  {page.page_title_en}
                 </option>
               ))}
               </select>
