@@ -15,7 +15,7 @@ type StaticImageItem = {
 };
 
 async function fetchStaticImageById(id: number): Promise<StaticImageItem> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/static-images/${id}/`);
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/${id}/`);
 
   if (!response.ok) {
     throw new Error(`Failed to load static object from API.`);
