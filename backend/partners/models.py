@@ -5,8 +5,10 @@ class Partner(models.Model):
     """Partner record for organizations shown on the site."""
 
     partner_id = models.AutoField(primary_key=True)
-    display_name = models.TextField()
-    category = models.TextField()
+    display_name_en = models.TextField()
+    display_name_ja = models.TextField(blank=True)
+    category_en = models.TextField()
+    category_ja = models.TextField(blank=True)
     website_url = models.URLField(blank=True, null=True)
     contribution_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_visible = models.BooleanField(default=True)
@@ -28,4 +30,4 @@ class Partner(models.Model):
 
     def __str__(self):
         """Return the partner display name."""
-        return self.display_name
+        return self.display_name_en

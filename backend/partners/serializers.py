@@ -10,8 +10,10 @@ class PartnerSerializer(serializers.ModelSerializer):
         model = Partner
         fields = [
             "partner_id",
-            "display_name",
-            "category",
+            "display_name_en",
+            "display_name_ja",
+            "category_en",
+            "category_ja",
             "website_url",
             "contribution_amount",
             "is_visible",
