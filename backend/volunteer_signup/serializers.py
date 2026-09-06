@@ -1,7 +1,3 @@
-from rest_framework import serializers
-from .models import VolunteerSignup
+from events.serializers import VolunteerSignupSerializer
 
-class VolunteerSignupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VolunteerSignup
-        fields = '__all__'
+__all__ = ["VolunteerSignupSerializer"]

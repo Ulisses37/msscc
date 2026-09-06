@@ -25,7 +25,7 @@ export function VolunteerSignupForm({ event, onClose }: { event: any, onClose: (
 
   // Fetch slots for this specific event
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/volunteer_slots/?event=${event.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/?event=${event.id}`)
       .then(res => res.json())
       .then(data => setSlots(data));
   }, [event.id]);

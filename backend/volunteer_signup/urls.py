@@ -1,10 +1,3 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import VolunteerSignupViewSet
+from events.urls import urlpatterns
 
-router = DefaultRouter()
-router.register(r'', VolunteerSignupViewSet)
-
-urlpatterns = [
-    path('', include(router.urls)),
-]
+__all__ = ["urlpatterns"]

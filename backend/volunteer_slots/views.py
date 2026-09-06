@@ -1,7 +1,3 @@
-from rest_framework import viewsets
-from .models import VolunteerSlot
-from .serializers import VolunteerSlotSerializer
+from events.views import VolunteerSlotViewSet
 
-class VolunteerSlotViewSet(viewsets.ModelViewSet):
-    queryset = VolunteerSlot.objects.all()
-    serializer_class = VolunteerSlotSerializer
+__all__ = ["VolunteerSlotViewSet"]

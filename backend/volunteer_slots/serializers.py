@@ -1,7 +1,3 @@
-from rest_framework import serializers
-from .models import VolunteerSlot
+from events.serializers import VolunteerSlotSerializer
 
-class VolunteerSlotSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VolunteerSlot
-        fields = '__all__'
+__all__ = ["VolunteerSlotSerializer"]

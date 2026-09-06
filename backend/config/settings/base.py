@@ -58,8 +58,6 @@ INSTALLED_APPS = [
     "page",
     "content",
     "static_image",
-    'volunteer_slots',
-    'volunteer_signup',
 ]
 
 REST_FRAMEWORK = {
