@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "page",
     "content",
     "static_image",
+    "donations",
 
     "volunteer_signup",
     "volunteer_slots",

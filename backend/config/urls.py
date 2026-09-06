@@ -32,4 +32,5 @@ urlpatterns = [
     path("api/page/", include("page.urls")),
     path("api/content/", include("content.urls")),
     path("api/static-images/", include("static_image.urls")),
+    path("api/donations/", include("donations.urls")),
 ]
