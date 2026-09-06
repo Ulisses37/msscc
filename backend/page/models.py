@@ -6,7 +6,7 @@ class Page(models.Model):
     page_id = models.AutoField(primary_key=True)
     page_slug = models.SlugField(max_length=255, unique=True)
     page_title_en = models.CharField(max_length=255)
-    page_title_ja = models.CharField(max_length=255)
+    page_title_ja = models.CharField(max_length=255, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
