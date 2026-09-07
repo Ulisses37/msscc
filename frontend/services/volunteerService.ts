@@ -10,14 +10,14 @@ export const getVolunteerEvents = async (): Promise<Event[]> => {
 
 // NEW: Fetch specific slots for an event based on your ERD
 export const getSlotsByEventId = async (eventId: number) => {
-  const response = await fetch(`${API_BASE_URL}/api/volunteer_slots/?event_id=${eventId}`);
+  const response = await fetch(`${API_BASE_URL}/api/events/slots/?event_id=${eventId}`);
   if (!response.ok) return [];
   return response.json();
 };
 
 // Submit the signup form
 export const submitVolunteerSignup = async (data: any) => {
-  return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/volunteer_signup/`, {
+  return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/`, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json' 

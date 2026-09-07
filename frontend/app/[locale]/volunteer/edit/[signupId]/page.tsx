@@ -34,7 +34,7 @@ export default function VolunteerEditPage() {
   useEffect(() => {
     const fetchSignupData = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/volunteer_signup/${signupId}/`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signupId}/`);
         if (!response.ok) throw new Error("Could not find registration.");
         
         const data = await response.json();
@@ -65,7 +65,7 @@ export default function VolunteerEditPage() {
 
     setIsProcessing(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/volunteer_signup/${signupId}/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signupId}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -85,7 +85,7 @@ export default function VolunteerEditPage() {
   const handleDelete = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/volunteer_signup/${signupId}/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signupId}/`, {
         method: 'DELETE',
       });
 
