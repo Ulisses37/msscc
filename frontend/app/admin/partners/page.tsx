@@ -23,35 +23,35 @@ const sponsors: SDProp[] = [
 export default function Partners(){
 
   return(
-    <div className="container w-[80%] mx-auto flex flex-col gap-6">
-      <h1 className="text-4xl text-left font-bold mb-10">Partners, Donors, & Sponsors</h1>
+    <div className="container w-[80%] mx-auto flex flex-col gap-4">
+      <h1 className="text-4xl text-left font-bold mb-2">Partners, Donors, & Sponsors</h1>
 
       <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid grid-cols-4 border-separate border-spacing-y-1">
-          <div className="px-6 py-2 text-sm font-semibold">Order</div>
-          <div className="px-6 py-2 text-sm font-semibold">Name</div>
-          <div className="px-6 py-2 text-sm font-semibold">Contribution Amount</div>
-          <div className="px-6 py-2 text-sm font-semibold">Website</div>
-          <PartnerTable rowData={partners}/>
+        <div className="grid grid-cols-8">
+          <div className="px-3 py-2 text-sm font-semibold col-span-1">Order</div>
+          <div className="px-3 py-2 text-sm font-semibold col-span-3">Name</div>
+          <div className="px-3 py-2 text-sm font-semibold col-span-2">Contribution Amount</div>
+          <div className="px-3 py-2 text-sm font-semibold col-span-1">Website</div>
         </div>
+        <PartnerTable rowData={partners}/>
       </div>
 
       <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid grid-cols-3 border-separate border-spacing-y-1">
-          <div className="px-6 py-2 text-sm font-semibold">Order</div>
-          <div className="px-6 py-2 text-sm font-semibold">Name</div>
-          <div className="px-6 py-2 text-sm font-semibold">Contribution Amount</div>
-          <SDTable rowData={sponsors}/>
+        <div className="grid grid-cols-8">
+          <div className="px-3 py-2 text-sm col-span-1 font-semibold">Order</div>
+          <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
+          <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
         </div>
+        <SDTable rowData={sponsors}/>
       </div>
 
       <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid-cols-3 grid border-separate border-spacing-y-1">
-          <div className="px-6 py-2 text-sm font-semibold">Order</div>
-          <div className="px-6 py-2 text-sm font-semibold">Name</div>
-          <div className="px-6 py-2 text-sm font-semibold">Contribution Amount</div>
-          <SDTable rowData={donors}/>
+        <div className="grid-cols-8 grid">
+          <div className="px-3 py-2 text-sm col-span-1 font-semibold">Order</div>
+          <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
+          <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
         </div>
+        <SDTable rowData={donors}/>
       </div>
     </div>
   )

@@ -73,13 +73,14 @@ function DisplayRow({
 }){
   {console.log(sdName + sdContributionAmount + sdDisplayOrder + sdWebsite)}
   return(
-    <div className="flex bg-white hover:bg-gray-50 border rounded-md  border-gray-300">
-      <div className="px-6 py-3">{sdDisplayOrder}</div>
-      <div className="px-6 py-3">{sdName}</div>
-      <div className="px-6 py-3">{sdContributionAmount}</div>
-      {sdWebsite !== null && (
-        <div className="px-6 py-3 ">{sdWebsite}</div>
-      )}
+    <div className="w-[100%] border border-gray-300 bg-white">
+      <div className="grid grid-cols-8">
+          <div className="px-3 py-2 text-sm col-span-1 font-semibold">{sdDisplayOrder}</div>
+          <div className="px-3 py-2 text-sm col-span-3 font-semibold">{sdName}</div>
+          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdContributionAmount}</div>
+          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdWebsite ?? ""}</div>
+
+        </div>
     </div>
   )
 }
