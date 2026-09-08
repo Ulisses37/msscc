@@ -1,6 +1,6 @@
 # backend/media/serializers.py
 from rest_framework import serializers
-from .models import MediaAsset
+from .models import MediaAsset, StaticImage
 
 #Serial allows for ease of access to the file's metadata and URL in the API responses.
 class MediaFileSerializer(serializers.ModelSerializer):
@@ -48,3 +48,15 @@ class MediaFileSerializer(serializers.ModelSerializer):
         if obj.file:
             return obj.file.url
         return None
+
+
+class StaticImageSerializer(serializers.ModelSerializer):
+    """Serializer for reusable static image records."""
+
+    class Meta:
+        model = StaticImage
+        fields = [
+            "static_image_id",
+            "display_name",
+            "media_asset",
+        ]

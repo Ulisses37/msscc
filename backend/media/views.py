@@ -1,10 +1,10 @@
 # backend/media/views.py
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import MediaAsset
-from .serializers import MediaFileSerializer
+from .models import MediaAsset, StaticImage
+from .serializers import MediaFileSerializer, StaticImageSerializer
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
@@ -92,3 +92,18 @@ class MediaDetailView(APIView):
 
         media.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StaticImageListView(generics.ListAPIView):
+    """Return static image records as a JSON list."""
+
+    queryset = StaticImage.objects.all().order_by("static_image_id")
+    serializer_class = StaticImageSerializer
+
+
+class StaticImageDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a single static image."""
+
+    queryset = StaticImage.objects.all()
+    serializer_class = StaticImageSerializer
+    lookup_field = "static_image_id"

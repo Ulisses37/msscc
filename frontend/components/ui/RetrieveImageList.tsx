@@ -27,7 +27,7 @@ const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
   "board-members": `${process.env.NEXT_PUBLIC_API_URL}/api/board-members/`,
   "partners": `${process.env.NEXT_PUBLIC_API_URL}/api/partners/`,
   "media": `${process.env.NEXT_PUBLIC_API_URL}/api/media/`,
-  "static-images": `${process.env.NEXT_PUBLIC_API_URL}/api/static-images/`,
+  "static-images": `${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/`,
 };
 
 export function RetrieveImageList({ modelType, onSelect, selectedId, selectedModelId }: RetrieveImageListProps) {

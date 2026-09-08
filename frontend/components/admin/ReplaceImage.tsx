@@ -7,6 +7,14 @@ import Image from "next/image";
 
 type ModelType = "media" | "events" | "board-members" | "partners" | "static-images";
 
+const MODEL_UPDATE_ENDPOINTS: Record<ModelType, string> = {
+  "events": "events",
+  "board-members": "board-members",
+  "partners": "partners",
+  "media": "media",
+  "static-images": "media/static-images",
+};
+
 export default function ReplaceImage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelType | null>(null);
@@ -41,6 +49,11 @@ export default function ReplaceImage() {
 
   {/* Expect mediaId and modelId for changing old mediaIds*/}
   const handleSubmit = async () => {
+    if (!selectedModel || selectedModelId === null) {
+      setSubmitError('Please select an image record before submitting.');
+      return;
+    }
+
     if (!selectedFile && !selectedReplacementId) {
       setSubmitError('Please select an image before submitting.');
       return;
@@ -68,7 +81,7 @@ export default function ReplaceImage() {
     // Tightly coupled to API structure, but allows for flexibility in models and media replacement
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/${selectedModel}/${selectedModelId}/`, //New Models needs APIK changes for PATCH method
+        `${process.env.NEXT_PUBLIC_API_URL}/api/${MODEL_UPDATE_ENDPOINTS[selectedModel]}/${selectedModelId}/`, //New Models needs APIK changes for PATCH method
         {
           method: 'PATCH',
           headers: {
