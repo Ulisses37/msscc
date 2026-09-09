@@ -3,6 +3,7 @@
 // React and Next.js Imports
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 // Components
 import { IntegerInput } from '@/components/ui/IntegerInput';
@@ -17,6 +18,7 @@ import { fetchPageContent } from '@/utils/content';
 type PaymentType = 'card' | 'paypal';
 
 export default function SupportPage() {
+  const t = useTranslations('SupportPage');
   const [donation, setDonation] = useState<number | ''>('');
   const [paymentType, setPaymentType] = useState<PaymentType>('card');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
@@ -55,11 +57,11 @@ export default function SupportPage() {
 
       <section className="mt-16 w-full px-6">
         <h2 className="mb-6 mt-16 text-2xl font-bold text-[#264653]">
-          Support us Today
+          {t('heading')}
         </h2>
         <div className="max-w-[600px] space-y-6">
           <label className="block text-sm font-medium text-slate-700">
-            Email
+            {t('email')}
             <input
               type="email"
               name="email"
@@ -72,7 +74,7 @@ export default function SupportPage() {
           {/* Payment type selector */}
           <fieldset>
             <legend className="mb-2 block text-sm font-medium text-slate-700">
-              Payment Type
+              {t('paymentType')}
             </legend>
             <div className="flex flex-wrap gap-3">
               <button
@@ -85,7 +87,7 @@ export default function SupportPage() {
                     : 'border-msscc-teal bg-white text-msscc-teal hover:bg-msscc-teal hover:text-white'
                 }`}
               >
-                Credit or Debit Card
+                {t('card')}
               </button>
               <button
                 type="button"
@@ -97,7 +99,7 @@ export default function SupportPage() {
                     : 'border-msscc-teal bg-white text-msscc-teal hover:bg-msscc-teal hover:text-white'
                 }`}
               >
-                PayPal
+                {t('paypal')}
               </button>
             </div>
           </fieldset>
@@ -105,15 +107,15 @@ export default function SupportPage() {
           <IntegerInput
             value={donation}
             onChange={setDonation}
-            label="Donation Amount"
-            placeholder="Enter a number"
+            label={t('donationAmount')}
+            placeholder={t('donationPlaceholder')}
             min={0}
           />
 
           {/* Fields required for every payment type */}
           <div className="space-y-4">
             <label className="block text-sm font-medium text-slate-700">
-              Name
+              {t('name')}
               <input
                 type="text"
                 name="name"
@@ -123,7 +125,7 @@ export default function SupportPage() {
               />
             </label>
             <label className="block text-sm font-medium text-slate-700">
-              Address
+              {t('address')}
               <input
                 type="text"
                 name="address"
@@ -138,7 +140,7 @@ export default function SupportPage() {
           {paymentType === 'card' ? (
             <div className="space-y-4">
               <label className="block text-sm font-medium text-slate-700">
-                Card Number
+                {t('cardNumber')}
                 <input
                   type="text"
                   name="cardNumber"
@@ -150,7 +152,7 @@ export default function SupportPage() {
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-slate-700">
-                  Expiration Date
+                  {t('expirationDate')}
                   <input
                     type="text"
                     name="expirationDate"
@@ -162,7 +164,7 @@ export default function SupportPage() {
                   />
                 </label>
                 <label className="block text-sm font-medium text-slate-700">
-                  Security Code
+                  {t('securityCode')}
                   <input
                     type="text"
                     name="securityCode"
@@ -176,7 +178,7 @@ export default function SupportPage() {
             </div>
           ) : (
             <p className="text-sm text-msscc-gray-mid">
-              You will be directed to PayPal to complete your donation.
+              {t('paypalInstructions')}
             </p>
           )}
         </div>

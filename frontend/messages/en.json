@@ -10,5 +10,21 @@
     "support": "Support",
     "events": "Program|Events",
     "partners": "Partners"
+  },
+
+  "SupportPage": {
+    "heading": "Support Us Today",
+    "email": "Email",
+    "paymentType": "Payment Type",
+    "card": "Credit or Debit Card",
+    "paypal": "PayPal",
+    "donationAmount": "Donation Amount",
+    "donationPlaceholder": "Enter a number",
+    "name": "Name",
+    "address": "Address",
+    "cardNumber": "Card Number",
+    "expirationDate": "Expiration Date",
+    "securityCode": "Security Code",
+    "paypalInstructions": "You will be directed to PayPal to complete your donation."
   }
 }
