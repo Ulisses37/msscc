@@ -14,16 +14,13 @@ type MembershipEntry = {
   amount_paid : number;
   payment_status : string;
   //reference_id : number;
-  //start_date : string;
-  //end_date : string;
+  start_date : string;
+  end_date : string;
   status : string;
   //notes : string;
-  created_at : string;
+  //created_at : string;
   //updated_at : string;
 };
-
-
-
 
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
@@ -41,7 +38,7 @@ export default function AdminMembershipsPage() {
   const fetchMemberships = useCallback(async () => {
     setError(null);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/memberships/`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`);
       if (!response.ok) {
         throw new Error('Failed to load membership list.');
       }
@@ -77,8 +74,14 @@ export default function AdminMembershipsPage() {
       </header>
 
       <main>
-        <PostTable membershipEntries={paginate(membershipItems, currentPage, itemsPerPage)} />
-        <PostPages data={membershipItems} itemsPerPage={itemsPerPage} currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        {error && <div className="text-red-600 mb-4">Error: {error}</div>}
+        {membershipItems.length === 0 && !error && <div className="text-center font-bold border border-gray-300 bg-gray-100 p-4">No memberships found.</div>}
+        {membershipItems.length > 0 && (
+          <>
+            <PostTable membershipEntries={paginate(membershipItems, currentPage, itemsPerPage)} />
+            <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          </>)
+        }
       </main>
     </div>
   );
