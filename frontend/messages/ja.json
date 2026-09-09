@@ -10,5 +10,21 @@
     "support": "支援・寄付",
     "events": "プログラム|イベント",
     "partners": "パートナー"
+  },
+
+  "SupportPage": {
+    "heading": "ご支援をお願いします",
+    "email": "メールアドレス",
+    "paymentType": "お支払い方法",
+    "card": "クレジットカードまたはデビットカード",
+    "paypal": "PayPal",
+    "donationAmount": "寄付金額",
+    "donationPlaceholder": "金額を入力してください",
+    "name": "お名前",
+    "address": "住所",
+    "cardNumber": "カード番号",
+    "expirationDate": "有効期限",
+    "securityCode": "セキュリティコード",
+    "paypalInstructions": "寄付を完了するため、PayPalに移動します。"
   }
 }
