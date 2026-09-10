@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -19,7 +20,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!success) return;
-    const timer = setTimeout(() => router.push('/'), 3000);
+    const timer = setTimeout(() => router.push('/'), 2000);
     return () => clearTimeout(timer);
   }, [success, router]);
 
@@ -76,6 +77,12 @@ export default function ResetPasswordPage() {
         <p className="text-body-sm text-msscc-danger">
           Invalid or expired reset link.
         </p>
+        <Link
+          href="/"
+          className="mt-4 text-body-sm text-msscc-teal hover:underline"
+        >
+          Back to Login
+        </Link>
       </div>
     );
   }
