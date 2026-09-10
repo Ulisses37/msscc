@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +13,6 @@ interface LoginModalProps {
 /** Login modal with email and password inputs. Closes on success, X, or backdrop click. */
 export function LoginModal({ onClose }: LoginModalProps) {
   const { login } = useAuth();
-  const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,7 +53,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
     try {
       await login(email, password);
       onClose();
-      router.push('/admin/dashboard');
     } catch {
       setSubmitError('Invalid email or password');
       setIsSubmitting(false);

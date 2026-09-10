@@ -10,6 +10,27 @@ import type { AuthContextValue, UserPayload } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const USER_KEY = 'msscc_user';
+const TOKEN_KEY = 'msscc_access_token';
+
+/** Read the persisted user payload from localStorage. Returns null when absent or invalid. */
+function readStoredUser(): UserPayload | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** Read the persisted access token from localStorage. */
+function readStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -29,10 +50,10 @@ const DEV_USER: UserPayload = {
 /** Wraps the application and provides auth state to all descendants. */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserPayload | null>(
-    DEV_AUTO_LOGIN ? DEV_USER : null,
+    DEV_AUTO_LOGIN ? DEV_USER : readStoredUser(),
   );
   const [accessToken, setAccessToken] = useState<string | null>(
-    DEV_AUTO_LOGIN ? 'dev-auto-login-token' : null,
+    DEV_AUTO_LOGIN ? 'dev-auto-login-token' : readStoredToken(),
   );
 
   const router = useRouter();
@@ -43,11 +64,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const tokens = await loginRequest(email, password);
     const payload = decodeTokenPayload(tokens.access);
 
+    localStorage.setItem(TOKEN_KEY, tokens.access);
+    localStorage.setItem(USER_KEY, JSON.stringify(payload));
+
     setAccessToken(tokens.access);
     setUser(payload);
-  }, []);
+    router.push('/admin/dashboard');
+  }, [router]);
 
   const logout = useCallback((): void => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setUser(null);
     setAccessToken(null);
     router.push('/');
