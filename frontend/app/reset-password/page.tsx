@@ -67,6 +67,19 @@ export default function ResetPasswordPage() {
   const canSubmit =
     newPassword.length > 0 && confirmPassword.length > 0 && !isSubmitting;
 
+  // On-load guard: if the reset link is missing its uid/token, never render
+  // the form — show an error state immediately instead.
+  if (!uid || !token) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-10">
+        <h1 className="mb-6">Reset password</h1>
+        <p className="text-body-sm text-msscc-danger">
+          Invalid or expired reset link.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-10">
       <h1 className="mb-6">Reset password</h1>
