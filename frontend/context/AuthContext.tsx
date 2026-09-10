@@ -45,7 +45,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     setAccessToken(tokens.access);
     setUser(payload);
-  }, []);
+    router.push('/admin/dashboard');
+  }, [router]);
 
   const logout = useCallback((): void => {
     setUser(null);
