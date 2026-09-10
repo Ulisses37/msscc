@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -19,7 +20,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!success) return;
-    const timer = setTimeout(() => router.push('/'), 3000);
+    const timer = setTimeout(() => router.push('/'), 2000);
     return () => clearTimeout(timer);
   }, [success, router]);
 
@@ -66,6 +67,25 @@ export default function ResetPasswordPage() {
 
   const canSubmit =
     newPassword.length > 0 && confirmPassword.length > 0 && !isSubmitting;
+
+  // On-load guard: if the reset link is missing its uid/token, never render
+  // the form — show an error state immediately instead.
+  if (!uid || !token) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-10">
+        <h1 className="mb-6">Reset password</h1>
+        <p className="text-body-sm text-msscc-danger">
+          Invalid or expired reset link.
+        </p>
+        <Link
+          href="/"
+          className="mt-4 text-body-sm text-msscc-teal hover:underline"
+        >
+          Back to Login
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-10">
