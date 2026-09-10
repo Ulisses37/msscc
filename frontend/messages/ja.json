@@ -25,6 +25,8 @@
     "cardNumber": "カード番号",
     "expirationDate": "有効期限",
     "securityCode": "セキュリティコード",
-    "paypalInstructions": "寄付を完了するため、PayPalに移動します。"
+    "paypalInstructions": "寄付を完了するため、PayPalに移動します。",
+    "summaryHeading": "寄付内容の確認",
+    "notProvided": "未入力"
   }
 }

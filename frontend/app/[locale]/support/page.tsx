@@ -21,6 +21,10 @@ export default function SupportPage() {
   const t = useTranslations('SupportPage');
   const [donation, setDonation] = useState<number | ''>('');
   const [paymentType, setPaymentType] = useState<PaymentType>('card');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
   const params = useParams();
   const locale = params?.locale;
@@ -66,6 +70,8 @@ export default function SupportPage() {
               type="email"
               name="email"
               autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               required
               className={inputClassName}
             />
@@ -120,6 +126,8 @@ export default function SupportPage() {
                 type="text"
                 name="name"
                 autoComplete="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
                 required
                 className={inputClassName}
               />
@@ -130,6 +138,8 @@ export default function SupportPage() {
                 type="text"
                 name="address"
                 autoComplete="street-address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
                 required
                 className={inputClassName}
               />
@@ -146,6 +156,8 @@ export default function SupportPage() {
                   name="cardNumber"
                   inputMode="numeric"
                   autoComplete="cc-number"
+                  value={cardNumber}
+                  onChange={(event) => setCardNumber(event.target.value)}
                   required
                   className={inputClassName}
                 />
@@ -181,6 +193,59 @@ export default function SupportPage() {
               {t('paypalInstructions')}
             </p>
           )}
+
+          {/* Live donation summary */}
+          <section
+            aria-labelledby="donation-summary-heading"
+            className="rounded-sm border border-msscc-gray-light bg-gray-50 p-5"
+          >
+            <h3
+              id="donation-summary-heading"
+              className="mb-4 text-lg font-semibold text-msscc-teal"
+            >
+              {t('summaryHeading')}
+            </h3>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-msscc-gray-mid">{t('donationAmount')}</dt>
+                <dd className="text-right text-msscc-gray-dark">
+                  {donation === '' ? t('notProvided') : `$${donation}`}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-msscc-gray-mid">{t('paymentType')}</dt>
+                <dd className="text-right text-msscc-gray-dark">
+                  {paymentType === 'card' ? t('card') : t('paypal')}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-msscc-gray-mid">{t('email')}</dt>
+                <dd className="break-all text-right text-msscc-gray-dark">
+                  {email || t('notProvided')}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-msscc-gray-mid">{t('name')}</dt>
+                <dd className="text-right text-msscc-gray-dark">{name || t('notProvided')}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="font-medium text-msscc-gray-mid">{t('address')}</dt>
+                <dd className="text-right text-msscc-gray-dark">
+                  {address || t('notProvided')}
+                </dd>
+              </div>
+              {paymentType === 'card' && (
+                <div className="flex justify-between gap-4">
+                  <dt className="font-medium text-msscc-gray-mid">{t('cardNumber')}</dt>
+                  <dd className="text-right text-msscc-gray-dark">
+                    {cardNumber
+                      ? `•••• ${cardNumber.replace(/\D/g, '').slice(-4)}`
+                      : t('notProvided')}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </section>
         </div>
       </section>
 

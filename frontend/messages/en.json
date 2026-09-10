@@ -25,6 +25,8 @@
     "cardNumber": "Card Number",
     "expirationDate": "Expiration Date",
     "securityCode": "Security Code",
-    "paypalInstructions": "You will be directed to PayPal to complete your donation."
+    "paypalInstructions": "You will be directed to PayPal to complete your donation.",
+    "summaryHeading": "Donation Summary",
+    "notProvided": "Not provided"
   }
 }
