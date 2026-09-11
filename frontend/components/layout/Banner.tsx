@@ -29,7 +29,14 @@ export const Banner = () =>{
   const isAdminRoute = pathname.startsWith('/admin');
 
   const handleLogoClick = () => {
-    router.push('/');
+    // Public home routes (with and without locale prefix). Clicking the logo
+    // while already on the home page resets scroll position and transient
+    // page state, matching the behavior of a fresh navigation.
+    if (pathname === '/' || pathname === '/en' || pathname === '/ja') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      router.push('/');
+    }
   };
 
   return (
