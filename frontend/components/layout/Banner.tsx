@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
@@ -25,7 +25,12 @@ export const Banner = () =>{
   };
 
   const pathname = usePathname();
+  const router = useRouter();
   const isAdminRoute = pathname.startsWith('/admin');
+
+  const handleLogoClick = () => {
+    router.push('/');
+  };
 
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
@@ -36,7 +41,7 @@ export const Banner = () =>{
       {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
       {/* Logo */}
       <div className="relative z-10 flex h-full items-center justify-center">
-        <div className="px-4 py-2 rounded-md">
+        <div className="px-4 py-2 rounded-md cursor-pointer" onClick={handleLogoClick}>
           <Image
             src={mssccLogo}
             alt="MSSCC Logo"
