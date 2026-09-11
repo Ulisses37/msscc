@@ -2,13 +2,13 @@
 
 export interface PartnerProp{
   // Sponsor and Donor Prop
-  sdDisplayOrder: number;
-  sdPartnerID: number;
-  sdNameEN: string;
-  sdNameJA: string;
-  sdMediaAssest: number | null;
-  sdContributionAmount: number;
-  sdWebsite: string | null;
+  DisplayOrder: number;
+  PartnerID: number;
+  Name: string;
+  Category: string;
+  MediaAssest: number | null;
+  ContributionAmount: number;
+  Website: string | null;
 }
 
 
@@ -22,14 +22,14 @@ export function PartnerTable({ rowData = [] } : PartnerTableProps ){
     <div>
       {rowData
       .slice()
-      .sort((a,b) => a.sdDisplayOrder - b.sdDisplayOrder)
+      .sort((a,b) => a.DisplayOrder - b.DisplayOrder)
       .map((row) =>(
         <DisplayRow
-         key={row.sdPartnerID}
-         sdName = {row.sdNameEN}
-         sdDisplayOrder = {row.sdDisplayOrder}
-         sdContributionAmount = {row.sdContributionAmount}
-         sdWebsite = {row.sdWebsite}
+         key={row.PartnerID}
+         sdName = {row.Name}
+         sdDisplayOrder = {row.DisplayOrder}
+         sdContributionAmount = {row.ContributionAmount}
+         sdWebsite = {row.Website}
         />
       ))}
     </div>
@@ -41,13 +41,13 @@ export function SDTable({ rowData = [] } : PartnerTableProps ){
     <div>
       {rowData
       .slice()
-      .sort((a,b) => a.sdDisplayOrder - b.sdDisplayOrder)
+      .sort((a,b) => a.DisplayOrder - b.DisplayOrder)
       .map((row) =>(
         <DisplayRow
-         key={row.sdPartnerID}
-         sdName = {row.sdNameEN}
-         sdDisplayOrder = {row.sdDisplayOrder}
-         sdContributionAmount = {row.sdContributionAmount}
+         key={row.PartnerID}
+         sdName = {row.Name}
+         sdDisplayOrder = {row.DisplayOrder}
+         sdContributionAmount = {row.ContributionAmount}
          sdWebsite = {null}
         />
       ))}

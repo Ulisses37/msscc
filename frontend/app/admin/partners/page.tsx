@@ -1,27 +1,43 @@
 'use client';
 
-import { SDProp, SDTable, PartnerTable, PartnerProp } from "./partnersComponents"
+import { useState, useEffect } from 'react';
 
-const partners: PartnerProp[] = [
-  { sdName: "Partner 1", sdDisplayOrder: 1, sdContributionAmount: 1000, sdWebsite: "www.1.com" },
-  { sdName: "Partner 2", sdDisplayOrder: 2, sdContributionAmount: 1000, sdWebsite: "www.2.com" },
-  { sdName: "Partner 3", sdDisplayOrder: 3, sdContributionAmount: 1000, sdWebsite: "www.3.com" },
-];
+import { PartnerProp, PartnerTable } from "./partnersComponents"
 
-const donors: SDProp[] = [
-  { sdName: "Donor 1", sdDisplayOrder: 1, sdContributionAmount: 500 },
-  { sdName: "Donor 2", sdDisplayOrder: 2, sdContributionAmount: 500 },
-  { sdName: "Donor 3", sdDisplayOrder: 3, sdContributionAmount: 500 },
-];
-
-const sponsors: SDProp[] = [
-  { sdName: "Sponsor 1", sdDisplayOrder: 1, sdContributionAmount: 200 },
-  { sdName: "Sponsor 2", sdDisplayOrder: 2, sdContributionAmount: 200 },
-  { sdName: "Sponsor 3", sdDisplayOrder: 3, sdContributionAmount: 200 },
-];
 
 export default function Partners(){
+  const [partners, setPartners] = useState<PartnerProp[]>([]);
 
+  // fetch partners from database
+useEffect(() => {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`)
+    .then(res => res.json())
+    .then((partnerRecords: {
+        partner_id: number;
+        display_name_en: string;
+        category_en: string;
+        website_url: string | null;
+        display_order: number;
+        media_assest: number | null;
+        contribution_amount: number;
+    }[]) => {
+      const mappedPartners: PartnerProp[] = partnerRecords
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(partner => ({
+          PartnerID: partner.partner_id,
+          Name: partner.display_name_en,
+          Category: partner.category_en,
+          Website: partner.website_url ?? null,
+          MediaAssest: partner.media_assest ?? null,
+          ContributionAmount: partner.contribution_amount ?? 0,
+          DisplayOrder: partner.display_order
+        }));
+
+      setPartners(mappedPartners);
+    })
+    .catch(error => console.error('Error fetching partners:', error));
+}, []);
+console.log(partners);
   return(
     <div className="container w-[80%] mx-auto flex flex-col gap-4">
       <h1 className="text-4xl text-left font-bold mb-2">Partners, Donors, & Sponsors</h1>
@@ -33,7 +49,7 @@ export default function Partners(){
           <div className="px-3 py-2 text-sm font-semibold col-span-2">Contribution Amount</div>
           <div className="px-3 py-2 text-sm font-semibold col-span-1">Website</div>
         </div>
-        <PartnerTable rowData={partners}/>
+        <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
       </div>
 
       <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
@@ -42,7 +58,7 @@ export default function Partners(){
           <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
           <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
         </div>
-        <SDTable rowData={sponsors}/>
+        <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
       </div>
 
       <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
@@ -51,7 +67,7 @@ export default function Partners(){
           <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
           <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
         </div>
-        <SDTable rowData={donors}/>
+        <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
       </div>
     </div>
   )
