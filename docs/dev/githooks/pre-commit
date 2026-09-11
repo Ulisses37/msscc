@@ -1,0 +1,38 @@
+#!/bin/sh
+# pre-commit: lint staged files only
+# Copy to .git/hooks/pre-commit and chmod +x
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+FAIL=0
+
+# --- Frontend: ESLint on staged .ts/.tsx/.js/.jsx files under frontend/ ---
+FRONTEND_FILES=$(echo "$STAGED_FILES" | grep '^frontend/.*\.\(ts\|tsx\|js\|jsx\)$')
+
+if [ -n "$FRONTEND_FILES" ]; then
+  echo "Running ESLint on staged frontend files..."
+  (cd frontend && echo "$FRONTEND_FILES" | sed 's|^frontend/||' | xargs npx eslint)
+  if [ $? -ne 0 ]; then
+    echo "ESLint failed. Fix the issues above or commit with --no-verify to skip."
+    FAIL=1
+  fi
+fi
+
+# --- Backend: Ruff — not added yet, planned for the lint story ---
+# Once ruff is in requirements-dev.txt and everyone has it, uncomment:
+#
+# BACKEND_FILES=$(echo "$STAGED_FILES" | grep '^backend/.*\.py$')
+# if [ -n "$BACKEND_FILES" ]; then
+#   echo "Running Ruff on staged backend files..."
+#   echo "$BACKEND_FILES" | xargs ruff check
+#   if [ $? -ne 0 ]; then
+#     echo "Ruff failed. Fix the issues above or commit with --no-verify to skip."
+#     FAIL=1
+#   fi
+# fi
+
+exit $FAIL
