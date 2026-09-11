@@ -20,3 +20,6 @@ backend/__pycache__/
 backend/**/*.pyc
 backend/**/__pycache__/
 backend/staticfiles/
+
+# Temporary Files
+*.tmp
