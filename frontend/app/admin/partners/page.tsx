@@ -43,8 +43,8 @@ return(
     <h1 className="text-4xl text-left font-bold mb-2">Partners, Donors, & Sponsors</h1>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="grid grid-cols-[80px_300px_180px_1fr]">
-        <div className="px-3 py-2 text-sm font-semibold">Order</div>
+      <div className="grid grid-cols-[100px_300px_180px_1fr]">
+        <div className="px-3 py-2 text-sm font-semibold">Order (000)</div>
         <div className="px-3 py-2 text-sm font-semibold">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
         <div className="px-3 py-2 text-sm font-semibold">Website</div>
@@ -53,22 +53,24 @@ return(
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="grid grid-cols-[80px_300px_180px]">
-        <div className="px-3 py-2 text-sm font-semibold">Order</div>
+      <div className="grid grid-cols-[100px_300px_180px]">
+        <div className="px-3 py-2 text-sm font-semibold">Order (100)</div>
+        <div className="px-3 py-2 text-sm font-semibold">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
+      </div>
+      <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
+    </div>
+
+    <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="grid grid-cols-[100px_300px_180px]">
+        <div className="px-3 py-2 text-sm font-semibold">Order (200)</div>
         <div className="px-3 py-2 text-sm font-semibold">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
     </div>
 
-    <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="grid grid-cols-[80px_300px_180px]">
-        <div className="px-3 py-2 text-sm font-semibold">Order</div>
-        <div className="px-3 py-2 text-sm font-semibold">Name</div>
-        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
-      </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
-    </div>
+
   </div>
 )
 }
