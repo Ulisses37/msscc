@@ -36,25 +36,6 @@ export function PartnerTable({ rowData = [] } : PartnerTableProps ){
   )
 }
 
-export function SDTable({ rowData = [] } : PartnerTableProps ){
-  return (
-    <div>
-      {rowData
-      .slice()
-      .sort((a,b) => a.DisplayOrder - b.DisplayOrder)
-      .map((row) =>(
-        <DisplayRow
-         key={row.PartnerID}
-         sdName = {row.Name}
-         sdDisplayOrder = {row.DisplayOrder}
-         sdContributionAmount = {row.ContributionAmount}
-         sdWebsite = {null}
-        />
-      ))}
-    </div>
-  )
-}
-
 
 function DisplayRow({
   sdName,
@@ -67,18 +48,16 @@ function DisplayRow({
   sdContributionAmount : number ,
   sdWebsite : string | null,
 }){
-  {console.log(sdName + sdContributionAmount + sdDisplayOrder + sdWebsite)}
-  return(
-    <div className="w-[100%] border border-gray-300 bg-white">
-      <div className="grid grid-cols-8">
-          <div className="px-3 py-2 text-sm col-span-1 font-semibold">{sdDisplayOrder}</div>
-          <div className="px-3 py-2 text-sm col-span-3 font-semibold">{sdName}</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdContributionAmount}</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdWebsite ?? ""}</div>
-
-        </div>
+  return (
+        <div className={`${sdWebsite != null ? "grid grid-cols-[80px_300px_180px_1fr]" : "grid grid-cols-[80px_300px_180px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
+      <div className="px-3 py-2 text-sm font-semibold">{sdDisplayOrder}</div>
+      <div className="px-3 py-2 text-sm font-semibold">{sdName}</div>
+      <div className="px-3 py-2 text-sm font-semibold">{sdContributionAmount}</div>
+      {sdWebsite && (
+        <div className="px-3 py-2 text-sm font-semibold">{sdWebsite ?? ""}</div>
+      )}
     </div>
-  )
+  );
 }
 
 
