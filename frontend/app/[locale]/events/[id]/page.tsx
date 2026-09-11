@@ -8,6 +8,7 @@ import { EventDetail } from '@/components/events/EventDetails';
 import type { Event } from '@/types/event';
 import { EventNavigation } from '@/components/events/EventNavigation';
 import Button from '@/components/ui/Button'; // Import your Button component
+import { EventCalendar } from '@/components/events/EventCalendar';
 
 export default function EventDetailPage() {
   const { id, locale } = useParams();
@@ -113,18 +114,61 @@ export default function EventDetailPage() {
         ← Back to events
       </Link>
 
-      {event && <EventDetail event={event} />}
+      {/* 60/40 layout — left: event detail, right: calendar */}
+      <div style={{
+        display: 'flex',
+        gap: 'var(--space-10)',
+        alignItems: 'flex-start',
+      }}>
+
+        {/* Left — 60% — full event detail */}
+        <div style={{ flex: '0 0 60%' }}>
+          {event && <EventDetail event={event} />}
+        </div>
+
+        {/* Right — 40% — calendar placeholder for now */}
+        <div style={{
+          flex: '0 0 40%',
+          position: 'sticky',
+          top: 'var(--space-10)',
+        }}>
+          {/* Google Maps placeholder — to be added later */}
+          <div style={{
+            width: '100%',
+            height: '200px',
+            backgroundColor: 'var(--color-gray-faint)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 'var(--space-4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '0.5px solid var(--color-gray-light)',
+          }}>
+            <p style={{
+              color: 'var(--color-gray-mid)',
+              fontSize: 'var(--fs-body-sm)',
+              fontFamily: 'var(--font-body)',
+            }}>
+              Map coming soon
+            </p>
+          </div>
+
+          {/* Calendar */}
+          {event && <EventCalendar event={event} />}
+        </div>
+
+      </div>
 
       {/* Volunteer Button Logic */}
       {/* Centered container with auto width for the button */}
       {event && (event.volunteerSlots > 0 || (event as any).volunteer_slots > 0) && (
-        <div style={{ 
-          marginTop: 'var(--space-10)', 
-          display: 'flex', 
-          justifyContent: 'center' 
+        <div style={{
+          marginTop: 'var(--space-10)',
+          display: 'flex',
+          justifyContent: 'center'
         }}>
-          <Button 
-            text="Volunteer for this Event" 
+          <Button
+            text="Volunteer for this Event"
             width="auto" // Prevents the button from filling the screen width
             padding="12px 24px"
             onClick={() => router.push(`/${locale}/volunteer/${id}`)} // Redirects to specific volunteer subpage
