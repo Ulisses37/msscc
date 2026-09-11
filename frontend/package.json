@@ -12,6 +12,7 @@
     "next": "14.2.35",
     "next-intl": "^4.8.3",
     "react": "^18",
+    "react-calendar": "^6.0.1",
     "react-dom": "^18",
     "react-hook-form": "^7.71.2",
     "uuid": "^13.0.0",
