@@ -19,7 +19,7 @@
     "card": "クレジットカードまたはデビットカード",
     "paypal": "PayPal",
     "donationAmount": "寄付金額",
-    "donationPlaceholder": "金額を入力してください",
+    "donationPlaceholder": "0.00",
     "name": "お名前",
     "address": "住所",
     "cardNumber": "カード番号",
@@ -27,6 +27,10 @@
     "securityCode": "セキュリティコード",
     "paypalInstructions": "寄付を完了するため、PayPalに移動します。",
     "summaryHeading": "寄付内容の確認",
-    "notProvided": "未入力"
+    "notProvided": "未入力",
+    "invalidAmount": "無効な金額",
+    "donationAmountError": "0より大きい金額を、小数点以下2桁以内で入力してください。",
+    "cardNumberError": "カード番号は12桁から19桁で入力してください。",
+    "securityCodeError": "セキュリティコードは3桁または4桁で入力してください。"
   }
 }
