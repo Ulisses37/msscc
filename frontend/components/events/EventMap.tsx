@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import type { Event } from '@/types/event';
 
+const INVALID_LOCATIONS = ['tbd', 'tba', '', 'unknown', 'online', 'virtual'];
+
+function isValidLocation(location: string): boolean {
+  return !INVALID_LOCATIONS.includes(location.toLowerCase().trim());
+}
+
 interface EventMapProps {
   event: Event;
 }
@@ -35,13 +41,22 @@ export function EventMap({ event }: EventMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
   const [coords, setCoords] = useState<Coordinates | null>(null);
 
+  const [geocodeFailed, setGeocodeFailed] = useState(false);
+  const shouldShowMap = event.locationEn && isValidLocation(event.locationEn) && apiKey;
+
   useEffect(() => {
+    if (!shouldShowMap) return;
+
     geocodeLocation(event.locationEn, apiKey).then((result) => {
       if (result) {
         setCoords(result);
+      } else {
+        setGeocodeFailed(true);
       }
     });
   }, [event.locationEn, apiKey]);
+
+  if (!shouldShowMap || geocodeFailed) return null;
 
   // Loading placeholder while geocoding
   if (!coords) {
