@@ -19,6 +19,26 @@ function formatDateTime(datetime: string): string {
   });
 }
 
+// Generates a Google Calendar add-event link from event data
+function generateGoogleCalendarLink(event: Event): string {
+  const formatDateForCalendar = (datetime: string): string => {
+    return new Date(datetime)
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace('.000Z', 'Z');
+  };
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.titleEn,
+    dates: `${formatDateForCalendar(event.startDatetime)}/${formatDateForCalendar(event.endDatetime)}`,
+    details: event.descriptionEn,
+    location: event.locationEn,
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 // Checks if two ISO datetime strings fall on the same calendar day
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
@@ -88,6 +108,24 @@ export function EventDetail({ event }: EventDetailProps) {
             : `${formatDateTime(event.startDatetime)} – ${formatDateTime(event.endDatetime)}`
           }
         </p>
+
+        {/* Google Calendar link */}
+        <a
+          href={generateGoogleCalendarLink(event)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 'var(--fs-body-sm)',
+            color: 'var(--color-gray-mid)',
+            textDecoration: 'none',
+            alignSelf: 'flex-start',
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+        >
+          Google Calendar
+        </a>
 
         {/* Location */}
         <p style={{
