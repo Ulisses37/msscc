@@ -1,14 +1,18 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 export interface PartnerProp{
   // Sponsor and Donor Prop
   DisplayOrder: number;
   PartnerID: number;
   Name: string;
+  NameJP: string;
   Category: string;
+  CategoryJP: string;
   MediaAssest: number | null;
   ContributionAmount: number;
   Website: string | null;
+  isVisible: boolean;
 }
 
 
@@ -60,5 +64,87 @@ function DisplayRow({
   );
 }
 
+export function CreatePartnerProp( {PType, onChange } :{PType:  string; onChange: (value:null) => void} ){
+  const [partnerInfo, setInfo] = useState<PartnerProp>({
+  PartnerID: 0,
+  Name: "",
+  NameJP: "",
+  Category: PType,
+  CategoryJP: "",
+  Website: null,
+  ContributionAmount: 0,
+  DisplayOrder: 0,
+  isVisible: true,
+  MediaAssest: 0,
+});
 
+  useEffect(() =>{
+    function handleKeyDown(e: KeyboardEvent){
+      if (e.key === "Escape"){
+        onChange(null);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+  }, [onChange])
+  return(
+    <div
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    onClick={() => onChange(null)}
+    >
+      <div
+      className="bg-white rounded p-6 w-96"
+      onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold mb-4">
+            Create {PType.charAt(0).toUpperCase() + PType.slice(1)}
+        </h2>
+
+        {/* Editable fields */}
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-semibold">Name (English)
+            <input
+              type="text"
+              value={partnerInfo?.Name ?? ""}
+              onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+          </label>
+          <label className="text-sm font-semibold">Name (Japanese)
+            <input
+              type="text"
+              value={partnerInfo?.NameJP ?? ""}
+              onChange={(e) => setInfo(prev => prev ? { ...prev, NameJP: e.target.value } : prev)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+          </label>
+          {PType === "partner" && <label className="text-sm font-semibold">Website
+            <input
+              type="text"
+              value={partnerInfo?.Website ?? ""}
+              onChange={(e) => setInfo(prev => prev ? { ...prev, Website: e.target.value } : prev)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+          </label>}
+          <label className="text-sm font-semibold">Website
+            <input
+              type="number"
+              value={partnerInfo?.ContributionAmount ?? 0}
+              onChange={(e) => setInfo(prev => prev ? { ...prev, ContributionAmount: Number(e.target.value) } : prev)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+          </label>
+          <label className="text-sm font-semibold flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={partnerInfo.isVisible}
+              onChange={(e) => setInfo(prev => ({ ...prev, isVisible: e.target.checked }))}
+              className="w-4 h-4"
+              />
+              Visible
+            </label>
+        </div>
+      </div>
+    </div>
+  );
+}
 
