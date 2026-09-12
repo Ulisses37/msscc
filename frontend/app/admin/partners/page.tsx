@@ -30,7 +30,7 @@ useEffect(() => {
           Website: partner.website_url ?? null,
           MediaAssest: partner.media_assest ?? null,
           ContributionAmount: partner.contribution_amount ?? 0,
-          DisplayOrder: partner.display_order
+          DisplayOrder: partner.display_order,
         }));
 
       setPartners(mappedPartners);
@@ -43,7 +43,15 @@ return(
     <h1 className="text-4xl text-center font-bold mb-2">Partners</h1>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="text-3xl text-left font-bold ml-2">Partners</div>
+      <div className="flex justify-between items-center">
+        <div className="text-3xl text-left font-bold ml-2">Partners</div>
+        <div
+          onClick={() => CreatePartner("partner")}
+          className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
+        >
+          +
+        </div>
+      </div>
       <div className="grid grid-cols-[60px_300px_200px_1fr]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
@@ -72,8 +80,10 @@ return(
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
     </div>
-
-
   </div>
 )
+}
+
+function CreatePartner( PType : string ){
+  console.log("Button Pressed" + PType);
 }
