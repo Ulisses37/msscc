@@ -265,4 +265,57 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* ── EventCalendar ────────────────────────────────────────── */
+  .react-calendar {
+    border: none !important;
+    font-family: var(--font-body) !important;
+    width: 100% !important;
+  }
+
+  .react-calendar__month-view__weekdays {
+    font-family: var(--font-body) !important;
+    font-size: var(--fs-caption) !important;
+    color: var(--color-gray-mid) !important;
+    text-transform: uppercase !important;
+  }
+
+  .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none !important;
+  }
+
+  .react-calendar__tile {
+    font-family: var(--font-body) !important;
+    font-size: var(--fs-caption) !important;
+    color: var(--color-gray-dark) !important;
+  }
+
+  .react-calendar__tile:enabled:hover,
+  .react-calendar__tile:enabled:focus {
+    background-color: transparent !important;
+    cursor: default !important;
+  }
+
+  .react-calendar__tile--now {
+    background-color: transparent !important;
+  }
+
+  .react-calendar__tile--active,
+  .react-calendar__tile--active:enabled:hover,
+  .react-calendar__tile--active:enabled:focus {
+    background-color: transparent !important;
+    color: var(--color-gray-dark) !important;
+  }
+
+  .event-highlight abbr {
+    background-color: var(--color-teal) !important;
+    color: var(--color-white) !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+  }
 }

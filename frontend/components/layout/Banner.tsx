@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
@@ -25,7 +25,19 @@ export const Banner = () =>{
   };
 
   const pathname = usePathname();
+  const router = useRouter();
   const isAdminRoute = pathname.startsWith('/admin');
+
+  const handleLogoClick = () => {
+    // Public home routes (with and without locale prefix). Clicking the logo
+    // while already on the home page resets scroll position and transient
+    // page state, matching the behavior of a fresh navigation.
+    if (pathname === '/' || pathname === '/en' || pathname === '/ja') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      router.push('/');
+    }
+  };
 
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
@@ -36,7 +48,7 @@ export const Banner = () =>{
       {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
       {/* Logo */}
       <div className="relative z-10 flex h-full items-center justify-center">
-        <div className="px-4 py-2 rounded-md">
+        <div className="px-4 py-2 rounded-md cursor-pointer" onClick={handleLogoClick}>
           <Image
             src={mssccLogo}
             alt="MSSCC Logo"
