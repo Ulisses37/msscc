@@ -19,6 +19,26 @@ function formatDateTime(datetime: string): string {
   });
 }
 
+// Generates a Google Calendar add-event link from event data
+function generateGoogleCalendarLink(event: Event): string {
+  const formatDateForCalendar = (datetime: string): string => {
+    return new Date(datetime)
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace('.000Z', 'Z');
+  };
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.titleEn,
+    dates: `${formatDateForCalendar(event.startDatetime)}/${formatDateForCalendar(event.endDatetime)}`,
+    details: event.descriptionEn,
+    location: event.locationEn,
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 // Checks if two ISO datetime strings fall on the same calendar day
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
