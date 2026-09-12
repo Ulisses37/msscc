@@ -1,0 +1,32 @@
+#!/bin/sh
+# post-merge: auto-install deps if lockfiles changed
+# Copy to .git/hooks/post-merge and chmod +x
+# Note: also fires after `git pull` (pull = fetch + merge)
+
+CHANGED_FILES=$(git diff --name-only ORIG_HEAD HEAD)
+
+# --- Frontend: package-lock.json changed ---
+if echo "$CHANGED_FILES" | grep -q '^frontend/package-lock\.json$'; then
+  echo "package-lock.json changed, running npm ci in frontend/..."
+  (cd frontend && npm ci)
+fi
+
+# --- Backend: requirements.txt changed ---
+if echo "$CHANGED_FILES" | grep -q '^backend/requirements\.txt$'; then
+  echo "requirements.txt changed, running pip install in backend/..."
+
+  if [ -f backend/venv/bin/pip ]; then
+    PIP_BIN=backend/venv/bin/pip
+  elif [ -f backend/venv/Scripts/pip.exe ]; then
+    PIP_BIN=backend/venv/Scripts/pip.exe
+  elif [ -f backend/.venv/bin/pip ]; then
+    PIP_BIN=backend/.venv/bin/pip
+  elif [ -f backend/.venv/Scripts/pip.exe ]; then
+    PIP_BIN=backend/.venv/Scripts/pip.exe
+  else
+    echo "No venv found — falling back to active pip."
+    PIP_BIN=pip
+  fi
+
+  (cd backend && $PIP_BIN install -r requirements.txt)
+fi

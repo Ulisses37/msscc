@@ -2,15 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
-import bannerBg from '@/public/images/banner-background.png';
 
 import { LoginButton } from '@/components/ui/Loginbutton';
 import { LogoutButton } from "@/components/admin/Logoutbutton";
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { PortalToggle } from '@/components/ui/PortalToggle';
 import { useAuth } from '@/context/AuthContext'
 import { LoginModal } from '@/components/auth/LoginModal';
 import PostStaticMedia from '../ui/PostStaticMedia';
@@ -25,18 +25,22 @@ export const Banner = () =>{
   };
 
   const pathname = usePathname();
+  const router = useRouter();
   const isAdminRoute = pathname.startsWith('/admin');
+
+  const handleLogoClick = () => {
+    // Public home routes (with and without locale prefix). Clicking the logo
+    // while already on the home page resets scroll position and transient
+    // page state, matching the behavior of a fresh navigation.
+    if (pathname === '/' || pathname === '/en' || pathname === '/ja') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      router.push('/');
+    }
+  };
 
   return (
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
-      {/* Background Fallback*/}
-      {/*<Image
-        src={bannerBg}
-        alt="Banner Background"
-        fill
-        priority
-        className="object-cover"
-      />*/}
       <PostStaticMedia staticImageId={1} configVariant="banner" className="absolute inset-0 z-0" />
       {/* FB ICON  */}
       <SocialIcon />
@@ -44,7 +48,7 @@ export const Banner = () =>{
       {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
       {/* Logo */}
       <div className="relative z-10 flex h-full items-center justify-center">
-        <div className="px-4 py-2 rounded-md">
+        <div className="px-4 py-2 rounded-md cursor-pointer" onClick={handleLogoClick}>
           <Image
             src={mssccLogo}
             alt="MSSCC Logo"
@@ -58,7 +62,13 @@ export const Banner = () =>{
       {/* Bottom-right actions: social media buttons will go left of LoginButton */}
       <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
         {!isAdminRoute && <LanguageToggle />}
-        {isAuthenticated ? <LogoutButton /> : <LoginButton onLoginClick={handleLoginClick} />}
+        {isAuthenticated && (
+          <>
+            <PortalToggle isAdminRoute={isAdminRoute} />
+            <LogoutButton />
+          </>
+        )}
+        {!isAuthenticated && <LoginButton onLoginClick={handleLoginClick} />}
       </div>
 
       {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
