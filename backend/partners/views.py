@@ -17,3 +17,11 @@ class PartnerDetailView(generics.RetrieveUpdateAPIView):
     queryset = Partner.objects.all()
     serializer_class = PartnerSerializer
     lookup_field = "partner_id"
+
+class PartnerCreateView(generics.CreateAPIView):
+    """Create a new partner recrord"""
+
+    queryset = Partner.object.all()
+    serializer_class = PartnerSerializer
+
+
