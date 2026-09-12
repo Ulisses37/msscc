@@ -21,7 +21,7 @@ class PartnerDetailView(generics.RetrieveUpdateAPIView):
 class PartnerCreateView(generics.CreateAPIView):
     """Create a new partner recrord"""
 
-    queryset = Partner.object.all()
+    queryset = Partner.objects.all()
     serializer_class = PartnerSerializer
 
 class PartnerDeleteView(generics.DestroyAPIView):
