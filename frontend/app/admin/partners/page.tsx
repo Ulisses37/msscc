@@ -40,9 +40,10 @@ useEffect(() => {
 console.log(partners);
 return(
   <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 px-4">
-    <h1 className="text-4xl text-left font-bold mb-2">Partners, Donors, & Sponsors</h1>
+    <h1 className="text-4xl text-left font-bold mb-2">Partners</h1>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Partners</div>
       <div className="grid grid-cols-[100px_300px_180px_1fr]">
         <div className="px-3 py-2 text-sm font-semibold">Order (000)</div>
         <div className="px-3 py-2 text-sm font-semibold">Name</div>
@@ -53,6 +54,7 @@ return(
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Donors</div>
       <div className="grid grid-cols-[100px_300px_180px]">
         <div className="px-3 py-2 text-sm font-semibold">Order (100)</div>
         <div className="px-3 py-2 text-sm font-semibold">Name</div>
@@ -62,6 +64,7 @@ return(
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Sponsors</div>
       <div className="grid grid-cols-[100px_300px_180px]">
         <div className="px-3 py-2 text-sm font-semibold">Order (200)</div>
         <div className="px-3 py-2 text-sm font-semibold">Name</div>
