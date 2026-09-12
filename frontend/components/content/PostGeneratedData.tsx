@@ -24,7 +24,17 @@ type MembershipEntry = {
 
 type PostTableProps = {
   membershipEntries: MembershipEntry[];
+  selectedColumn: SortColumn | null;
+  onSort: (column: SortColumn) => void;
 };
+
+type SortColumn =
+  | "last_name"
+  | "membership_type"
+  | "amount_paid"
+  | "payment_status"
+  | "start_date"
+  | "end_date";
 
 const getActiveStatus = (isExpired: boolean) => {
   if (!isExpired) {
@@ -64,7 +74,13 @@ const columnWidths = {
   status: 190,
 };
 
-export function PostTable({ membershipEntries }: PostTableProps) {
+
+//Potentially Stylize the highlighted column with a different background color
+//   or font weight to indicate that it is the currently sorted column.
+//This can help users quickly identify which column is being used for sorting.
+//Could use State active Column to track the currently sorted column and apply
+//   conditional styling based on that state.
+export function PostTable({ membershipEntries, selectedColumn, onSort }: PostTableProps) {
   return (
     <div className="p-6">
       <div className="overflow-x-auto flex justify-center">
@@ -72,12 +88,96 @@ export function PostTable({ membershipEntries }: PostTableProps) {
           <table className="w-auto border-separate border-spacing-y-1">
             <thead>
               <tr className="text-left">
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.date, minWidth: columnWidths.date }}>Date Paid</th>
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.name, minWidth: columnWidths.name }}>Name</th>
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.paymentStatus, minWidth: columnWidths.paymentStatus }}>Payment Status</th>
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.reference, minWidth: columnWidths.reference }}>Reference</th>
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.amount, minWidth: columnWidths.amount }}>Amount</th>
-                <th className="px-6 py-2 text-sm font-semibold" style={{ width: columnWidths.status, minWidth: columnWidths.status }}>Membership</th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "start_date" ? "ascending" : "none"}
+                  style={{ width: columnWidths.date, minWidth: columnWidths.date }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("start_date")}
+                      className={
+                        selectedColumn === "start_date"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Date Paid
+                    </button>
+                </th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "last_name" ? "ascending" : "none"}
+                  style={{ width: columnWidths.name, minWidth: columnWidths.name }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("last_name")}
+                      className={
+                        selectedColumn === "last_name"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Name
+                    </button>
+                </th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "payment_status" ? "ascending" : "none"}
+                  style={{ width: columnWidths.paymentStatus, minWidth: columnWidths.paymentStatus }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("payment_status")}
+                      className={
+                        selectedColumn === "payment_status"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Payment Status
+                    </button>
+                </th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "membership_type" ? "ascending" : "none"}
+                  style={{ width: columnWidths.reference, minWidth: columnWidths.reference }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("membership_type")}
+                      className={
+                        selectedColumn === "membership_type"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Membership
+                    </button>
+                </th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "amount_paid" ? "ascending" : "none"}
+                  style={{ width: columnWidths.amount, minWidth: columnWidths.amount }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("amount_paid")}
+                      className={
+                        selectedColumn === "amount_paid"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Amount Paid
+                    </button>
+                </th>
+                <th className="px-6 py-2 text-sm font-semibold"
+                  aria-sort={selectedColumn === "end_date" ? "ascending" : "none"}
+                  style={{ width: columnWidths.status, minWidth: columnWidths.status }}>
+                    <button
+                      type="button"
+                      onClick={() => onSort("end_date")}
+                      className={
+                        selectedColumn === "end_date"
+                          ? "font-bold underline"
+                          : ""
+                      }
+                    >
+                      Membership
+                    </button>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +187,7 @@ export function PostTable({ membershipEntries }: PostTableProps) {
                     {membership.start_date}
                   </td>
                   <td className="px-6 py-3 border-y border-gray-300" style={{ width: columnWidths.name, minWidth: columnWidths.name }}>
-                    {membership.first_name} {membership.last_name}
+                    {membership.last_name}, {membership.first_name}
                   </td>
                   <td className="px-6 py-3 border-y border-gray-300" style={{ width: columnWidths.paymentStatus, minWidth: columnWidths.paymentStatus }}>
                     {membership.payment_status}
