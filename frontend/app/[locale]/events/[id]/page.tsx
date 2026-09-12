@@ -9,6 +9,7 @@ import type { Event } from '@/types/event';
 import { EventNavigation } from '@/components/events/EventNavigation';
 import Button from '@/components/ui/Button'; // Import your Button component
 import { EventCalendar } from '@/components/events/EventCalendar';
+import { EventMap } from '@/components/events/EventMap';
 
 export default function EventDetailPage() {
   const { id, locale } = useParams();
@@ -132,26 +133,9 @@ export default function EventDetailPage() {
           position: 'sticky',
           top: 'var(--space-10)',
         }}>
-          {/* Google Maps placeholder — to be added later */}
-          <div style={{
-            width: '100%',
-            height: '200px',
-            backgroundColor: 'var(--color-gray-faint)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-4)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '0.5px solid var(--color-gray-light)',
-          }}>
-            <p style={{
-              color: 'var(--color-gray-mid)',
-              fontSize: 'var(--fs-body-sm)',
-              fontFamily: 'var(--font-body)',
-            }}>
-              Map coming soon
-            </p>
-          </div>
+
+          {/* EventMap */}
+          {event && <EventMap event={event} />}
 
           {/* Calendar */}
           {event && <EventCalendar event={event} />}
