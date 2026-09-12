@@ -24,4 +24,10 @@ class PartnerCreateView(generics.CreateAPIView):
     queryset = Partner.object.all()
     serializer_class = PartnerSerializer
 
+class PartnerDeleteView(generics.DestroyAPIView):
+    """Delete a single partner record"""
+
+    queryset = Partner.objects.all()
+    serializer_class = PartnerSerializer
+    lookup_field = "partner_id"
 
