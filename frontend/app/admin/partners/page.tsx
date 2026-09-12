@@ -40,7 +40,7 @@ useEffect(() => {
 console.log(partners);
 return(
   <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 px-4">
-    <h1 className="text-4xl text-left font-bold mb-2">Partners</h1>
+    <h1 className="text-4xl text-center font-bold mb-2">Partners</h1>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
       <div className="text-3xl text-left font-bold ml-2">Partners</div>
