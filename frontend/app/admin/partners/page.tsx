@@ -1,58 +1,79 @@
 'use client';
 
-import { SDProp, SDTable, PartnerTable, PartnerProp } from "./partnersComponents"
+import { useState, useEffect } from 'react';
 
-const partners: PartnerProp[] = [
-  { sdName: "Partner 1", sdDisplayOrder: 1, sdContributionAmount: 1000, sdWebsite: "www.1.com" },
-  { sdName: "Partner 2", sdDisplayOrder: 2, sdContributionAmount: 1000, sdWebsite: "www.2.com" },
-  { sdName: "Partner 3", sdDisplayOrder: 3, sdContributionAmount: 1000, sdWebsite: "www.3.com" },
-];
+import { PartnerProp, PartnerTable } from "./partnersComponents"
 
-const donors: SDProp[] = [
-  { sdName: "Donor 1", sdDisplayOrder: 1, sdContributionAmount: 500 },
-  { sdName: "Donor 2", sdDisplayOrder: 2, sdContributionAmount: 500 },
-  { sdName: "Donor 3", sdDisplayOrder: 3, sdContributionAmount: 500 },
-];
-
-const sponsors: SDProp[] = [
-  { sdName: "Sponsor 1", sdDisplayOrder: 1, sdContributionAmount: 200 },
-  { sdName: "Sponsor 2", sdDisplayOrder: 2, sdContributionAmount: 200 },
-  { sdName: "Sponsor 3", sdDisplayOrder: 3, sdContributionAmount: 200 },
-];
 
 export default function Partners(){
+  const [partners, setPartners] = useState<PartnerProp[]>([]);
 
-  return(
-    <div className="container w-[80%] mx-auto flex flex-col gap-4">
-      <h1 className="text-4xl text-left font-bold mb-2">Partners, Donors, & Sponsors</h1>
+  // fetch partners from database
+useEffect(() => {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`)
+    .then(res => res.json())
+    .then((partnerRecords: {
+        partner_id: number;
+        display_name_en: string;
+        category_en: string;
+        website_url: string | null;
+        display_order: number;
+        media_assest: number | null;
+        contribution_amount: number;
+    }[]) => {
+      const mappedPartners: PartnerProp[] = partnerRecords
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(partner => ({
+          PartnerID: partner.partner_id,
+          Name: partner.display_name_en,
+          Category: partner.category_en,
+          Website: partner.website_url ?? null,
+          MediaAssest: partner.media_assest ?? null,
+          ContributionAmount: partner.contribution_amount ?? 0,
+          DisplayOrder: partner.display_order
+        }));
 
-      <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid grid-cols-8">
-          <div className="px-3 py-2 text-sm font-semibold col-span-1">Order</div>
-          <div className="px-3 py-2 text-sm font-semibold col-span-3">Name</div>
-          <div className="px-3 py-2 text-sm font-semibold col-span-2">Contribution Amount</div>
-          <div className="px-3 py-2 text-sm font-semibold col-span-1">Website</div>
-        </div>
-        <PartnerTable rowData={partners}/>
+      setPartners(mappedPartners);
+    })
+    .catch(error => console.error('Error fetching partners:', error));
+}, []);
+console.log(partners);
+return(
+  <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 px-4">
+    <h1 className="text-4xl text-center font-bold mb-2">Partners</h1>
+
+    <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Partners</div>
+      <div className="grid grid-cols-[60px_300px_200px_1fr]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
-
-      <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid grid-cols-8">
-          <div className="px-3 py-2 text-sm col-span-1 font-semibold">Order</div>
-          <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
-        </div>
-        <SDTable rowData={sponsors}/>
-      </div>
-
-      <div className="w-[80%] inline-block rounded border border-gray-300 bg-gray-50 p-2">
-        <div className="grid-cols-8 grid">
-          <div className="px-3 py-2 text-sm col-span-1 font-semibold">Order</div>
-          <div className="px-3 py-2 text-sm col-span-3 font-semibold">Name</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">Contribution Amount</div>
-        </div>
-        <SDTable rowData={donors}/>
-      </div>
+      <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
     </div>
-  )
+
+    <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Donors</div>
+      <div className="grid grid-cols-[60px_300px_200px]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
+      </div>
+      <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
+    </div>
+
+    <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
+      <div className="text-3xl text-left font-bold ml-2">Sponsors</div>
+      <div className="grid grid-cols-[60px_300px_200px]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
+      </div>
+      <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
+    </div>
+
+
+  </div>
+)
 }

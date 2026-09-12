@@ -1,23 +1,19 @@
 'use client'
 
-export interface SDProp{
+export interface PartnerProp{
   // Sponsor and Donor Prop
-  sdName: string;
-  sdDisplayOrder: number;
-  sdContributionAmount: number;
+  DisplayOrder: number;
+  PartnerID: number;
+  Name: string;
+  Category: string;
+  MediaAssest: number | null;
+  ContributionAmount: number;
+  Website: string | null;
 }
 
-export interface PartnerProp extends SDProp{
-  // Partner Prop
-  sdWebsite: string | null;
-}
 
 interface PartnerTableProps{
   rowData: PartnerProp[];
-}
-
-interface SDTableProps{
-  rowData: SDProp[];
 }
 
 
@@ -26,33 +22,14 @@ export function PartnerTable({ rowData = [] } : PartnerTableProps ){
     <div>
       {rowData
       .slice()
-      .sort((a,b) => a.sdDisplayOrder - b.sdDisplayOrder)
+      .sort((a,b) => a.DisplayOrder - b.DisplayOrder)
       .map((row) =>(
         <DisplayRow
-         key={row.sdName}
-         sdName = {row.sdName}
-         sdDisplayOrder = {row.sdDisplayOrder}
-         sdContributionAmount = {row.sdContributionAmount}
-         sdWebsite = {row.sdWebsite}
-        />
-      ))}
-    </div>
-  )
-}
-
-export function SDTable({ rowData = [] } : SDTableProps ){
-  return (
-    <div>
-      {rowData
-      .slice()
-      .sort((a,b) => a.sdDisplayOrder - b.sdDisplayOrder)
-      .map((row) =>(
-        <DisplayRow
-         key={row.sdName}
-         sdName = {row.sdName}
-         sdDisplayOrder = {row.sdDisplayOrder}
-         sdContributionAmount = {row.sdContributionAmount}
-         sdWebsite = {null}
+         key={row.PartnerID}
+         sdName = {row.Name}
+         sdDisplayOrder = {row.DisplayOrder}
+         sdContributionAmount = {row.ContributionAmount}
+         sdWebsite = {row.Website}
         />
       ))}
     </div>
@@ -71,18 +48,16 @@ function DisplayRow({
   sdContributionAmount : number ,
   sdWebsite : string | null,
 }){
-  {console.log(sdName + sdContributionAmount + sdDisplayOrder + sdWebsite)}
-  return(
-    <div className="w-[100%] border border-gray-300 bg-white">
-      <div className="grid grid-cols-8">
-          <div className="px-3 py-2 text-sm col-span-1 font-semibold">{sdDisplayOrder}</div>
-          <div className="px-3 py-2 text-sm col-span-3 font-semibold">{sdName}</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdContributionAmount}</div>
-          <div className="px-3 py-2 text-sm col-span-2 font-semibold">{sdWebsite ?? ""}</div>
-
-        </div>
+  return (
+        <div className={`${sdWebsite != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
+      <div className="px-3 py-2 text-sm font-semibold text-center">{sdDisplayOrder}</div>
+      <div className="px-3 py-2 text-sm font-semibold pl-4">{sdName}</div>
+      <div className="px-3 py-2 text-sm font-semibold text-right">${sdContributionAmount}</div>
+      {sdWebsite && (
+        <div className="px-3 py-2 text-sm font-semibold pl-8">{sdWebsite ?? ""}</div>
+      )}
     </div>
-  )
+  );
 }
 
 
