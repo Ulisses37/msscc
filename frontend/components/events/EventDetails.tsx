@@ -109,6 +109,24 @@ export function EventDetail({ event }: EventDetailProps) {
           }
         </p>
 
+        {/* Google Calendar link */}
+        <a
+          href={generateGoogleCalendarLink(event)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 'var(--fs-body-sm)',
+            color: 'var(--color-gray-mid)',
+            textDecoration: 'none',
+            alignSelf: 'flex-start',
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+        >
+          Google Calendar
+        </a>
+
         {/* Location */}
         <p style={{
           fontFamily: 'var(--font-body)',
