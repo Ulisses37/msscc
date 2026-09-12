@@ -11,6 +11,22 @@ import {
 const inputClassName =
   'mt-1 block w-full rounded-sm border border-msscc-gray-light px-3 py-2 text-sm text-msscc-gray-dark shadow-sm outline-none transition focus:border-msscc-teal focus:ring-2 focus:ring-msscc-teal/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60';
 
+function isValidExpirationDate(expirationDate: string) {
+  const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expirationDate);
+  if (!expirationMatch) return false;
+
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear() % 100;
+  const expirationMonth = Number(expirationMatch[1]);
+  const expirationYear = Number(expirationMatch[2]);
+
+  return (
+    expirationYear > currentYear ||
+    (expirationYear === currentYear && expirationMonth >= currentMonth)
+  );
+}
+
 export function DonationForm() {
   const t = useTranslations('SupportPage');
   const [donation, setDonation] = useState('');
@@ -19,6 +35,7 @@ export function DonationForm() {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
   const [securityCode, setSecurityCode] = useState('');
   const [summaryDonation, setSummaryDonation] = useState('');
   const [summaryEmail, setSummaryEmail] = useState('');
@@ -26,30 +43,57 @@ export function DonationForm() {
   const [summaryAddress, setSummaryAddress] = useState('');
   const [summaryCardNumber, setSummaryCardNumber] = useState('');
   const [donationTouched, setDonationTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
   const [cardNumberTouched, setCardNumberTouched] = useState(false);
+  const [expirationDateTouched, setExpirationDateTouched] = useState(false);
   const [securityCodeTouched, setSecurityCodeTouched] = useState(false);
 
-  const emailProvided = email.trim().length > 0;
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const donationIsValid = /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
   const cardNumberIsValid = cardNumber.length >= 12 && cardNumber.length <= 19;
+  const expirationDateIsValid = isValidExpirationDate(expirationDate);
   const securityCodeIsValid = securityCode.length >= 3 && securityCode.length <= 4;
+  const commonFieldsAreValid =
+    emailIsValid && donationIsValid && name.trim().length > 0 && address.trim().length > 0;
+  const formIsValid =
+    commonFieldsAreValid &&
+    (paymentType === 'paypal' ||
+      (cardNumberIsValid && expirationDateIsValid && securityCodeIsValid));
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    // The backend payment request will be connected in PR4.
+    if (!formIsValid) return;
+  };
 
   return (
     <section className="mt-16 w-full px-6">
       <h2 className="mb-6 mt-16 text-2xl font-bold text-[#264653]">{t('heading')}</h2>
-      <div className="max-w-[600px] space-y-6">
+      <form className="max-w-[600px] space-y-6" onSubmit={handleSubmit} noValidate>
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
             type="email"
             name="email"
             autoComplete="email"
+            maxLength={254}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            onBlur={() => setSummaryEmail(email)}
+            onBlur={() => {
+              setEmailTouched(true);
+              setSummaryEmail(email);
+            }}
             required
             className={inputClassName}
+            aria-invalid={emailTouched && !emailIsValid}
+            aria-describedby={emailTouched && !emailIsValid ? 'email-error' : undefined}
           />
+          {emailTouched && !emailIsValid && (
+            <p id="email-error" className="mt-1 text-sm text-red-600">
+              {t('emailError')}
+            </p>
+          )}
         </label>
 
         <fieldset>
@@ -63,7 +107,7 @@ export function DonationForm() {
                 type="button"
                 aria-pressed={paymentType === type}
                 onClick={() => setPaymentType(type)}
-                disabled={!emailProvided}
+                disabled={!emailIsValid}
                 className={`rounded-sm border px-4 py-2 text-btn tracking-btn transition-colors disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60 ${
                   paymentType === type
                     ? 'border-msscc-pink bg-msscc-pink text-white'
@@ -89,7 +133,7 @@ export function DonationForm() {
               setSummaryDonation(donation);
             }}
             placeholder={t('donationPlaceholder')}
-            disabled={!emailProvided}
+            disabled={!emailIsValid}
             required
             className={inputClassName}
             aria-invalid={donationTouched && !donationIsValid}
@@ -114,7 +158,7 @@ export function DonationForm() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               onBlur={() => setSummaryName(name)}
-              disabled={!emailProvided}
+              disabled={!emailIsValid}
               required
               className={inputClassName}
             />
@@ -128,7 +172,7 @@ export function DonationForm() {
               value={address}
               onChange={(event) => setAddress(event.target.value)}
               onBlur={() => setSummaryAddress(address)}
-              disabled={!emailProvided}
+              disabled={!emailIsValid}
               required
               className={inputClassName}
             />
@@ -152,7 +196,7 @@ export function DonationForm() {
                   setCardNumberTouched(true);
                   setSummaryCardNumber(cardNumber);
                 }}
-                disabled={!emailProvided}
+                disabled={!emailIsValid}
                 required
                 className={inputClassName}
                 aria-invalid={cardNumberTouched && !cardNumberIsValid}
@@ -174,11 +218,30 @@ export function DonationForm() {
                   name="expirationDate"
                   inputMode="numeric"
                   autoComplete="cc-exp"
+                  value={expirationDate}
+                  onChange={(event) => {
+                    const digits = event.target.value.replace(/\D/g, '').slice(0, 4);
+                    setExpirationDate(
+                      digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits,
+                    );
+                  }}
+                  onBlur={() => setExpirationDateTouched(true)}
                   placeholder="MM/YY"
-                  disabled={!emailProvided}
+                  disabled={!emailIsValid}
                   required
                   className={inputClassName}
+                  aria-invalid={expirationDateTouched && !expirationDateIsValid}
+                  aria-describedby={
+                    expirationDateTouched && !expirationDateIsValid
+                      ? 'expiration-date-error'
+                      : undefined
+                  }
                 />
+                {expirationDateTouched && !expirationDateIsValid && (
+                  <p id="expiration-date-error" className="mt-1 text-sm text-red-600">
+                    {t('expirationDateError')}
+                  </p>
+                )}
               </label>
               <label className="block text-sm font-medium text-slate-700">
                 {t('securityCode')}
@@ -192,7 +255,7 @@ export function DonationForm() {
                     setSecurityCode(event.target.value.replace(/\D/g, '').slice(0, 4))
                   }
                   onBlur={() => setSecurityCodeTouched(true)}
-                  disabled={!emailProvided}
+                  disabled={!emailIsValid}
                   required
                   className={inputClassName}
                   aria-invalid={securityCodeTouched && !securityCodeIsValid}
@@ -222,7 +285,15 @@ export function DonationForm() {
           address={summaryAddress}
           cardNumber={summaryCardNumber}
         />
-      </div>
+
+        <button
+          type="submit"
+          disabled={!formIsValid}
+          className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
+        >
+          {t('submitDonation')}
+        </button>
+      </form>
     </section>
   );
 }
