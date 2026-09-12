@@ -49,12 +49,12 @@ function DisplayRow({
   sdWebsite : string | null,
 }){
   return (
-        <div className={`${sdWebsite != null ? "grid grid-cols-[100px_300px_180px_1fr]" : "grid grid-cols-[100px_300px_180px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
-      <div className="px-3 py-2 text-sm font-semibold">{sdDisplayOrder}</div>
-      <div className="px-3 py-2 text-sm font-semibold">{sdName}</div>
-      <div className="px-3 py-2 text-sm font-semibold">{sdContributionAmount}</div>
+        <div className={`${sdWebsite != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
+      <div className="px-3 py-2 text-sm font-semibold text-center">{sdDisplayOrder}</div>
+      <div className="px-3 py-2 text-sm font-semibold pl-4">{sdName}</div>
+      <div className="px-3 py-2 text-sm font-semibold text-right">${sdContributionAmount}</div>
       {sdWebsite && (
-        <div className="px-3 py-2 text-sm font-semibold">{sdWebsite ?? ""}</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-8">{sdWebsite ?? ""}</div>
       )}
     </div>
   );

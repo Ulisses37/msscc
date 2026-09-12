@@ -44,20 +44,20 @@ return(
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
       <div className="text-3xl text-left font-bold ml-2">Partners</div>
-      <div className="grid grid-cols-[100px_300px_180px_1fr]">
-        <div className="px-3 py-2 text-sm font-semibold">Order (000)</div>
-        <div className="px-3 py-2 text-sm font-semibold">Name</div>
+      <div className="grid grid-cols-[60px_300px_200px_1fr]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
-        <div className="px-3 py-2 text-sm font-semibold">Website</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
       <div className="text-3xl text-left font-bold ml-2">Donors</div>
-      <div className="grid grid-cols-[100px_300px_180px]">
-        <div className="px-3 py-2 text-sm font-semibold">Order (100)</div>
-        <div className="px-3 py-2 text-sm font-semibold">Name</div>
+      <div className="grid grid-cols-[60px_300px_200px]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
@@ -65,9 +65,9 @@ return(
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
       <div className="text-3xl text-left font-bold ml-2">Sponsors</div>
-      <div className="grid grid-cols-[100px_300px_180px]">
-        <div className="px-3 py-2 text-sm font-semibold">Order (200)</div>
-        <div className="px-3 py-2 text-sm font-semibold">Name</div>
+      <div className="grid grid-cols-[60px_300px_200px]">
+        <div className="px-2 py-2 text-sm font-semibold">Order</div>
+        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
