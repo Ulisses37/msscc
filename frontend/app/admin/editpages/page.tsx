@@ -348,6 +348,12 @@ export default function EditPagesPage() {
                     + Header
                 </button>
                 <button
+                    onClick={() => addBlock('subheader')}
+                    className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
+                >
+                    + Subheader
+                </button>
+                <button
                     onClick={() => addBlock('paragraph')}
                     className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
                 >
