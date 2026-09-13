@@ -1,10 +1,12 @@
 import Image from 'next/image';
 import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
+import Button from '@/components/ui/Button';
 
 
 interface EventDetailProps {
   event: Event;
+  onVolunteer?: () => void;
 }
 
 // Formats ISO datetime string to readable date and time
@@ -44,7 +46,7 @@ function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
-export function EventDetail({ event }: EventDetailProps) {
+export function EventDetail({ event, onVolunteer }: EventDetailProps) {
   const { locale } = useParams();
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
@@ -58,14 +60,15 @@ export function EventDetail({ event }: EventDetailProps) {
 
       {/* Hero image */}
       {event.media?.fileUrl && (
-        <div style={{
-          width: '100%',
-          aspectRatio: '16 / 9',
-          position: 'relative',
-          borderRadius: 'var(--radius-md)',
-          overflow: 'hidden',
-          marginBottom: 'var(--space-10)',
-        }}>
+        <>
+          <div style={{
+            width: '100%',
+            aspectRatio: '16 / 9',
+            position: 'relative',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            marginBottom: 'var(--space-10)',
+          }}>
           <Image
             src={event.media.fileUrl}
             alt={event.media.altText ?? title}
@@ -73,7 +76,16 @@ export function EventDetail({ event }: EventDetailProps) {
             style={{ objectFit: 'cover' }}
             priority
           />
-        </div>
+          </div>
+
+          {/* Button below image */}
+          {onVolunteer && (
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <Button text="Volunteer for this Event" width="auto" padding="12px 24px"
+              onClick={onVolunteer} />
+            </div>
+          )}
+        </>
       )}
 
       {/* Title */}
@@ -169,6 +181,13 @@ export function EventDetail({ event }: EventDetailProps) {
         )}
 
       </div>
+
+      {/* Button below location if no image, below description if description exists */}
+      {!event.media?.fileUrl && onVolunteer && (
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <Button text="Volunteer for this Event" width="auto" padding="12px 24px" onClick={onVolunteer} />
+        </div>
+      )}
 
       {/* Full description — preserves line breaks */}
       {description && (
