@@ -421,6 +421,33 @@ async function updatePartnerTable(
         console.error(err);
       });
     }
+if (submissionType === "update") {
+  fetch(
+    `http://localhost:8000/api/partners/${partner.PartnerID}/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        display_name_en: partner.Name,
+        category_en: partner.Category,
+        website_url: partner.Website,
+        contribution_amount: partner.ContributionAmount,
+        is_visible: partner.isVisible,
+        display_order: partner.DisplayOrder,
+        media_assest: partner.MediaAssest,
+        category_ja: partner.CategoryJP,
+        display_name_ja: partner.NameJP,
+      }),
+    }
+  ).then(res => {
+    if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
+    window.location.reload();
+  })
+  .catch(err => {
+    alert("Network error, please try again.");
+    console.error(err);
+  });
+}
 }
 
 function handleOrderChange(
