@@ -69,16 +69,16 @@ return(
        rowData={partners.filter(p => p.Category === "partner")}
       setEditPop={setEditPopUp}
       />
-      {popUp === "partner" && <CreatePartnerProp
+      {popUp !== null && <CreatePartnerProp
        PType = {popUp}
         onChange = {setPopUp}
-        InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
-        UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
+        InitialDisplayOrder={getNextDisplayOrder({category: popUp, partnersArray: partners})}
+        UsedDisplayOrders= {partners.filter(p => p.Category === popUp).map(p => p.DisplayOrder)}/>}
 
       {editPopUp !== null && <EditPartnerProp
       partner = {editPopUp}
       onChange={setEditPopUp}
-      UsedDisplayOrders={partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}
+      UsedDisplayOrders={partners.filter(p => p.Category === editPopUp.Category).map(p => p.DisplayOrder)}
       />}
     </div>
 
