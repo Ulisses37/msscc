@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { set } from 'zod';
 export interface PartnerProp{
-  // Sponsor and Donor Prop
   DisplayOrder: number;
   PartnerID: number;
   Name: string;
@@ -90,39 +90,10 @@ export function CreatePartnerProp(
   isVisible: true,
   MediaAssest: 0,
   });
-  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string | null>(null);
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
-
-  function handleOrderChange(value: number) {
-    setInfo(prev => ({ ...prev, DisplayOrder: value }));
-    if (UsedDisplayOrders.includes(value)) {
-      setOrderError(`A ${CategoryTitle} already has that display order position.`);
-    } else {
-      setOrderError(null);
-    }
-  }
-
-  function validateSubmission(){
-    let websiteURL: string = "";
-
-    if (partnerInfo.Website != null && PType == "partner"){
-      websiteURL = partnerInfo.Website
-    } else if (PType != "partner"){
-      updatePartnerTable({partner: partnerInfo, submissionType: "create"})
-      return;
-    }else {
-      setWebsiteError("Please enter a valid URL");
-      return;
-    }
-
-    if (!(/^https?:\/\//i.test(websiteURL))) {
-      partnerInfo.Website = `https://${websiteURL}`;
-    }
-    updatePartnerTable({partner: partnerInfo, submissionType: "create"})
-
-  }
 
 
   useEffect(() =>{
@@ -177,7 +148,15 @@ export function CreatePartnerProp(
             <input
               type="number"
               value={partnerInfo?.DisplayOrder ?? 0}
-              onChange={(e) => handleOrderChange(Number(e.target.value))}
+              onChange={(e) => handleOrderChange(
+                  {
+                    value: e.target.value,
+                    UsedDisplayOrders :  UsedDisplayOrders,
+                    setOrderError: setOrderError,
+                    setInfo: setInfo,
+                    CategoryTitle: CategoryTitle,
+                    currentDisplayOrder: -1,
+                  })}
               className="w-full border rounded px-2 py-1 mt-1 font-normal"
             />
             {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
@@ -202,7 +181,13 @@ export function CreatePartnerProp(
         </div>
         <div className="flex">
         <button
-          onClick={async() => await validateSubmission()}
+          onClick={async() => await validateAndSubmit(
+            {
+              partnerInfo: partnerInfo,
+              setWebsiteError: setWebsiteError,
+              type: "create"
+            }
+          )}
           disabled={!!(orderError != null || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
@@ -234,8 +219,22 @@ export function EditPartnerProp(
   const [partnerInfo, setInfo] = useState<PartnerProp>(partner);
   const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string>("");
+  const [currentDisplayOrder, setCurrentDisplayOrder] = useState<number | string>(partnerInfo.DisplayOrder);
 
   const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
+
+
+  const categoryOptions = [
+    { value: "partner", en: "Partner", jp: "パートナー" },
+    { value: "sponsor", en: "Sponsor", jp: "スポンサー" },
+    { value: "donor", en: "Donor", jp: "寄付者" },
+  ];
+
+  function handleCategoryChange(value: string) {
+    const selected = categoryOptions.find(opt => opt.value === value);
+    if (!selected) return;
+    setInfo(prev => prev ? { ...prev, Category: selected.en, CategoryJP: selected.jp } : prev);
+  }
 
   return(
     <div
@@ -250,8 +249,36 @@ export function EditPartnerProp(
 
         {/* Editable fields */}
         <div className="flex flex-col gap-3">
-          <div className="flex gap-3"> {/*Pair Row*/}
-            <label className="text-sm font-semibold">Name (English)
+          <div className="flex gap-3"> {/*Partner ID & Display Order*/}
+            <label className="text-sm font-semibold flex-1"> Partner ID
+              <input
+                type="number"
+                value={partnerInfo?.PartnerID}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal bg-gray-100 text-gray-500 cursor-not-allowed"
+                disabled
+              />
+            </label>
+            <label className="text-sm font-semibold flex-1">Display Order
+              <input
+                type="number"
+                value={currentDisplayOrder}
+                onChange={(e)=>setCurrentDisplayOrder(e.target.value)}
+                onBlur={(e) => handleOrderChange(
+                  {
+                    value: e.target.value,
+                    UsedDisplayOrders :  UsedDisplayOrders,
+                    setOrderError: setOrderError,
+                    setInfo: setInfo,
+                    CategoryTitle: CategoryTitle,
+                    currentDisplayOrder: partnerInfo.DisplayOrder
+                  })}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            {orderError !== "" && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
+            </label>
+          </div>
+          <div className="flex gap-3"> {/*Name pair*/}
+            <label className="text-sm font-semibold flex-1">Name (English)
               <input
                 type="text"
                 value={partnerInfo?.Name ?? ""}
@@ -259,7 +286,7 @@ export function EditPartnerProp(
                 className="w-full border rounded px-2 py-1 mt-1 font-normal"
               />
             </label>
-            <label className="text-sm font-semibold">Name (Japanese)
+            <label className="text-sm font-semibold flex-1">Name (Japanese)
               <input
                 type="text"
                 value={partnerInfo?.NameJP ?? ""}
@@ -268,9 +295,93 @@ export function EditPartnerProp(
               />
             </label>
           </div>
+          <div className="flex gap-3"> {/*Category Pair*/}
+            <label className="text-sm font-semibold flex-1">
+              Category (English)
+              <select
+                value={categoryOptions.find(opt => opt.en === partnerInfo?.Category)?.value ?? partnerInfo.Category}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              >
+                <option value="" disabled>Select a category</option>
+                {categoryOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.en}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-semibold flex-1">
+              Category (Japanese)
+              <input
+                type="text"
+                value={partnerInfo?.CategoryJP ?? partnerInfo.CategoryJP}
+                readOnly
+                disabled
+                className="w-full border rounded px-2 py-1 mt-1 font-normal bg-gray-100 text-gray-500 cursor-not-allowed"
+              />
+            </label>
+          </div>
+          <div className="flex gap-3"> {/*Contribution & Media*/}
+            <label className="text-sm font-semibold flex-1"> Contribution Amount
+              <input
+                type="number"
+                value={partnerInfo?.ContributionAmount?? ""}
+                    onChange={(e) => setInfo(prev => prev ? { ...prev, ContributionAmount: Number(e.target.value) } : prev)}
+
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            </label>
+              <label className="text-sm font-semibold flex-1"> Media Assest
+              <input
+                type="number"
+                value={partnerInfo?.MediaAssest?? ""}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAssest: Number(e.target.value) } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            </label>
+          </div>
+          <div> {/*Website URL & Visible*/}
+            <label className="text-sm font-semibold flex-1">Website URL
+              <input
+                type="text"
+                value={partnerInfo?.Website ?? ""}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, Website: e.target.value } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            </label>
+            <label className="text-sm font-semibold flex items-center gap-2 flex-1 mt-2">
+              <input
+                type="checkbox"
+                checked={partnerInfo.isVisible}
+                onChange={(e) => setInfo(prev => ({ ...prev, isVisible: e.target.checked }))}
+                className="w-4 h-4"
+                />
+                Visible
+            </label>
+          </div>
+        </div>
+        <div className="flex">
+        <button
+          onClick={async() => await validateAndSubmit(
+            {
+              partnerInfo: partnerInfo,
+              setWebsiteError: setWebsiteError,
+              type: "update",
+            }
+          )}
+          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => onChange(null)}
+          className="mx-12 mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-400"
+        >
+          Cancel
+        </button>
+        </div>
         </div>
       </div>
-    </div>
   )
 }
 
@@ -312,4 +423,70 @@ async function updatePartnerTable(
     }
 }
 
+function handleOrderChange(
+  {
+    value,
+    UsedDisplayOrders,
+    setOrderError,
+    setInfo,
+    CategoryTitle,
+    currentDisplayOrder,
+  } : {
+    value: string;
+    UsedDisplayOrders: number[];
+    setOrderError: (value: string) => void;
+    setInfo: (value: any) => void;
+    CategoryTitle: string;
+    currentDisplayOrder: number;
+  } ){
+    let currentValue = Number(value);
 
+    if (currentValue === currentDisplayOrder){
+      setOrderError("");
+      return;
+    }
+
+    if (currentValue < 1) {
+      setOrderError("Display order must be 1 or greater.");
+      return;
+    }
+
+    if (UsedDisplayOrders.includes(currentValue)) {
+      setOrderError(`A ${CategoryTitle} already has that display order position.`);
+      return;
+    } else {
+      setOrderError("");
+    }
+    setInfo(prev => ({ ...prev, DisplayOrder: value }));
+  }
+
+function validateAndSubmit(
+  {
+    partnerInfo,
+    setWebsiteError,
+    type,
+  } : {
+    partnerInfo : PartnerProp;
+    setWebsiteError: (value: string) => void;
+    type: string;
+  }){
+  let websiteURL: string = "";
+
+
+
+  if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
+    websiteURL = partnerInfo.Website
+   } else if (partnerInfo.Category != "partner"){
+    updatePartnerTable({partner: partnerInfo, submissionType: "create"})
+    return;
+  }else {
+    setWebsiteError("Please enter a valid URL");
+    return;
+  }
+
+  if (!(/^https?:\/\//i.test(websiteURL))) {
+    partnerInfo.Website = `https://${websiteURL}`;
+  }
+
+  updatePartnerTable({partner: partnerInfo, submissionType: type})
+}
