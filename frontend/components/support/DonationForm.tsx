@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 import {
@@ -10,6 +10,10 @@ import {
 
 const inputClassName =
   'mt-1 block w-full rounded-sm border border-msscc-gray-light px-3 py-2 text-sm text-msscc-gray-dark shadow-sm outline-none transition focus:border-msscc-teal focus:ring-2 focus:ring-msscc-teal/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60';
+
+interface DonationResponse {
+  reference_id: string;
+}
 
 function isValidExpirationDate(expirationDate: string) {
   const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expirationDate);
@@ -32,21 +36,29 @@ export function DonationForm() {
   const [donation, setDonation] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('card');
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [securityCode, setSecurityCode] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [message, setMessage] = useState('');
   const [summaryDonation, setSummaryDonation] = useState('');
   const [summaryEmail, setSummaryEmail] = useState('');
-  const [summaryName, setSummaryName] = useState('');
+  const [summaryFirstName, setSummaryFirstName] = useState('');
+  const [summaryLastName, setSummaryLastName] = useState('');
   const [summaryAddress, setSummaryAddress] = useState('');
   const [summaryCardNumber, setSummaryCardNumber] = useState('');
+  const [summaryMessage, setSummaryMessage] = useState('');
   const [donationTouched, setDonationTouched] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [cardNumberTouched, setCardNumberTouched] = useState(false);
   const [expirationDateTouched, setExpirationDateTouched] = useState(false);
   const [securityCodeTouched, setSecurityCodeTouched] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submittedReference, setSubmittedReference] = useState('');
 
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const donationIsValid = /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
@@ -54,17 +66,52 @@ export function DonationForm() {
   const expirationDateIsValid = isValidExpirationDate(expirationDate);
   const securityCodeIsValid = securityCode.length >= 3 && securityCode.length <= 4;
   const commonFieldsAreValid =
-    emailIsValid && donationIsValid && name.trim().length > 0 && address.trim().length > 0;
+    emailIsValid &&
+    donationIsValid &&
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    address.trim().length > 0;
   const formIsValid =
     commonFieldsAreValid &&
     (paymentType === 'paypal' ||
       (cardNumberIsValid && expirationDateIsValid && securityCodeIsValid));
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    // The backend payment request will be connected in PR4.
     if (!formIsValid) return;
+
+    setIsSubmitting(true);
+    setSubmitError('');
+    setSubmittedReference('');
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/donations/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            donor_first_name: firstName.trim(),
+            donor_last_name: lastName.trim(),
+            donor_email: email.trim().toLowerCase(),
+            amount: donation,
+            is_anonymous: isAnonymous,
+            message: message.trim(),
+          }),
+        },
+      );
+
+      const data = (await response.json().catch(() => null)) as DonationResponse | null;
+      if (!response.ok || !data) {
+        throw new Error('Donation request failed.');
+      }
+
+      setSubmittedReference(data.reference_id);
+    } catch {
+      setSubmitError(t('submitError'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -148,21 +195,39 @@ export function DonationForm() {
           )}
         </label>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
-            {t('name')}
+            {t('firstName')}
             <input
               type="text"
-              name="name"
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              onBlur={() => setSummaryName(name)}
+              name="firstName"
+              autoComplete="given-name"
+              maxLength={255}
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              onBlur={() => setSummaryFirstName(firstName)}
               disabled={!emailIsValid}
               required
               className={inputClassName}
             />
           </label>
+          <label className="block text-sm font-medium text-slate-700">
+            {t('lastName')}
+            <input
+              type="text"
+              name="lastName"
+              autoComplete="family-name"
+              maxLength={255}
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              onBlur={() => setSummaryLastName(lastName)}
+              disabled={!emailIsValid}
+              required
+              className={inputClassName}
+            />
+          </label>
+        </div>
+        <div className="space-y-4">
           <label className="block text-sm font-medium text-slate-700">
             {t('address')}
             <input
@@ -277,22 +342,60 @@ export function DonationForm() {
           <p className="text-sm text-msscc-gray-mid">{t('paypalInstructions')}</p>
         )}
 
+        <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            name="isAnonymous"
+            checked={isAnonymous}
+            onChange={(event) => setIsAnonymous(event.target.checked)}
+            disabled={!emailIsValid}
+            className="h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          {t('anonymousDonation')}
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          {t('message')}
+          <textarea
+            name="message"
+            rows={3}
+            maxLength={500}
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            onBlur={() => setSummaryMessage(message)}
+            disabled={!emailIsValid}
+            className={inputClassName}
+          />
+          <span className="mt-1 block text-right text-xs text-msscc-gray-mid">
+            {message.length}/500
+          </span>
+        </label>
+
         <DonationSummary
           donation={summaryDonation}
           paymentType={paymentType}
           email={summaryEmail}
-          name={summaryName}
+          firstName={summaryFirstName}
+          lastName={summaryLastName}
           address={summaryAddress}
           cardNumber={summaryCardNumber}
+          isAnonymous={isAnonymous}
+          message={summaryMessage}
         />
 
         <button
           type="submit"
-          disabled={!formIsValid}
+          disabled={!formIsValid || isSubmitting}
           className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
         >
-          {t('submitDonation')}
+          {isSubmitting ? t('submittingDonation') : t('submitDonation')}
         </button>
+        {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+        {submittedReference && (
+          <p className="text-sm text-green-700" role="status">
+            {t('submitSuccess', { reference: submittedReference })}
+          </p>
+        )}
       </form>
     </section>
   );

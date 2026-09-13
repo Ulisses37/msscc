@@ -30,7 +30,17 @@
     "notProvided": "Not provided",
     "invalidAmount": "Invalid amount",
     "donationAmountError": "Enter a dollar amount greater than zero with no more than two decimal places.",
+    "emailError": "Enter a valid email address.",
     "cardNumberError": "Card number must contain between 12 and 19 digits.",
-    "securityCodeError": "Security code must contain 3 or 4 digits."
+    "expirationDateError": "Enter a valid expiration date that is not in the past.",
+    "securityCodeError": "Security code must contain 3 or 4 digits.",
+    "submitDonation": "Submit Donation",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "submitSuccess": "Donation recorded. Reference: {reference}",
+    "anonymousDonation": "Make this donation anonymous",
+    "message": "Message (optional)",
+    "no": "No",
+    "yes": "Yes"
   }
 }

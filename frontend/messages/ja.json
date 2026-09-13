@@ -30,7 +30,17 @@
     "notProvided": "未入力",
     "invalidAmount": "無効な金額",
     "donationAmountError": "0より大きい金額を、小数点以下2桁以内で入力してください。",
+    "emailError": "有効なメールアドレスを入力してください。",
     "cardNumberError": "カード番号は12桁から19桁で入力してください。",
-    "securityCodeError": "セキュリティコードは3桁または4桁で入力してください。"
+    "expirationDateError": "有効期限が過ぎていない正しい日付を入力してください。",
+    "securityCodeError": "セキュリティコードは3桁または4桁で入力してください。",
+    "submitDonation": "寄付を送信",
+    "firstName": "名",
+    "lastName": "姓",
+    "submitSuccess": "寄付が記録されました。参照: {reference}",
+    "anonymousDonation": "匿名で寄付する",
+    "message": "メッセージ（任意）",
+    "no": "いいえ",
+    "yes": "はい" 
   }
 }
