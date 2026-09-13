@@ -69,21 +69,30 @@ return(
        rowData={partners.filter(p => p.Category === "partner")}
       setEditPop={setEditPopUp}
       />
-      {popUp === "partner" && <CreatePartnerProp
-       PType = "partner"
+      {popUp !== null && <CreatePartnerProp
+       PType = {popUp}
         onChange = {setPopUp}
-        InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
-        UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
+        InitialDisplayOrder={getNextDisplayOrder({category: popUp, partnersArray: partners})}
+        UsedDisplayOrders= {partners.filter(p => p.Category === popUp).map(p => p.DisplayOrder)}/>}
 
       {editPopUp !== null && <EditPartnerProp
       partner = {editPopUp}
       onChange={setEditPopUp}
-      UsedDisplayOrders={partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}
+      UsedDisplayOrders={partners.filter(p => p.Category === editPopUp.Category).map(p => p.DisplayOrder)}
       />}
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="text-3xl text-left font-bold ml-2">Donors</div>
+      <div className="flex justify-between items-center">
+        <div className="text-3xl text-left font-bold ml-2">Donors</div>
+        <div
+          onClick={() => {setPopUp("donor")}}
+          className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
+        >
+          +
+        </div>
+      </div>
+
       <div className="grid grid-cols-[60px_300px_200px]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
@@ -96,7 +105,15 @@ return(
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="text-3xl text-left font-bold ml-2">Sponsors</div>
+      <div className="flex justify-between items-center">
+        <div className="text-3xl text-left font-bold ml-2">Sponsors</div>
+        <div
+          onClick={() => {setPopUp("sponsor")}}
+          className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
+        >
+          +
+        </div>
+      </div>
       <div className="grid grid-cols-[60px_300px_200px]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
