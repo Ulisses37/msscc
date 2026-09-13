@@ -41,6 +41,8 @@
     "anonymousDonation": "Make this donation anonymous",
     "message": "Message (optional)",
     "no": "No",
-    "yes": "Yes"
+    "yes": "Yes",
+    "submittingDonation": "Submitting...",
+    "submitError": "Unable to record the donation. Please try again."
   }
 }

@@ -41,6 +41,8 @@
     "anonymousDonation": "匿名で寄付する",
     "message": "メッセージ（任意）",
     "no": "いいえ",
-    "yes": "はい" 
+    "yes": "はい" ,
+    "submittingDonation": "送信中...",
+    "submitError": "寄付を記録できませんでした。もう一度お試しください。"
   }
 }
