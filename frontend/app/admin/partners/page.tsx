@@ -70,7 +70,7 @@ return(
       setEditPop={setEditPopUp}
       />
       {popUp === "partner" && <CreatePartnerProp
-       PType = "partner"
+       PType = {popUp}
         onChange = {setPopUp}
         InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
         UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
@@ -83,7 +83,16 @@ return(
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
-      <div className="text-3xl text-left font-bold ml-2">Donors</div>
+      <div className="flex justify-between items-center">
+        <div className="text-3xl text-left font-bold ml-2">Donors</div>
+        <div
+          onClick={() => {setPopUp("donor")}}
+          className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
+        >
+          +
+        </div>
+      </div>
+
       <div className="grid grid-cols-[60px_300px_200px]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
