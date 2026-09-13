@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 
-import { PartnerProp, PartnerTable, CreatePartnerProp } from "./partnersComponents"
+import { PartnerProp, PartnerTable, CreatePartnerProp, EditPartnerProp } from "./partnersComponents"
 
 
 export default function Partners(){
   const [partners, setPartners] = useState<PartnerProp[]>([]);
   const [popUp, setPopUp] = useState<"partner" | "donor" | "sponsor" | null>(null);
+  const [editPopUp, setEditPopUp] = useState<PartnerProp | null>(null);
 
   // fetch partners from database
 useEffect(() => {
@@ -16,35 +17,34 @@ useEffect(() => {
     .then((partnerRecords: {
         partner_id: number;
         display_name_en: string;
-        display_name_jp: string;
+        display_name_ja: string;
         category_en: string;
         category_jp: string;
         website_url: string | null;
         display_order: number;
-        media_assest: number | null;
+        media_asset: number | null;
         contribution_amount: number;
-        isVisible: boolean;
+        is_visible: boolean;
     }[]) => {
       const mappedPartners: PartnerProp[] = partnerRecords
         .sort((a, b) => a.display_order - b.display_order)
         .map(partner => ({
           PartnerID: partner.partner_id,
           Name: partner.display_name_en,
-          NameJP:partner.display_name_jp,
+          NameJP:partner.display_name_ja,
           Category: partner.category_en,
           CategoryJP: partner.category_jp,
           Website: partner.website_url ?? null,
-          MediaAssest: partner.media_assest ?? null,
+          MediaAsset: partner.media_asset ?? null,
           ContributionAmount: partner.contribution_amount ?? 0,
           DisplayOrder: partner.display_order,
-          isVisible: partner.isVisible
+          isVisible: partner.is_visible
         }));
 
       setPartners(mappedPartners);
     })
     .catch(error => console.error('Error fetching partners:', error));
 }, []);
-console.log(partners);
 return(
   <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 px-4">
     <h1 className="text-4xl text-center font-bold mb-2">Partners</h1>
@@ -65,12 +65,21 @@ return(
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
         <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "partner")}
+      setEditPop={setEditPopUp}
+      />
       {popUp === "partner" && <CreatePartnerProp
        PType = "partner"
         onChange = {setPopUp}
         InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
         UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
+
+      {editPopUp !== null && <EditPartnerProp
+      partner = {editPopUp}
+      onChange={setEditPopUp}
+      UsedDisplayOrders={partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}
+      />}
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
@@ -80,7 +89,10 @@ return(
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "donor")}
+        setEditPop={setEditPopUp}
+      />
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
@@ -90,7 +102,10 @@ return(
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "sponsor")}
+        setEditPop={setEditPopUp}
+      />
     </div>
   </div>
 )
