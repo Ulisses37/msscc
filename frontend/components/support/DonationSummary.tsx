@@ -8,18 +8,24 @@ interface DonationSummaryProps {
   donation: string;
   paymentType: PaymentType;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   address: string;
   cardNumber: string;
+  isAnonymous: boolean;
+  message: string;
 }
 
 export function DonationSummary({
   donation,
   paymentType,
   email,
-  name,
+  firstName,
+  lastName,
   address,
   cardNumber,
+  isAnonymous,
+  message,
 }: DonationSummaryProps) {
   const t = useTranslations('SupportPage');
   const locale = useLocale();
@@ -65,7 +71,9 @@ export function DonationSummary({
         </div>
         <div className="flex justify-between gap-4">
           <dt className="font-medium text-msscc-gray-mid">{t('name')}</dt>
-          <dd className="text-right text-msscc-gray-dark">{name || t('notProvided')}</dd>
+          <dd className="text-right text-msscc-gray-dark">
+            {[firstName, lastName].filter(Boolean).join(' ') || t('notProvided')}
+          </dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="font-medium text-msscc-gray-mid">{t('address')}</dt>
@@ -79,6 +87,18 @@ export function DonationSummary({
             </dd>
           </div>
         )}
+        <div className="flex justify-between gap-4">
+          <dt className="font-medium text-msscc-gray-mid">{t('anonymousDonation')}</dt>
+          <dd className="text-right text-msscc-gray-dark">
+            {isAnonymous ? t('yes') : t('no')}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4">
+          <dt className="font-medium text-msscc-gray-mid">{t('message')}</dt>
+          <dd className="max-w-[65%] whitespace-pre-wrap text-right text-msscc-gray-dark">
+            {message || t('notProvided')}
+          </dd>
+        </div>
       </dl>
     </section>
   );

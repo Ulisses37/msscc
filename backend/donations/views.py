@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, permissions
 
 from donations.models import Donation, Membership
 from donations.serializers import DonationSerializer, MembershipSerializer
@@ -8,6 +8,12 @@ class DonationListCreateView(generics.ListCreateAPIView):
     """List donation records or create a new donation."""
 
     serializer_class = DonationSerializer
+
+    def get_permissions(self):
+        """Allow public donations while protecting the donor list."""
+        if self.request.method == "POST":
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
     def get_queryset(self):
         queryset = Donation.objects.all()
@@ -32,6 +38,7 @@ class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Donation.objects.all()
     serializer_class = DonationSerializer
     lookup_field = "donation_id"
+    permission_classes = [permissions.IsAdminUser]
 
 
 class MembershipListCreateView(generics.ListCreateAPIView):
