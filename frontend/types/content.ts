@@ -1,7 +1,7 @@
 /**
  * Defines the type of text blocks created in the Page Edit page
  */
-export type BlockType = 'header' | 'paragraph' | 'caption';
+export type BlockType = 'header' | 'subheader' | 'paragraph' | 'caption';
 
 /**
  * Defines the data structure of a text block created in the Page Edit page

@@ -28,6 +28,13 @@ export function ContentBlockRenderer({
           </h2>
         );
 
+        case 'subheader':
+        return (
+          <h4 className="font-heading text-[18px] font-bold text-msscc-gray-dark">
+            {content}
+          </h4>
+        );
+
       case 'paragraph':
         return (
           <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
