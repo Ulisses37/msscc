@@ -176,8 +176,53 @@ export function CreatePartnerProp(
               Visible
             </label>
         </div>
+        <button
+          onClick={async() => await updatePartnerTable({partner: partnerInfo, submissionType: "create"})}
+          disabled={!!(orderError != null || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+          className="mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+        >
+          Save
+        </button>
       </div>
     </div>
   );
 }
+
+async function updatePartnerTable(
+  {
+    partner,
+    submissionType,
+  }: {
+    partner : PartnerProp,
+    submissionType : string,
+  }){
+    if (submissionType === "create"){
+      fetch(
+        `http://localhost:8000/api/partners/create/`,
+        {
+          method: "POST",
+          headers: { "Content-Type" : "application/json" },
+          body: JSON.stringify({
+            display_name_en: partner.Name,
+            category_en: partner.Category,
+            website_url: partner.Website,
+            contribution_amount: partner.ContributionAmount,
+            is_visible: partner.isVisible,
+            display_order: partner.DisplayOrder,
+            media_assest: partner.MediaAssest,
+            category_ja: partner.CategoryJP,
+            display_name_ja: partner.NameJP,
+          }),
+        }
+      ).then(res => {
+        if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
+        window.location.reload();
+      })
+      .catch(err => {
+        alert("Network error, please try again.");
+        console.error(err);
+      });
+    }
+}
+
 
