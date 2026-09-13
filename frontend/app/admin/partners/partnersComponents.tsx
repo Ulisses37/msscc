@@ -188,14 +188,14 @@ export function CreatePartnerProp(
               type: "create"
             }
           )}
-          disabled={!!(orderError != null || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
           Save
         </button>
         <button
           onClick={() => onChange(null)}
-          className="mx-12 mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-400"
+          className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
         </button>
@@ -360,25 +360,36 @@ export function EditPartnerProp(
           </div>
         </div>
         <div className="flex">
-        <button
-          onClick={async() => await validateAndSubmit(
-            {
-              partnerInfo: partnerInfo,
-              setWebsiteError: setWebsiteError,
-              type: "update",
-            }
-          )}
-          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
-          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
-        >
-          Save
-        </button>
-        <button
-          onClick={() => onChange(null)}
-          className="mx-12 mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-400"
-        >
-          Cancel
-        </button>
+          <button
+            onClick={async() => await validateAndSubmit(
+              {
+                partnerInfo: partnerInfo,
+                setWebsiteError: setWebsiteError,
+                type: "update",
+              }
+            )}
+            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+            className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => onChange(null)}
+            className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+              onClick={async() => await validateAndSubmit(
+              {
+                partnerInfo: partnerInfo,
+                setWebsiteError: setWebsiteError,
+                type: "delete",
+              })}
+               className="mx-12 mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+            >
+            Delete
+            </button>
         </div>
         </div>
       </div>
@@ -498,6 +509,29 @@ function validateAndSubmit(
     type: string;
   }){
   let websiteURL: string = "";
+
+  if (type === "delete"){
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${partnerInfo.Name}?" This cannot be undone.`
+    )
+
+    if (!confirmed) return;
+
+    fetch(`http://localhost:8000/api/partners/${partnerInfo.PartnerID}/delete/`, {
+    method: "DELETE",
+    })
+    .then(res => {
+      if (!res.ok) {
+        alert("Failed to delete partner.");
+        return;
+      }
+      window.location.reload();
+    })
+    .catch(err => {
+      alert("Network error, please try again.");
+      console.error(err);
+    });
+  };
 
 
 
