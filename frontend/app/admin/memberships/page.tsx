@@ -37,7 +37,7 @@ export default function AdminMembershipsPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>("start_date");
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>("null");
 
 
   const paginate = (entries: MembershipEntry[], currentPage: number, itemsPerPage: number): MembershipEntry[] => {
