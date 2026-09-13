@@ -66,7 +66,11 @@ return(
         <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
       <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
-      {popUp === "partner" && <CreatePartnerProp PType = "partner" onChange = {setPopUp}/>}
+      {popUp === "partner" && <CreatePartnerProp
+       PType = "partner"
+        onChange = {setPopUp}
+        InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
+        UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
@@ -90,4 +94,17 @@ return(
     </div>
   </div>
 )
+}
+
+function getNextDisplayOrder({
+  category,
+  partnersArray,
+  } : {
+    category : string,
+    partnersArray: PartnerProp[],
+  }): number {
+    const categoryPartners = partnersArray.filter(p => p.Category === category);
+    if (categoryPartners.length === 0) return 1;
+    const maxOrder = Math.max(...categoryPartners.map(p => p.DisplayOrder));
+    return maxOrder + 1;
 }

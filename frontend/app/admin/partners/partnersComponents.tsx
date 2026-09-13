@@ -53,7 +53,7 @@ function DisplayRow({
   sdWebsite : string | null,
 }){
   return (
-        <div className={`${sdWebsite != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
+      <div className={`${sdWebsite != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
       <div className="px-3 py-2 text-sm font-semibold text-center">{sdDisplayOrder}</div>
       <div className="px-3 py-2 text-sm font-semibold pl-4">{sdName}</div>
       <div className="px-3 py-2 text-sm font-semibold text-right">${sdContributionAmount}</div>
@@ -64,7 +64,19 @@ function DisplayRow({
   );
 }
 
-export function CreatePartnerProp( {PType, onChange } :{PType:  string; onChange: (value:null) => void} ){
+export function CreatePartnerProp(
+  {
+    PType,
+    onChange,
+    InitialDisplayOrder,
+    UsedDisplayOrders,
+  } :
+  {
+    PType:  string;
+    onChange: (value:null) => void;
+    InitialDisplayOrder: number;
+    UsedDisplayOrders: number[];
+  } ){
   const [partnerInfo, setInfo] = useState<PartnerProp>({
   PartnerID: 0,
   Name: "",
@@ -73,10 +85,22 @@ export function CreatePartnerProp( {PType, onChange } :{PType:  string; onChange
   CategoryJP: "",
   Website: null,
   ContributionAmount: 0,
-  DisplayOrder: 0,
+  DisplayOrder: InitialDisplayOrder,
   isVisible: true,
   MediaAssest: 0,
-});
+  });
+  const [orderError, setOrderError] = useState<string | null>(null);
+
+  const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
+
+  function handleOrderChange(value: number) {
+    setInfo(prev => ({ ...prev, DisplayOrder: value }));
+    if (UsedDisplayOrders.includes(value)) {
+      setOrderError(`A ${CategoryTitle} already has that display order position.`);
+    } else {
+      setOrderError(null);
+    }
+  }
 
   useEffect(() =>{
     function handleKeyDown(e: KeyboardEvent){
@@ -96,7 +120,7 @@ export function CreatePartnerProp( {PType, onChange } :{PType:  string; onChange
       onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-bold mb-4">
-            Create {PType.charAt(0).toUpperCase() + PType.slice(1)}
+          Create {CategoryTitle}
         </h2>
 
         {/* Editable fields */}
@@ -125,11 +149,20 @@ export function CreatePartnerProp( {PType, onChange } :{PType:  string; onChange
               className="w-full border rounded px-2 py-1 mt-1 font-normal"
             />
           </label>}
-          <label className="text-sm font-semibold">Website
+          <label className="text-sm font-semibold">Display Order
+            <input
+              type="number"
+              value={partnerInfo?.DisplayOrder ?? 0}
+              onChange={(e) => handleOrderChange(Number(e.target.value))}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+            {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
+          </label>
+          <label className="text-sm font-semibold">Contribution Amount
             <input
               type="number"
               value={partnerInfo?.ContributionAmount ?? 0}
-              onChange={(e) => setInfo(prev => prev ? { ...prev, ContributionAmount: Number(e.target.value) } : prev)}
+              onChange={(e) => setInfo(prev => ({ ...prev, ContributionAmount: Number(e.target.value)}))}
               className="w-full border rounded px-2 py-1 mt-1 font-normal"
             />
           </label>
