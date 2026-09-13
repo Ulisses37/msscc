@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 
-import { PartnerProp, PartnerTable, CreatePartnerProp } from "./partnersComponents"
+import { PartnerProp, PartnerTable, CreatePartnerProp, EditPartnerProp } from "./partnersComponents"
 
 
 export default function Partners(){
   const [partners, setPartners] = useState<PartnerProp[]>([]);
   const [popUp, setPopUp] = useState<"partner" | "donor" | "sponsor" | null>(null);
+  const [editPopUp, setEditPopUp] = useState<PartnerProp | null>(null);
 
   // fetch partners from database
 useEffect(() => {
@@ -65,12 +66,21 @@ return(
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
         <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "partner")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "partner")}
+      setEditPop={setEditPopUp}
+      />
       {popUp === "partner" && <CreatePartnerProp
        PType = "partner"
         onChange = {setPopUp}
         InitialDisplayOrder={getNextDisplayOrder({category: "partner", partnersArray: partners})}
         UsedDisplayOrders= {partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}/>}
+
+      {editPopUp !== null && <EditPartnerProp
+      partner = {editPopUp}
+      onChange={setEditPopUp}
+      UsedDisplayOrders={partners.filter(p => p.Category === "partner").map(p => p.DisplayOrder)}
+      />}
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
@@ -80,7 +90,10 @@ return(
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "donor")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "donor")}
+        setEditPop={setEditPopUp}
+      />
     </div>
 
     <div className="w-full rounded border border-gray-300 bg-gray-100 p-2">
@@ -90,7 +103,10 @@ return(
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
-      <PartnerTable rowData={partners.filter(p => p.Category === "sponsor")}/>
+      <PartnerTable
+       rowData={partners.filter(p => p.Category === "sponsor")}
+        setEditPop={setEditPopUp}
+      />
     </div>
   </div>
 )

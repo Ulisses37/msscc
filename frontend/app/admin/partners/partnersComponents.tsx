@@ -16,12 +16,14 @@ export interface PartnerProp{
 }
 
 
-interface PartnerTableProps{
-  rowData: PartnerProp[];
-}
-
-
-export function PartnerTable({ rowData = [] } : PartnerTableProps ){
+export function PartnerTable(
+  {
+    rowData,
+    setEditPop,
+  } : {
+    rowData: PartnerProp[];
+    setEditPop: (value: PartnerProp) => void;
+  }){
   return (
     <div>
       {rowData
@@ -30,10 +32,8 @@ export function PartnerTable({ rowData = [] } : PartnerTableProps ){
       .map((row) =>(
         <DisplayRow
          key={row.PartnerID}
-         sdName = {row.Name}
-         sdDisplayOrder = {row.DisplayOrder}
-         sdContributionAmount = {row.ContributionAmount}
-         sdWebsite = {row.Website}
+         partnerInfo={row}
+         setEditPopUp={setEditPop}
         />
       ))}
     </div>
@@ -42,23 +42,24 @@ export function PartnerTable({ rowData = [] } : PartnerTableProps ){
 
 
 function DisplayRow({
-  sdName,
-  sdDisplayOrder,
-  sdContributionAmount,
-  sdWebsite,
+  partnerInfo,
+  setEditPopUp,
 } : {
-  sdName: string,
-  sdDisplayOrder : number,
-  sdContributionAmount : number ,
-  sdWebsite : string | null,
+  partnerInfo: PartnerProp;
+  setEditPopUp: (value: PartnerProp) => void;
 }){
   return (
-      <div className={`${sdWebsite != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"} border-b border-gray-200 last:border-b-0 bg-white`}>
-      <div className="px-3 py-2 text-sm font-semibold text-center">{sdDisplayOrder}</div>
-      <div className="px-3 py-2 text-sm font-semibold pl-4">{sdName}</div>
-      <div className="px-3 py-2 text-sm font-semibold text-right">${sdContributionAmount}</div>
-      {sdWebsite && (
-        <div className="px-3 py-2 text-sm font-semibold pl-8">{sdWebsite ?? ""}</div>
+      <div
+      className={`${partnerInfo.Website != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"}
+       border-b border-gray-200 last:border-b-0 cursor-pointer
+       bg-white hover:bg-yellow-100`}
+       onClick={()=>setEditPopUp(partnerInfo)}
+      >
+      <div className="px-3 py-2 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
+      <div className="px-3 py-2 text-sm font-semibold pl-4">{partnerInfo.Name}</div>
+      <div className="px-3 py-2 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
+      {partnerInfo.Website && (
+        <div className="px-3 py-2 text-sm font-semibold pl-8">{partnerInfo.Website ?? ""}</div>
       )}
     </div>
   );
@@ -219,6 +220,60 @@ export function CreatePartnerProp(
     </div>
   );
 }
+
+export function EditPartnerProp(
+  {
+    partner,
+    onChange,
+    UsedDisplayOrders
+  } : {
+    partner: PartnerProp;
+    onChange: (value: null) => void;
+    UsedDisplayOrders: number[];
+}){
+  const [partnerInfo, setInfo] = useState<PartnerProp>(partner);
+  const [orderError, setOrderError] = useState<string>("");
+  const [websiteError, setWebsiteError] = useState<string>("");
+
+  const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
+
+  return(
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={() => onChange(null)}
+    >
+      <div
+        className="bg-white rounded p-6 w-192"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold mb-4"> Update {CategoryTitle}</h2>
+
+        {/* Editable fields */}
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3"> {/*Pair Row*/}
+            <label className="text-sm font-semibold">Name (English)
+              <input
+                type="text"
+                value={partnerInfo?.Name ?? ""}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            </label>
+            <label className="text-sm font-semibold">Name (Japanese)
+              <input
+                type="text"
+                value={partnerInfo?.NameJP ?? ""}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, NameJP: e.target.value } : prev)}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 
 async function updatePartnerTable(
   {
