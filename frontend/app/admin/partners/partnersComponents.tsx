@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { set } from 'zod';
+
 export interface PartnerProp{
   DisplayOrder: number;
   PartnerID: number;
@@ -88,7 +88,7 @@ export function CreatePartnerProp(
   ContributionAmount: 0,
   DisplayOrder: InitialDisplayOrder,
   isVisible: true,
-  MediaAsset: 0,
+  MediaAsset: null,
   });
   const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string | null>(null);
