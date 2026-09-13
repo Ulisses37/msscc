@@ -590,5 +590,5 @@ function validateContribution(
     }else{
       setContributionError("");
     }
-    setInfo(prev => ({...prev, currentAmount}));
+    setInfo(prev => ({...prev, ContributionAmount: contributionAmount}));
 }
