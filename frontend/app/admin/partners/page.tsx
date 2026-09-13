@@ -22,7 +22,7 @@ useEffect(() => {
         category_jp: string;
         website_url: string | null;
         display_order: number;
-        media_assest: number | null;
+        media_asset: number | null;
         contribution_amount: number;
         isVisible: boolean;
     }[]) => {
@@ -35,7 +35,7 @@ useEffect(() => {
           Category: partner.category_en,
           CategoryJP: partner.category_jp,
           Website: partner.website_url ?? null,
-          MediaAssest: partner.media_assest ?? null,
+          MediaAsset: partner.media_asset ?? null,
           ContributionAmount: partner.contribution_amount ?? 0,
           DisplayOrder: partner.display_order,
           isVisible: partner.isVisible
@@ -45,7 +45,6 @@ useEffect(() => {
     })
     .catch(error => console.error('Error fetching partners:', error));
 }, []);
-console.log(partners);
 return(
   <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-4 px-4">
     <h1 className="text-4xl text-center font-bold mb-2">Partners</h1>

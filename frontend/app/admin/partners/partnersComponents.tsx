@@ -9,7 +9,7 @@ export interface PartnerProp{
   NameJP: string;
   Category: string;
   CategoryJP: string;
-  MediaAssest: number | null;
+  MediaAsset: number | null;
   ContributionAmount: number;
   Website: string | null;
   isVisible: boolean;
@@ -50,7 +50,7 @@ function DisplayRow({
 }){
   return (
       <div
-      className={`${partnerInfo.Website != null ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"}
+      className={`${partnerInfo.Category == "partner" ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"}
        border-b border-gray-200 last:border-b-0 cursor-pointer
        bg-white hover:bg-yellow-100`}
        onClick={()=>setEditPopUp(partnerInfo)}
@@ -58,8 +58,8 @@ function DisplayRow({
       <div className="px-3 py-2 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
       <div className="px-3 py-2 text-sm font-semibold pl-4">{partnerInfo.Name}</div>
       <div className="px-3 py-2 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
-      {partnerInfo.Website && (
-        <div className="px-3 py-2 text-sm font-semibold pl-8">{partnerInfo.Website ?? ""}</div>
+      {partnerInfo.Category == "partner" && (
+        <div className="px-3 py-2 text-sm font-semibold pl-8">{partnerInfo.Website}</div>
       )}
     </div>
   );
@@ -88,7 +88,7 @@ export function CreatePartnerProp(
   ContributionAmount: 0,
   DisplayOrder: InitialDisplayOrder,
   isVisible: true,
-  MediaAssest: 0,
+  MediaAsset: 0,
   });
   const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string | null>(null);
@@ -225,9 +225,9 @@ export function EditPartnerProp(
 
 
   const categoryOptions = [
-    { value: "partner", en: "Partner", jp: "パートナー" },
-    { value: "sponsor", en: "Sponsor", jp: "スポンサー" },
-    { value: "donor", en: "Donor", jp: "寄付者" },
+    { value: "partner", en: "partner", jp: "パートナー" },
+    { value: "sponsor", en: "sponsor", jp: "スポンサー" },
+    { value: "donor", en: "donor", jp: "寄付者" },
   ];
 
   function handleCategoryChange(value: string) {
@@ -330,11 +330,11 @@ export function EditPartnerProp(
                 className="w-full border rounded px-2 py-1 mt-1 font-normal"
               />
             </label>
-              <label className="text-sm font-semibold flex-1"> Media Assest
+              <label className="text-sm font-semibold flex-1"> Media Asset
               <input
                 type="number"
-                value={partnerInfo?.MediaAssest?? ""}
-                onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAssest: Number(e.target.value) } : prev)}
+                value={partnerInfo?.MediaAsset?? ""}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAsset: Number(e.target.value) } : prev)}
                 className="w-full border rounded px-2 py-1 mt-1 font-normal"
               />
             </label>
@@ -418,7 +418,7 @@ async function updatePartnerTable(
             contribution_amount: partner.ContributionAmount,
             is_visible: partner.isVisible,
             display_order: partner.DisplayOrder,
-            media_assest: partner.MediaAssest,
+            media_asset: partner.MediaAsset,
             category_ja: partner.CategoryJP,
             display_name_ja: partner.NameJP,
           }),
@@ -432,33 +432,33 @@ async function updatePartnerTable(
         console.error(err);
       });
     }
-if (submissionType === "update") {
-  fetch(
-    `http://localhost:8000/api/partners/${partner.PartnerID}/`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        display_name_en: partner.Name,
-        category_en: partner.Category,
-        website_url: partner.Website,
-        contribution_amount: partner.ContributionAmount,
-        is_visible: partner.isVisible,
-        display_order: partner.DisplayOrder,
-        media_assest: partner.MediaAssest,
-        category_ja: partner.CategoryJP,
-        display_name_ja: partner.NameJP,
-      }),
-    }
-  ).then(res => {
-    if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
-    window.location.reload();
-  })
-  .catch(err => {
-    alert("Network error, please try again.");
-    console.error(err);
-  });
-}
+  if (submissionType === "update") {
+    fetch(
+      `http://localhost:8000/api/partners/${partner.PartnerID}/`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name_en: partner.Name,
+          category_en: partner.Category,
+          website_url: partner.Website,
+          contribution_amount: partner.ContributionAmount,
+          is_visible: partner.isVisible,
+          display_order: partner.DisplayOrder,
+          media_asset: partner.MediaAsset,
+          category_ja: partner.CategoryJP,
+          display_name_ja: partner.NameJP,
+        }),
+      }
+    ).then(res => {
+      if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
+      window.location.reload();
+    })
+    .catch(err => {
+      alert("Network error, please try again.");
+      console.error(err);
+    });
+  }
 }
 
 function handleOrderChange(
@@ -538,7 +538,7 @@ function validateAndSubmit(
   if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
     websiteURL = partnerInfo.Website
    } else if (partnerInfo.Category != "partner"){
-    updatePartnerTable({partner: partnerInfo, submissionType: "create"})
+    updatePartnerTable({partner: partnerInfo, submissionType: type})
     return;
   }else {
     setWebsiteError("Please enter a valid URL");
