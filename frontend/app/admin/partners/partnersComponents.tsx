@@ -90,6 +90,7 @@ export function CreatePartnerProp(
   MediaAssest: 0,
   });
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
 
@@ -101,6 +102,27 @@ export function CreatePartnerProp(
       setOrderError(null);
     }
   }
+
+  function validateSubmission(){
+    let websiteURL: string = "";
+
+    if (partnerInfo.Website != null && PType == "partner"){
+      websiteURL = partnerInfo.Website
+    } else if (PType != "partner"){
+      updatePartnerTable({partner: partnerInfo, submissionType: "create"})
+      return;
+    }else {
+      setWebsiteError("Please enter a valid URL");
+      return;
+    }
+
+    if (!(/^https?:\/\//i.test(websiteURL))) {
+      partnerInfo.Website = `https://${websiteURL}`;
+    }
+    updatePartnerTable({partner: partnerInfo, submissionType: "create"})
+
+  }
+
 
   useEffect(() =>{
     function handleKeyDown(e: KeyboardEvent){
@@ -145,10 +167,11 @@ export function CreatePartnerProp(
             <input
               type="text"
               value={partnerInfo?.Website ?? ""}
-              onChange={(e) => setInfo(prev => prev ? { ...prev, Website: e.target.value } : prev)}
+              onChange={(e) => setInfo(prev => ({ ...prev, Website: e.target.value || null }))}
               className="w-full border rounded px-2 py-1 mt-1 font-normal"
             />
           </label>}
+          {websiteError && <p className="text-red-500 text-xs mt-1">{websiteError}</p>}
           <label className="text-sm font-semibold">Display Order
             <input
               type="number"
@@ -178,7 +201,7 @@ export function CreatePartnerProp(
         </div>
         <div className="flex">
         <button
-          onClick={async() => await updatePartnerTable({partner: partnerInfo, submissionType: "create"})}
+          onClick={async() => await validateSubmission()}
           disabled={!!(orderError != null || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
