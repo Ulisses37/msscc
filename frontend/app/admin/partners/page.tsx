@@ -17,28 +17,28 @@ useEffect(() => {
     .then((partnerRecords: {
         partner_id: number;
         display_name_en: string;
-        display_name_jp: string;
+        display_name_ja: string;
         category_en: string;
         category_jp: string;
         website_url: string | null;
         display_order: number;
         media_asset: number | null;
         contribution_amount: number;
-        isVisible: boolean;
+        is_visible: boolean;
     }[]) => {
       const mappedPartners: PartnerProp[] = partnerRecords
         .sort((a, b) => a.display_order - b.display_order)
         .map(partner => ({
           PartnerID: partner.partner_id,
           Name: partner.display_name_en,
-          NameJP:partner.display_name_jp,
+          NameJP:partner.display_name_ja,
           Category: partner.category_en,
           CategoryJP: partner.category_jp,
           Website: partner.website_url ?? null,
           MediaAsset: partner.media_asset ?? null,
           ContributionAmount: partner.contribution_amount ?? 0,
           DisplayOrder: partner.display_order,
-          isVisible: partner.isVisible
+          isVisible: partner.is_visible
         }));
 
       setPartners(mappedPartners);
