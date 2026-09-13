@@ -176,13 +176,22 @@ export function CreatePartnerProp(
               Visible
             </label>
         </div>
+        <div className="flex">
         <button
           onClick={async() => await updatePartnerTable({partner: partnerInfo, submissionType: "create"})}
           disabled={!!(orderError != null || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
-          className="mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
           Save
         </button>
+        <button
+          onClick={() => onChange(null)}
+          className="mx-12 mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-400"
+        >
+          Cancel
+        </button>
+        </div>
+
       </div>
     </div>
   );
