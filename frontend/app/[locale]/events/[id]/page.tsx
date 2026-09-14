@@ -124,7 +124,16 @@ export default function EventDetailPage() {
 
         {/* Left — 60% — full event detail */}
         <div style={{ flex: '0 0 60%' }}>
-          {event && <EventDetail event={event} />}
+          {event && (
+            <EventDetail
+              event={event}
+              onVolunteer={
+                event.volunteerSlots > 0
+                  ? () => router.push(`/${locale}/volunteer/${id}`)
+                  : undefined
+              }
+            />
+          )}
         </div>
 
         {/* Right — 40% — calendar placeholder for now */}
@@ -142,23 +151,6 @@ export default function EventDetailPage() {
         </div>
 
       </div>
-
-      {/* Volunteer Button Logic */}
-      {/* Centered container with auto width for the button */}
-      {event && (event.volunteerSlots > 0 || (event as any).volunteer_slots > 0) && (
-        <div style={{
-          marginTop: 'var(--space-10)',
-          display: 'flex',
-          justifyContent: 'center'
-        }}>
-          <Button
-            text="Volunteer for this Event"
-            width="auto" // Prevents the button from filling the screen width
-            padding="12px 24px"
-            onClick={() => router.push(`/${locale}/volunteer/${id}`)} // Redirects to specific volunteer subpage
-          />
-        </div>
-      )}
 
       {/* Previous / next navigation */}
       <div style={{ marginTop: 'var(--space-12)' }}>
