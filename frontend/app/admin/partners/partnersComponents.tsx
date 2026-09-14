@@ -92,6 +92,8 @@ export function CreatePartnerProp(
   });
   const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string | null>(null);
+  const [contributionError, setContributionError] = useState<string>("");
+  const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
 
@@ -162,12 +164,19 @@ export function CreatePartnerProp(
             {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
           </label>
           <label className="text-sm font-semibold">Contribution Amount
-            <input
-              type="number"
-              value={partnerInfo?.ContributionAmount ?? 0}
-              onChange={(e) => setInfo(prev => ({ ...prev, ContributionAmount: Number(e.target.value)}))}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
-            />
+              <input
+                type="number"
+                value={currentContribution}
+                onChange={(e) => setCurrentContribution(e.target.value)}
+                onBlur={(e) => validateContribution(
+                  {
+                    contributionAmount: e.target.value,
+                    setContributionError: setContributionError,
+                    setInfo: setInfo,
+                  })}
+                className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              />
+            {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
           </label>
           <label className="text-sm font-semibold flex items-center gap-2">
             <input
@@ -188,7 +197,7 @@ export function CreatePartnerProp(
               type: "create"
             }
           )}
-          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
           Save
@@ -219,7 +228,9 @@ export function EditPartnerProp(
   const [partnerInfo, setInfo] = useState<PartnerProp>(partner);
   const [orderError, setOrderError] = useState<string>("");
   const [websiteError, setWebsiteError] = useState<string>("");
+  const [contributionError, setContributionError] = useState<string>("");
   const [currentDisplayOrder, setCurrentDisplayOrder] = useState<number | string>(partnerInfo.DisplayOrder);
+  const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
 
   const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
 
@@ -324,11 +335,17 @@ export function EditPartnerProp(
             <label className="text-sm font-semibold flex-1"> Contribution Amount
               <input
                 type="number"
-                value={partnerInfo?.ContributionAmount?? ""}
-                    onChange={(e) => setInfo(prev => prev ? { ...prev, ContributionAmount: Number(e.target.value) } : prev)}
-
+                value={currentContribution}
+                onChange={(e) => setCurrentContribution(e.target.value)}
+                onBlur={(e) => validateContribution(
+                  {
+                    contributionAmount: e.target.value,
+                    setContributionError: setContributionError,
+                    setInfo: setInfo,
+                  })}
                 className="w-full border rounded px-2 py-1 mt-1 font-normal"
               />
+            {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
             </label>
               <label className="text-sm font-semibold flex-1"> Media Asset
               <input
@@ -368,7 +385,7 @@ export function EditPartnerProp(
                 type: "update",
               }
             )}
-            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == ""))}
+            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
             className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
           >
             Save
@@ -477,7 +494,7 @@ function handleOrderChange(
     CategoryTitle: string;
     currentDisplayOrder: number;
   } ){
-    let currentValue = Number(value);
+    const currentValue = Number(value);
 
     if (currentValue === currentDisplayOrder){
       setOrderError("");
@@ -533,6 +550,10 @@ function validateAndSubmit(
     });
   };
 
+  if (partnerInfo.ContributionAmount < 0){
+    return;
+  }
+
 
 
   if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
@@ -550,4 +571,24 @@ function validateAndSubmit(
   }
 
   updatePartnerTable({partner: partnerInfo, submissionType: type})
+}
+
+function validateContribution(
+  {
+    contributionAmount,
+    setContributionError,
+    setInfo,
+  } : {
+    contributionAmount: string;
+    setContributionError: (value: string) => void;
+    setInfo: (value: any) => void;
+  }){
+    const currentAmount = Number(contributionAmount);
+    if (currentAmount < 0){
+      setContributionError("Contribution can not be negative.");
+      return;
+    }else{
+      setContributionError("");
+    }
+    setInfo(prev => ({...prev, ContributionAmount: contributionAmount}));
 }
