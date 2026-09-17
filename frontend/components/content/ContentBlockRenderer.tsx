@@ -49,6 +49,25 @@ export function ContentBlockRenderer({
           </p>
         );
 
+      case 'image':
+        return (
+          <figure>
+            {block.media_url && (
+              <img
+                src={block.media_url}
+                alt={content}
+                className="max-w-full h-auto"
+              />
+            )}
+
+            {content && (
+              <figcaption className="font-body text-caption text-msscc-gray-mid">
+                {content}
+              </figcaption>
+            )}
+          </figure>
+        );
+
       default:
         return null;
     }

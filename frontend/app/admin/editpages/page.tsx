@@ -32,6 +32,8 @@ type dbContentBlock = {
   content_type: BlockType;
   content_en: string;
   content_ja: string;
+  media_asset: number | null;
+  media_url: string | null;
 };
 
 export default function EditPagesPage() {
@@ -152,6 +154,8 @@ export default function EditPagesPage() {
           type: item.content_type as BlockType,
           contentEn: item.content_en,
           contentJa: item.content_ja,
+          mediaAssetId: item.media_asset,
+          mediaUrl: item.media_url,
         }));
         setBlocks(loadedBlocks);
       } catch (error) {
@@ -176,6 +180,28 @@ export default function EditPagesPage() {
         // Convert each block's id into a number
         const block = updatedBlocks[index];
         const contentId = Number(block.id);
+        let mediaAssetId = block.mediaAssetId ?? null;
+
+        // Handle newly added images by POSTing them to the database
+        if (block.type === 'image' && block.file) {
+          const formData = new FormData();
+          formData.append('image', block.file, block.file.name);
+
+          const mediaResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+            {
+              method: 'POST',
+              body: formData,
+            },
+          );
+
+        if (!mediaResponse.ok) {
+          throw new Error(`Failed to upload image: ${mediaResponse.status}`);
+        }
+        // Retrieve the media record information after the POST is done
+        const mediaData = await mediaResponse.json();
+        mediaAssetId = mediaData.media_asset_id;
+      }
 
         const requestData = {
           page_id: selectedPageId,
@@ -183,6 +209,7 @@ export default function EditPagesPage() {
           content_type: block.type,
           content_en: block.contentEn,
           content_ja: block.contentJa,
+          media_asset: mediaAssetId,
         };
 
         // Perform POST to backend
@@ -207,6 +234,7 @@ export default function EditPagesPage() {
           updatedBlocks[index] = {
             ...block,
             id: createdContent.content_id.toString(),
+            mediaAssetId,
           };
         }
 
