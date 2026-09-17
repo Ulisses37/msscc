@@ -11,6 +11,7 @@ import { ContentBlock, BlockType } from '@/types/content';
 
 // Components
 import BilingualInput from '@/components/admin/BilingualInput';
+import ImageBlockInput from '@/components/admin/ImageBlockInput';
 
 /**
  * Admin page for allowing client to dynamically add/edit content on their website
@@ -365,6 +366,12 @@ export default function EditPagesPage() {
                 >
                     + Caption
                 </button>
+                <button
+                  onClick={() => addBlock('image')}
+                  className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
+                >
+                  + Image
+                </button>
             </div>
 
             {/* Loop through blocks array to show each created block */}
@@ -393,18 +400,45 @@ export default function EditPagesPage() {
                         ↓ Move Down
                       </button>
                     </div>
-                    <BilingualInput
-                        key={block.id}
+                    {block.type === 'image' ? (
+                      <ImageBlockInput
+                        contentEn={block.contentEn}
+                        contentJa={block.contentJa}
+                        imageUrl={block.mediaUrl ?? null}
+                        onUpdateEn={(val) =>
+                          updateBlock({ ...block, contentEn: val })
+                        }
+                        onUpdateJa={(val) =>
+                          updateBlock({ ...block, contentJa: val })
+                        }
+                        onSelectFile={(file) => {
+                          const previewUrl = URL.createObjectURL(file);
+
+                          updateBlock({
+                            ...block,
+                            file,
+                            mediaUrl: previewUrl,
+                          });
+                        }}
+                        onDelete={() => handleDeleteBlock(block.id)}
+                      />
+                    ) : (
+                      <BilingualInput
                         title={block.type}
                         labelEn="English Text"
                         labelJa="Japanese Text"
                         valueEn={block.contentEn}
                         valueJa={block.contentJa}
-                        onUpdateEn={(val) => updateBlock({ ...block, contentEn: val })}
-                        onUpdateJa={(val) => updateBlock({ ...block, contentJa: val })}
+                        onUpdateEn={(val) =>
+                          updateBlock({ ...block, contentEn: val })
+                        }
+                        onUpdateJa={(val) =>
+                          updateBlock({ ...block, contentJa: val })
+                        }
                         onTranslate={() => handleTranslate(block.id, block.contentEn)}
                         onDelete={() => handleDeleteBlock(block.id)}
-                    />
+                      />
+                    )}
                   </div>
                 ))}
 
