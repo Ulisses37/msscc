@@ -8,10 +8,10 @@ import { DonationForm } from '@/components/support/DonationForm';
 
 import type { DbContentBlock } from '@/types/content';
 
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 export default function SupportPage() {
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
   const params = useParams();
   const locale = params?.locale;
 
