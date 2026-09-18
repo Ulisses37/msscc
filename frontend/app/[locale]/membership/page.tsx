@@ -12,10 +12,10 @@ import Button from '@/components/ui/Button';
 import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 export default function MembershipPage() {
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('membership'),);
   const params = useParams();
   const locale = params?.locale;
 

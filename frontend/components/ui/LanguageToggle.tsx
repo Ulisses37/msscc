@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from '@/i18n/routing';
 
 /**
  * LanguageToggle Component
@@ -11,25 +11,17 @@ import { usePathname } from 'next/navigation';
 export function LanguageToggle() {
   const locale = useLocale();
   const pathname = usePathname();
+  const router = useRouter();
 
   /**
    * Updates the URL to the selected language.
    * @param nextLocale - The language code to switch to ('en' | 'ja').
    */
-  const switchLanguage = (nextLocale: string) => {
-    // Optimization: Skip navigation if the selected language is already active.
+  const switchLanguage = (nextLocale: 'en' | 'ja') => {
+    // End function if nextLocale is the same as the currently active locale.
     if (nextLocale === locale) return;
 
-    // Pathname manipulation:
-    // next-intl patterns usually follow: /locale/path/to/page
-    // .split('/') results in ["", "locale", "path", ...]
-    const segments = pathname.split('/');
-    segments[1] = nextLocale;
-
-    const newPath = segments.join('/') || '/';
-
-    // Force a hard refresh to re-run i18n/request.ts on the server
-    window.location.href = newPath;
+    router.replace(pathname, { locale: nextLocale });
   };
 
   // Shared button styles for consistency

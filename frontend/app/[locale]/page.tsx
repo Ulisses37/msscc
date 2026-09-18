@@ -13,7 +13,7 @@ import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer'
 import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 /**
  * This is the general view home page
@@ -21,7 +21,7 @@ import { fetchPageContent } from '@/utils/content';
  */
 
 export default function HomePage() {
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('home'),);
   const params = useParams();
   const locale = params?.locale;
 

@@ -12,7 +12,7 @@ import Button from '@/components/ui/Button';
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 
 // Project Utilities
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 // Types
 import type { DbContentBlock } from '@/types/content';
@@ -24,7 +24,7 @@ import type { DbContentBlock } from '@/types/content';
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('events'),);
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;

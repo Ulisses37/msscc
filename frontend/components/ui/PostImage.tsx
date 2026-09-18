@@ -15,6 +15,9 @@ type ImageItem = {
   created_at: string;
 };
 
+// A cache that maps the media asset ID to the media asset's information
+const imageCache = new Map<number, ImageItem>();
+
 async function fetchImageById(id: number): Promise<ImageItem> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`);
 
@@ -32,13 +35,23 @@ type PostImageProps = {
 };
 
 export default function PostImage({ mediaID, className, configVariant }: PostImageProps) {
-  const [image, setImage] = useState<ImageItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [image, setImage] = useState<ImageItem | null>(() => imageCache.get(mediaID) ?? null,);
+  const [isLoading, setIsLoading] = useState(() => !imageCache.has(mediaID),);
   const [error, setError] = useState<string | null>(null);
   const layout = configVariant ? ImageLayout[configVariant] : ImageLayout.content; // Default to 'content' layout if no config provided
 
   useEffect(() => {
     if (!mediaID) return;
+
+    const cachedImage = imageCache.get(mediaID);
+
+    // Set cached image and skip loading
+    if (cachedImage) {
+      setError(null);
+      setImage(cachedImage);
+      setIsLoading(false);
+      return;
+    }
 
     const fetchImage = async () => {
       setError(null);
@@ -46,6 +59,7 @@ export default function PostImage({ mediaID, className, configVariant }: PostIma
 
       try {
         const item = await fetchImageById(mediaID);
+        imageCache.set(mediaID, item);
         setImage(item);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unable to load image.');
