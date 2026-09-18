@@ -11,6 +11,7 @@ import { ContentBlock, BlockType } from '@/types/content';
 
 // Components
 import BilingualInput from '@/components/admin/BilingualInput';
+import ImageBlockInput from '@/components/admin/ImageBlockInput';
 
 /**
  * Admin page for allowing client to dynamically add/edit content on their website
@@ -31,6 +32,8 @@ type dbContentBlock = {
   content_type: BlockType;
   content_en: string;
   content_ja: string;
+  media_asset: number | null;
+  media_url: string | null;
 };
 
 export default function EditPagesPage() {
@@ -151,6 +154,8 @@ export default function EditPagesPage() {
           type: item.content_type as BlockType,
           contentEn: item.content_en,
           contentJa: item.content_ja,
+          mediaAssetId: item.media_asset,
+          mediaUrl: item.media_url,
         }));
         setBlocks(loadedBlocks);
       } catch (error) {
@@ -175,6 +180,28 @@ export default function EditPagesPage() {
         // Convert each block's id into a number
         const block = updatedBlocks[index];
         const contentId = Number(block.id);
+        let mediaAssetId = block.mediaAssetId ?? null;
+
+        // Handle newly added images by POSTing them to the database
+        if (block.type === 'image' && block.file) {
+          const formData = new FormData();
+          formData.append('image', block.file, block.file.name);
+
+          const mediaResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+            {
+              method: 'POST',
+              body: formData,
+            },
+          );
+
+        if (!mediaResponse.ok) {
+          throw new Error(`Failed to upload image: ${mediaResponse.status}`);
+        }
+        // Retrieve the media record information after the POST is done
+        const mediaData = await mediaResponse.json();
+        mediaAssetId = mediaData.media_asset_id;
+      }
 
         const requestData = {
           page_id: selectedPageId,
@@ -182,6 +209,7 @@ export default function EditPagesPage() {
           content_type: block.type,
           content_en: block.contentEn,
           content_ja: block.contentJa,
+          media_asset: mediaAssetId,
         };
 
         // Perform POST to backend
@@ -206,6 +234,7 @@ export default function EditPagesPage() {
           updatedBlocks[index] = {
             ...block,
             id: createdContent.content_id.toString(),
+            mediaAssetId,
           };
         }
 
@@ -365,6 +394,12 @@ export default function EditPagesPage() {
                 >
                     + Caption
                 </button>
+                <button
+                  onClick={() => addBlock('image')}
+                  className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
+                >
+                  + Image
+                </button>
             </div>
 
             {/* Loop through blocks array to show each created block */}
@@ -393,18 +428,45 @@ export default function EditPagesPage() {
                         ↓ Move Down
                       </button>
                     </div>
-                    <BilingualInput
-                        key={block.id}
+                    {block.type === 'image' ? (
+                      <ImageBlockInput
+                        contentEn={block.contentEn}
+                        contentJa={block.contentJa}
+                        imageUrl={block.mediaUrl ?? null}
+                        onUpdateEn={(val) =>
+                          updateBlock({ ...block, contentEn: val })
+                        }
+                        onUpdateJa={(val) =>
+                          updateBlock({ ...block, contentJa: val })
+                        }
+                        onSelectFile={(file) => {
+                          const previewUrl = URL.createObjectURL(file);
+
+                          updateBlock({
+                            ...block,
+                            file,
+                            mediaUrl: previewUrl,
+                          });
+                        }}
+                        onDelete={() => handleDeleteBlock(block.id)}
+                      />
+                    ) : (
+                      <BilingualInput
                         title={block.type}
                         labelEn="English Text"
                         labelJa="Japanese Text"
                         valueEn={block.contentEn}
                         valueJa={block.contentJa}
-                        onUpdateEn={(val) => updateBlock({ ...block, contentEn: val })}
-                        onUpdateJa={(val) => updateBlock({ ...block, contentJa: val })}
+                        onUpdateEn={(val) =>
+                          updateBlock({ ...block, contentEn: val })
+                        }
+                        onUpdateJa={(val) =>
+                          updateBlock({ ...block, contentJa: val })
+                        }
                         onTranslate={() => handleTranslate(block.id, block.contentEn)}
                         onDelete={() => handleDeleteBlock(block.id)}
-                    />
+                      />
+                    )}
                   </div>
                 ))}
 
