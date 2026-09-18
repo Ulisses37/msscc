@@ -36,7 +36,8 @@ export default function EventsPage() {
 
       // Filter to published only, then sort by startDatetime ascending
       const sorted = data
-        .filter((event) => event.isPublished)
+        .filter((event) => event.isPublished &&
+        new Date(event.endDatetime).getTime() >= Date.now(),)
         .sort((a, b) =>
           new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
         );
