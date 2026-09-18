@@ -12,7 +12,7 @@ import { OfficerCard, DirectorCard } from "./BoardOfDirectorCards";
 import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 interface BoardMember {
   boardMemberName: string;
@@ -26,7 +26,7 @@ export default function AboutPage() {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('about'),);
   const params = useParams();
   const locale = params?.locale;
   const isJapanese = locale === 'ja';

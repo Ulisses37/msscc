@@ -15,7 +15,7 @@ import { PartnerCard } from './PartnerCard';
 import type { DbContentBlock } from '@/types/content';
 
 // Utils Imports
-import { fetchPageContent } from '@/utils/content';
+import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 interface PartnerLinkProps {
   name: string;
@@ -57,7 +57,7 @@ function PartnerLink({ name, href }: PartnerLinkProps) {
 }
 
 export default function PartnersPage() {
-  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>([]);
+  const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('partners'),);
   const [partners, setPartners] = useState<PartnerRecord[]>([]);
   const params = useParams();
   const locale = params?.locale;

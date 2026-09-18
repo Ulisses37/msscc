@@ -8,6 +8,9 @@ import React, { useEffect, useState } from "react";
 import PostImage from "./PostImage";
 import { SelectedConfig } from "./ImageConfiguration";
 
+// A cache that maps the static image's id to its static image record
+const staticImageCache = new Map<number, StaticImageItem>();
+
 type StaticImageItem = {
   static_image_id: number;
   label : string;
@@ -32,16 +35,27 @@ type PostStaticMediaProps = {
 
 export default function PostStaticMedia({ staticImageId, className , configVariant }: PostStaticMediaProps) {
   const placeholder = 0; // ID of a default placeholder static image to use when no valid ID is provided
-  const [staticImage, setStaticImage] = useState<StaticImageItem | null>(null);
+  const [staticImage, setStaticImage] = useState<StaticImageItem | null>(() => staticImageCache.get(staticImageId) ?? null,);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !staticImageCache.has(staticImageId),);
   useEffect(() => {
     const fetchedId = staticImageId || placeholder; // Use provided ID or fallback to placeholder
+    const cachedImage = staticImageCache.get(fetchedId);
+
+    // Set image to cache if it exists. Then skip the loading state.
+    if (cachedImage) {
+      setStaticImage(cachedImage);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchStaticObject = async () => {
       setError(null);
       setIsLoading(true);
       try {
         const staticObject = await fetchStaticImageById(fetchedId);
+
+        staticImageCache.set(fetchedId, staticObject);
         setStaticImage(staticObject);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Static Retrieval Error');
