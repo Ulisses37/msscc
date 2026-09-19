@@ -4,10 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ImportImage } from '@/components/ui/ImportImage';
 
-type Language = 'en' | 'ja';
-
 export default function EventsPage() {
-  const [activeLang, setActiveLang] = useState<Language>('en');
   const [showForm, setShowForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +20,22 @@ export default function EventsPage() {
     startDatetime: '',
     endDatetime: '',
   });
+
+  const handleTranslate = async (fieldEn: keyof typeof formData, fieldJa: keyof typeof formData) => {
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: formData[fieldEn] }),
+      });
+      const data = await response.json();
+      if (data.translation) {
+        setFormData((prev) => ({ ...prev, [fieldJa]: data.translation }));
+      }
+    } catch (error) {
+      console.error('Translation failed:', error);
+    }
+  };
 
   const handleSubmit = async () => {
     setSaveMessage('');
@@ -132,29 +145,18 @@ export default function EventsPage() {
 
         {showForm ? (
           <>
-            {/* Language Toggle */}
-            <div className="flex gap-2 mb-8">
+            {/* Translate Button */}
+            <div className="flex justify-end mb-8">
               <button
                 type="button"
-                onClick={() => setActiveLang('en')}
-                className={`px-4 py-1 rounded-sm text-btn tracking-btn transition-colors border ${
-                  activeLang === 'en'
-                    ? 'bg-msscc-teal text-white border-msscc-teal'
-                    : 'bg-white text-msscc-teal border-msscc-teal hover:bg-msscc-teal hover:text-white'
-                }`}
+                onClick={() => {
+                  handleTranslate('titleEn', 'titleJa');
+                  handleTranslate('locationEn', 'locationJa');
+                  handleTranslate('descriptionEn', 'descriptionJa');
+                }}
+                className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal text-btn tracking-btn hover:bg-msscc-teal hover:text-white transition-colors"
               >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveLang('ja')}
-                className={`px-4 py-1 rounded-sm text-btn tracking-btn transition-colors border ${
-                  activeLang === 'ja'
-                    ? 'bg-msscc-teal text-white border-msscc-teal'
-                    : 'bg-white text-msscc-teal border-msscc-teal hover:bg-msscc-teal hover:text-white'
-                }`}
-              >
-                JA
+                Translate to Japanese
               </button>
             </div>
 
@@ -192,7 +194,7 @@ export default function EventsPage() {
               {/* Title + Datetimes */}
               <div className="flex flex-col gap-4 flex-1">
 
-                {/* Title */}
+                {/* Title EN */}
                 <div>
                   <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
                     Title <span className="text-msscc-danger">*</span>
@@ -200,14 +202,23 @@ export default function EventsPage() {
                   <input
                     required
                     type="text"
-                    placeholder={activeLang === 'en' ? 'Event title...' : 'イベントタイトル...'}
-                    value={activeLang === 'en' ? formData.titleEn : formData.titleJa}
-                    onChange={(e) =>
-                      setFormData(activeLang === 'en'
-                        ? { ...formData, titleEn: e.target.value }
-                        : { ...formData, titleJa: e.target.value }
-                      )
-                    }
+                    placeholder="Event title..."
+                    value={formData.titleEn}
+                    onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
+                {/* Title JA  */}
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Title (Japanese)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="イベントタイトル..."
+                    value={formData.titleJa}
+                    onChange={(e) => setFormData({ ...formData, titleJa: e.target.value })}
                     className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
                   />
                 </div>
@@ -240,21 +251,29 @@ export default function EventsPage() {
                   />
                 </div>
 
-                {/* Location */}
+                {/* Location EN + JA */}
                 <div>
                   <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
                     Location
                   </label>
                   <input
                     type="text"
-                    placeholder={activeLang === 'en' ? 'Event location...' : 'イベント会場...'}
-                    value={activeLang === 'en' ? formData.locationEn : formData.locationJa}
-                    onChange={(e) =>
-                      setFormData(activeLang === 'en'
-                        ? { ...formData, locationEn: e.target.value }
-                        : { ...formData, locationJa: e.target.value }
-                      )
-                    }
+                    placeholder="Event location..."
+                    value={formData.locationEn}
+                    onChange={(e) => setFormData({ ...formData, locationEn: e.target.value })}
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Location (Japanese)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="イベント会場..."
+                    value={formData.locationJa}
+                    onChange={(e) => setFormData({ ...formData, locationJa: e.target.value })}
                     className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
                   />
                 </div>
@@ -262,24 +281,34 @@ export default function EventsPage() {
               </div>
             </div>
 
-              {/* Description */}
+              {/* Description EN + JA */}
+              <div className="flex flex-col gap-4">
               <div>
                 <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
                   Description
                 </label>
                 <textarea
                   rows={5}
-                  placeholder={activeLang === 'en' ? 'Event description...' : 'イベントの説明...'}
-                  value={activeLang === 'en' ? formData.descriptionEn : formData.descriptionJa}
-                  onChange={(e) =>
-                    setFormData(activeLang === 'en'
-                      ? { ...formData, descriptionEn: e.target.value }
-                      : { ...formData, descriptionJa: e.target.value }
-                    )
-                  }
+                  placeholder="Event description..."
+                  value={formData.descriptionEn}
+                  onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                   className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
                 />
               </div>
+
+              <div>
+                <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                  Description (Japanese)
+                </label>
+                <textarea
+                  rows={5}
+                  placeholder="イベントの説明..."
+                  value={formData.descriptionJa}
+                  onChange={(e) => setFormData({ ...formData, descriptionJa: e.target.value })}
+                  className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
+                />
+              </div>
+            </div>
 
               {/* Save Button */}
               <div className="flex justify-end mt-6">
