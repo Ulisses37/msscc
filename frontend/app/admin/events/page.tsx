@@ -11,6 +11,8 @@ export default function EventsPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [formData, setFormData] = useState({
     titleEn: '',
     titleJa: '',
@@ -23,6 +25,28 @@ export default function EventsPage() {
   });
 
   const handleSubmit = async () => {
+    setSaveMessage('');
+    setSaveError('');
+
+    // Validate required fields
+    const missingFields = [];
+    if (!formData.titleEn) missingFields.push('Title');
+    if (!formData.startDatetime) missingFields.push('Start Date & Time');
+    if (!formData.endDatetime) missingFields.push('End Date & Time');
+
+    if (missingFields.length > 0) {
+      setSaveError(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Validate that end datetime is not before start datetime
+    if (formData.startDatetime && formData.endDatetime) {
+      if (new Date(formData.endDatetime) < new Date(formData.startDatetime)) {
+        setSaveError('End date and time cannot be before start date and time.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -63,10 +87,17 @@ export default function EventsPage() {
 
       if (!res.ok) throw new Error('Failed to create event.');
 
+      setSaveMessage('Event created successfully.');
+
     } catch (error) {
       console.error('Event creation failed:', error);
+      setSaveError('Failed to create event. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => {
+        setSaveMessage('');
+        setSaveError('');
+      }, 5000);
     }
   };
 
@@ -260,6 +291,20 @@ export default function EventsPage() {
                 >
                   {isSubmitting ? 'Saving...' : 'Save'}
                 </button>
+              </div>
+
+              {/* Feedback messages */}
+              <div className="h-6 mt-2 text-right">
+                {saveMessage && (
+                  <p className="text-body-sm text-msscc-teal">
+                    {saveMessage}
+                  </p>
+                )}
+                {saveError && (
+                  <p className="text-body-sm text-msscc-danger">
+                    {saveError}
+                  </p>
+                )}
               </div>
           </>
         ) : (
