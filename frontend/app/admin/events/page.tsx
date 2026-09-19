@@ -15,6 +15,8 @@ export default function EventsPage() {
     titleJa: '',
     descriptionEn: '',
     descriptionJa: '',
+    locationEn: '',
+    locationJa: '',
     startDatetime: '',
     endDatetime: '',
   });
@@ -154,6 +156,25 @@ export default function EventsPage() {
                     type="datetime-local"
                     value={formData.endDatetime}
                     onChange={(e) => setFormData({ ...formData, endDatetime: e.target.value })}
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={activeLang === 'en' ? 'Event location...' : 'イベント会場...'}
+                    value={activeLang === 'en' ? formData.locationEn : formData.locationJa}
+                    onChange={(e) =>
+                      setFormData(activeLang === 'en'
+                        ? { ...formData, locationEn: e.target.value }
+                        : { ...formData, locationJa: e.target.value }
+                      )
+                    }
                     className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
                   />
                 </div>
