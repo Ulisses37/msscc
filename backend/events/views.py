@@ -10,7 +10,7 @@ from events.serializers import (
 )
 
 
-class EventListView(generics.ListAPIView):
+class EventListView(generics.ListCreateAPIView):
     """Return event records as a JSON list."""
 
     queryset = Event.objects.all().order_by("start_datetime", "event_id")
