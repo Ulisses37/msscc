@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ImportImage } from '@/components/ui/ImportImage';
+import type { Event } from '@/types/event';
+import { getEvents } from '@/services/eventService';
 
 export default function EventsPage() {
   const [showForm, setShowForm] = useState(false);
@@ -20,6 +22,26 @@ export default function EventsPage() {
     startDatetime: '',
     endDatetime: '',
   });
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [eventError, setEventError] = useState('');
+
+  // Fetch existing events on load
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const data = await getEvents();
+        setEvents(data);
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+        setEventError('Failed to load events.');
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+
+    loadEvents();
+  }, []);
 
   const handleTranslate = async (fieldEn: keyof typeof formData, fieldJa: keyof typeof formData) => {
     try {
@@ -131,9 +153,40 @@ export default function EventsPage() {
         </button>
 
         {/* Event List Placeholder */}
-        <div className="text-center text-msscc-gray-mid py-20 border border-dashed border-msscc-gray-light rounded-lg font-body text-body-sm">
-          No events added yet. Existing events will appear here.
-        </div>
+        {isLoadingEvents ? (
+          <p className="text-msscc-gray-mid text-body-sm">
+            Loading events...
+          </p>
+        ) : eventError ? (
+          <p className="text-msscc-danger text-body-sm">
+            {eventError}
+          </p>
+        ) : events.length === 0 ? (
+          <p className="text-msscc-gray-mid text-body-sm">
+            No events exist.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="border border-msscc-gray-light rounded-sm p-3"
+              >
+                <p className="font-heading text-msscc-teal">
+                  {event.titleEn}
+                </p>
+
+                <p className="text-body-sm text-msscc-gray-mid">
+                  {new Date(event.startDatetime).toLocaleString()}
+                </p>
+
+                <p className="text-body-sm">
+                  {event.isPublished ? 'Published' : 'Unpublished'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
       </aside>
 
@@ -339,7 +392,7 @@ export default function EventsPage() {
           </>
         ) : (
           <div className="text-center text-msscc-gray-mid py-20 border border-dashed border-msscc-gray-light rounded-lg font-body">
-            Select an event or click "+ Create Event" to get started.
+            Select an event or click + Create Event to get started.
           </div>
         )}
       </main>
