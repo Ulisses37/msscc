@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
+import { ImportImage } from '@/components/ui/ImportImage';
 
 type Language = 'en' | 'ja';
 
 export default function EventsPage() {
   const [activeLang, setActiveLang] = useState<Language>('en');
   const [showForm, setShowForm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     titleEn: '',
     titleJa: '',
@@ -73,55 +76,90 @@ export default function EventsPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-6 max-w-prose">
+           {/* ── Image + Title + Datetimes row ───────────────── */}
+            <div className="flex gap-6 mb-6">
 
-              {/* Title */}
-              <div>
+              {/* Image Upload Box */}
+              <div className="flex-shrink-0 w-72">
                 <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-                  Title <span className="text-msscc-danger">*</span>
+                  Image
                 </label>
-                <input
-                  required
-                  type="text"
-                  placeholder={activeLang === 'en' ? 'Event title...' : 'イベントタイトル...'}
-                  value={activeLang === 'en' ? formData.titleEn : formData.titleJa}
-                  onChange={(e) =>
-                    setFormData(activeLang === 'en'
-                      ? { ...formData, titleEn: e.target.value }
-                      : { ...formData, titleJa: e.target.value }
-                    )
-                  }
-                  className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
-                />
+                <div className="w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
+                  {selectedFile ? (
+                    <Image
+                      src={URL.createObjectURL(selectedFile)}
+                      alt="Event image preview"
+                      width={288}
+                      height={288}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <span className="text-msscc-gray-mid text-body-sm text-center px-2">
+                      No image selected
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <ImportImage
+                    onChange={(file) => setSelectedFile(file)}
+                    id="event-image"
+                  />
+                </div>
               </div>
 
-              {/* Start Datetime */}
-              <div>
-                <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-                  Start Date & Time <span className="text-msscc-danger">*</span>
-                </label>
-                <input
-                  required
-                  type="datetime-local"
-                  value={formData.startDatetime}
-                  onChange={(e) => setFormData({ ...formData, startDatetime: e.target.value })}
-                  className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
-                />
-              </div>
+              {/* Title + Datetimes */}
+              <div className="flex flex-col gap-4 flex-1">
 
-              {/* End Datetime */}
-              <div>
-                <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-                  End Date & Time <span className="text-msscc-danger">*</span>
-                </label>
-                <input
-                  required
-                  type="datetime-local"
-                  value={formData.endDatetime}
-                  onChange={(e) => setFormData({ ...formData, endDatetime: e.target.value })}
-                  className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
-                />
+                {/* Title */}
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Title <span className="text-msscc-danger">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder={activeLang === 'en' ? 'Event title...' : 'イベントタイトル...'}
+                    value={activeLang === 'en' ? formData.titleEn : formData.titleJa}
+                    onChange={(e) =>
+                      setFormData(activeLang === 'en'
+                        ? { ...formData, titleEn: e.target.value }
+                        : { ...formData, titleJa: e.target.value }
+                      )
+                    }
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
+                {/* Start Datetime */}
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    Start Date & Time <span className="text-msscc-danger">*</span>
+                  </label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={formData.startDatetime}
+                    onChange={(e) => setFormData({ ...formData, startDatetime: e.target.value })}
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
+                {/* End Datetime */}
+                <div>
+                  <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                    End Date & Time <span className="text-msscc-danger">*</span>
+                  </label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={formData.endDatetime}
+                    onChange={(e) => setFormData({ ...formData, endDatetime: e.target.value })}
+                    className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+                  />
+                </div>
+
               </div>
+            </div>
 
               {/* Description */}
               <div>
@@ -142,8 +180,6 @@ export default function EventsPage() {
                   className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
                 />
               </div>
-
-            </div>
           </>
         ) : (
           <div className="text-center text-msscc-gray-mid py-20 border border-dashed border-msscc-gray-light rounded-lg font-body">
