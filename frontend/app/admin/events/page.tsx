@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { ImportImage } from '@/components/ui/ImportImage';
 import type { Event } from '@/types/event';
 import { getEvents, getMediaAssetById } from '@/services/eventService';
-import EventForm from '@/components/admin/EventForm';
+import EventForm, { EventFormData } from '@/components/admin/EventForm';
 
 /**
  * Helper function for formatting time to string format for EventForm.tsx
@@ -155,6 +155,74 @@ export default function EventsPage() {
     }
   };
 
+  const handleUpdateEvent = async (
+    data: EventFormData,
+    imageFile: File | null,
+  ) => {
+    if (!selectedEvent) return;
+
+    setIsSubmitting(true);
+    setSaveMessage('');
+    setSaveError('');
+
+    try {
+      let mediaAssetId = selectedEvent.mediaAssetId;
+
+      // Upload a replacement image only if the admin selected one.
+      if (imageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append('image', imageFile);
+
+        const imageResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+          {
+            method: 'POST',
+            body: imageFormData,
+          },
+        );
+
+        if (!imageResponse.ok) {
+          throw new Error(`Image upload failed: ${imageResponse.status}`);
+        }
+
+        const imageData = await imageResponse.json();
+        mediaAssetId = imageData.media_asset_id;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/${selectedEvent.id}/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title_en: data.titleEn,
+            title_ja: data.titleJa,
+            description_en: data.descriptionEn,
+            description_ja: data.descriptionJa,
+            location_en: data.locationEn,
+            location_ja: data.locationJa,
+            start_datetime: data.startDatetime,
+            end_datetime: data.endDatetime,
+            media_asset: mediaAssetId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update event: ${response.status}`);
+      }
+
+      setSaveMessage('Event updated successfully.');
+    } catch (error) {
+      console.error('Event update failed:', error);
+      setSaveError('Failed to update event. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleEditEvent = async (event: Event) => {
     try {
       let media = undefined;
@@ -273,9 +341,7 @@ export default function EventsPage() {
                 endDatetime: formatDatetimeLocal(selectedEvent.endDatetime),
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
-              onSubmit={async () => {
-                // PATCH logic will go here later.
-              }}
+              onSubmit={handleUpdateEvent}
               submitLabel="Save Changes"
             />
           ) : (
