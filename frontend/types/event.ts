@@ -19,4 +19,5 @@ export interface Event {
   updatedAt: string;
   calendarLink?: string;
   media?: MediaAsset;
+  mediaAssetId: number | null;
 }

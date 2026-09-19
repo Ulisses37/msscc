@@ -4,7 +4,23 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ImportImage } from '@/components/ui/ImportImage';
 import type { Event } from '@/types/event';
-import { getEvents } from '@/services/eventService';
+import { getEvents, getMediaAssetById } from '@/services/eventService';
+import EventForm from '@/components/admin/EventForm';
+
+/**
+ * Helper function for formatting time to string format for EventForm.tsx
+ */
+function formatDatetimeLocal(datetime: string): string {
+  const date = new Date(datetime);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 export default function EventsPage() {
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +41,8 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [eventError, setEventError] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch existing events on load
   useEffect(() => {
@@ -137,6 +155,36 @@ export default function EventsPage() {
     }
   };
 
+  const handleEditEvent = async (event: Event) => {
+    try {
+      let media = undefined;
+
+      if (event.mediaAssetId) {
+        media = await getMediaAssetById(event.mediaAssetId);
+      }
+
+      setSelectedEvent({
+        ...event,
+        media: media?.file_url
+          ? {
+              fileUrl: media.file_url,
+              altText: media.alt_text_en,
+            }
+          : undefined,
+      });
+
+      setIsEditing(true);
+      setShowForm(true);
+    } catch (error) {
+      console.error('Failed to load event media:', error);
+
+      // Still open the event form even if its image fails to load.
+      setSelectedEvent(event);
+      setIsEditing(true);
+      setShowForm(true);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-msscc-white font-body text-msscc-gray-dark">
 
@@ -146,7 +194,11 @@ export default function EventsPage() {
         {/* Create Event Button */}
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setSelectedEvent(null);
+            setIsEditing(false);
+            setShowForm(true);
+          }}
           className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors text-left"
         >
           + Create Event
@@ -183,6 +235,15 @@ export default function EventsPage() {
                 <p className="text-body-sm">
                   {event.isPublished ? 'Published' : 'Unpublished'}
                 </p>
+
+                {/*Edit Button*/}
+                <button
+                  type="button"
+                  onClick={() => handleEditEvent(event)}
+                  className="text-body-sm text-msscc-teal underline"
+                >
+                  Edit
+                </button>
               </div>
             ))}
           </div>
@@ -194,11 +255,31 @@ export default function EventsPage() {
       <main className="flex-1 p-10 max-w-content mx-auto">
 
         <h1 className="font-heading text-display text-msscc-teal border-b border-msscc-gray-light pb-4 mb-10">
-          Create Event
+          {isEditing ? 'Edit Event' : 'Create Event'}
         </h1>
 
         {showForm ? (
-          <>
+          isEditing && selectedEvent ? (
+            <EventForm
+              key={selectedEvent.id}
+              initialData={{
+                titleEn: selectedEvent.titleEn,
+                titleJa: selectedEvent.titleJa,
+                descriptionEn: selectedEvent.descriptionEn,
+                descriptionJa: selectedEvent.descriptionJa,
+                locationEn: selectedEvent.locationEn,
+                locationJa: selectedEvent.locationJa,
+                startDatetime: formatDatetimeLocal(selectedEvent.startDatetime),
+                endDatetime: formatDatetimeLocal(selectedEvent.endDatetime),
+              }}
+              initialImageUrl={selectedEvent.media?.fileUrl ?? null}
+              onSubmit={async () => {
+                // PATCH logic will go here later.
+              }}
+              submitLabel="Save Changes"
+            />
+          ) : (
+            <>
             {/* Translate Button */}
             <div className="flex justify-end mb-8">
               <button
@@ -390,6 +471,7 @@ export default function EventsPage() {
                 )}
               </div>
           </>
+          )
         ) : (
           <div className="text-center text-msscc-gray-mid py-20 border border-dashed border-msscc-gray-light rounded-lg font-body">
             Select an event or click + Create Event to get started.
