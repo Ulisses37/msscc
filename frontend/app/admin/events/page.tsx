@@ -46,6 +46,7 @@ export default function EventsPage() {
     if (!formData.titleEn) missingFields.push('Title');
     if (!formData.startDatetime) missingFields.push('Start Date & Time');
     if (!formData.endDatetime) missingFields.push('End Date & Time');
+    if (!selectedFile) missingFields.push('Image');
 
     if (missingFields.length > 0) {
       setSaveError(`Please fill in the following required fields: ${missingFields.join(', ')}`);
@@ -166,7 +167,7 @@ export default function EventsPage() {
               {/* Image Upload Box */}
               <div className="flex-shrink-0 w-72">
                 <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-                  Image
+                  Image <span className="text-msscc-danger">*</span>
                 </label>
                 <div className="w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
                   {selectedFile ? (
