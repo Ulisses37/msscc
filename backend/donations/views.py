@@ -9,11 +9,11 @@ class DonationListCreateView(generics.ListCreateAPIView):
 
     serializer_class = DonationSerializer
 
-    def get_permissions(self):
-        """Allow public donations while protecting the donor list."""
-        if self.request.method == "POST":
-            return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
+    # def get_permissions(self):
+    #     """Allow public donations while protecting the donor list."""
+    #     if self.request.method == "POST":
+    #         return [permissions.AllowAny()]
+    #     return [permissions.IsAdminUser()]
 
     def get_queryset(self):
         queryset = Donation.objects.all()
