@@ -164,10 +164,9 @@ export default function EventsPage() {
               {/* Description */}
               <div>
                 <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-                  Description <span className="text-msscc-danger">*</span>
+                  Description
                 </label>
                 <textarea
-                  required
                   rows={5}
                   placeholder={activeLang === 'en' ? 'Event description...' : 'イベントの説明...'}
                   value={activeLang === 'en' ? formData.descriptionEn : formData.descriptionJa}
