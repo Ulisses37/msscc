@@ -10,6 +10,7 @@ export default function EventsPage() {
   const [activeLang, setActiveLang] = useState<Language>('en');
   const [showForm, setShowForm] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     titleEn: '',
     titleJa: '',
@@ -20,6 +21,54 @@ export default function EventsPage() {
     startDatetime: '',
     endDatetime: '',
   });
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    try {
+      // Upload image first if one was selected
+      let mediaAssetId = null;
+      if (selectedFile) {
+        const imageFormData = new FormData();
+        imageFormData.append('image', selectedFile);
+        const imageRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+          { method: 'POST', body: imageFormData },
+        );
+        if (!imageRes.ok) throw new Error('Image upload failed.');
+        const imageData = await imageRes.json();
+        mediaAssetId = imageData.media_asset_id;
+      }
+
+      // Submit event data to backend
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title_en: formData.titleEn,
+            title_ja: formData.titleJa,
+            description_en: formData.descriptionEn,
+            description_ja: formData.descriptionJa,
+            location_en: formData.locationEn,
+            location_ja: formData.locationJa,
+            start_datetime: formData.startDatetime,
+            end_datetime: formData.endDatetime,
+            media_asset: mediaAssetId,
+            is_published: true,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error('Failed to create event.');
+
+    } catch (error) {
+      console.error('Event creation failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-msscc-white font-body text-msscc-gray-dark">
@@ -199,6 +248,18 @@ export default function EventsPage() {
                   }
                   className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
                 />
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Saving...' : 'Save'}
+                </button>
               </div>
           </>
         ) : (
