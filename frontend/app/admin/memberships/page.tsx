@@ -7,21 +7,21 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 //Data Fetched
 type MembershipEntry = {
-  //membership_id : number;
+  membership_id: number;
   first_name : string;
   last_name : string;
-  //email : string;
-  //phone : string;
+  email: string;
+  phone: string;
   membership_type : string;
   amount_paid : number;
   payment_status : string;
-  //reference_id : number;
+  reference_id: string;
   start_date : string;
   end_date : string;
-  //status : string;
-  //notes : string;
-  //created_at : string;
-  //updated_at : string;
+  status: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type SortColumn =
@@ -34,11 +34,11 @@ type SortColumn =
 
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
-  const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalPages, setTotalPages] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
   const pageSizeOptions = [5, 10, 15, 20];
@@ -69,6 +69,7 @@ export default function AdminMembershipsPage() {
 
   const fetchMemberships = useCallback(async () => {
     setError(null);
+    setIsLoading(true);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`);
       if (!response.ok) {
@@ -80,7 +81,7 @@ export default function AdminMembershipsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load membership list.');
     } finally {
-
+      setIsLoading(false);
     }
   }, []);
 
@@ -138,6 +139,8 @@ export default function AdminMembershipsPage() {
     return sortedItems;
   }, [membershipItems, sortColumn, sortDirection]);
 
+  const totalPages = Math.max(1, Math.ceil(sortedMembershipItems.length / itemsPerPage));
+
   function handleSort(column: SortColumn){
     setCurrentPage(1);
     if (sortColumn === column) {
@@ -158,10 +161,6 @@ export default function AdminMembershipsPage() {
   }, [fetchMemberships]);
 
   useEffect(() => {
-    setTotalPages(Math.ceil(membershipItems.length / itemsPerPage));
-  }, [membershipItems, itemsPerPage]);
-
-  useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
@@ -170,21 +169,24 @@ export default function AdminMembershipsPage() {
     }
   }, [currentPage, totalPages]);
 
+  const hasMemberships = membershipItems.length > 0;
+
   return(
-    <div className="p-6">
-      <header className="mb-6">
-        <h1>View Memberships</h1>
+    <div className="min-h-screen bg-msscc-white p-6 font-body text-msscc-gray-dark md:p-10">
+      <header className="mb-8 border-b border-msscc-gray-light pb-4">
+        <h1 className="font-heading text-display text-msscc-teal">View Memberships</h1>
       </header>
 
-      <main>
-        {error && <div className="text-red-600 mb-4">Error: {error}</div>}
-        {membershipItems.length === 0 && !error && <div className="text-center font-bold border border-gray-300 bg-gray-100 p-4">No memberships found.</div>}
-        {membershipItems.length > 0 && (
+      <main className="w-full">
+        {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
+        {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}
+        {!isLoading && hasMemberships && (
           <>
             <PostTable dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
             <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
           </>)
         }
+        {!isLoading && !hasMemberships && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No memberships found.</div>}
       </main>
     </div>
   );
