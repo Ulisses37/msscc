@@ -28,9 +28,67 @@ function getColumnButtonClasses<T, ColumnKey extends keyof T>(column: PostTableC
 }
 
 export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>({ dataEntries, columns, selectedColumn = null, sortDirection = "ascending", onSort }: PostTableProps<T, ColumnKey>) {
+  const sortableColumns = columns.filter((column) => column.sortable !== false);
+
+  const handleMobileSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextColumn = sortableColumns.find((column) => String(column.key) === event.target.value);
+
+    if (nextColumn) {
+      onSort?.(nextColumn.key);
+    }
+  };
+
   return (
-    <div className="w-full overflow-x-auto rounded-sm border border-msscc-gray-light bg-white">
-      <table className="w-full min-w-[920px] border-collapse">
+    <>
+      <div className="md:hidden">
+        {onSort && (
+          <div className="mb-3 flex items-end gap-2">
+            <label className="min-w-0 flex-1 text-label uppercase tracking-label text-msscc-gray-mid">
+              <span className="mb-1 block">Sort by</span>
+              <select
+                value={selectedColumn === null ? "" : String(selectedColumn)}
+                onChange={handleMobileSortChange}
+                className="w-full bg-white px-3 py-2 text-body-sm normal-case tracking-normal text-msscc-gray-dark"
+              >
+                <option value="" disabled>Choose a field</option>
+                {sortableColumns.map((column) => (
+                  <option key={String(column.key)} value={String(column.key)}>{column.header}</option>
+                ))}
+              </select>
+            </label>
+            {selectedColumn !== null && (
+              <button
+                type="button"
+                onClick={() => onSort(selectedColumn)}
+                aria-label={`Change to ${sortDirection === "ascending" ? "descending" : "ascending"} order`}
+                className="rounded-md border border-msscc-gray-light bg-white px-3 py-2 text-body-sm text-msscc-gray-dark transition-colors hover:border-msscc-teal hover:text-msscc-teal"
+              >
+                {sortDirection === "ascending" ? "Ascending ↑" : "Descending ↓"}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {dataEntries.map((row, rowIndex) => (
+            <article key={rowIndex} className="overflow-hidden rounded-md border border-msscc-gray-light bg-white">
+              <dl>
+                {columns.map((column) => (
+                  <div key={String(column.key)} className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1.2fr)] gap-3 border-b border-msscc-gray-light px-4 py-3 last:border-b-0">
+                    <dt className="text-eyebrow font-semibold uppercase tracking-eyebrow text-msscc-gray-mid">{column.header}</dt>
+                    <dd className="min-w-0 break-words text-body-sm text-msscc-gray-dark">
+                      {column.render ? column.render(row[column.key], row) : String(row[column.key] ?? "")}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden w-full overflow-x-auto rounded-sm border border-msscc-gray-light bg-white md:block">
+        <table className="w-full min-w-[920px] border-collapse">
             <thead>
               <tr className="border-b border-msscc-gray-light bg-msscc-gray-faint">
                 {columns.map((column) => {
@@ -61,7 +119,8 @@ export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>
                 </tr>
               ))}
             </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </>
   );
 }

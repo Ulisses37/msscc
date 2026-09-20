@@ -208,9 +208,9 @@ export default function AdminMembershipsPage() {
   const hasSearchResults = sortedMembershipItems.length > 0;
 
   return(
-    <div className="min-h-screen bg-msscc-white p-6 font-body text-msscc-gray-dark md:p-10">
-      <header className="mb-8 border-b border-msscc-gray-light pb-4">
-        <h1 className="font-heading text-display text-msscc-teal">View Memberships</h1>
+    <div className="min-h-screen bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+      <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
+        <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Memberships</h1>
       </header>
 
       <main className="w-full">
