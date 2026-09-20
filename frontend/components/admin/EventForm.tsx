@@ -27,6 +27,8 @@ interface EventFormProps {
   ) => Promise<void>;
   isSubmitting?: boolean;
   submitLabel?: string;
+  successMessage?: string;
+  errorMessage?: string;
 }
 
 /**
@@ -40,6 +42,8 @@ export default function EventForm({
   onSubmit,
   isSubmitting = false,
   submitLabel = 'Save',
+  successMessage = '',
+  errorMessage = '',
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -334,6 +338,21 @@ export default function EventForm({
         >
           {isSubmitting ? 'Saving...' : submitLabel}
         </button>
+      </div>
+
+      {/* Feedback messages */}
+      <div className="h-6 mt-2 text-right">
+        {successMessage && (
+          <p className="text-body-sm text-msscc-teal">
+            {successMessage}
+          </p>
+        )}
+
+        {errorMessage && (
+          <p className="text-body-sm text-msscc-danger">
+            {errorMessage}
+          </p>
+        )}
       </div>
 
       {/* Validation / Submission Error */}

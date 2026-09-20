@@ -251,8 +251,7 @@ export default function EventsPage() {
         ),
       );
 
-      setSaveMessage('Event deleted successfully.');
-      setSaveError('');
+      window.alert('Event deleted successfully.');
 
       // Clear the form if the deleted event was currently being edited
       if (selectedEvent?.id === event.id) {
@@ -262,8 +261,7 @@ export default function EventsPage() {
       }
     } catch (error) {
       console.error('Event deletion failed:', error);
-      setSaveError('Failed to delete event. Please try again.');
-      setSaveMessage('');
+      window.alert('Failed to delete event. Please try again.');
     }
   };
 
@@ -396,7 +394,10 @@ export default function EventsPage() {
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
               onSubmit={handleUpdateEvent}
+              isSubmitting={isSubmitting}
               submitLabel="Save Changes"
+              successMessage={saveMessage}
+              errorMessage={saveError}
             />
           ) : (
             <>
