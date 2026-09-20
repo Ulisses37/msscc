@@ -13,9 +13,9 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
     startTime: '',
     endTime: '',
     positionName: '',
+    description: '',
     capacity: '',
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -33,6 +33,7 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             position_name: formData.positionName,
+            description: formData.description,
             start_datetime: startDatetime,
             end_datetime: endDatetime,
             capacity: Number(formData.capacity),
@@ -144,6 +145,20 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
               value={formData.positionName}
               onChange={(e) => setFormData({ ...formData, positionName: e.target.value })}
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              placeholder="e.g. Greet visitors at the booth"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
             />
           </div>
 
