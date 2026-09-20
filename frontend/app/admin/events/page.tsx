@@ -223,6 +223,50 @@ export default function EventsPage() {
     }
   };
 
+  const handleDeleteEvent = async (event: Event) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${event.titleEn}"?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/${event.id}/`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete event: ${response.status}`);
+      }
+
+      // Remove the deleted event from the displayed event list
+      setEvents((prevEvents) =>
+        prevEvents.filter(
+          (existingEvent) => existingEvent.id !== event.id,
+        ),
+      );
+
+      setSaveMessage('Event deleted successfully.');
+      setSaveError('');
+
+      // Clear the form if the deleted event was currently being edited
+      if (selectedEvent?.id === event.id) {
+        setSelectedEvent(null);
+        setIsEditing(false);
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error('Event deletion failed:', error);
+      setSaveError('Failed to delete event. Please try again.');
+      setSaveMessage('');
+    }
+  };
+
   const handleEditEvent = async (event: Event) => {
     try {
       let media = undefined;
@@ -304,14 +348,24 @@ export default function EventsPage() {
                   {event.isPublished ? 'Published' : 'Unpublished'}
                 </p>
 
-                {/*Edit Button*/}
-                <button
-                  type="button"
-                  onClick={() => handleEditEvent(event)}
-                  className="text-body-sm text-msscc-teal underline"
-                >
-                  Edit
-                </button>
+                {/* Edit and Delete Buttons */}
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditEvent(event)}
+                    className="text-body-sm text-msscc-teal underline"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteEvent(event)}
+                    className="text-body-sm text-msscc-danger underline"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
