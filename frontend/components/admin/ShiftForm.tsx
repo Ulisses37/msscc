@@ -1,10 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+
 interface ShiftFormProps {
   onClose: () => void;
 }
 
 export function ShiftForm({ onClose }: ShiftFormProps) {
+  const [formData, setFormData] = useState({
+    date: '',
+    startTime: '',
+    endTime: '',
+  });
+
   return (
     <div style={{
       position: 'fixed',
@@ -41,15 +49,50 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
           </h2>
         </div>
 
-        {/* Modal body placeholder */}
-        <div style={{ padding: 'var(--space-6)' }}>
-          <p style={{
-            color: 'var(--color-gray-mid)',
-            fontSize: 'var(--fs-body-sm)',
-            fontFamily: 'var(--font-body)',
-          }}>
-            Shift fields coming soon.
-          </p>
+        {/* Modal body */}
+        <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+
+          {/* Date */}
+          <div>
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+              Date <span className="text-msscc-danger">*</span>
+            </label>
+            <input
+              required
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+            />
+          </div>
+
+          {/* Start and End time side by side */}
+          <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+            <div style={{ flex: 1 }}>
+              <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                Start Time <span className="text-msscc-danger">*</span>
+              </label>
+              <input
+                required
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                End Time <span className="text-msscc-danger">*</span>
+              </label>
+              <input
+                required
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+              />
+            </div>
+          </div>
 
           {/* Confirm and Cancel buttons */}
           <div style={{
