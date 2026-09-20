@@ -11,6 +11,7 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
     date: '',
     startTime: '',
     endTime: '',
+    positionName: '',
   });
 
   return (
@@ -92,6 +93,21 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
                 className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
               />
             </div>
+          </div>
+
+          {/* Position Name */}
+          <div>
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+              Job Name <span className="text-msscc-danger">*</span>
+            </label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. Booth Attendant"
+              value={formData.positionName}
+              onChange={(e) => setFormData({ ...formData, positionName: e.target.value })}
+              className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+            />
           </div>
 
           {/* Confirm and Cancel buttons */}
