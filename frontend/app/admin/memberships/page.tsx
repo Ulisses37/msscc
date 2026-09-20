@@ -32,6 +32,18 @@ type SortColumn =
   | "start_date"
   | "end_date";
 
+const searchableMembershipFields: (keyof MembershipEntry)[] = [
+  "first_name",
+  "last_name",
+  "email",
+  "phone",
+  "membership_type",
+  "payment_status",
+  "reference_id",
+  "status",
+  "notes",
+];
+
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
   const [error, setError] = useState<string | null>(null);
@@ -86,12 +98,29 @@ export default function AdminMembershipsPage() {
     }
   }, []);
 
-  const sortedMembershipItems = useMemo(() => {
-    if (sortColumn === null) {
+  const filteredMembershipItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) {
       return membershipItems;
     }
 
-    const sortedItems = [...membershipItems];
+    return membershipItems.filter((membership) => {
+      const searchableValues = searchableMembershipFields.map((field) => membership[field]);
+      searchableValues.push(`${membership.first_name} ${membership.last_name}`);
+
+      return searchableValues.some((value) =>
+        String(value ?? "").toLocaleLowerCase().includes(normalizedQuery),
+      );
+    });
+  }, [membershipItems, searchQuery]);
+
+  const sortedMembershipItems = useMemo(() => {
+    if (sortColumn === null) {
+      return filteredMembershipItems;
+    }
+
+    const sortedItems = [...filteredMembershipItems];
 
     sortedItems.sort((x, y) => {
       const direction = sortDirection === "ascending" ? 1 : -1;
@@ -138,7 +167,7 @@ export default function AdminMembershipsPage() {
     });
 
     return sortedItems;
-  }, [membershipItems, sortColumn, sortDirection]);
+  }, [filteredMembershipItems, sortColumn, sortDirection]);
 
   const totalPages = Math.max(1, Math.ceil(sortedMembershipItems.length / itemsPerPage));
 
@@ -154,6 +183,11 @@ export default function AdminMembershipsPage() {
 
   function handleItemsPerPageChange(nextItemsPerPage: number) {
     setItemsPerPage(nextItemsPerPage);
+    setCurrentPage(1);
+  }
+
+  function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setSearchQuery(event.target.value);
     setCurrentPage(1);
   }
 
@@ -196,7 +230,7 @@ export default function AdminMembershipsPage() {
                   id="membership-search"
                   type="search"
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={handleSearchChange}
                   placeholder="Search memberships..."
                   className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
                 />
