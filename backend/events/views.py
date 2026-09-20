@@ -17,7 +17,7 @@ class EventListView(generics.ListCreateAPIView):
     serializer_class = EventSerializer
 
 
-class EventDetailView(generics.RetrieveUpdateAPIView):
+class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve or update a single event."""
 
     queryset = Event.objects.all()

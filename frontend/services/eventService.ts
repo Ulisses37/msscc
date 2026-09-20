@@ -14,9 +14,32 @@ interface RawEvent {
   volunteer_slots: number;
   is_published: boolean;
   calendar_link: string | null;
-  media_asset: { fileUrl: string; altText: string } | null;
+  media_asset: number | null;
   created_at: string;
   updated_at: string;
+}
+
+interface RawMediaAsset {
+  media_asset_id: number;
+  file_url: string | null;
+  alt_text_en: string;
+  alt_text_ja: string;
+}
+
+/**
+ * Used for pulling event images from the database
+ */
+export async function getMediaAssetById(
+  id: number,
+): Promise<RawMediaAsset | undefined> {
+  const res = await fetch(`${API_BASE_URL}/api/media/${id}/`);
+
+  if (!res.ok) {
+    if (res.status === 404) return undefined;
+    throw new Error(`Failed to fetch media asset ${id}: ${res.status}`);
+  }
+
+  return res.json();
 }
 
 function mapEvent(raw: RawEvent): Event {
@@ -33,27 +56,79 @@ function mapEvent(raw: RawEvent): Event {
     volunteerSlots: raw.volunteer_slots,
     isPublished:    raw.is_published,
     calendarLink:   raw.calendar_link ?? undefined,
-    media:          raw.media_asset ?? undefined,
+    mediaAssetId: raw.media_asset,
     createdAt:      raw.created_at,
     updatedAt:      raw.updated_at,
   };
 }
 
 export async function getEvents(): Promise<Event[]> {
-  const res = await fetch(`${API_BASE_URL}/api/events/`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch events: ${res.status}`);
+  const [eventsResponse, mediaResponse] = await Promise.all([
+    fetch(`${API_BASE_URL}/api/events/`),
+    fetch(`${API_BASE_URL}/api/media/`),
+  ]);
+
+  if (!eventsResponse.ok) {
+    throw new Error(`Failed to fetch events: ${eventsResponse.status}`);
   }
-  const data: RawEvent[] = await res.json();
-  return data.map(mapEvent);
+
+  if (!mediaResponse.ok) {
+    throw new Error(`Failed to fetch media: ${mediaResponse.status}`);
+  }
+
+  const events: RawEvent[] = await eventsResponse.json();
+  const mediaAssets: RawMediaAsset[] = await mediaResponse.json();
+
+  const mediaMap = new Map(
+    mediaAssets.map((media) => [media.media_asset_id, media]),
+  );
+
+  return events.map((event) => {
+    const mappedEvent = mapEvent(event);
+    const media = event.media_asset
+      ? mediaMap.get(event.media_asset)
+      : undefined;
+
+    return {
+      ...mappedEvent,
+      media: media
+        ? mapMediaAsset(media)
+        : undefined,
+    };
+  });
 }
 
 export async function getEventById(id: number): Promise<Event | undefined> {
   const res = await fetch(`${API_BASE_URL}/api/events/${id}/`);
+
   if (!res.ok) {
     if (res.status === 404) return undefined;
     throw new Error(`Failed to fetch event ${id}: ${res.status}`);
   }
+
   const raw: RawEvent = await res.json();
-  return mapEvent(raw);
+  const event = mapEvent(raw);
+
+  if (raw.media_asset) {
+    const media = await getMediaAssetById(raw.media_asset);
+
+    if (media?.file_url) {
+      event.media = {
+        fileUrl: media.file_url,
+        altText: media.alt_text_en,
+      };
+    }
+  }
+
+  return event;
+}
+
+function mapMediaAsset(raw: RawMediaAsset): {
+  fileUrl: string;
+  altText: string;
+} {
+  return {
+    fileUrl: raw.file_url ?? '',
+    altText: raw.alt_text_en,
+  };
 }
