@@ -214,6 +214,26 @@ export default function EventsPage() {
         throw new Error(`Failed to update event: ${response.status}`);
       }
 
+      // Update the list of events in the display after a save occurs
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === selectedEvent.id
+            ? {
+                ...event,
+                titleEn: data.titleEn,
+                titleJa: data.titleJa,
+                descriptionEn: data.descriptionEn,
+                descriptionJa: data.descriptionJa,
+                locationEn: data.locationEn,
+                locationJa: data.locationJa,
+                startDatetime: data.startDatetime,
+                endDatetime: data.endDatetime,
+                mediaAssetId,
+              }
+            : event,
+        ),
+      );
+
       setSaveMessage('Event updated successfully.');
     } catch (error) {
       console.error('Event update failed:', error);
