@@ -12,6 +12,7 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
     startTime: '',
     endTime: '',
     positionName: '',
+    capacity: '',
   });
 
   return (
@@ -106,6 +107,22 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
               placeholder="e.g. Booth Attendant"
               value={formData.positionName}
               onChange={(e) => setFormData({ ...formData, positionName: e.target.value })}
+              className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+            />
+          </div>
+
+          {/* Capacity */}
+          <div>
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+              Number of Volunteers Wanted <span className="text-msscc-danger">*</span>
+            </label>
+            <input
+              required
+              type="number"
+              min="1"
+              placeholder="e.g. 5"
+              value={formData.capacity}
+              onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
             />
           </div>
