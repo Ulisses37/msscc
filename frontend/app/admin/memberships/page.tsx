@@ -205,6 +205,7 @@ export default function AdminMembershipsPage() {
   }, [currentPage, totalPages]);
 
   const hasMemberships = membershipItems.length > 0;
+  const hasSearchResults = sortedMembershipItems.length > 0;
 
   return(
     <div className="min-h-screen bg-msscc-white p-6 font-body text-msscc-gray-dark md:p-10">
@@ -236,8 +237,16 @@ export default function AdminMembershipsPage() {
                 />
               </div>
             </div>
-            <PostTable dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-            <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
+            {hasSearchResults ? (
+              <>
+                <PostTable dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
+              </>
+            ) : (
+              <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">
+                No matching memberships found.
+              </div>
+            )}
           </>)
         }
         {!isLoading && !hasMemberships && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No memberships found.</div>}
