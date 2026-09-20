@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
 import { ShiftForm } from '@/components/admin/ShiftForm';
 
 export default function VolunteerCreationPage() {
+  const { id } = useParams();
   const [showForm, setShowForm] = useState(false);
 
-  // Placeholder empty shifts array — populated in SCRUM-588
+  // Placeholder empty shifts array —  will get to in later subtask
   const shifts: never[] = [];
 
   return (
@@ -113,7 +115,10 @@ export default function VolunteerCreationPage() {
 
       {/* Shift form modal */}
       {showForm && (
-        <ShiftForm onClose={() => setShowForm(false)} />
+        <ShiftForm
+          onClose={() => setShowForm(false)}
+          eventId={Number(id)}
+          />
       )}
 
     </main>

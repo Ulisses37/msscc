@@ -4,9 +4,10 @@ import { useState } from 'react';
 
 interface ShiftFormProps {
   onClose: () => void;
+  eventId: number;
 }
 
-export function ShiftForm({ onClose }: ShiftFormProps) {
+export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
   const [formData, setFormData] = useState({
     date: '',
     startTime: '',
@@ -14,6 +15,41 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
     positionName: '',
     capacity: '',
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+
+    try {
+      // Combine date and time into ISO datetime strings
+      const startDatetime = `${formData.date}T${formData.startTime}:00Z`;
+      const endDatetime = `${formData.date}T${formData.endTime}:00Z`;
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            position_name: formData.positionName,
+            start_datetime: startDatetime,
+            end_datetime: endDatetime,
+            capacity: Number(formData.capacity),
+            event: eventId,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error('Failed to create shift.');
+
+      onClose();
+    } catch (error) {
+      console.error('Shift creation failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div style={{
@@ -143,9 +179,11 @@ export function ShiftForm({ onClose }: ShiftFormProps) {
             </button>
             <button
               type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
               className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
             >
-              Confirm
+              {isSubmitting ? 'Saving...' : 'Confirm'}
             </button>
           </div>
         </div>
