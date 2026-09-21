@@ -45,6 +45,7 @@ export default function AdminDonationsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  const [selectedDonation, setSelectedDonation] = useState<DonationEntry | null>(null);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -209,7 +210,16 @@ export default function AdminDonationsPage() {
                     </div>
                     {hasSearchResults ? (
                       <>
-                        <PostTable dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                        <PostTable
+                          dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)}
+                          columns={columns}
+                          selectedColumn={sortColumn}
+                          sortDirection={sortDirection}
+                          onSort={handleSort}
+                          getRowKey={(donation) => donation.donation_id}
+                          isRowSelected={(donation) => donation.donation_id === selectedDonation?.donation_id}
+                          onRowSelect={setSelectedDonation}
+                        />
                         <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
                       </>
                     ) : (
