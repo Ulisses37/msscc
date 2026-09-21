@@ -174,6 +174,9 @@ export default function AdminDonationsPage() {
       }
     }, [currentPage, totalPages]);
 
+    const hasDonations = donationItems.length > 0;
+    const hasSearchResults = sortedDonationItems.length > 0;
+
   return(
     <div className="min-h-screen bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
@@ -182,8 +185,8 @@ export default function AdminDonationsPage() {
 
       <main className="w-full">
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
-                {donationItems.length === 0 && !error && <div className="text-center font-bold border border-gray-300 bg-gray-100 p-4">No donations found.</div>}
-                {donationItems.length > 0 && (
+                {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}
+                {hasDonations && (
                   <>
                     <div className="mb-6 max-w-sm">
                       <label htmlFor="donation-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
@@ -204,8 +207,16 @@ export default function AdminDonationsPage() {
                         />
                       </div>
                     </div>
-                    <PostTable dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
-                    <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
+                    {hasSearchResults ? (
+                      <>
+                        <PostTable dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                        <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
+                      </>
+                    ) : (
+                      <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">
+                        No matching donations found.
+                      </div>
+                    )}
                   </>)
                 }
       </main>
