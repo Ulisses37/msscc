@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
@@ -26,6 +27,35 @@ const searchableMembershipFields: (keyof MembershipEntry)[] = [
   "notes",
 ];
 
+const membershipExportFields: ExportFieldOption<keyof MembershipEntry>[] = [
+  { key: "membership_id", label: "Membership ID" },
+  { key: "first_name", label: "First name" },
+  { key: "last_name", label: "Last name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "membership_type", label: "Membership type" },
+  { key: "amount_paid", label: "Amount paid" },
+  { key: "payment_status", label: "Payment status" },
+  { key: "reference_id", label: "Reference ID" },
+  { key: "start_date", label: "Start date" },
+  { key: "end_date", label: "End date" },
+  { key: "renewal_date", label: "Renewal date" },
+  { key: "status", label: "Record status" },
+  { key: "notes", label: "Notes" },
+  { key: "created_at", label: "Created at" },
+  { key: "updated_at", label: "Updated at" },
+];
+
+const defaultMembershipExportFields: (keyof MembershipEntry)[] = [
+  "start_date",
+  "first_name",
+  "last_name",
+  "payment_status",
+  "membership_type",
+  "amount_paid",
+  "end_date",
+];
+
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +67,8 @@ export default function AdminMembershipsPage() {
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
   const [selectedMembership, setSelectedMembership] = useState<MembershipEntry | null>(null);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
+  const [selectedExportFields, setSelectedExportFields] = useState<(keyof MembershipEntry)[]>(defaultMembershipExportFields);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -205,24 +237,34 @@ export default function AdminMembershipsPage() {
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}
         {!isLoading && hasMemberships && (
           <>
-            <div className="mb-6 max-w-sm">
-              <label htmlFor="membership-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
-                Search memberships
-              </label>
-              <div className="relative">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-msscc-gray-mid">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-4-4" />
-                </svg>
-                <input
-                  id="membership-search"
-                  type="search"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  placeholder="Search memberships..."
-                  className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
-                />
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="w-full max-w-sm">
+                <label htmlFor="membership-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
+                  Search memberships
+                </label>
+                <div className="relative">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-msscc-gray-mid">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-4-4" />
+                  </svg>
+                  <input
+                    id="membership-search"
+                    type="search"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    placeholder="Search memberships..."
+                    className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
+                  />
+                </div>
               </div>
+              <DataExportMenu
+                entityLabel="memberships"
+                fields={membershipExportFields}
+                format={exportFormat}
+                selectedFields={selectedExportFields}
+                onFormatChange={setExportFormat}
+                onSelectedFieldsChange={setSelectedExportFields}
+              />
             </div>
             {hasSearchResults ? (
               <>
