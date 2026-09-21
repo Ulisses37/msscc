@@ -28,6 +28,7 @@ export default function AdminPermissionPage() {
   return (
     <div className="flex justify-center min-h-screen">
       <div className="border w-full max-w-[2400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
+          {/* Delete once SCRUM-74 is completed*/}
           <button
             onClick={() => handleLogin("JaneDoe@gmail.com")}
             className="bg-green-500 text-white py-2 px-4 m-2">
@@ -45,6 +46,7 @@ export default function AdminPermissionPage() {
             className="bg-gray-500 text-white py-2 px-4 m-2">
             Log out
           </button>
+          {/* Delete once SCRUM-74 is completed*/}
 
           <div className="m-5 flex items-center">
             <div className="flex-1 shrink"/> {/* Spacing */}
