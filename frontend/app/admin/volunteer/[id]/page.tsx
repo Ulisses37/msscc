@@ -23,7 +23,7 @@ export default function VolunteerCreationPage() {
       {/* Back link */}
       <div style={{ padding: 'var(--space-4) var(--space-6)' }}>
         <Link
-          href="/admin/events"
+          href={`/admin/events?edit=${id}`}
           style={{
             color: 'var(--color-gray-dark)',
             fontSize: 'var(--fs-body-sm)',
