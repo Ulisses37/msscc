@@ -1,24 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { formatCurrency } from "@/utils/formatCurrency";
-
-//Data Fetched
-type DonationEntry = {
-  donation_id : number;
-  donor_first_name : string;
-  donor_last_name : string;
-  donor_email : string;
-  amount : number;
-  donation_date : string;
-  is_anonymous : boolean;
-  message : string;
-  payment_status : string;
-  reference_id : string;
-  created_at : string;
-};
 
 type SortColumn =
   | "donor_last_name"
@@ -45,6 +31,7 @@ export default function AdminDonationsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  const [selectedDonation, setSelectedDonation] = useState<DonationEntry | null>(null);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -127,7 +114,7 @@ export default function AdminDonationsPage() {
             );
 
           case "amount":
-            return direction * (x.amount - y.amount);
+            return direction * (Number(x.amount) - Number(y.amount));
 
           default:
             return 0;
@@ -156,6 +143,10 @@ export default function AdminDonationsPage() {
       setSearchQuery(event.target.value);
       setCurrentPage(1);
     }
+
+    const closeDonationDetails = useCallback(() => {
+      setSelectedDonation(null);
+    }, []);
 
     useEffect(() => {
       fetchDonations();
@@ -209,7 +200,16 @@ export default function AdminDonationsPage() {
                     </div>
                     {hasSearchResults ? (
                       <>
-                        <PostTable dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                        <PostTable
+                          dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)}
+                          columns={columns}
+                          selectedColumn={sortColumn}
+                          sortDirection={sortDirection}
+                          onSort={handleSort}
+                          getRowKey={(donation) => donation.donation_id}
+                          isRowSelected={(donation) => donation.donation_id === selectedDonation?.donation_id}
+                          onRowSelect={setSelectedDonation}
+                        />
                         <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
                       </>
                     ) : (
@@ -220,6 +220,13 @@ export default function AdminDonationsPage() {
                   </>)
                 }
       </main>
+
+      {selectedDonation && (
+        <DonationDetailDrawer
+          donation={selectedDonation}
+          onClose={closeDonationDetails}
+        />
+      )}
     </div>
   );
 }
