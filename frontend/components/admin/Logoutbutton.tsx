@@ -8,7 +8,7 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={logout}
-      className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-msscc-white transition-colors hover:bg-msscc-pink-dark"
+      className="whitespace-nowrap rounded-sm bg-msscc-pink px-3 py-1.5 text-xs tracking-btn text-msscc-white transition-colors hover:bg-msscc-pink-dark sm:px-4 sm:py-2 sm:text-btn"
     >
       Log Out
     </button>
