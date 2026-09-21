@@ -18,6 +18,9 @@ type PostTableProps<T, ColumnKey extends keyof T = keyof T> = {
   selectedColumn?: ColumnKey | null;
   sortDirection?: SortDirection;
   onSort?: (column: ColumnKey) => void;
+  getRowKey?: (row: T) => React.Key;
+  isRowSelected?: (row: T) => boolean;
+  onRowSelect?: (row: T) => void;
 };
 
 function getColumnButtonClasses<T, ColumnKey extends keyof T>(column: PostTableColumn<T, ColumnKey>, selectedColumn: ColumnKey | null | undefined): string {
@@ -27,8 +30,24 @@ function getColumnButtonClasses<T, ColumnKey extends keyof T>(column: PostTableC
   return `${baseClasses} ${selectedColumn === column.key ? selectedClasses : unselectedClasses}`;
 }
 
-export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>({ dataEntries, columns, selectedColumn = null, sortDirection = "ascending", onSort }: PostTableProps<T, ColumnKey>) {
+export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>({
+  dataEntries,
+  columns,
+  selectedColumn = null,
+  sortDirection = "ascending",
+  onSort,
+  getRowKey,
+  isRowSelected,
+  onRowSelect,
+}: PostTableProps<T, ColumnKey>) {
   const sortableColumns = columns.filter((column) => column.sortable !== false);
+
+  const handleRowKeyDown = (event: React.KeyboardEvent, row: T) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onRowSelect?.(row);
+    }
+  };
 
   const handleMobileSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const nextColumn = sortableColumns.find((column) => String(column.key) === event.target.value);
@@ -70,8 +89,22 @@ export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>
         )}
 
         <div className="space-y-3">
-          {dataEntries.map((row, rowIndex) => (
-            <article key={rowIndex} className="overflow-hidden rounded-md border border-msscc-gray-light bg-white">
+          {dataEntries.map((row, rowIndex) => {
+            const selected = isRowSelected?.(row) ?? false;
+            const interactiveClasses = onRowSelect
+              ? "cursor-pointer transition-colors hover:bg-msscc-pink-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-msscc-teal"
+              : "";
+
+            return (
+            <article
+              key={getRowKey?.(row) ?? rowIndex}
+              className={`overflow-hidden rounded-md border bg-white ${selected ? "border-msscc-teal ring-2 ring-msscc-teal" : "border-msscc-gray-light"} ${interactiveClasses}`}
+              onClick={onRowSelect ? () => onRowSelect(row) : undefined}
+              onKeyDown={onRowSelect ? (event) => handleRowKeyDown(event, row) : undefined}
+              role={onRowSelect ? "button" : undefined}
+              tabIndex={onRowSelect ? 0 : undefined}
+              aria-pressed={onRowSelect ? selected : undefined}
+            >
               <dl>
                 {columns.map((column) => (
                   <div key={String(column.key)} className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1.2fr)] gap-3 border-b border-msscc-gray-light px-4 py-3 last:border-b-0">
@@ -83,7 +116,8 @@ export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>
                 ))}
               </dl>
             </article>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -109,15 +143,29 @@ export function PostTable<T extends object, ColumnKey extends keyof T = keyof T>
               </tr>
             </thead>
             <tbody>
-              {dataEntries.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-msscc-gray-light last:border-b-0 hover:bg-msscc-pink-faint">
+              {dataEntries.map((row, rowIndex) => {
+                const selected = isRowSelected?.(row) ?? false;
+                const interactiveClasses = onRowSelect
+                  ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-msscc-teal"
+                  : "";
+
+                return (
+                <tr
+                  key={getRowKey?.(row) ?? rowIndex}
+                  className={`border-b border-msscc-gray-light last:border-b-0 hover:bg-msscc-pink-faint ${selected ? "bg-msscc-pink-faint" : ""} ${interactiveClasses}`}
+                  onClick={onRowSelect ? () => onRowSelect(row) : undefined}
+                  onKeyDown={onRowSelect ? (event) => handleRowKeyDown(event, row) : undefined}
+                  tabIndex={onRowSelect ? 0 : undefined}
+                  aria-selected={onRowSelect ? selected : undefined}
+                >
                   {columns.map((column, columnIndex) => (
                     <td key={String(column.key)} className={`px-4 py-3 text-left text-body-sm text-msscc-gray-dark ${columnIndex === 0 ? "font-medium" : ""}`} style={column.width ? { width: column.width, minWidth: column.width } : undefined}>
                       {column.render ? column.render(row[column.key], row) : String(row[column.key] ?? "")}
                     </td>
                   ))}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
         </table>
       </div>
