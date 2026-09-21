@@ -16,7 +16,7 @@ type DataExportMenuProps<FieldKey extends string> = {
   selectedFields: FieldKey[];
   onFormatChange: (format: ExportFormat) => void;
   onSelectedFieldsChange: (fields: FieldKey[]) => void;
-  onExport?: (format: ExportFormat, fields: FieldKey[]) => void;
+  onExport?: (format: ExportFormat, fields: FieldKey[]) => void | Promise<void>;
   enabledFormats?: ExportFormat[];
   isExportDisabled?: boolean;
   isExporting?: boolean;
@@ -181,7 +181,7 @@ export function DataExportMenu<FieldKey extends string>({
               type="button"
               disabled={!canExport}
               onClick={() => {
-                onExport?.(format, selectedFields);
+                void onExport?.(format, selectedFields);
                 setIsOpen(false);
               }}
               className="rounded-md bg-msscc-pink px-3 py-2 text-caption font-semibold text-white transition-colors hover:bg-msscc-pink-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-msscc-pink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"

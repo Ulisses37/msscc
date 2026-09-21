@@ -6,6 +6,7 @@ import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { downloadCsv, type CsvColumn } from "@/utils/exportCsv";
+import { downloadXlsx, type XlsxCell, type XlsxColumn } from "@/utils/exportXlsx";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 type SortColumn =
@@ -57,6 +58,77 @@ const defaultMembershipExportFields: (keyof MembershipEntry)[] = [
   "end_date",
 ];
 
+const membershipExportColumnWidths: Record<keyof MembershipEntry, number> = {
+  membership_id: 15,
+  first_name: 18,
+  last_name: 18,
+  email: 30,
+  phone: 18,
+  membership_type: 20,
+  amount_paid: 16,
+  payment_status: 18,
+  reference_id: 22,
+  start_date: 14,
+  end_date: 14,
+  renewal_date: 14,
+  status: 16,
+  notes: 40,
+  created_at: 22,
+  updated_at: 22,
+};
+
+function parseDateOnly(value: string): Date | null {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) return null;
+
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function createMembershipXlsxCell(membership: MembershipEntry, field: keyof MembershipEntry): XlsxCell {
+  const value = membership[field];
+
+  if (value === null || value === undefined || value === "") return null;
+
+  if (field === "membership_id") {
+    return { value: Number(value), type: Number, format: "0" };
+  }
+
+  if (field === "amount_paid") {
+    const amount = Number(value);
+
+    return Number.isFinite(amount)
+      ? { value: amount, type: Number, format: "[$$-409]#,##0.00" }
+      : { value: String(value), type: String, format: "@" };
+  }
+
+  if (field === "start_date" || field === "end_date" || field === "renewal_date") {
+    const date = parseDateOnly(String(value));
+
+    return date
+      ? { value: date, type: Date, format: "mm/dd/yyyy" }
+      : { value: String(value), type: String, format: "@" };
+  }
+
+  if (field === "created_at" || field === "updated_at") {
+    const date = new Date(String(value));
+
+    return Number.isNaN(date.getTime())
+      ? { value: String(value), type: String, format: "@" }
+      : { value: date, type: Date, format: "mm/dd/yyyy h:mm AM/PM" };
+  }
+
+  return {
+    value: String(value),
+    type: String,
+    format: "@",
+    wrap: field === "notes",
+    alignVertical: field === "notes" ? "top" : "center",
+  };
+}
+
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +142,8 @@ export default function AdminMembershipsPage() {
   const [selectedMembership, setSelectedMembership] = useState<MembershipEntry | null>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof MembershipEntry)[]>(defaultMembershipExportFields);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -207,15 +281,14 @@ export default function AdminMembershipsPage() {
     setCurrentPage(1);
   }
 
-  function handleExport(format: ExportFormat, fields: (keyof MembershipEntry)[]) {
-    if (format !== "csv") return;
-
-    const selectedColumns: CsvColumn<MembershipEntry>[] = fields.map((field) => {
+  async function handleExport(format: ExportFormat, fields: (keyof MembershipEntry)[]) {
+    setExportError(null);
+    const selectedFieldOptions = fields.map((field) => {
       const fieldOption = membershipExportFields.find((option) => option.key === field);
 
       return {
+        field,
         header: fieldOption?.label ?? String(field),
-        getValue: (membership) => membership[field],
       };
     });
     const now = new Date();
@@ -225,7 +298,31 @@ export default function AdminMembershipsPage() {
       String(now.getDate()).padStart(2, "0"),
     ].join("-");
 
-    downloadCsv(`memberships-${dateStamp}.csv`, sortedMembershipItems, selectedColumns);
+    if (format === "csv") {
+      const selectedColumns: CsvColumn<MembershipEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
+        header,
+        getValue: (membership) => membership[field],
+      }));
+
+      downloadCsv(`memberships-${dateStamp}.csv`, sortedMembershipItems, selectedColumns);
+      return;
+    }
+
+    const selectedColumns: XlsxColumn<MembershipEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
+      header,
+      width: membershipExportColumnWidths[field],
+      getCell: (membership) => createMembershipXlsxCell(membership, field),
+    }));
+
+    setIsExporting(true);
+    try {
+      await downloadXlsx(`memberships-${dateStamp}.xlsx`, "Memberships", sortedMembershipItems, selectedColumns);
+    } catch (err) {
+      console.error("Unable to export memberships as XLSX.", err);
+      setExportError("Unable to create the XLSX export. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   const closeMembershipDetails = useCallback(() => {
@@ -256,6 +353,7 @@ export default function AdminMembershipsPage() {
 
       <main className="w-full">
         {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
+        {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}
         {!isLoading && hasMemberships && (
           <>
@@ -287,8 +385,8 @@ export default function AdminMembershipsPage() {
                 onFormatChange={setExportFormat}
                 onSelectedFieldsChange={setSelectedExportFields}
                 onExport={handleExport}
-                enabledFormats={["csv"]}
                 isExportDisabled={!hasSearchResults}
+                isExporting={isExporting}
               />
             </div>
             {hasSearchResults ? (
