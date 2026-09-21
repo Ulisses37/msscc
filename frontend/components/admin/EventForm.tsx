@@ -3,6 +3,7 @@
 // React and next
 import Image from 'next/image';
 import { useState } from 'react';
+import Link from 'next/link';
 
 // Components
 import { ImportImage } from '@/components/ui/ImportImage';
@@ -30,6 +31,7 @@ interface EventFormProps {
   successMessage?: string;
   errorMessage?: string;
   requireImage?: boolean;
+  eventId?: number;
 }
 
 /**
@@ -55,6 +57,7 @@ export default function EventForm({
   successMessage = '',
   errorMessage = '',
   requireImage = false,
+  eventId,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -180,6 +183,32 @@ export default function EventForm({
               onChange={(file) => setSelectedFile(file)}
               id="event-image"
             />
+          </div>
+
+          {/* Volunteer Shifts Button */}
+          <div className="mt-4">
+            {eventId ? (
+              <Link
+                href={`/admin/volunteer/${eventId}`}
+                className="block text-center rounded-sm bg-msscc-pink px-4 py-2 text-white no-underline text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
+                style={{ color: '#FFFFFF' }}
+              >
+                Add Volunteer Shifts
+              </Link>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full rounded-sm bg-msscc-gray-light px-4 py-2 text-msscc-gray-mid text-btn tracking-btn cursor-not-allowed"
+                >
+                  Add Volunteer Shifts
+                </button>
+                <p className="text-caption text-msscc-gray-mid mt-1">
+                  Save the event first to add volunteer shifts.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

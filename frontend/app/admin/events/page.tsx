@@ -350,6 +350,7 @@ export default function EventsPage() {
           isEditing && selectedEvent ? (
             <EventForm
               key={selectedEvent.id}
+              eventId={selectedEvent.id}
               initialData={{
                 titleEn: selectedEvent.titleEn,
                 titleJa: selectedEvent.titleJa,
