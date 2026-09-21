@@ -1,24 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { formatCurrency } from "@/utils/formatCurrency";
-
-//Data Fetched
-type DonationEntry = {
-  donation_id : number;
-  donor_first_name : string;
-  donor_last_name : string;
-  donor_email : string;
-  amount : number;
-  donation_date : string;
-  is_anonymous : boolean;
-  message : string;
-  payment_status : string;
-  reference_id : string;
-  created_at : string;
-};
 
 type SortColumn =
   | "donor_last_name"
@@ -128,7 +114,7 @@ export default function AdminDonationsPage() {
             );
 
           case "amount":
-            return direction * (x.amount - y.amount);
+            return direction * (Number(x.amount) - Number(y.amount));
 
           default:
             return 0;
@@ -157,6 +143,10 @@ export default function AdminDonationsPage() {
       setSearchQuery(event.target.value);
       setCurrentPage(1);
     }
+
+    const closeDonationDetails = useCallback(() => {
+      setSelectedDonation(null);
+    }, []);
 
     useEffect(() => {
       fetchDonations();
@@ -230,6 +220,13 @@ export default function AdminDonationsPage() {
                   </>)
                 }
       </main>
+
+      {selectedDonation && (
+        <DonationDetailDrawer
+          donation={selectedDonation}
+          onClose={closeDonationDetails}
+        />
+      )}
     </div>
   );
 }
