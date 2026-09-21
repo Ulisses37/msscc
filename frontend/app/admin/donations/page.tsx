@@ -30,6 +30,7 @@ type SortColumn =
 export default function AdminDonationsPage() {
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -143,16 +144,35 @@ export default function AdminDonationsPage() {
     }, [currentPage, totalPages]);
 
   return(
-    <div className="p-6">
-      <header className="mb-6">
-        <h1>View Donations</h1>
+    <div className="min-h-screen bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+      <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
+        <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Donations</h1>
       </header>
 
-      <main>
+      <main className="w-full">
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
                 {donationItems.length === 0 && !error && <div className="text-center font-bold border border-gray-300 bg-gray-100 p-4">No donations found.</div>}
                 {donationItems.length > 0 && (
                   <>
+                    <div className="mb-6 max-w-sm">
+                      <label htmlFor="donation-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
+                        Search donations
+                      </label>
+                      <div className="relative">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-msscc-gray-mid">
+                          <circle cx="11" cy="11" r="7" />
+                          <path d="m20 20-4-4" />
+                        </svg>
+                        <input
+                          id="donation-search"
+                          type="search"
+                          value={searchQuery}
+                          onChange={(event) => setSearchQuery(event.target.value)}
+                          placeholder="Search donations..."
+                          className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
+                        />
+                      </div>
+                    </div>
                     <PostTable dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
                     <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
                   </>)
