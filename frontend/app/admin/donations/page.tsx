@@ -7,17 +7,17 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 //Data Fetched
 type DonationEntry = {
-  //donation_id : number;
+  donation_id : number;
   donor_first_name : string;
   donor_last_name : string;
-  //donor_email : string;
+  donor_email : string;
   amount : number;
   donation_date : string;
-  //is_anonymous : boolean;
-  //message : string;
+  is_anonymous : boolean;
+  message : string;
   payment_status : string;
-  //reference_id : number;
-  //created_at : string;
+  reference_id : string;
+  created_at : string;
 };
 
 type SortColumn =
@@ -25,6 +25,15 @@ type SortColumn =
   | "amount"
   | "donation_date"
   | "payment_status";
+
+const searchableDonationFields: (keyof DonationEntry)[] = [
+  "donor_first_name",
+  "donor_last_name",
+  "donor_email",
+  "payment_status",
+  "reference_id",
+  "message",
+];
 
   //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminDonationsPage() {
@@ -68,12 +77,29 @@ export default function AdminDonationsPage() {
       }
     }, []);
 
-    const sortedDonationItems = useMemo(() => {
-      if (sortColumn === null) {
+    const filteredDonationItems = useMemo(() => {
+      const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+
+      if (!normalizedQuery) {
         return donationItems;
       }
 
-      const sortedItems = [...donationItems];
+      return donationItems.filter((donation) => {
+        const searchableValues = searchableDonationFields.map((field) => donation[field]);
+        searchableValues.push(`${donation.donor_first_name} ${donation.donor_last_name}`);
+
+        return searchableValues.some((value) =>
+          String(value ?? "").toLocaleLowerCase().includes(normalizedQuery),
+        );
+      });
+    }, [donationItems, searchQuery]);
+
+    const sortedDonationItems = useMemo(() => {
+      if (sortColumn === null) {
+        return filteredDonationItems;
+      }
+
+      const sortedItems = [...filteredDonationItems];
 
       sortedItems.sort((x, y) => {
         const direction = sortDirection === "ascending" ? 1 : -1;
@@ -109,7 +135,7 @@ export default function AdminDonationsPage() {
       });
 
       return sortedItems;
-    }, [donationItems, sortColumn, sortDirection]);
+    }, [filteredDonationItems, sortColumn, sortDirection]);
 
     function handleSort(column: SortColumn){
       setCurrentPage(1);
@@ -126,13 +152,18 @@ export default function AdminDonationsPage() {
       setCurrentPage(1);
     }
 
+    function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
+      setSearchQuery(event.target.value);
+      setCurrentPage(1);
+    }
+
     useEffect(() => {
       fetchDonations();
     }, [fetchDonations]);
 
     useEffect(() => {
-      setTotalPages(Math.ceil(donationItems.length / itemsPerPage));
-    }, [donationItems, itemsPerPage]);
+      setTotalPages(Math.max(1, Math.ceil(filteredDonationItems.length / itemsPerPage)));
+    }, [filteredDonationItems, itemsPerPage]);
 
     useEffect(() => {
       if (currentPage > totalPages) {
@@ -167,7 +198,7 @@ export default function AdminDonationsPage() {
                           id="donation-search"
                           type="search"
                           value={searchQuery}
-                          onChange={(event) => setSearchQuery(event.target.value)}
+                          onChange={handleSearchChange}
                           placeholder="Search donations..."
                           className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
                         />
