@@ -28,32 +28,32 @@ export function PostPages({
   };
 
   return (
-    <div className="relative flex items-center justify-center mt-4 w-full">
-      <div className="flex items-center justify-center gap-2">
+    <div className="mt-5 flex w-full flex-col gap-4 border-t border-msscc-gray-light pt-4 text-body-sm text-msscc-gray-mid sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2">
         <button
-          className="px-4 py-2 mx-1 bg-gray-300 rounded disabled:opacity-50"
+          className="rounded-sm border border-msscc-gray-light px-3 py-2 text-msscc-gray-dark transition-colors hover:border-msscc-teal hover:text-msscc-teal disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >
           Previous
         </button>
-        <span className="px-4 py-2 mx-1">
+        <span className="px-2 py-2">
           Page {currentPage} of {totalPages}
         </span>
         <button
-          className="px-4 py-2 mx-1 bg-gray-300 rounded disabled:opacity-50"
+          className="rounded-sm border border-msscc-gray-light px-3 py-2 text-msscc-gray-dark transition-colors hover:border-msscc-teal hover:text-msscc-teal disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
           Next
         </button>
       </div>
-      <label className="absolute right-0 flex items-center gap-2">
+      <label className="flex items-center gap-2">
         <span>Entries per page:</span>
         <select
           value={itemsPerPage}
           onChange={handleItemsPerPageChange}
-          className="px-2 py-2 border border-gray-300 rounded"
+          className="rounded-sm border border-msscc-gray-light bg-white px-3 py-2 text-msscc-gray-dark outline-none focus:border-msscc-teal focus:ring-1 focus:ring-msscc-teal"
         >
           {pageSizeOptions.map((option) => (
             <option key={option} value={option}>
