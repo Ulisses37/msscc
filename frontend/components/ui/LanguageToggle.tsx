@@ -25,7 +25,7 @@ export function LanguageToggle() {
   };
 
   // Shared button styles for consistency
-  const baseBtnStyle = "px-3 py-1 transition-colors text-xs sm:text-sm font-medium focus:outline-none";
+  const baseBtnStyle = "whitespace-nowrap px-2 py-1 text-[0.6875rem] font-medium transition-colors focus:outline-none sm:px-3 sm:text-sm";
   const activeStyle = "bg-[#264653] text-white";
   const inactiveStyle = "bg-white text-[#264653] hover:bg-teal-50";
 
