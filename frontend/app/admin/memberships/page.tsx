@@ -1,28 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { formatCurrency } from "@/utils/formatCurrency";
-
-//Data Fetched
-type MembershipEntry = {
-  membership_id: number;
-  first_name : string;
-  last_name : string;
-  email: string;
-  phone: string;
-  membership_type : string;
-  amount_paid : number;
-  payment_status : string;
-  reference_id: string;
-  start_date : string;
-  end_date : string;
-  status: string;
-  notes: string;
-  created_at: string;
-  updated_at: string;
-};
 
 type SortColumn =
   | "last_name"
@@ -54,6 +36,7 @@ export default function AdminMembershipsPage() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  const [selectedMembership, setSelectedMembership] = useState<MembershipEntry | null>(null);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -68,7 +51,7 @@ export default function AdminMembershipsPage() {
       header: "Status",
       width: 190,
       render: (_value, membership) => {
-        const expired = new Date(membership.end_date).getTime() < Date.now();
+        const expired = new Date(`${membership.end_date}T23:59:59`).getTime() < Date.now();
         return <span className={`inline-flex rounded-md px-4 py-1 text-sm font-bold ${expired ? "bg-red-200 text-red-900" : "bg-green-200 text-green-900"}`}>{expired ? "Expired" : "Active"}</span>;
       },
     },
@@ -153,7 +136,7 @@ export default function AdminMembershipsPage() {
           );
 
         case "amount_paid":
-          return direction * (x.amount_paid - y.amount_paid);
+          return direction * (Number(x.amount_paid) - Number(y.amount_paid));
 
         case "end_date":
           return direction * (
@@ -190,6 +173,10 @@ export default function AdminMembershipsPage() {
     setSearchQuery(event.target.value);
     setCurrentPage(1);
   }
+
+  const closeMembershipDetails = useCallback(() => {
+    setSelectedMembership(null);
+  }, []);
 
   useEffect(() => {
     fetchMemberships();
@@ -239,7 +226,16 @@ export default function AdminMembershipsPage() {
             </div>
             {hasSearchResults ? (
               <>
-                <PostTable dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <PostTable
+                  dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)}
+                  columns={columns}
+                  selectedColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  getRowKey={(membership) => membership.membership_id}
+                  isRowSelected={(membership) => membership.membership_id === selectedMembership?.membership_id}
+                  onRowSelect={setSelectedMembership}
+                />
                 <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
               </>
             ) : (
@@ -251,6 +247,13 @@ export default function AdminMembershipsPage() {
         }
         {!isLoading && !hasMemberships && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No memberships found.</div>}
       </main>
+
+      {selectedMembership && (
+        <MembershipDetailDrawer
+          membership={selectedMembership}
+          onClose={closeMembershipDetails}
+        />
+      )}
     </div>
   );
 }
