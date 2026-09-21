@@ -17,6 +17,8 @@ type DataExportMenuProps<FieldKey extends string> = {
   onFormatChange: (format: ExportFormat) => void;
   onSelectedFieldsChange: (fields: FieldKey[]) => void;
   onExport?: (format: ExportFormat, fields: FieldKey[]) => void;
+  enabledFormats?: ExportFormat[];
+  isExportDisabled?: boolean;
   isExporting?: boolean;
 };
 
@@ -28,6 +30,8 @@ export function DataExportMenu<FieldKey extends string>({
   onFormatChange,
   onSelectedFieldsChange,
   onExport,
+  enabledFormats = ["csv", "xlsx"],
+  isExportDisabled = false,
   isExporting = false,
 }: DataExportMenuProps<FieldKey>) {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,6 +41,13 @@ export function DataExportMenu<FieldKey extends string>({
   const formatGroupName = useId();
   const allFieldsSelected = fields.length > 0 && selectedFields.length === fields.length;
   const someFieldsSelected = selectedFields.length > 0 && !allFieldsSelected;
+  const canExport = Boolean(
+    onExport &&
+    selectedFields.length > 0 &&
+    enabledFormats.includes(format) &&
+    !isExportDisabled &&
+    !isExporting,
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -168,8 +179,11 @@ export function DataExportMenu<FieldKey extends string>({
           <div className="mt-3 flex justify-end border-t border-msscc-gray-light pt-3">
             <button
               type="button"
-              disabled={!onExport || selectedFields.length === 0 || isExporting}
-              onClick={() => onExport?.(format, selectedFields)}
+              disabled={!canExport}
+              onClick={() => {
+                onExport?.(format, selectedFields);
+                setIsOpen(false);
+              }}
               className="rounded-md bg-msscc-pink px-3 py-2 text-caption font-semibold text-white transition-colors hover:bg-msscc-pink-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-msscc-pink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
             >
               {isExporting ? "Exporting..." : `Export ${format.toUpperCase()}`}

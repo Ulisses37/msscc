@@ -5,6 +5,7 @@ import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/com
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
+import { downloadCsv, type CsvColumn } from "@/utils/exportCsv";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 type SortColumn =
@@ -206,6 +207,27 @@ export default function AdminMembershipsPage() {
     setCurrentPage(1);
   }
 
+  function handleExport(format: ExportFormat, fields: (keyof MembershipEntry)[]) {
+    if (format !== "csv") return;
+
+    const selectedColumns: CsvColumn<MembershipEntry>[] = fields.map((field) => {
+      const fieldOption = membershipExportFields.find((option) => option.key === field);
+
+      return {
+        header: fieldOption?.label ?? String(field),
+        getValue: (membership) => membership[field],
+      };
+    });
+    const now = new Date();
+    const dateStamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    downloadCsv(`memberships-${dateStamp}.csv`, sortedMembershipItems, selectedColumns);
+  }
+
   const closeMembershipDetails = useCallback(() => {
     setSelectedMembership(null);
   }, []);
@@ -264,6 +286,9 @@ export default function AdminMembershipsPage() {
                 selectedFields={selectedExportFields}
                 onFormatChange={setExportFormat}
                 onSelectedFieldsChange={setSelectedExportFields}
+                onExport={handleExport}
+                enabledFormats={["csv"]}
+                isExportDisabled={!hasSearchResults}
               />
             </div>
             {hasSearchResults ? (
