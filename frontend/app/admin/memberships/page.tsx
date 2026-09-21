@@ -54,6 +54,7 @@ export default function AdminMembershipsPage() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  const [selectedMembership, setSelectedMembership] = useState<MembershipEntry | null>(null);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -239,7 +240,16 @@ export default function AdminMembershipsPage() {
             </div>
             {hasSearchResults ? (
               <>
-                <PostTable dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)} columns={columns} selectedColumn={sortColumn} sortDirection={sortDirection} onSort={handleSort} />
+                <PostTable
+                  dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)}
+                  columns={columns}
+                  selectedColumn={sortColumn}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  getRowKey={(membership) => membership.membership_id}
+                  isRowSelected={(membership) => membership.membership_id === selectedMembership?.membership_id}
+                  onRowSelect={setSelectedMembership}
+                />
                 <PostPages currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} itemsPerPage={itemsPerPage} pageSizeOptions={pageSizeOptions} onItemsPerPageChange={handleItemsPerPageChange} />
               </>
             ) : (
