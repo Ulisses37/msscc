@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { Event } from '@/types/event';
 import { getEvents, getMediaAssetById } from '@/services/eventService';
 import EventForm, { EventFormData } from '@/components/admin/EventForm';
+import { useSearchParams } from 'next/navigation';
 
 /**
  * Helper function for formatting time to string format for EventForm.tsx
@@ -30,6 +31,7 @@ export default function EventsPage() {
   const [eventError, setEventError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const searchParams = useSearchParams();
 
   // Fetch existing events on load
   useEffect(() => {
@@ -47,6 +49,17 @@ export default function EventsPage() {
 
     loadEvents();
   }, []);
+
+  // Auto-open the edit form for an event when returning from the volunteer shifts page
+  useEffect(() => {
+  const editId = searchParams.get('edit');
+  if (editId && events.length > 0) {
+    const eventToEdit = events.find((e) => e.id === Number(editId));
+    if (eventToEdit) {
+      handleEditEvent(eventToEdit);
+    }
+  }
+}, [events, searchParams]);
 
   const handleSubmit = async (data: EventFormData, imageFile: File | null) => {
     setIsSubmitting(true);
