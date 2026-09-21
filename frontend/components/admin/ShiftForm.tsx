@@ -17,8 +17,34 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
     capacity: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const handleSubmit = async () => {
+    setSaveMessage('');
+    setSaveError('');
+
+    // Validate required fields
+    const missingFields = [];
+    if (!formData.date) missingFields.push('Date');
+    if (!formData.startTime) missingFields.push('Start Time');
+    if (!formData.endTime) missingFields.push('End Time');
+    if (!formData.positionName) missingFields.push('Job Name');
+    if (!formData.capacity) missingFields.push('Number of Volunteers');
+
+    if (missingFields.length > 0) {
+      setSaveError(`Please fill in the following required fields: ${missingFields.join(', ')}.`);
+      return;
+    }
+
+    // Validate end time is not before start time
+    if (formData.startTime && formData.endTime) {
+      if (formData.endTime < formData.startTime) {
+        setSaveError('End time cannot be before start time.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -43,10 +69,13 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
       );
 
       if (!res.ok) throw new Error('Failed to create shift.');
+      setSaveMessage('Shift created successfully.');
+      setTimeout(() => onClose(), 1500);
 
       onClose();
     } catch (error) {
       console.error('Shift creation failed:', error);
+      setSaveError('Failed to create shift. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -176,6 +205,16 @@ export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
               onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
             />
+          </div>
+
+          {/* Feedback messages */}
+          <div className="h-6">
+            {saveMessage && (
+              <p className="text-body-sm text-msscc-teal">{saveMessage}</p>
+            )}
+            {saveError && (
+              <p className="text-body-sm text-msscc-danger">{saveError}</p>
+            )}
           </div>
 
           {/* Confirm and Cancel buttons */}

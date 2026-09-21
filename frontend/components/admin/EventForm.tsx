@@ -19,7 +19,7 @@ export interface EventFormData {
 }
 
 interface EventFormProps {
-  initialData: EventFormData;
+  initialData?: EventFormData;
   initialImageUrl?: string | null;
   onSubmit: (
     data: EventFormData,
@@ -29,6 +29,7 @@ interface EventFormProps {
   submitLabel?: string;
   successMessage?: string;
   errorMessage?: string;
+  requireImage?: boolean;
 }
 
 /**
@@ -37,13 +38,23 @@ interface EventFormProps {
  */
 
 export default function EventForm({
-  initialData,
+  initialData = {
+    titleEn: '',
+    titleJa: '',
+    descriptionEn: '',
+    descriptionJa: '',
+    locationEn: '',
+    locationJa: '',
+    startDatetime: '',
+    endDatetime: '',
+  },
   initialImageUrl = null,
   onSubmit,
   isSubmitting = false,
   submitLabel = 'Save',
   successMessage = '',
   errorMessage = '',
+  requireImage = false,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -85,6 +96,9 @@ export default function EventForm({
     }
     if (!formData.endDatetime) {
       missingFields.push('End Date & Time');
+    }
+    if (requireImage && !selectedFile && !initialImageUrl) {
+      missingFields.push('Image');
     }
 
     if (missingFields.length > 0) {
@@ -134,7 +148,7 @@ export default function EventForm({
         {/* Image Upload Box */}
         <div className="flex-shrink-0 w-72">
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-            Image
+            Image {requireImage && <span className="text-msscc-danger">*</span>}
           </label>
 
           <div className="w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
@@ -174,7 +188,7 @@ export default function EventForm({
           {/* Title EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Title
+              Title <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="text"
@@ -212,7 +226,7 @@ export default function EventForm({
           {/* Start Datetime */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Start Date & Time
+              Start Date & Time <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="datetime-local"
@@ -230,7 +244,7 @@ export default function EventForm({
           {/* End Datetime */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              End Date & Time
+              End Date & Time <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="datetime-local"
