@@ -23,10 +23,9 @@ export function ShiftCard({
   onDelete,
 }: ShiftCardProps) {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    <div
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    style={{
       border: '0.5px solid var(--color-gray-light)',
       borderRadius: 'var(--radius-md)',
       padding: 'var(--space-4) var(--space-6)',
@@ -34,7 +33,7 @@ export function ShiftCard({
     }}>
 
       {/* Date and time */}
-      <div style={{ flex: '0 0 35%' }}>
+      <div className="sm:flex-[0_0_35%]">
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
@@ -55,7 +54,7 @@ export function ShiftCard({
       </div>
 
       {/* Position name and filled count */}
-      <div style={{ flex: '0 0 40%' }}>
+      <div className="sm:flex-[0_0_40%]">
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
@@ -76,18 +75,18 @@ export function ShiftCard({
       </div>
 
       {/* Edit and Delete buttons */}
-      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+      <div className="flex gap-2 sm:flex-[0_0_20%] sm:justify-end">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
+          className="flex-1 sm:flex-none rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
         >
           Edit
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
+          className="flex-1 sm:flex-none rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
         >
           Delete
         </button>
