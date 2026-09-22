@@ -23,9 +23,10 @@ export function ShiftCard({
   onDelete,
 }: ShiftCardProps) {
   return (
-    <div
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-    style={{
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       border: '0.5px solid var(--color-gray-light)',
       borderRadius: 'var(--radius-md)',
       padding: 'var(--space-4) var(--space-6)',
@@ -33,7 +34,7 @@ export function ShiftCard({
     }}>
 
       {/* Date and time */}
-      <div className="sm:flex-[0_0_35%]">
+      <div style={{ flex: '0 0 35%' }}>
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
@@ -54,7 +55,7 @@ export function ShiftCard({
       </div>
 
       {/* Position name and filled count */}
-      <div className="sm:flex-[0_0_40%]">
+      <div style={{ flex: '0 0 40%' }}>
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
