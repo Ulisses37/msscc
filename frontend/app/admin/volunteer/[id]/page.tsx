@@ -1,17 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
 import { ShiftForm } from '@/components/admin/ShiftForm';
+import { getSlotsByEventId } from '@/services/volunteerService';
+
+interface VolunteerSlot {
+  volunteer_slot_id: number;
+  position_name: string;
+  description: string;
+  start_datetime: string;
+  end_datetime: string;
+  capacity: number;
+  filled_count: number;
+  event: number;
+}
 
 export default function VolunteerCreationPage() {
   const { id } = useParams();
   const [showForm, setShowForm] = useState(false);
+  const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
+  const [isLoadingShifts, setIsLoadingShifts] = useState(true);
+  const [shiftError, setShiftError] = useState('');
 
-  // Placeholder empty shifts array —  will get to in later subtask
-  const shifts: never[] = [];
+  useEffect(() => {
+    const loadShifts = async () => {
+      try {
+        const data = await getSlotsByEventId(Number(id));
+        setShifts(data || []);
+      } catch (error) {
+        console.error('Failed to fetch volunteer shifts:', error);
+        setShiftError('Failed to load volunteer shifts.');
+      } finally {
+        setIsLoadingShifts(false);
+      }
+    };
+
+    loadShifts();
+  }, [id]);
 
   return (
     <main style={{
@@ -58,8 +86,22 @@ export default function VolunteerCreationPage() {
           </div>
         )}
 
+        {/* Loading state */}
+        {isLoadingShifts && (
+          <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body-sm)' }}>
+            Loading shifts...
+          </p>
+        )}
+
+        {/* Error state */}
+        {!isLoadingShifts && shiftError && (
+          <p style={{ color: 'var(--color-danger)', fontSize: 'var(--fs-body-sm)' }}>
+            {shiftError}
+          </p>
+        )}
+
         {/* Empty state — button below text when no shifts */}
-        {shifts.length === 0 && (
+        {!isLoadingShifts && !shiftError && shifts.length === 0 && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -87,20 +129,20 @@ export default function VolunteerCreationPage() {
         )}
 
         {/* Shift list */}
-        {shifts.length > 0 && (
+        {!isLoadingShifts && shifts.length > 0 && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--space-4)',
             marginTop: 'var(--space-6)',
           }}>
-            {shifts.map((shift: any) => (
+            {shifts.map((shift) => (
               <ShiftCard
                 key={shift.volunteer_slot_id}
                 shiftId={shift.volunteer_slot_id}
-                date={shift.date}
-                startTime={shift.startTime}
-                endTime={shift.endTime}
+                date={new Date(shift.start_datetime).toLocaleDateString()}
+                startTime={new Date(shift.start_datetime).toLocaleTimeString()}
+                endTime={new Date(shift.end_datetime).toLocaleTimeString()}
                 positionName={shift.position_name}
                 filledCount={shift.filled_count}
                 capacity={shift.capacity}
