@@ -40,3 +40,18 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
     new_password = serializers.CharField(min_length=8)
+
+class AdminCreateSerializer(serializers.ModelSerializer):
+    """Validates input for creating a new admin user."""
+    first_name = serializers.CharField(required=True, allow_blank=False)
+    last_name = serializers.CharField(required=True, allow_blank=False)
+
+    class Meta:
+        model = AdminUser
+        fields = ["first_name", "last_name", "email"]
+
+    def validate_email(self, value):
+        """Ensure no existing admin already uses this email (case-insensitive)."""
+        if AdminUser.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("An admin with this email already exists.")
+        return value

@@ -1,5 +1,8 @@
 "use client";
+import { isValid } from "zod/v3";
 import { AdminRecord, PermissionRecord } from "./adminRecord";
+import { useState, useEffect } from 'react';
+import { isValidEmail } from '@/utils/emailValidation';
 
 function formatPermissionKey(key: string): string {
     return key
@@ -8,7 +11,7 @@ function formatPermissionKey(key: string): string {
         .join(" ");
 }
 
-export default function PermissionCard (
+export function PermissionCard (
   { adminInformation, currentUserInformation, onPermissionToggle }:
   {adminInformation:AdminRecord, currentUserInformation: AdminRecord | null, onPermissionToggle: (id: number, permissionName: string) => void })
   {
@@ -64,5 +67,193 @@ function PermissionIcon({ currentPermission, isExecutiveView, onToggle }: {
           Developer Placeholder</span>
       )
     }
+  }
+}
+
+
+export function NewAdminPopup({
+  currentAdminList,
+  isOpen,
+} : {
+  currentAdminList : AdminRecord[];
+  isOpen: (value:boolean) => void;
+}){
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [lastName, setLastName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string>("");
+
+  useEffect(() =>{
+      function handleKeyDown(e: KeyboardEvent){
+        if (e.key === "Escape"){
+          isOpen(false);
+        }
+      }
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen])
+  useEffect(() => {
+  if (submissionError) {
+    window.alert(submissionError);
+  }
+  console.log(localStorage);
+}, [submissionError]);
+  return(
+    <div
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    onClick={() => isOpen(false)}
+    >
+      <div
+      className="bg-white rounded p-6 w-96"
+      onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-xl font-bold mb-4">
+          Add New Admin
+        </h2>
+
+        {/* Editable fields */}
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-sm font-semibold">First Name
+            <input
+              type="text"
+              value={firstName || ""}
+              onChange={(e) => setFirstName(e.target.value)}
+              onBlur={(e)=>setFirstName(e.target.value)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+            </label>
+            {firstName == "" &&
+            <div className="text-red-500 text-xs"> First Name cannot be empty </div>
+            }
+          </div>
+          <div>
+            <label className="text-sm font-semibold">Last Name
+            <input
+              type="text"
+              value={lastName || ""}
+              onChange={(e) => setLastName(e.target.value)}
+              onBlur={(e)=>setLastName(e.target.value)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+            </label>
+            {lastName == "" &&
+            <div className="text-red-500 text-xs"> Last Name cannot be empty </div>
+            }
+          </div>
+          <div className="gap-0">
+            <label className="text-sm font-semibold">Email
+            <input
+              type="text"
+              value={email|| ""}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={(e)=>setEmail(e.target.value)}
+              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+            />
+            </label>
+            {email == "" &&
+            <div className="text-red-500 text-xs"> Email cannot be empty </div>
+            }
+            {(!isValidEmail(email || "") && email != null) &&
+            <div className="text-red-500 text-xs"> Email is invalid</div>
+            }
+          </div>
+        </div>
+
+        {/* Validation and Submission */ }
+        <div className="flex">
+        <button
+          onClick={async() => await validateAndSubmit(
+            {
+            firstName: firstName || "",
+            lastName: lastName || "",
+            email: email || "",
+            currentAdminList: currentAdminList,
+            setSubmissionError: setSubmissionError,
+            }
+          )}
+          disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
+          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+        >
+          Add
+        </button>
+        <button
+          onClick={() => isOpen(false)}
+          className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+        >
+          Cancel
+        </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+async function validateAndSubmit({
+  firstName,
+  lastName,
+  email,
+  currentAdminList,
+  setSubmissionError
+} : {
+  firstName: string;
+  lastName: string;
+  email: string;
+  currentAdminList: AdminRecord[];
+  setSubmissionError : (value: string) => void;
+}){
+  if (currentAdminList.some((admin) => admin.email.toLowerCase() === email.toLowerCase())){
+    setSubmissionError(email + " is already in use.");
+    return;
+  }
+  if (
+    currentAdminList.some((admin) => admin.first_name.toLowerCase() === firstName.toLowerCase())
+    &&
+    currentAdminList.some((admin) => admin.last_name.toLowerCase() === lastName.toLowerCase())
+  ){
+    setSubmissionError(firstName + " " + lastName + " already has an account.");
+    return;
+  }
+
+  const token = localStorage.getItem("msscc_access_token");
+
+    try {
+    const res = await fetch("http://localhost:8000/api/admins/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+      }),
+    });
+
+    if (res.status === 201) {
+      window.location.reload();
+      return;
+    }
+
+    if (res.status === 400) {
+      const data = await res.json();
+      const message =
+        data.email?.[0] ||
+        data.first_name?.[0] ||
+        data.last_name?.[0] ||
+        "Could not create admin. Please check the form and try again.";
+      setSubmissionError(message);
+      return;
+    }
+
+    if (res.status === 401) {
+      setSubmissionError("You are not authorized to perform this action. Please log in again.");
+      return;
+    }
+
+    setSubmissionError("Something went wrong. Please try again.");
+  } catch {
+    setSubmissionError("Network error. Please check your connection and try again.");
   }
 }

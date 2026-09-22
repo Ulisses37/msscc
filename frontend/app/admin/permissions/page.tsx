@@ -1,6 +1,6 @@
 "use client";
 import { AdminRecord} from "./adminRecord";
-import PermissionCard from "./permissionsCard";
+import { PermissionCard, NewAdminPopup } from "./permissionsCard";
 import { useEffect, useState } from "react";
 
 
@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 export default function AdminPermissionPage() {
   const [adminRecords, setAdminRecords] = useState<AdminRecord[]>([]);
   const [currentUserInformation, setCurrentLogIn] = useState<AdminRecord | null>(null);
+
+  const [newAdminPopup, setNewAdminPopup] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost:8000/api/admins/")
@@ -24,7 +26,6 @@ export default function AdminPermissionPage() {
         });
   }, []);
 
-  console.log("adminRecords:", adminRecords);
   return (
     <div className="flex justify-center min-h-screen">
       <div className="border w-full max-w-[2400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
@@ -47,11 +48,11 @@ export default function AdminPermissionPage() {
             </button>
           </div>{/* Delete once SCRUM-74 is completed*/}
 
-
           <div className="my-5 flex items-center">
-              <div className="text-3xl text-left font-bold ml-2">Admin Permissions</div>
-              <div
-                className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
+            <div className="text-3xl text-left font-bold ml-2">Admin Permissions</div>
+            <div
+              onClick={()=>setNewAdminPopup(true)}
+              className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
               >
               +
               </div>
@@ -65,6 +66,11 @@ export default function AdminPermissionPage() {
             }
           </div>
         </div>
+        {newAdminPopup && <NewAdminPopup
+          currentAdminList = {adminRecords}
+          isOpen = {setNewAdminPopup}
+          />
+        }
         {adminRecords.map((record) => (
           <PermissionCard
            key={record.id}
