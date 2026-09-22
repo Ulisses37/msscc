@@ -1,29 +1,70 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { adminNavLinks } from '@/config/adminNavLinks';
 
 export const AdminNavbar = () => {
   const pathname = usePathname();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  const isLinkActive = (href: string) =>
+    href === '/admin/dashboard' ? pathname === href : pathname.startsWith(href);
 
   return (
-    /* bg-pink-500 provides the pink background, justify-center centers the links */
-    <nav className="w-full bg-msscc-pink">
-      <div className="container mx-auto flex h-16 items-center justify-center space-x-8 px-4">
+    <nav className="w-full bg-msscc-pink" aria-label="Admin navigation">
+      <div className="lg:hidden">
+        <button
+          type="button"
+          aria-expanded={isMenuOpen}
+          aria-controls="admin-mobile-menu"
+          onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
+          className="flex w-full items-center justify-between px-4 py-3 text-left text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
+        >
+          <span>Admin menu</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+            {isMenuOpen ? <path d="m6 6 12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
+
+        {isMenuOpen && (
+          <div id="admin-mobile-menu" className="max-h-[70vh] overflow-y-auto border-t border-white/20">
+            {adminNavLinks.map((link) => {
+              const isActive = isLinkActive(link.href);
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`block border-b border-white/15 px-4 py-3 text-nav-admin !text-white transition-colors last:border-b-0 hover:bg-msscc-pink-dark ${
+                    isActive ? 'bg-msscc-pink-dark font-bold' : 'opacity-80'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="container mx-auto hidden flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-3 lg:flex">
         {adminNavLinks.map((link) => {
-          // Fix: Check for exact match on the base dashboard path
-          const isActive =
-            link.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname.startsWith(link.href);
+          const isActive = isLinkActive(link.href);
 
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`relative text-sm font-medium transition-colors hover:text-white ${
-                isActive ? 'text-white' : 'text-white/70'
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative text-nav-admin font-medium !text-white transition-opacity hover:opacity-100 ${
+                isActive ? 'opacity-100' : 'opacity-70'
               }`}
             >
               {link.label}

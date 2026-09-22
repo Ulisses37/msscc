@@ -4,6 +4,7 @@
   },
 
   "Navbar": {
+    "menu": "メニュー",
     "home": "ホーム",
     "about": "当団体について|理事会",
     "membership": "会員登録",

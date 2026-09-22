@@ -47,20 +47,20 @@ export const Banner = () =>{
 
       {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
       {/* Logo */}
-      <div className="relative z-10 flex h-full items-center justify-center">
+      <div className="relative z-10 flex h-full items-center justify-center pb-12 sm:pb-0">
         <div className="px-4 py-2 rounded-md cursor-pointer" onClick={handleLogoClick}>
           <Image
             src={mssccLogo}
             alt="MSSCC Logo"
             width={400}
             height={140}
-            className="h-auto w-auto drop-shadow-2xl"
+            className="h-auto max-h-[calc(18vh-3.5rem)] w-auto max-w-[82vw] object-contain drop-shadow-2xl sm:max-h-none sm:max-w-full"
           />
         </div>
       </div>
 
       {/* Bottom-right actions: social media buttons will go left of LoginButton */}
-      <div className="absolute bottom-2 right-4 z-10 flex items-center gap-2">
+      <div className="absolute bottom-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 items-center justify-center gap-2 sm:left-auto sm:right-4 sm:max-w-none sm:translate-x-0">
         {!isAdminRoute && <LanguageToggle />}
         {isAuthenticated && (
           <>
