@@ -76,18 +76,18 @@ export function ShiftCard({
       </div>
 
       {/* Edit and Delete buttons */}
-      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+      <div className="flex gap-2 sm:flex-[0_0_20%] sm:justify-end">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-sm bg-msscc-teal px-4 py-1 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
+          className="flex-1 sm:flex-none rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
         >
           Edit
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-sm bg-msscc-danger px-4 py-1 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
+          className="flex-1 sm:flex-none rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
         >
           Delete
         </button>

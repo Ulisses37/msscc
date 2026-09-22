@@ -1,17 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
 import { ShiftForm } from '@/components/admin/ShiftForm';
+import { getSlotsByEventId } from '@/services/volunteerService';
+import { getEventById } from '@/services/eventService';
+
+interface VolunteerSlot {
+  volunteer_slot_id: number;
+  position_name: string;
+  description: string;
+  start_datetime: string;
+  end_datetime: string;
+  capacity: number;
+  filled_count: number;
+  event: number;
+}
 
 export default function VolunteerCreationPage() {
   const { id } = useParams();
   const [showForm, setShowForm] = useState(false);
+  const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
+  const [isLoadingShifts, setIsLoadingShifts] = useState(true);
+  const [shiftError, setShiftError] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
 
-  // Placeholder empty shifts array —  will get to in later subtask
-  const shifts: never[] = [];
+// Fetch shifts for this event, reusable so it can be called again after creating a shift
+  const loadShifts = async () => {
+    try {
+      const data = await getSlotsByEventId(Number(id));
+      setShifts(data || []);
+    } catch (error) {
+      console.error('Failed to fetch volunteer shifts:', error);
+      setShiftError('Failed to load volunteer shifts.');
+    } finally {
+      setIsLoadingShifts(false);
+    }
+  };
+
+  useEffect(() => {
+    loadShifts();
+  }, [id]);
+
+  // Loads Event Name
+  useEffect(() => {
+  const loadEvent = async () => {
+    const event = await getEventById(Number(id));
+    if (event) setEventTitle(event.titleEn);
+  };
+  loadEvent();
+}, [id]);
 
   return (
     <main style={{
@@ -45,9 +85,23 @@ export default function VolunteerCreationPage() {
         padding: 'var(--space-6)',
       }}>
 
-        {/* New Shift button — top right when shifts exist */}
-        {shifts.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
+        {/* Header row — event title left, New Shift button right */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 'var(--space-4)',
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            color: 'var(--color-teal)',
+            fontSize: 'var(--fs-heading-3)',
+            margin: 0,
+          }}>
+            {eventTitle}
+          </h2>
+
+          {shifts.length > 0 && (
             <button
               type="button"
               onClick={() => setShowForm(true)}
@@ -55,11 +109,25 @@ export default function VolunteerCreationPage() {
             >
               New Shift +
             </button>
-          </div>
+          )}
+        </div>
+
+        {/* Loading state */}
+        {isLoadingShifts && (
+          <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body-sm)' }}>
+            Loading shifts...
+          </p>
+        )}
+
+        {/* Error state */}
+        {!isLoadingShifts && shiftError && (
+          <p style={{ color: 'var(--color-danger)', fontSize: 'var(--fs-body-sm)' }}>
+            {shiftError}
+          </p>
         )}
 
         {/* Empty state — button below text when no shifts */}
-        {shifts.length === 0 && (
+        {!isLoadingShifts && !shiftError && shifts.length === 0 && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -86,21 +154,23 @@ export default function VolunteerCreationPage() {
           </div>
         )}
 
-        {/* Shift list */}
-        {shifts.length > 0 && (
+        {/* Scrollable shift list */}
+        {!isLoadingShifts && shifts.length > 0 && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--space-4)',
             marginTop: 'var(--space-6)',
+            maxHeight: '70vh',
+            overflowY: 'auto',
           }}>
-            {shifts.map((shift: any) => (
+            {shifts.map((shift) => (
               <ShiftCard
                 key={shift.volunteer_slot_id}
                 shiftId={shift.volunteer_slot_id}
-                date={shift.date}
-                startTime={shift.startTime}
-                endTime={shift.endTime}
+                date={new Date(shift.start_datetime).toLocaleDateString()}
+                startTime={new Date(shift.start_datetime).toLocaleTimeString()}
+                endTime={new Date(shift.end_datetime).toLocaleTimeString()}
                 positionName={shift.position_name}
                 filledCount={shift.filled_count}
                 capacity={shift.capacity}
@@ -113,10 +183,13 @@ export default function VolunteerCreationPage() {
 
       </div>
 
-      {/* Shift form modal */}
+      {/* Shift form modal that refreshes shift list on close */}
       {showForm && (
         <ShiftForm
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false)
+            loadShifts();
+          }}
           eventId={Number(id)}
           />
       )}
