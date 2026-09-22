@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
 import { ShiftForm } from '@/components/admin/ShiftForm';
 import { getSlotsByEventId } from '@/services/volunteerService';
+import { getEventById } from '@/services/eventService';
 
 interface VolunteerSlot {
   volunteer_slot_id: number;
@@ -24,6 +25,7 @@ export default function VolunteerCreationPage() {
   const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
   const [shiftError, setShiftError] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
 
 // Fetch shifts for this event, reusable so it can be called again after creating a shift
   const loadShifts = async () => {
@@ -41,6 +43,15 @@ export default function VolunteerCreationPage() {
   useEffect(() => {
     loadShifts();
   }, [id]);
+
+  // Loads Event Name
+  useEffect(() => {
+  const loadEvent = async () => {
+    const event = await getEventById(Number(id));
+    if (event) setEventTitle(event.titleEn);
+  };
+  loadEvent();
+}, [id]);
 
   return (
     <main style={{
@@ -74,9 +85,23 @@ export default function VolunteerCreationPage() {
         padding: 'var(--space-6)',
       }}>
 
-        {/* New Shift button — top right when shifts exist */}
-        {shifts.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
+        {/* Header row — event title left, New Shift button right */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 'var(--space-4)',
+        }}>
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            color: 'var(--color-teal)',
+            fontSize: 'var(--fs-heading-3)',
+            margin: 0,
+          }}>
+            {eventTitle}
+          </h2>
+
+          {shifts.length > 0 && (
             <button
               type="button"
               onClick={() => setShowForm(true)}
@@ -84,8 +109,8 @@ export default function VolunteerCreationPage() {
             >
               New Shift +
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Loading state */}
         {isLoadingShifts && (
