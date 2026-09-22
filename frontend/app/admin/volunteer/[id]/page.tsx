@@ -19,6 +19,18 @@ interface VolunteerSlot {
   event: number;
 }
 
+function toDateInput(datetime: string): string {
+  return new Date(datetime).toISOString().split('T')[0];
+}
+
+// Converts an ISO datetime string to an HH:MM time string
+function toTimeInput(datetime: string): string {
+  const date = new Date(datetime);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 export default function VolunteerCreationPage() {
   const { id } = useParams();
   const [showForm, setShowForm] = useState(false);
@@ -26,6 +38,8 @@ export default function VolunteerCreationPage() {
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
   const [shiftError, setShiftError] = useState('');
   const [eventTitle, setEventTitle] = useState('');
+  const [selectedShift, setSelectedShift] = useState<VolunteerSlot | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
 // Fetch shifts for this event, reusable so it can be called again after creating a shift
   const loadShifts = async () => {
@@ -52,6 +66,13 @@ export default function VolunteerCreationPage() {
   };
   loadEvent();
 }, [id]);
+
+// Opens the modal pre-filled with the selected shift's data
+const handleEditShift = (shift: VolunteerSlot) => {
+  setSelectedShift(shift);
+  setIsEditing(true);
+  setShowForm(true);
+};
 
   return (
     <main style={{
@@ -104,7 +125,11 @@ export default function VolunteerCreationPage() {
           {shifts.length > 0 && (
             <button
               type="button"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setSelectedShift(null);
+                setIsEditing(false);
+                setShowForm(true)
+              }}
               className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
             >
               New Shift +
@@ -146,7 +171,11 @@ export default function VolunteerCreationPage() {
             </p>
             <button
               type="button"
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setSelectedShift(null);
+                setIsEditing(false);
+                setShowForm(true)
+              }}
               className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
             >
               New Shift +
@@ -174,7 +203,7 @@ export default function VolunteerCreationPage() {
                 positionName={shift.position_name}
                 filledCount={shift.filled_count}
                 capacity={shift.capacity}
-                onEdit={() => setShowForm(true)}
+                onEdit={() => handleEditShift(shift)}
                 onDelete={() => {}}
               />
             ))}
@@ -186,8 +215,23 @@ export default function VolunteerCreationPage() {
       {/* Shift form modal that refreshes shift list on close */}
       {showForm && (
         <ShiftForm
+         initialData={
+          isEditing && selectedShift
+            ? {
+                date: toDateInput(selectedShift.start_datetime),
+                startTime: toTimeInput(selectedShift.start_datetime),
+                endTime: toTimeInput(selectedShift.end_datetime),
+                positionName: selectedShift.position_name,
+                description: selectedShift.description ?? '',
+                capacity: String(selectedShift.capacity),
+              }
+            : undefined
+        }
+
           onClose={() => {
             setShowForm(false)
+            setIsEditing(false);
+            setSelectedShift(null);
             loadShifts();
           }}
           eventId={Number(id)}

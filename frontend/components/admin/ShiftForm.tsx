@@ -5,17 +5,31 @@ import { useState } from 'react';
 interface ShiftFormProps {
   onClose: () => void;
   eventId: number;
+  initialData?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    positionName: string;
+    description: string;
+    capacity: string;
+  };
 }
 
-export function ShiftForm({ onClose, eventId }: ShiftFormProps) {
-  const [formData, setFormData] = useState({
+export function ShiftForm({
+  onClose,
+  eventId,
+  initialData = {
     date: '',
     startTime: '',
     endTime: '',
     positionName: '',
     description: '',
     capacity: '',
-  });
+  },
+}: ShiftFormProps) {
+  const [formData, setFormData] = useState({
+  ...initialData,
+});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
