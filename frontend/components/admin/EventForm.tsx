@@ -3,6 +3,7 @@
 // React and next
 import Image from 'next/image';
 import { useState } from 'react';
+import Link from 'next/link';
 
 // Components
 import { ImportImage } from '@/components/ui/ImportImage';
@@ -19,7 +20,7 @@ export interface EventFormData {
 }
 
 interface EventFormProps {
-  initialData: EventFormData;
+  initialData?: EventFormData;
   initialImageUrl?: string | null;
   onSubmit: (
     data: EventFormData,
@@ -29,6 +30,8 @@ interface EventFormProps {
   submitLabel?: string;
   successMessage?: string;
   errorMessage?: string;
+  requireImage?: boolean;
+  eventId?: number;
 }
 
 /**
@@ -37,13 +40,24 @@ interface EventFormProps {
  */
 
 export default function EventForm({
-  initialData,
+  initialData = {
+    titleEn: '',
+    titleJa: '',
+    descriptionEn: '',
+    descriptionJa: '',
+    locationEn: '',
+    locationJa: '',
+    startDatetime: '',
+    endDatetime: '',
+  },
   initialImageUrl = null,
   onSubmit,
   isSubmitting = false,
   submitLabel = 'Save',
   successMessage = '',
   errorMessage = '',
+  requireImage = false,
+  eventId,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -85,6 +99,9 @@ export default function EventForm({
     }
     if (!formData.endDatetime) {
       missingFields.push('End Date & Time');
+    }
+    if (requireImage && !selectedFile && !initialImageUrl) {
+      missingFields.push('Image');
     }
 
     if (missingFields.length > 0) {
@@ -134,7 +151,7 @@ export default function EventForm({
         {/* Image Upload Box */}
         <div className="flex-shrink-0 w-72">
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-            Image
+            Image {requireImage && <span className="text-msscc-danger">*</span>}
           </label>
 
           <div className="w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
@@ -167,6 +184,32 @@ export default function EventForm({
               id="event-image"
             />
           </div>
+
+          {/* Volunteer Shifts Button */}
+          <div className="mt-4">
+            {eventId ? (
+              <Link
+                href={`/admin/volunteer/${eventId}`}
+                className="block text-center rounded-sm bg-msscc-pink px-4 py-2 text-white no-underline text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
+                style={{ color: '#FFFFFF' }}
+              >
+                Add Volunteer Shifts
+              </Link>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full rounded-sm bg-msscc-gray-light px-4 py-2 text-msscc-gray-mid text-btn tracking-btn cursor-not-allowed"
+                >
+                  Add Volunteer Shifts
+                </button>
+                <p className="text-caption text-msscc-gray-mid mt-1">
+                  Save the event first to add volunteer shifts.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Title + Datetimes + Location */}
@@ -174,7 +217,7 @@ export default function EventForm({
           {/* Title EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Title
+              Title <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="text"
@@ -212,7 +255,7 @@ export default function EventForm({
           {/* Start Datetime */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Start Date & Time
+              Start Date & Time <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="datetime-local"
@@ -230,7 +273,7 @@ export default function EventForm({
           {/* End Datetime */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              End Date & Time
+              End Date & Time <span className="text-msscc-danger">*</span>
             </label>
             <input
               type="datetime-local"

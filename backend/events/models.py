@@ -9,7 +9,7 @@ class Event(models.Model):
     title_ja = models.TextField(blank=True)
     description_en = models.TextField(blank=True)
     description_ja = models.TextField(blank=True)
-    location_en = models.TextField()
+    location_en = models.TextField(blank=True)
     location_ja = models.TextField(blank=True)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
