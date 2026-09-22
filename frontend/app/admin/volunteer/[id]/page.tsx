@@ -25,19 +25,20 @@ export default function VolunteerCreationPage() {
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
   const [shiftError, setShiftError] = useState('');
 
-  useEffect(() => {
-    const loadShifts = async () => {
-      try {
-        const data = await getSlotsByEventId(Number(id));
-        setShifts(data || []);
-      } catch (error) {
-        console.error('Failed to fetch volunteer shifts:', error);
-        setShiftError('Failed to load volunteer shifts.');
-      } finally {
-        setIsLoadingShifts(false);
-      }
-    };
+// Fetch shifts for this event, reusable so it can be called again after creating a shift
+  const loadShifts = async () => {
+    try {
+      const data = await getSlotsByEventId(Number(id));
+      setShifts(data || []);
+    } catch (error) {
+      console.error('Failed to fetch volunteer shifts:', error);
+      setShiftError('Failed to load volunteer shifts.');
+    } finally {
+      setIsLoadingShifts(false);
+    }
+  };
 
+  useEffect(() => {
     loadShifts();
   }, [id]);
 
@@ -128,13 +129,15 @@ export default function VolunteerCreationPage() {
           </div>
         )}
 
-        {/* Shift list */}
+        {/* Scrollable shift list */}
         {!isLoadingShifts && shifts.length > 0 && (
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--space-4)',
             marginTop: 'var(--space-6)',
+            maxHeight: '70vh',
+            overflowY: 'auto',
           }}>
             {shifts.map((shift) => (
               <ShiftCard
@@ -155,10 +158,13 @@ export default function VolunteerCreationPage() {
 
       </div>
 
-      {/* Shift form modal */}
+      {/* Shift form modal that refreshes shift list on close */}
       {showForm && (
         <ShiftForm
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false)
+            loadShifts();
+          }}
           eventId={Number(id)}
           />
       )}
