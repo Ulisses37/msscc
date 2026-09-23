@@ -228,10 +228,7 @@ const handleDeleteShift = async (shift: VolunteerSlot) => {
       }}>
 
         {/* Header row — event title left, New Shift button right */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3" style={{
           marginBottom: 'var(--space-4)',
         }}>
           <h2 style={{
@@ -262,7 +259,7 @@ const handleDeleteShift = async (shift: VolunteerSlot) => {
                 setIsEditing(false);
                 setShowForm(true)
               }}
-              className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
+              className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors self-start sm:self-auto"
             >
               New Shift +
             </button>
