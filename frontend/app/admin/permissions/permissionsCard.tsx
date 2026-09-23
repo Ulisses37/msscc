@@ -1,5 +1,4 @@
 "use client";
-import { isValid } from "zod/v3";
 import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
@@ -279,16 +278,44 @@ async function confirmAndDelete({
      + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
 
   if (!confirmationOne){
-    window.alert("Canceling Delete")
     return;
   }
 
   const confirmationTwo = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
 
   if(!confirmationTwo){
-    window.alert("Canceling Delete Request")
     return;
   }
 
-  window.alert("Admin has been deleted");
+  try {
+    const res = await fetch(`http://localhost:8000/api/admins/delete/${selectedAdmin.id}`,{
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}`} : {}),
+      }
+    });
+
+    if (res.ok){
+      window.alert("Admin has been deleted");
+      window.location.reload();
+      return;
+    }
+
+    if (res.status === 400){
+      const data = await res.json();
+      window.alert(data.detail);
+      return;
+    }
+
+    if (res.status === 401) {
+      window.alert("Authentication failed. Please log in again.");
+      return;
+    }
+
+    if (res.status === 404){
+      window.alert("Admin has already been deleted");
+    }
+  } catch {
+    window.alert("Network Error. Please reload the page and try again.");
+  }
 }

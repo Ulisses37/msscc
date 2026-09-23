@@ -21,6 +21,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import get_object_or_404
 
 
 class AdminTokenObtainPairView(TokenObtainPairView):
@@ -148,9 +149,9 @@ def create_admin(request):
 
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
-def delete_admin(request, id):
+def delete_admin(request, admin_id):
     """Delete an admin user from the database"""
-    admin = get_object_or_404(AdminUser, pk=id)
+    admin = get_object_or_404(AdminUser, pk=admin_id)
 
     if admin.pk == request.user.pk:
         return Response(
