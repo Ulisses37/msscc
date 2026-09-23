@@ -170,6 +170,17 @@ const handleUpdateShift = async (data: ShiftFormData) => {
   }
 };
 
+const handleDeleteShift = (shift: VolunteerSlot) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete the "${shift.position_name}" shift?`,
+  );
+
+  if (!confirmed) return;
+
+  // TODO: SCRUM-593 — send delete request to backend
+  console.log('Confirmed delete for shift:', shift.volunteer_slot_id);
+};
+
   return (
     <main style={{
       minHeight: '100vh',
@@ -300,7 +311,7 @@ const handleUpdateShift = async (data: ShiftFormData) => {
                 filledCount={shift.filled_count}
                 capacity={shift.capacity}
                 onEdit={() => handleEditShift(shift)}
-                onDelete={() => {}}
+                onDelete={() => handleDeleteShift(shift)}
               />
             ))}
           </div>
