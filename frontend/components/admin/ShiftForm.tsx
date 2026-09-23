@@ -2,22 +2,32 @@
 
 import { useState } from 'react';
 
+export interface ShiftFormData {
+  date: string;
+  startTime: string;
+  endTime: string;
+  positionName: string;
+  description: string;
+  capacity: string;
+}
+
 interface ShiftFormProps {
   onClose: () => void;
-  eventId: number;
-  initialData?: {
-    date: string;
-    startTime: string;
-    endTime: string;
-    positionName: string;
-    description: string;
-    capacity: string;
-  };
+  onSubmit: (data: ShiftFormData) => Promise<void>;
+  submitLabel?: string;
+  successMessage?: string;
+  errorMessage?: string;
+  isSubmitting?: boolean;
+  initialData?: ShiftFormData;
 }
 
 export function ShiftForm({
   onClose,
-  eventId,
+  onSubmit,
+  submitLabel = 'Confirm',
+  successMessage = '',
+  errorMessage = '',
+  isSubmitting = false,
   initialData = {
     date: '',
     startTime: '',
@@ -30,12 +40,12 @@ export function ShiftForm({
   const [formData, setFormData] = useState({
   ...initialData,
 });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
+  // const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
 
   const handleSubmit = async () => {
-    setSaveMessage('');
+    // setSaveMessage('');
     setSaveError('');
 
     // Validate required fields
@@ -59,39 +69,11 @@ export function ShiftForm({
       }
     }
 
-    setIsSubmitting(true);
-
     try {
-      // Combine date and time into ISO datetime strings
-      const startDatetime = `${formData.date}T${formData.startTime}:00Z`;
-      const endDatetime = `${formData.date}T${formData.endTime}:00Z`;
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            position_name: formData.positionName,
-            description: formData.description,
-            start_datetime: startDatetime,
-            end_datetime: endDatetime,
-            capacity: Number(formData.capacity),
-            event: eventId,
-          }),
-        },
-      );
-
-      if (!res.ok) throw new Error('Failed to create shift.');
-      setSaveMessage('Shift created successfully.');
-      setTimeout(() => onClose(), 1500);
-
-      onClose();
+      await onSubmit(formData);
     } catch (error) {
-      console.error('Shift creation failed:', error);
-      setSaveError('Failed to create shift. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.error('Shift form submission failed:', error);
+      setSaveError('Failed to save shift. Please try again.');
     }
   };
 
@@ -127,7 +109,7 @@ export function ShiftForm({
             fontSize: 'var(--fs-heading-3)',
             margin: 0,
           }}>
-            New Shift
+            {submitLabel === 'Confirm' ? 'New Shift' : 'Edit Shift'}
           </h2>
         </div>
 
@@ -223,11 +205,11 @@ export function ShiftForm({
 
           {/* Feedback messages */}
           <div className="h-6">
-            {saveMessage && (
-              <p className="text-body-sm text-msscc-teal">{saveMessage}</p>
+            {successMessage && (
+              <p className="text-body-sm text-msscc-teal">{successMessage}</p>
             )}
-            {saveError && (
-              <p className="text-body-sm text-msscc-danger">{saveError}</p>
+            {(errorMessage || saveError) && (
+              <p className="text-body-sm text-msscc-danger">{errorMessage || saveError}</p>
             )}
           </div>
 
@@ -251,7 +233,7 @@ export function ShiftForm({
               disabled={isSubmitting}
               className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
             >
-              {isSubmitting ? 'Saving...' : 'Confirm'}
+              {isSubmitting ? 'Saving...' : submitLabel}
             </button>
           </div>
         </div>

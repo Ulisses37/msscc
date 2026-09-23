@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
-import { ShiftForm } from '@/components/admin/ShiftForm';
+import { ShiftForm, ShiftFormData } from '@/components/admin/ShiftForm';
 import { getSlotsByEventId } from '@/services/volunteerService';
 import { getEventById } from '@/services/eventService';
 
@@ -20,7 +20,11 @@ interface VolunteerSlot {
 }
 
 function toDateInput(datetime: string): string {
-  return new Date(datetime).toISOString().split('T')[0];
+  const date = new Date(datetime);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Converts an ISO datetime string to an HH:MM time string
@@ -40,6 +44,9 @@ export default function VolunteerCreationPage() {
   const [eventTitle, setEventTitle] = useState('');
   const [selectedShift, setSelectedShift] = useState<VolunteerSlot | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
 
 // Fetch shifts for this event, reusable so it can be called again after creating a shift
   const loadShifts = async () => {
@@ -72,6 +79,95 @@ const handleEditShift = (shift: VolunteerSlot) => {
   setSelectedShift(shift);
   setIsEditing(true);
   setShowForm(true);
+};
+
+const handleCreateShift = async (data: ShiftFormData) => {
+  setIsSubmitting(true);
+  setSaveMessage('');
+  setSaveError('');
+
+  try {
+    const startDatetime = new Date(`${data.date}T${data.startTime}`).toISOString();
+    const endDatetime = new Date(`${data.date}T${data.endTime}`).toISOString();
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          position_name: data.positionName,
+          description: data.description,
+          start_datetime: startDatetime,
+          end_datetime: endDatetime,
+          capacity: Number(data.capacity),
+          event: Number(id),
+        }),
+      },
+    );
+
+    if (!res.ok) throw new Error('Failed to create shift.');
+
+    setSaveMessage('Shift created successfully.');
+    await loadShifts();
+    setTimeout(() => {
+      setSaveMessage('');
+      setShowForm(false);
+    }, 1500);
+
+  } catch (error) {
+    console.error('Shift creation failed:', error);
+    setSaveError('Failed to create shift. Please try again.');
+    setTimeout(() => setSaveError(''), 5000);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+const handleUpdateShift = async (data: ShiftFormData) => {
+  if (!selectedShift) return;
+
+  setIsSubmitting(true);
+  setSaveMessage('');
+  setSaveError('');
+
+  try {
+    const startDatetime = new Date(`${data.date}T${data.startTime}`).toISOString();
+    const endDatetime = new Date(`${data.date}T${data.endTime}`).toISOString();
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/${selectedShift.volunteer_slot_id}/`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          position_name: data.positionName,
+          description: data.description,
+          start_datetime: startDatetime,
+          end_datetime: endDatetime,
+          capacity: Number(data.capacity),
+        }),
+      },
+    );
+
+    if (!res.ok) throw new Error('Failed to update shift.');
+
+    setSaveMessage('Shift updated successfully.');
+    await loadShifts();
+    setTimeout(() => {
+      setSaveMessage('');
+      setShowForm(false);
+      setIsEditing(false);
+      setSelectedShift(null);
+    }, 1500);
+
+  } catch (error) {
+    console.error('Shift update failed:', error);
+    setSaveError('Failed to update shift. Please try again.');
+    setTimeout(() => setSaveError(''), 5000);
+  } finally {
+    setIsSubmitting(false);
+  }
 };
 
   return (
@@ -227,14 +323,17 @@ const handleEditShift = (shift: VolunteerSlot) => {
               }
             : undefined
         }
-
+          onSubmit={isEditing ? handleUpdateShift : handleCreateShift}
+          isSubmitting={isSubmitting}
+          submitLabel={isEditing ? 'Save Changes' : 'Confirm'}
+          successMessage={saveMessage}
+          errorMessage={saveError}
           onClose={() => {
             setShowForm(false)
             setIsEditing(false);
             setSelectedShift(null);
             loadShifts();
           }}
-          eventId={Number(id)}
           />
       )}
 
