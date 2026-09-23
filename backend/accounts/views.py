@@ -145,3 +145,19 @@ def create_admin(request):
         AdminUserSerializer(admin).data,
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_admin(request, id):
+    """Delete an admin user from the database"""
+    admin = get_object_or_404(AdminUser, pk=id)
+
+    if admin.pk == request.user.pk:
+        return Response(
+            {"detail": "You cannot delete your own account."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    admin.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
