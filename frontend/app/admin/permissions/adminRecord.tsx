@@ -6,7 +6,7 @@ export type PermissionRecord = {
 };
 
 export type AdminRecord = {
-    id: number | null;
+    id: number;
     first_name: string;
     last_name: string;
     email: string;
