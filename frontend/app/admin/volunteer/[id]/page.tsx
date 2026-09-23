@@ -243,6 +243,17 @@ const handleDeleteShift = async (shift: VolunteerSlot) => {
             {eventTitle}
           </h2>
 
+          {/* Feedback message */}
+          {(saveMessage || saveError) && (
+            <p style={{
+              fontSize: 'var(--fs-body-sm)',
+              color: saveMessage ? 'var(--color-teal)' : 'var(--color-danger)',
+              margin: 0,
+            }}>
+              {saveMessage || saveError}
+            </p>
+          )}
+
           {shifts.length > 0 && (
             <button
               type="button"
