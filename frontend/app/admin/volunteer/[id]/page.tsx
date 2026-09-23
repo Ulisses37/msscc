@@ -170,15 +170,29 @@ const handleUpdateShift = async (data: ShiftFormData) => {
   }
 };
 
-const handleDeleteShift = (shift: VolunteerSlot) => {
+const handleDeleteShift = async (shift: VolunteerSlot) => {
   const confirmed = window.confirm(
     `Are you sure you want to delete the "${shift.position_name}" shift?`,
   );
 
   if (!confirmed) return;
+  try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/${shift.volunteer_slot_id}/`,
+        { method: 'DELETE' },
+      );
 
-  // TODO: SCRUM-593 — send delete request to backend
-  console.log('Confirmed delete for shift:', shift.volunteer_slot_id);
+      if (!res.ok) throw new Error('Failed to delete shift.');
+
+      setSaveMessage('Shift deleted successfully.');
+      await loadShifts();
+      setTimeout(() => setSaveMessage(''), 5000);
+
+    } catch (error) {
+      console.error('Shift deletion failed:', error);
+      setSaveError('Failed to delete shift. Please try again.');
+      setTimeout(() => setSaveError(''), 5000);
+    }
 };
 
   return (
@@ -244,78 +258,78 @@ const handleDeleteShift = (shift: VolunteerSlot) => {
           )}
         </div>
 
-        {/* Loading state */}
-        {isLoadingShifts && (
-          <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body-sm)' }}>
-            Loading shifts...
-          </p>
-        )}
+            {/* Loading state */}
+            {isLoadingShifts && (
+              <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body-sm)' }}>
+                Loading shifts...
+              </p>
+            )}
 
-        {/* Error state */}
-        {!isLoadingShifts && shiftError && (
-          <p style={{ color: 'var(--color-danger)', fontSize: 'var(--fs-body-sm)' }}>
-            {shiftError}
-          </p>
-        )}
+            {/* Error state */}
+            {!isLoadingShifts && shiftError && (
+              <p style={{ color: 'var(--color-danger)', fontSize: 'var(--fs-body-sm)' }}>
+                {shiftError}
+              </p>
+            )}
 
-        {/* Empty state — button below text when no shifts */}
-        {!isLoadingShifts && !shiftError && shifts.length === 0 && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '50vh',
-            gap: 'var(--space-4)',
-          }}>
-            <p style={{
-              fontFamily: 'var(--font-heading)',
-              fontSize: 'var(--fs-heading-2)',
-              color: 'var(--color-gray-dark)',
-              margin: 0,
-            }}>
-              No Shifts Scheduled for this Event
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedShift(null);
-                setIsEditing(false);
-                setShowForm(true)
-              }}
-              className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
-            >
-              New Shift +
-            </button>
-          </div>
-        )}
+            {/* Empty state — button below text when no shifts */}
+            {!isLoadingShifts && !shiftError && shifts.length === 0 && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '50vh',
+                gap: 'var(--space-4)',
+              }}>
+                <p style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: 'var(--fs-heading-2)',
+                  color: 'var(--color-gray-dark)',
+                  margin: 0,
+                }}>
+                  No Shifts Scheduled for this Event
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedShift(null);
+                    setIsEditing(false);
+                    setShowForm(true)
+                  }}
+                  className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
+                >
+                  New Shift +
+                </button>
+              </div>
+            )}
 
-        {/* Scrollable shift list */}
-        {!isLoadingShifts && shifts.length > 0 && (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-4)',
-            marginTop: 'var(--space-6)',
-            maxHeight: '70vh',
-            overflowY: 'auto',
-          }}>
-            {shifts.map((shift) => (
-              <ShiftCard
-                key={shift.volunteer_slot_id}
-                shiftId={shift.volunteer_slot_id}
-                date={new Date(shift.start_datetime).toLocaleDateString()}
-                startTime={new Date(shift.start_datetime).toLocaleTimeString()}
-                endTime={new Date(shift.end_datetime).toLocaleTimeString()}
-                positionName={shift.position_name}
-                filledCount={shift.filled_count}
-                capacity={shift.capacity}
-                onEdit={() => handleEditShift(shift)}
-                onDelete={() => handleDeleteShift(shift)}
-              />
-            ))}
-          </div>
-        )}
+            {/* Scrollable shift list */}
+            {!isLoadingShifts && shifts.length > 0 && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-4)',
+                marginTop: 'var(--space-6)',
+                maxHeight: '70vh',
+                overflowY: 'auto',
+              }}>
+                {shifts.map((shift) => (
+                  <ShiftCard
+                    key={shift.volunteer_slot_id}
+                    shiftId={shift.volunteer_slot_id}
+                    date={new Date(shift.start_datetime).toLocaleDateString()}
+                    startTime={new Date(shift.start_datetime).toLocaleTimeString()}
+                    endTime={new Date(shift.end_datetime).toLocaleTimeString()}
+                    positionName={shift.position_name}
+                    filledCount={shift.filled_count}
+                    capacity={shift.capacity}
+                    onEdit={() => handleEditShift(shift)}
+                    onDelete={() => handleDeleteShift(shift)}
+                  />
+                ))}
+              </div>
+            )}
 
       </div>
 
@@ -346,7 +360,7 @@ const handleDeleteShift = (shift: VolunteerSlot) => {
             loadShifts();
           }}
           />
-      )}
+        )}
 
     </main>
   );
