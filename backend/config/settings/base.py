@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'accounts',
+    'emails',
     'rest_framework_simplejwt',
 
     'media',
