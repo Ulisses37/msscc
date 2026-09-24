@@ -1,6 +1,6 @@
 "use client";
 import { AdminRecord} from "./adminRecord";
-import { PermissionCard, NewAdminPopup } from "./permissionsCard";
+import { PermissionCard, AdminPopup } from "./permissionsCard";
 import { useEffect, useState } from "react";
 
 
@@ -10,7 +10,8 @@ export default function AdminPermissionPage() {
   const [adminRecords, setAdminRecords] = useState<AdminRecord[]>([]);
   const [currentUserInformation, setCurrentLogIn] = useState<AdminRecord | null>(null);
 
-  const [newAdminPopup, setNewAdminPopup] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null)
+  const [adminPopupType, setAdminPopUpType] = useState<string>("")
 
   useEffect(() => {
     fetch("http://localhost:8000/api/admins/")
@@ -51,7 +52,7 @@ export default function AdminPermissionPage() {
           <div className="my-5 flex items-center">
             <div className="text-3xl text-left font-bold ml-2">Admin Permissions</div>
             <div
-              onClick={()=>setNewAdminPopup(true)}
+              onClick={()=>{setSelectedAdmin(null); setAdminPopUpType("create")}}
               className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
               >
               +
@@ -66,9 +67,11 @@ export default function AdminPermissionPage() {
             }
           </div>
         </div>
-        {newAdminPopup && <NewAdminPopup
+        {adminPopupType != "" && <AdminPopup
           currentAdminList = {adminRecords}
-          isOpen = {setNewAdminPopup}
+          setPType = {setAdminPopUpType}
+          pType = {adminPopupType}
+          selectedAdmin = {selectedAdmin}
           />
         }
         {adminRecords.map((record) => (
@@ -77,6 +80,8 @@ export default function AdminPermissionPage() {
            adminInformation={record}
            currentUserInformation={currentUserInformation ?? null}
            onPermissionToggle={handlePermissionToggle}
+           setSelectedAdmin={setSelectedAdmin}
+           setAdminPopUpType={setAdminPopUpType}
           />
         ))}
       </div>

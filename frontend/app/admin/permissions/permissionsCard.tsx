@@ -11,9 +11,19 @@ function formatPermissionKey(key: string): string {
 }
 
 export function PermissionCard (
-  { adminInformation, currentUserInformation, onPermissionToggle }:
-  {adminInformation:AdminRecord, currentUserInformation: AdminRecord | null, onPermissionToggle: (id: number, permissionName: string) => void })
   {
+    adminInformation,
+    currentUserInformation,
+    onPermissionToggle,
+    setSelectedAdmin,
+    setAdminPopUpType,
+  }:{
+    adminInformation:AdminRecord,
+    currentUserInformation: AdminRecord | null,
+    onPermissionToggle: (id: number, permissionName: string) => void
+    setSelectedAdmin: (selectedAdmin: AdminRecord) => void
+    setAdminPopUpType: (pType: string) => void
+  } ){
 
   return (
     <div className={`border rounded-md p-6 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x min-h-32 items-center ${currentUserInformation?.email === adminInformation.email ? 'bg-yellow-100' : 'bg-white'}`}>
@@ -39,10 +49,11 @@ export function PermissionCard (
       {/*Create and Delete*/}
       <div className="flex-col basis-1/12 pl-4 gap-2">
         <div
-        className="bg-gray-500 hover:bg-gray-600 text-white text-center py-2 px-4 cursor-pointer"
+        className="bg-gray-500 hover:bg-gray-600 text-white text-center py-2 px-4 cursor-pointer mb-1"
+        onClick={() => {setSelectedAdmin(adminInformation); setAdminPopUpType("update")}}
         >Edit</div>
         <div
-        className="bg-red-500 hover:bg-red-600 text-white text-center py-2 px-4 cursor-pointer"
+        className="bg-red-500 hover:bg-red-600 text-white text-center py-2 px-4 cursor-pointer mt-1"
         onClick={() => confirmAndDelete({selectedAdmin: adminInformation})}
         >Delete</div>
       </div>
@@ -81,27 +92,31 @@ function PermissionIcon({ currentPermission, isExecutiveView, onToggle }: {
 }
 
 
-export function NewAdminPopup({
+export function AdminPopup({
   currentAdminList,
-  isOpen,
+  setPType,
+  pType,
+  selectedAdmin,
 } : {
   currentAdminList : AdminRecord[];
-  isOpen: (value:boolean) => void;
+  setPType: (pType: string) => void;
+  pType: string;
+  selectedAdmin: AdminRecord | null;
 }){
-  const [firstName, setFirstName] = useState<string | null>(null);
-  const [lastName, setLastName] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string | null>(selectedAdmin?.first_name || null);
+  const [lastName, setLastName] = useState<string | null>(selectedAdmin?.last_name || null);
+  const [email, setEmail] = useState<string | null>(selectedAdmin?.email || null);
   const [submissionError, setSubmissionError] = useState<string>("");
 
   useEffect(() =>{
       function handleKeyDown(e: KeyboardEvent){
         if (e.key === "Escape"){
-          isOpen(false);
+          setPType("");
         }
       }
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen])
+  }, [setPType])
   useEffect(() => {
   if (submissionError) {
     window.alert(submissionError);
@@ -110,16 +125,17 @@ export function NewAdminPopup({
   return(
     <div
     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    onClick={() => isOpen(false)}
+    onClick={() => setPType("")}
     >
       <div
       className="bg-white rounded p-6 w-96"
       onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold mb-4">
-          Add New Admin
-        </h2>
-
+          {
+          pType =="update" ?
+           <h2 className="text-xl font-bold mb-4">Update {email} </h2>
+            : <h2 className="text-xl font-bold mb-4"> Create New Admin </h2>
+          }
         {/* Editable fields */}
         <div className="flex flex-col gap-3">
           <div>
@@ -182,12 +198,12 @@ export function NewAdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-100 disabled:cursor-not-allowed"
         >
-          Add
+          {pType =="update" ? <p>Update</p> : <p>Create</p>}
         </button>
         <button
-          onClick={() => isOpen(false)}
+          onClick={() => setPType("")}
           className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
