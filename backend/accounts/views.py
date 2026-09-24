@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,9 +9,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from accounts.models import AdminUser
 from accounts.utils import send_password_reset_email
 from accounts.serializers import (
+    AdminCreateSerializer,
     AdminTokenObtainPairSerializer,
     AdminUserSerializer,
     PasswordResetConfirmSerializer,
+    AdminUpdateSerializer,
 )
 
 from django.contrib.auth.tokens import default_token_generator
@@ -20,6 +22,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.conf import settings
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import get_object_or_404
 
 
 class AdminTokenObtainPairView(TokenObtainPairView):
@@ -115,3 +118,61 @@ def password_reset_confirm(request):
     user.save()
 
     return Response({"detail": "Password reset successfully."})
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_admin(request):
+    """Create a new admin user and email them a link to set their password."""
+    serializer = AdminCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    admin = AdminUser.objects.create_user(
+        email=serializer.validated_data["email"],
+        password=None,
+        first_name=serializer.validated_data["first_name"],
+        last_name=serializer.validated_data["last_name"],
+    )
+
+    token = default_token_generator.make_token(admin)
+    uid = urlsafe_base64_encode(force_bytes(admin.pk))
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}&uid={uid}"
+
+    try:
+        send_password_reset_email(admin.email, reset_link)
+    except Exception:
+        pass
+
+    return Response(
+        AdminUserSerializer(admin).data,
+        status=status.HTTP_201_CREATED,
+    )
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_admin(request, admin_id):
+    """Delete an admin user from the database"""
+    admin = get_object_or_404(AdminUser, pk=admin_id)
+
+    if admin.pk == request.user.pk:
+        return Response(
+            {"detail": "You cannot delete your own account."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    admin.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_admin(request, admin_id):
+    """Update an existing admin name or email in the database"""
+    admin = get_object_or_404(AdminUser, pk=admin_id)
+
+    serializer = AdminUpdateSerializer(admin, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer.save()
+    return Response(AdminUserSerializer(admin).data, status=status.HTTP_200_OK)
+
