@@ -252,14 +252,15 @@ async function validateAndSubmit({
 
   const token = localStorage.getItem("msscc_access_token");
   const url = (pType == "update") ?
-  `http://localhost:8000/api/admins/update/${admin_id}/`
+  `http://localhost:8000/api/admins/update/${admin_id}`
   :
   "http://localhost:8000/api/admins/create/"
 
+  const method = (pType == "update") ? "PATCH" : "POST"
 
     try {
     const res = await fetch(url, {
-      method: "POST",
+      method,
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

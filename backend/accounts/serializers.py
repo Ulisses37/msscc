@@ -55,3 +55,8 @@ class AdminCreateSerializer(serializers.ModelSerializer):
         if AdminUser.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError("An admin with this email already exists.")
         return value
+
+class AdminUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminUser
+        fields = ["first_name", "last_name", "email"]

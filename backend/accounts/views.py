@@ -13,6 +13,7 @@ from accounts.serializers import (
     AdminTokenObtainPairSerializer,
     AdminUserSerializer,
     PasswordResetConfirmSerializer,
+    AdminUpdateSerializer,
 )
 
 from django.contrib.auth.tokens import default_token_generator
@@ -161,4 +162,17 @@ def delete_admin(request, admin_id):
 
     admin.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_admin(request, admin_id):
+    """Update an existing admin name or email in the database"""
+    admin = get_object_or_404(AdminUser, pk=admin_id)
+
+    serializer = AdminUpdateSerializer(admin, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer.save()
+    return Response(AdminUserSerializer(admin).data, status=status.HTTP_200_OK)
 
