@@ -194,3 +194,10 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
+
+# Stripe Configuration
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+if not STRIPE_SECRET_KEY:
+    raise RuntimeError(
+        "STRIPE_SECRET_KEY environment variable is required."
+    )
