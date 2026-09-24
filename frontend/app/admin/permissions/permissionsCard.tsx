@@ -194,6 +194,8 @@ export function AdminPopup({
             lastName: lastName || "",
             email: email || "",
             currentAdminList: currentAdminList,
+            pType: pType,
+            admin_id: selectedAdmin?.id || null,
             setSubmissionError: setSubmissionError,
             }
           )}
@@ -219,31 +221,44 @@ async function validateAndSubmit({
   lastName,
   email,
   currentAdminList,
+  pType,
+  admin_id,
   setSubmissionError
 } : {
   firstName: string;
   lastName: string;
   email: string;
   currentAdminList: AdminRecord[];
+  admin_id: number | null;
+  pType: string;
   setSubmissionError : (value: string) => void;
 }){
-  if (currentAdminList.some((admin) => admin.email.toLowerCase() === email.toLowerCase())){
-    setSubmissionError(email + " is already in use.");
-    return;
-  }
-  if (
-    currentAdminList.some((admin) => admin.first_name.toLowerCase() === firstName.toLowerCase())
-    &&
-    currentAdminList.some((admin) => admin.last_name.toLowerCase() === lastName.toLowerCase())
-  ){
-    setSubmissionError(firstName + " " + lastName + " already has an account.");
-    return;
+  if (pType != "update"){
+    if (currentAdminList.some((admin) => admin.email.toLowerCase() === email.toLowerCase())){
+      setSubmissionError(email + " is already in use.");
+      return;
+    }
+    if (
+      currentAdminList.some(
+        (a) =>
+          a.first_name.toLowerCase() === firstName.toLowerCase() &&
+          a.last_name.toLowerCase() === lastName.toLowerCase()
+      )
+    ){
+      setSubmissionError(firstName + " " + lastName + " already has an account.");
+      return;
+    }
   }
 
   const token = localStorage.getItem("msscc_access_token");
+  const url = (pType == "update") ?
+  `http://localhost:8000/api/admins/update/${admin_id}/`
+  :
+  "http://localhost:8000/api/admins/create/"
+
 
     try {
-    const res = await fetch("http://localhost:8000/api/admins/create/", {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -256,7 +271,7 @@ async function validateAndSubmit({
       }),
     });
 
-    if (res.status === 201) {
+    if (res.ok) {
       window.location.reload();
       return;
     }
