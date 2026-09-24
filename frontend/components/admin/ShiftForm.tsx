@@ -89,6 +89,7 @@ export function ShiftForm({
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 9999,
+      padding: 'var(--space-4)',
     }}>
       <div style={{
         backgroundColor: 'var(--color-white)',
@@ -96,12 +97,16 @@ export function ShiftForm({
         overflow: 'hidden',
         width: '100%',
         maxWidth: '30rem',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
       }}>
 
         {/* Modal header */}
         <div style={{
           backgroundColor: 'var(--color-teal)',
           padding: 'var(--space-4) var(--space-6)',
+          flexShrink: 0,
         }}>
           <h2 style={{
             fontFamily: 'var(--font-heading)',
@@ -114,7 +119,13 @@ export function ShiftForm({
         </div>
 
         {/* Modal body */}
-        <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <div style={{
+          padding: 'var(--space-6)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-4)',
+          overflowY: 'auto',
+          }}>
 
           {/* Date */}
           <div>
