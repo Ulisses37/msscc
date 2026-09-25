@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{% block title %}MSSCC{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F1EFE8;font-family:Almarai,'Segoe UI',sans-serif;font-size:16px;line-height:1.7;color:#3D3D3A;">
+
+  {% block preheader %}{% endblock %}
+
+  <!-- Email wrapper -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1EFE8;">
+    <tr>
+      <td align="center" style="padding:40px 24px;">
+
+        <!-- Card container -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#264653;padding:24px 32px;border-radius:6px 6px 0 0;">
+              <h1 style="margin:0;font-family:'Libre Baskerville',Georgia,serif;font-size:22px;line-height:1.3;font-weight:600;color:#FFFFFF;">
+                MSSCC
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#FFFFFF;border-left:0.5px solid #D3D1C7;border-right:0.5px solid #D3D1C7;padding:32px 40px;">
+              {% block content %}
+              {% endblock %}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:#915988;padding:16px 24px;border-radius:0 0 6px 6px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="font-family:Almarai,'Segoe UI',sans-serif;font-size:12px;line-height:1.5;color:#FFFFFF;">
+                    &copy; {% now "Y" %} Matsuyama-Sacramento Sister City Corporation
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
