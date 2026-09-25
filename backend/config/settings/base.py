@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'accounts',
+    'emails',
     'rest_framework_simplejwt',
 
     'media',
@@ -194,6 +195,10 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
+
+# When enabled (development only), every outgoing email is routed to
+# RESEND_DEV_ALERT_EMAIL instead of the real recipient. See services.py.
+EMAIL_SEND_TO_DEV = os.getenv("EMAIL_SEND_TO_DEV", "false").lower() in ("true", "1", "yes")
 
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")

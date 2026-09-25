@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.models import AdminUser
-from accounts.utils import send_password_reset_email
+from emails.messages import send_password_reset_email
 from accounts.serializers import (
     AdminCreateSerializer,
     AdminTokenObtainPairSerializer,
