@@ -22,6 +22,29 @@ def send_email(to: str, subject: str, template_name: str, context: dict) -> None
     html = render_to_string(template_name, context)
     from_email = settings.RESEND_FROM_EMAIL
 
+    # ── DEV-ONLY EMAIL INTERCEPTION LAYER ─────────────────────────────────
+    # Resend no longer redirects test-mode emails to the account owner's
+    # inbox; it hard-fails on unverified recipients instead. While in
+    # development we route every outgoing email to the dev inbox
+    # (RESEND_DEV_ALERT_EMAIL) so we can inspect it.
+    # REMOVE THIS BLOCK BEFORE DEPLOY.
+    if (
+        settings.DEBUG
+        and getattr(settings, "EMAIL_SEND_TO_DEV", False)
+        and settings.RESEND_DEV_ALERT_EMAIL
+    ):
+        original_recipient = to
+        to = settings.RESEND_DEV_ALERT_EMAIL
+        subject = f"[DEV → {original_recipient}] {subject}"
+        html = (
+            '<div style="margin:0 0 16px;padding:12px 16px;border:1px solid #D3D1C7;'
+            'background:#F1EFE8;font:13px/1.5 Almarai,sans-serif;color:#3D3D3A;">'
+            f'<strong>DEV INTERCEPT</strong> — original recipient: {original_recipient}'
+            f' · template: {template_name}</div>{html}'
+        )
+        logger.info("DEV interception: redirecting email intended for %s to %s", original_recipient, to)
+    # ── END DEV-ONLY EMAIL INTERCEPTION LAYER ──────────────────────────────
+
     try:
         _send_via_resend(from_email, to_email=to, subject=subject, html=html)
     except Exception as exc:
