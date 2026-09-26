@@ -54,6 +54,9 @@ class PaymentSessionCreateView(APIView):
             "?session_id={CHECKOUT_SESSION_ID}"
         )
 
+        # for testing purposes, we can use a static return URL to avoid having to deal with the session ID in the frontend.
+        return_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
+
         try:
             # Call the reusable service created in SCRUM-561.
             payment_session = create_payment_session(
