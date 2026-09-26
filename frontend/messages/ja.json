@@ -44,6 +44,17 @@
     "no": "いいえ",
     "yes": "はい" ,
     "submittingDonation": "送信中...",
-    "submitError": "寄付を記録できませんでした。もう一度お試しください。"
+    "submitError": "寄付を記録できませんでした。もう一度お試しください。",
+    "continueToPayment": "お支払いへ進む",
+    "preparingPayment": "お支払いを準備中...",
+    "paymentDetails": "お支払い情報",
+    "loadingPaymentForm": "安全なお支払いフォームを読み込んでいます...",
+    "paymentUnavailable": "お支払いフォームを利用できません。もう一度お試しください。",
+    "paymentTotal": "お支払い合計",
+    "confirmPayment": "寄付を確定",
+    "confirmingPayment": "処理中...",
+    "paymentConfirmationError": "お支払いを確定できませんでした。入力内容を確認して、もう一度お試しください。",
+    "paymentSessionError": "お支払いフォームを準備できませんでした。もう一度お試しください。",
+    "secureStripePayment": "Stripeによる安全なお支払い"
   }
 }

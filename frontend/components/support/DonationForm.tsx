@@ -3,10 +3,9 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
-import {
-  DonationSummary,
-  type PaymentType,
-} from '@/components/support/DonationSummary';
+import { DonationSummary } from '@/components/support/DonationSummary';
+import { StripePaymentElement } from '@/components/support/StripePaymentElement';
+import { createPaymentSession } from '@/services/paymentService';
 
 const inputClassName =
   'mt-1 block w-full rounded-sm border border-msscc-gray-light px-3 py-2 text-sm text-msscc-gray-dark shadow-sm outline-none transition focus:border-msscc-teal focus:ring-2 focus:ring-msscc-teal/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60';
@@ -15,109 +14,142 @@ interface DonationResponse {
   reference_id: string;
 }
 
-function isValidExpirationDate(expirationDate: string) {
-  const expirationMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expirationDate);
-  if (!expirationMatch) return false;
-
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear() % 100;
-  const expirationMonth = Number(expirationMatch[1]);
-  const expirationYear = Number(expirationMatch[2]);
-
-  return (
-    expirationYear > currentYear ||
-    (expirationYear === currentYear && expirationMonth >= currentMonth)
-  );
-}
-
 export function DonationForm() {
   const t = useTranslations('SupportPage');
+
+  // Non-payment donation information remains in application state.
   const [donation, setDonation] = useState('');
-  const [paymentType, setPaymentType] = useState<PaymentType>('card');
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
-  const [securityCode, setSecurityCode] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Values displayed in the existing donation summary.
   const [summaryDonation, setSummaryDonation] = useState('');
   const [summaryEmail, setSummaryEmail] = useState('');
   const [summaryFirstName, setSummaryFirstName] = useState('');
   const [summaryLastName, setSummaryLastName] = useState('');
   const [summaryAddress, setSummaryAddress] = useState('');
-  const [summaryCardNumber, setSummaryCardNumber] = useState('');
   const [summaryMessage, setSummaryMessage] = useState('');
+
+  // Validation and submission state.
   const [donationTouched, setDonationTouched] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
-  const [cardNumberTouched, setCardNumberTouched] = useState(false);
-  const [expirationDateTouched, setExpirationDateTouched] = useState(false);
-  const [securityCodeTouched, setSecurityCodeTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
 
-  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
-  const donationIsValid = /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
-  const cardNumberIsValid = cardNumber.length >= 12 && cardNumber.length <= 19;
-  const expirationDateIsValid = isValidExpirationDate(expirationDate);
-  const securityCodeIsValid = securityCode.length >= 3 && securityCode.length <= 4;
-  const commonFieldsAreValid =
+  // Stripe uses this client secret to render the Payment Element.
+  // This is not the Stripe account's secret API key.
+  const [clientSecret, setClientSecret] = useState('');
+
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
+    email.trim(),
+  );
+
+  const donationIsValid =
+    /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
+
+  const formIsValid =
     emailIsValid &&
     donationIsValid &&
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     address.trim().length > 0;
-  const formIsValid =
-    commonFieldsAreValid &&
-    (paymentType === 'paypal' ||
-      (cardNumberIsValid && expirationDateIsValid && securityCodeIsValid));
 
+  // Lock the donation details after the database record is created.
+  // This keeps the stored donation and Stripe session amounts consistent.
+  const fieldsAreLocked = submittedReference.length > 0;
+
+  /**
+   * Create the donation record and prepare its Stripe Checkout Session.
+   *
+   * This does not collect or transmit card information. Stripe's embedded
+   * Payment Element handles payment details after this method finishes.
+   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formIsValid) return;
+
+    if (!formIsValid || clientSecret || isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmitError('');
-    setSubmittedReference('');
+
+    // If session creation previously failed, reuse the existing donation
+    // reference instead of creating a duplicate donation record.
+    let donationReference = submittedReference;
+    let donationWasCreated = donationReference.length > 0;
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/donations/`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            donor_first_name: firstName.trim(),
-            donor_last_name: lastName.trim(),
-            donor_email: email.trim().toLowerCase(),
-            amount: donation,
-            is_anonymous: isAnonymous,
-            message: message.trim(),
-          }),
-        },
-      );
+      if (!donationReference) {
+        const donationResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/donations/`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              donor_first_name: firstName.trim(),
+              donor_last_name: lastName.trim(),
+              donor_email: email.trim().toLowerCase(),
+              amount: donation,
+              is_anonymous: isAnonymous,
+              message: message.trim(),
+            }),
+          },
+        );
 
-      const data = (await response.json().catch(() => null)) as DonationResponse | null;
-      if (!response.ok || !data) {
-        throw new Error('Donation request failed.');
+        const donationData = (await donationResponse
+          .json()
+          .catch(() => null)) as DonationResponse | null;
+
+        if (
+          !donationResponse.ok ||
+          typeof donationData?.reference_id !== 'string'
+        ) {
+          throw new Error('Donation request failed.');
+        }
+
+        donationReference = donationData.reference_id;
+        donationWasCreated = true;
+        setSubmittedReference(donationReference);
       }
 
-      setSubmittedReference(data.reference_id);
+      // Use the reusable PR1 endpoint to create a Stripe Checkout Session.
+      const paymentSession = await createPaymentSession({
+        amount: donation,
+        currency: 'usd',
+        paymentPurpose: 'Donation',
+        internalReference: donationReference,
+      });
+
+      // Supplying this value causes StripePaymentElement to render.
+      setClientSecret(paymentSession.clientSecret);
     } catch {
-      setSubmitError(t('submitError'));
+      setSubmitError(
+        donationWasCreated ? t('paymentSessionError') : t('submitError'),
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <section className="mt-16 w-full px-6">
-      <h2 className="mb-6 mt-16 text-2xl font-bold text-[#264653]">{t('heading')}</h2>
-      <form className="max-w-[600px] space-y-6" onSubmit={handleSubmit} noValidate>
+    <section className="mt-12 w-full px-0 sm:mt-16 sm:px-6">
+      <h2 className="mb-6 mt-16 text-2xl font-bold text-[#264653]">
+        {t('heading')}
+      </h2>
+
+      <form
+        className="max-w-[600px] space-y-6"
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -131,41 +163,21 @@ export function DonationForm() {
               setEmailTouched(true);
               setSummaryEmail(email);
             }}
+            disabled={fieldsAreLocked}
             required
             className={inputClassName}
             aria-invalid={emailTouched && !emailIsValid}
-            aria-describedby={emailTouched && !emailIsValid ? 'email-error' : undefined}
+            aria-describedby={
+              emailTouched && !emailIsValid ? 'email-error' : undefined
+            }
           />
+
           {emailTouched && !emailIsValid && (
             <p id="email-error" className="mt-1 text-sm text-red-600">
               {t('emailError')}
             </p>
           )}
         </label>
-
-        <fieldset>
-          <legend className="mb-2 block text-sm font-medium text-slate-700">
-            {t('paymentType')}
-          </legend>
-          <div className="flex flex-wrap gap-3">
-            {(['card', 'paypal'] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                aria-pressed={paymentType === type}
-                onClick={() => setPaymentType(type)}
-                disabled={!emailIsValid}
-                className={`rounded-sm border px-4 py-2 text-btn tracking-btn transition-colors disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60 ${
-                  paymentType === type
-                    ? 'border-msscc-pink bg-msscc-pink text-white'
-                    : 'border-msscc-teal bg-white text-msscc-teal hover:bg-msscc-teal hover:text-white'
-                }`}
-              >
-                {t(type)}
-              </button>
-            ))}
-          </div>
-        </fieldset>
 
         <label className="block text-sm font-medium text-slate-700">
           {t('donationAmount')}
@@ -180,16 +192,22 @@ export function DonationForm() {
               setSummaryDonation(donation);
             }}
             placeholder={t('donationPlaceholder')}
-            disabled={!emailIsValid}
+            disabled={!emailIsValid || fieldsAreLocked}
             required
             className={inputClassName}
             aria-invalid={donationTouched && !donationIsValid}
             aria-describedby={
-              donationTouched && !donationIsValid ? 'donation-amount-error' : undefined
+              donationTouched && !donationIsValid
+                ? 'donation-amount-error'
+                : undefined
             }
           />
+
           {donationTouched && !donationIsValid && (
-            <p id="donation-amount-error" className="mt-1 text-sm text-red-600">
+            <p
+              id="donation-amount-error"
+              className="mt-1 text-sm text-red-600"
+            >
               {t('donationAmountError')}
             </p>
           )}
@@ -206,11 +224,12 @@ export function DonationForm() {
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               onBlur={() => setSummaryFirstName(firstName)}
-              disabled={!emailIsValid}
+              disabled={!emailIsValid || fieldsAreLocked}
               required
               className={inputClassName}
             />
           </label>
+
           <label className="block text-sm font-medium text-slate-700">
             {t('lastName')}
             <input
@@ -221,126 +240,27 @@ export function DonationForm() {
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               onBlur={() => setSummaryLastName(lastName)}
-              disabled={!emailIsValid}
-              required
-              className={inputClassName}
-            />
-          </label>
-        </div>
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-slate-700">
-            {t('address')}
-            <input
-              type="text"
-              name="address"
-              autoComplete="street-address"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              onBlur={() => setSummaryAddress(address)}
-              disabled={!emailIsValid}
+              disabled={!emailIsValid || fieldsAreLocked}
               required
               className={inputClassName}
             />
           </label>
         </div>
 
-        {paymentType === 'card' ? (
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-slate-700">
-              {t('cardNumber')}
-              <input
-                type="text"
-                name="cardNumber"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                value={cardNumber}
-                onChange={(event) =>
-                  setCardNumber(event.target.value.replace(/\D/g, '').slice(0, 19))
-                }
-                onBlur={() => {
-                  setCardNumberTouched(true);
-                  setSummaryCardNumber(cardNumber);
-                }}
-                disabled={!emailIsValid}
-                required
-                className={inputClassName}
-                aria-invalid={cardNumberTouched && !cardNumberIsValid}
-                aria-describedby={
-                  cardNumberTouched && !cardNumberIsValid ? 'card-number-error' : undefined
-                }
-              />
-              {cardNumberTouched && !cardNumberIsValid && (
-                <p id="card-number-error" className="mt-1 text-sm text-red-600">
-                  {t('cardNumberError')}
-                </p>
-              )}
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-slate-700">
-                {t('expirationDate')}
-                <input
-                  type="text"
-                  name="expirationDate"
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  value={expirationDate}
-                  onChange={(event) => {
-                    const digits = event.target.value.replace(/\D/g, '').slice(0, 4);
-                    setExpirationDate(
-                      digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits,
-                    );
-                  }}
-                  onBlur={() => setExpirationDateTouched(true)}
-                  placeholder="MM/YY"
-                  disabled={!emailIsValid}
-                  required
-                  className={inputClassName}
-                  aria-invalid={expirationDateTouched && !expirationDateIsValid}
-                  aria-describedby={
-                    expirationDateTouched && !expirationDateIsValid
-                      ? 'expiration-date-error'
-                      : undefined
-                  }
-                />
-                {expirationDateTouched && !expirationDateIsValid && (
-                  <p id="expiration-date-error" className="mt-1 text-sm text-red-600">
-                    {t('expirationDateError')}
-                  </p>
-                )}
-              </label>
-              <label className="block text-sm font-medium text-slate-700">
-                {t('securityCode')}
-                <input
-                  type="text"
-                  name="securityCode"
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  value={securityCode}
-                  onChange={(event) =>
-                    setSecurityCode(event.target.value.replace(/\D/g, '').slice(0, 4))
-                  }
-                  onBlur={() => setSecurityCodeTouched(true)}
-                  disabled={!emailIsValid}
-                  required
-                  className={inputClassName}
-                  aria-invalid={securityCodeTouched && !securityCodeIsValid}
-                  aria-describedby={
-                    securityCodeTouched && !securityCodeIsValid
-                      ? 'security-code-error'
-                      : undefined
-                  }
-                />
-                {securityCodeTouched && !securityCodeIsValid && (
-                  <p id="security-code-error" className="mt-1 text-sm text-red-600">
-                    {t('securityCodeError')}
-                  </p>
-                )}
-              </label>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-msscc-gray-mid">{t('paypalInstructions')}</p>
-        )}
+        <label className="block text-sm font-medium text-slate-700">
+          {t('address')}
+          <input
+            type="text"
+            name="address"
+            autoComplete="street-address"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            onBlur={() => setSummaryAddress(address)}
+            disabled={!emailIsValid || fieldsAreLocked}
+            required
+            className={inputClassName}
+          />
+        </label>
 
         <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
           <input
@@ -348,7 +268,7 @@ export function DonationForm() {
             name="isAnonymous"
             checked={isAnonymous}
             onChange={(event) => setIsAnonymous(event.target.checked)}
-            disabled={!emailIsValid}
+            disabled={!emailIsValid || fieldsAreLocked}
             className="h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
           />
           {t('anonymousDonation')}
@@ -363,9 +283,10 @@ export function DonationForm() {
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             onBlur={() => setSummaryMessage(message)}
-            disabled={!emailIsValid}
+            disabled={!emailIsValid || fieldsAreLocked}
             className={inputClassName}
           />
+
           <span className="mt-1 block text-right text-xs text-msscc-gray-mid">
             {message.length}/500
           </span>
@@ -373,28 +294,39 @@ export function DonationForm() {
 
         <DonationSummary
           donation={summaryDonation}
-          paymentType={paymentType}
           email={summaryEmail}
           firstName={summaryFirstName}
           lastName={summaryLastName}
           address={summaryAddress}
-          cardNumber={summaryCardNumber}
           isAnonymous={isAnonymous}
           message={summaryMessage}
         />
 
-        <button
-          type="submit"
-          disabled={!formIsValid || isSubmitting}
-          className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
-        >
-          {isSubmitting ? t('submittingDonation') : t('submitDonation')}
-        </button>
-        {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-        {submittedReference && (
-          <p className="text-sm text-green-700" role="status">
-            {t('submitSuccess', { reference: submittedReference })}
+        {/* The first button records the donation and prepares Stripe. */}
+        {!clientSecret && (
+          <button
+            type="submit"
+            disabled={!formIsValid || isSubmitting}
+            className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
+          >
+            {isSubmitting
+              ? t('preparingPayment')
+              : t('continueToPayment')}
+          </button>
+        )}
+
+        {submitError && (
+          <p className="text-sm text-red-600" role="alert">
+            {submitError}
           </p>
+        )}
+
+        {/* Stripe renders its hosted payment fields after session creation. */}
+        {clientSecret && (
+          <StripePaymentElement
+            clientSecret={clientSecret}
+            email={email}
+          />
         )}
       </form>
     </section>

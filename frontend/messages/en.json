@@ -44,6 +44,17 @@
     "no": "No",
     "yes": "Yes",
     "submittingDonation": "Submitting...",
-    "submitError": "Unable to record the donation. Please try again."
+    "submitError": "Unable to record the donation. Please try again.",
+    "continueToPayment": "Continue to Payment",
+    "preparingPayment": "Preparing Payment...",
+    "paymentDetails": "Payment Details",
+    "loadingPaymentForm": "Loading secure payment form...",
+    "paymentUnavailable": "The payment form is currently unavailable. Please try again.",
+    "paymentTotal": "Payment Total",
+    "confirmPayment": "Confirm Donation",
+    "confirmingPayment": "Processing...",
+    "paymentConfirmationError": "Unable to confirm the payment. Check your payment details and try again.",
+    "paymentSessionError": "Unable to prepare the payment form. Please try again.",
+    "secureStripePayment": "Secure payment powered by Stripe"
   }
 }
