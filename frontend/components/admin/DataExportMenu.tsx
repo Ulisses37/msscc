@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 export type ExportFormat = "csv" | "xlsx";
 
+// Generic field keys let memberships and donations share this UI without losing page-level type safety.
 export type ExportFieldOption<FieldKey extends string> = {
   key: FieldKey;
   label: string;
@@ -41,6 +42,7 @@ export function DataExportMenu<FieldKey extends string>({
   const formatGroupName = useId();
   const allFieldsSelected = fields.length > 0 && selectedFields.length === fields.length;
   const someFieldsSelected = selectedFields.length > 0 && !allFieldsSelected;
+  // Keep the action unavailable when there is no handler, format, field, data, or while work is in progress.
   const canExport = Boolean(
     onExport &&
     selectedFields.length > 0 &&
@@ -52,6 +54,7 @@ export function DataExportMenu<FieldKey extends string>({
   useEffect(() => {
     if (!isOpen) return;
 
+    // The options behave like a popover and close without exporting on outside click or Escape.
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
@@ -74,12 +77,14 @@ export function DataExportMenu<FieldKey extends string>({
   }, [isOpen]);
 
   useEffect(() => {
+    // Native indeterminate state communicates that only part of the field list is selected.
     if (selectAllCheckboxRef.current) {
       selectAllCheckboxRef.current.indeterminate = someFieldsSelected;
     }
   }, [isOpen, someFieldsSelected]);
 
   function handleFieldChange(field: FieldKey, checked: boolean) {
+    // Re-filter the configured catalog so exported columns retain the page-defined display order.
     const nextFields = checked
       ? fields.filter((option) => option.key === field || selectedFields.includes(option.key)).map((option) => option.key)
       : selectedFields.filter((selectedField) => selectedField !== field);
@@ -181,6 +186,7 @@ export function DataExportMenu<FieldKey extends string>({
               type="button"
               disabled={!canExport}
               onClick={() => {
+                // Pass the current format and selected fields back to the owning page to create the file.
                 void onExport?.(format, selectedFields);
                 setIsOpen(false);
               }}

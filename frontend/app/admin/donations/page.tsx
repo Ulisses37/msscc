@@ -26,6 +26,8 @@ const searchableDonationFields: (keyof DonationEntry)[] = [
   "message",
 ];
 
+// This ordered catalog supplies both the field checkboxes and the exported column headings.
+// keyof keeps every selectable field tied to an actual value returned by the donation API.
 const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "donation_id", label: "Donation ID" },
   { key: "donor_first_name", label: "First name" },
@@ -40,6 +42,7 @@ const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "created_at", label: "Created at" },
 ];
 
+// Start with the same high-value fields shown in the summary table; admins can add detail fields.
 const defaultDonationExportFields: (keyof DonationEntry)[] = [
   "donation_date",
   "donor_first_name",
@@ -48,6 +51,7 @@ const defaultDonationExportFields: (keyof DonationEntry)[] = [
   "amount",
 ];
 
+// Spreadsheet widths are defined per API field because XLSX columns need explicit readable sizing.
 const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
   donation_id: 15,
   donor_first_name: 18,
@@ -62,6 +66,7 @@ const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
   created_at: 22,
 };
 
+// Parse date-only API values in local time so spreadsheet dates do not shift across time zones.
 function parseDateOnly(value: string): Date | null {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
@@ -72,6 +77,8 @@ function parseDateOnly(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// Convert API values to native spreadsheet cell types so Excel can sort and format them correctly.
+// Unparseable values fall back to text rather than being dropped from the export.
 function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEntry): XlsxCell {
   const value = donation[field];
 
@@ -131,6 +138,7 @@ export default function AdminDonationsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
   // Keep the complete selected API record so the drawer always shows data from the row the admin chose.
   const [selectedDonation, setSelectedDonation] = useState<DonationEntry | null>(null);
+  // Export preferences live on the page while the reusable menu only renders and updates the controls.
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof DonationEntry)[]>(defaultDonationExportFields);
   const [isExporting, setIsExporting] = useState(false);
@@ -254,6 +262,7 @@ export default function AdminDonationsPage() {
 
     async function handleExport(format: ExportFormat, fields: (keyof DonationEntry)[]) {
       setExportError(null);
+      // Preserve the field-picker order and translate API keys into administrator-friendly headings.
       const selectedFieldOptions = fields.map((field) => {
         const fieldOption = donationExportFields.find((option) => option.key === field);
 
@@ -275,6 +284,7 @@ export default function AdminDonationsPage() {
           getValue: (donation) => donation[field],
         }));
 
+        // Export the complete filtered/sorted result set, not only the currently paginated table page.
         downloadCsv(`donations-${dateStamp}.csv`, sortedDonationItems, selectedColumns);
         return;
       }
@@ -285,6 +295,7 @@ export default function AdminDonationsPage() {
         getCell: (donation) => createDonationXlsxCell(donation, field),
       }));
 
+      // XLSX generation loads an additional browser library, so expose progress and recoverable errors.
       setIsExporting(true);
       try {
         await downloadXlsx(`donations-${dateStamp}.xlsx`, "Donations", sortedDonationItems, selectedColumns);
@@ -355,6 +366,7 @@ export default function AdminDonationsPage() {
                           />
                         </div>
                       </div>
+                      {/* The shared menu connects format/field controls to this page's donation export handler. */}
                       <DataExportMenu
                         entityLabel="donations"
                         fields={donationExportFields}
