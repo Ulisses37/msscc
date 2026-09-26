@@ -13,6 +13,8 @@ interface RawEvent {
   end_datetime: string;
   volunteer_slots: number;
   is_published: boolean;
+  send_volunteer_reminders: boolean;
+  reminder_sent_at: string | null;
   calendar_link: string | null;
   media_asset: number | null;
   created_at: string;
@@ -55,6 +57,8 @@ function mapEvent(raw: RawEvent): Event {
     endDatetime:    raw.end_datetime,
     volunteerSlots: raw.volunteer_slots,
     isPublished:    raw.is_published,
+    sendVolunteerReminders: raw.send_volunteer_reminders,
+    reminderSentAt: raw.reminder_sent_at,
     calendarLink:   raw.calendar_link ?? undefined,
     mediaAssetId: raw.media_asset,
     createdAt:      raw.created_at,

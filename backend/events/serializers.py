@@ -21,6 +21,8 @@ class EventSerializer(serializers.ModelSerializer):
             "end_datetime",
             "volunteer_slots",
             "is_published",
+            "send_volunteer_reminders",
+            "reminder_sent_at",
             "created_at",
             "updated_at",
             "media_asset",

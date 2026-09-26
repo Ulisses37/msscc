@@ -15,6 +15,8 @@ export interface Event {
   endDatetime: string;
   volunteerSlots: number;
   isPublished: boolean;
+  sendVolunteerReminders: boolean;
+  reminderSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   calendarLink?: string;

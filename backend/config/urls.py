@@ -18,12 +18,18 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from events.views import run_event_reminders
 from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/media/', include('media.urls')),
     path("api/events/", include("events.urls")),
+    path(
+        "api/trigger/event-reminders/",
+        run_event_reminders,
+        name="trigger-event-reminders",
+    ),
     path("api/board-members/", include("board_members.urls")),
     path("api/partners/", include("partners.urls")),
     path("api/admin/admin_support/", include("admin_support.urls")),

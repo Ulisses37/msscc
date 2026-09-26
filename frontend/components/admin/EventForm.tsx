@@ -17,11 +17,13 @@ export interface EventFormData {
   locationJa: string;
   startDatetime: string;
   endDatetime: string;
+  sendVolunteerReminders: boolean;
 }
 
 interface EventFormProps {
   initialData?: EventFormData;
   initialImageUrl?: string | null;
+  volunteerSlots?: number;
   onSubmit: (
     data: EventFormData,
     imageFile: File | null,
@@ -49,8 +51,10 @@ export default function EventForm({
     locationJa: '',
     startDatetime: '',
     endDatetime: '',
+    sendVolunteerReminders: false,
   },
   initialImageUrl = null,
+  volunteerSlots = 0,
   onSubmit,
   isSubmitting = false,
   submitLabel = 'Save',
@@ -370,6 +374,31 @@ export default function EventForm({
           />
         </div>
       </div>
+
+      {/* Send Volunteer Reminders Checkbox (hidden when there are no volunteer slots) */}
+      {volunteerSlots > 0 && (
+        <div className="mt-6">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.sendVolunteerReminders}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  sendVolunteerReminders: e.target.checked,
+                }))
+              }
+              className="w-4 h-4 accent-msscc-teal"
+            />
+            <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+              Send volunteer reminder emails
+            </span>
+          </label>
+          <p className="text-caption text-msscc-gray-mid mt-1 ml-7">
+            Volunteers will receive a reminder email before the event starts.
+          </p>
+        </div>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end mt-6">

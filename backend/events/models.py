@@ -15,6 +15,8 @@ class Event(models.Model):
     end_datetime = models.DateTimeField()
     volunteer_slots = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=False)
+    send_volunteer_reminders = models.BooleanField(default=False)
+    reminder_sent_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     media_asset = models.ForeignKey(
