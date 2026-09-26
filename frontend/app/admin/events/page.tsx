@@ -96,6 +96,7 @@ export default function EventsPage() {
             end_datetime: new Date(data.endDatetime).toISOString(),
             media_asset: mediaAssetId,
             is_published: true,
+            send_volunteer_reminders: data.sendVolunteerReminders,
           }),
         },
       );
@@ -167,6 +168,7 @@ export default function EventsPage() {
             start_datetime: data.startDatetime,
             end_datetime: data.endDatetime,
             media_asset: mediaAssetId,
+            send_volunteer_reminders: data.sendVolunteerReminders,
           }),
         },
       );
@@ -190,6 +192,7 @@ export default function EventsPage() {
                 startDatetime: data.startDatetime,
                 endDatetime: data.endDatetime,
                 mediaAssetId,
+                sendVolunteerReminders: data.sendVolunteerReminders,
               }
             : event,
         ),
@@ -364,6 +367,7 @@ export default function EventsPage() {
             <EventForm
               key={selectedEvent.id}
               eventId={selectedEvent.id}
+              volunteerSlots={selectedEvent.volunteerSlots}
               initialData={{
                 titleEn: selectedEvent.titleEn,
                 titleJa: selectedEvent.titleJa,
@@ -373,6 +377,7 @@ export default function EventsPage() {
                 locationJa: selectedEvent.locationJa,
                 startDatetime: formatDatetimeLocal(selectedEvent.startDatetime),
                 endDatetime: formatDatetimeLocal(selectedEvent.endDatetime),
+                sendVolunteerReminders: selectedEvent.sendVolunteerReminders,
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
               onSubmit={handleUpdateEvent}

@@ -1,3 +1,8 @@
+from django.conf import settings
+from django.core.management import call_command
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
 from rest_framework import generics
 
 from rest_framework import viewsets
@@ -50,3 +55,23 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
         signup = serializer.save()
         if signup.slot is not None:
             send_volunteer_thanks_email(signup)
+
+
+@require_POST
+def run_event_reminders(request):
+    """Scheduled trigger for the volunteer reminder emails.
+
+    External schedulers (e.g. a Railway cron job or CI task) POST to this
+    endpoint to run the ``send_event_reminders`` management command on schedule.
+    The request must include the shared secret in the ``X-API-Key`` header,
+    matching the ``TRIGGER_API_KEY`` setting.
+    """
+    api_key = request.headers.get("X-API-Key", "")
+    if api_key != settings.TRIGGER_API_KEY:
+        return JsonResponse(
+            {"error": "Unauthorized"},
+            status=403,
+        )
+
+    call_command("send_event_reminders")
+    return JsonResponse({"status": "ok"})
