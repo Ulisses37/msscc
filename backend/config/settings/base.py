@@ -200,6 +200,11 @@ RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
 # RESEND_DEV_ALERT_EMAIL instead of the real recipient. See services.py.
 EMAIL_SEND_TO_DEV = os.getenv("EMAIL_SEND_TO_DEV", "false").lower() in ("true", "1", "yes")
 
+# Shared secret used to authenticate external schedulers (e.g. a Railway cron
+# job or CI task) when they hit the protected reminder trigger endpoint.
+# Requests must present the value in the "X-API-Key" header.
+TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY", "dev-trigger-key")
+
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 if not STRIPE_SECRET_KEY:
