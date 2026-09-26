@@ -129,6 +129,7 @@ export default function AdminDonationsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  // Keep the complete selected API record so the drawer always shows data from the row the admin chose.
   const [selectedDonation, setSelectedDonation] = useState<DonationEntry | null>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof DonationEntry)[]>(defaultDonationExportFields);
@@ -296,6 +297,7 @@ export default function AdminDonationsPage() {
     }
 
     const closeDonationDetails = useCallback(() => {
+      // Clearing the selection unmounts the drawer without changing the donation or table data.
       setSelectedDonation(null);
     }, []);
 
@@ -368,6 +370,7 @@ export default function AdminDonationsPage() {
                     {/* Keep the search control visible while replacing an empty result table with clear feedback. */}
                     {hasSearchResults ? (
                       <>
+                        {/* Stable backend IDs keep the visual selection attached to the correct row after sorting. */}
                         <PostTable
                           dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)}
                           columns={columns}
@@ -389,6 +392,7 @@ export default function AdminDonationsPage() {
                 }
       </main>
 
+      {/* Only mount the viewport-level drawer after a row has supplied its donation record. */}
       {selectedDonation && (
         <DonationDetailDrawer
           donation={selectedDonation}

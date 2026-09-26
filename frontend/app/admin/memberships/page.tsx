@@ -142,6 +142,7 @@ export default function AdminMembershipsPage() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  // Keep the complete selected API record so the drawer always shows data from the row the admin chose.
   const [selectedMembership, setSelectedMembership] = useState<MembershipEntry | null>(null);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof MembershipEntry)[]>(defaultMembershipExportFields);
@@ -334,6 +335,7 @@ export default function AdminMembershipsPage() {
   }
 
   const closeMembershipDetails = useCallback(() => {
+    // Clearing the selection unmounts the drawer without changing the membership or table data.
     setSelectedMembership(null);
   }, []);
 
@@ -402,6 +404,7 @@ export default function AdminMembershipsPage() {
             {/* Keep the search control visible while replacing an empty result table with clear feedback. */}
             {hasSearchResults ? (
               <>
+                {/* Stable backend IDs keep the visual selection attached to the correct row after sorting. */}
                 <PostTable
                   dataEntries={paginate(sortedMembershipItems, currentPage, itemsPerPage)}
                   columns={columns}
@@ -424,6 +427,7 @@ export default function AdminMembershipsPage() {
         {!isLoading && !hasMemberships && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No memberships found.</div>}
       </main>
 
+      {/* Only mount the viewport-level drawer after a row has supplied its membership record. */}
       {selectedMembership && (
         <MembershipDetailDrawer
           membership={selectedMembership}
