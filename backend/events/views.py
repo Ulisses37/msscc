@@ -2,6 +2,7 @@ from rest_framework import generics
 
 from rest_framework import viewsets
 
+from emails.messages import send_volunteer_thanks_email
 from events.models import Event, VolunteerSignup, VolunteerSlot
 from events.serializers import (
     EventSerializer,
@@ -44,3 +45,8 @@ class VolunteerSlotViewSet(viewsets.ModelViewSet):
 class VolunteerSignupViewSet(viewsets.ModelViewSet):
     queryset = VolunteerSignup.objects.all().order_by("-submitted_at")
     serializer_class = VolunteerSignupSerializer
+
+    def perform_create(self, serializer):
+        signup = serializer.save()
+        if signup.slot is not None:
+            send_volunteer_thanks_email(signup)
