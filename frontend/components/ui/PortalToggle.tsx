@@ -6,7 +6,7 @@ interface PortalToggleProps {
   isAdminRoute: boolean;
 }
 
-/** Renders "Admin Portal" when on the public site, "Public Site" when in the admin portal. */
+/** Renders the portal switch with compact mobile sizing and standard sizing from `sm`. */
 export function PortalToggle({ isAdminRoute }: PortalToggleProps) {
   const router = useRouter();
 
