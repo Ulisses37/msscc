@@ -36,3 +36,27 @@ def send_volunteer_thanks_email(signup) -> None:
         context=signup_details,
     )
 
+
+def send_event_reminder_email(to_email: str, event, first_name: str = "") -> None:
+    """Send a volunteer event reminder email to a single recipient.
+
+    Unlike the signup-confirmation email, this is sent per-event after the
+    volunteer emails have been deduplicated (see the ``send_event_reminders``
+    management command), so it takes a single recipient email and the event as
+    context rather than a specific signup. ``first_name`` is optional and used
+    only to personalize the greeting when it is known.
+    """
+    reminder_details = {
+        "first_name": first_name,
+        "event_name": event.title_en,
+        "start_datetime": event.start_datetime.strftime("%B %d, %Y at %I:%M %p"),
+        "location": event.location_en or "TBD",
+    }
+
+    send_email(
+        to=to_email,
+        subject=f"MSSCC Event Reminder: {event.title_en}",
+        template_name="emails/event_reminder.html",
+        context=reminder_details,
+    )
+
