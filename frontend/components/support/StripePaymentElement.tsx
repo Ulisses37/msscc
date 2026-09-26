@@ -61,9 +61,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
         const result = await checkout.updateEmail(normalizedEmail);
 
         if (!isCancelled && result.type === "error") {
-          setConfirmationError(
-            result.error.message || t("paymentConfirmationError")
-          );
+          setConfirmationError(t("paymentConfirmationError"));
         }
       } catch {
         if (!isCancelled) {
@@ -84,7 +82,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
   if (checkoutState.type === "loading") {
     return (
       <div className="py-4 text-center text-sm text-gray-600">
-        Loading secure payment form...
+        {t("loadingPaymentForm")}
       </div>
     );
   }
@@ -92,7 +90,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
   if (checkoutState.type === "error") {
     return (
       <p className="mt-3 text-sm text-red-600" role="alert">
-        {checkoutState.error.message || t("paymentConfirmationError")}
+        {t("paymentUnavailable")}
       </p>
     );
   }
@@ -126,9 +124,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
        * error only needs to be displayed if Stripe returns an error result.
        */
       if (result.type === "error") {
-        setConfirmationError(
-          result.error.message || t("paymentConfirmationError")
-        );
+        setConfirmationError(t("paymentConfirmationError"));
         setIsConfirming(false);
       }
     } catch {
@@ -157,7 +153,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
         disabled={!checkout.canConfirm || isConfirming}
         className="mt-5 w-full rounded-md bg-pink-700 px-4 py-3 font-semibold text-white transition-colors hover:bg-pink-800 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
       >
-        {isConfirming ? "Confirming Donation..." : "Confirm Donation"}
+        {isConfirming ? t("confirmingPayment") : t("confirmPayment")}
       </button>
     </div>
   );
@@ -189,7 +185,7 @@ export function StripePaymentElement({
     <div className="rounded-md border border-slate-300 bg-slate-50 p-3 sm:p-5">
       <div className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
         <span aria-hidden="true"></span>
-        <span>Secure payment powered by Stripe</span>
+        <span>{t("secureStripePayment")}</span>
       </div>
 
       <CheckoutElementsProvider

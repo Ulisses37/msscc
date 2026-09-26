@@ -52,12 +52,9 @@ class PaymentSessionCreateView(APIView):
         # Stripe replaces {CHECKOUT_SESSION_ID} with the actual session ID
         # when it sends the user back to the application.
         return_url = (
-            f"{settings.FRONTEND_URL.rstrip('/')}/payment/return"
+            f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
             "?session_id={CHECKOUT_SESSION_ID}"
         )
-
-        # for testing purposes, we can use a static return URL to avoid having to deal with the session ID in the frontend.
-        return_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
 
         try:
             # Call the reusable service created in SCRUM-561.
@@ -154,6 +151,97 @@ def _get_internal_reference(stripe_object):
 
     metadata = stripe_object.get("metadata") or {}
     return metadata.get("internal_reference")
+
+
+class PaymentStatusView(APIView):
+    """Return the webhook-confirmed status for one Stripe Checkout Session."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Resolve a Stripe session to its donation and return only its status."""
+
+        session_id = request.query_params.get("session_id", "").strip()
+
+        # Checkout Session IDs are safe browser values, but reject malformed
+        # input before making a request to Stripe.
+        valid_prefix = session_id.startswith(("cs_test_", "cs_live_"))
+
+        if not valid_prefix or len(session_id) > 255:
+            return Response(
+                {"detail": "A valid payment session is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not settings.STRIPE_SECRET_KEY:
+            logger.error("Stripe secret key is not configured.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(
+                session_id,
+                api_key=settings.STRIPE_SECRET_KEY,
+            )
+            session_data = checkout_session.to_dict()
+        except stripe.InvalidRequestError:
+            # Do not return Stripe's raw error or reveal whether another
+            # internal payment reference exists.
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except stripe.StripeError as exc:
+            logger.error(
+                "Unable to retrieve Stripe payment session. request_id=%s",
+                getattr(exc, "request_id", None),
+            )
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        reference_id = _get_internal_reference(session_data)
+
+        if not reference_id or not reference_id.startswith("DON-"):
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            donation = Donation.objects.only("payment_status").get(
+                reference_id=reference_id,
+            )
+        except Donation.DoesNotExist:
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Donation.MultipleObjectsReturned:
+            logger.error("Payment status lookup matched multiple donations.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        allowed_statuses = {"pending", "completed", "failed", "canceled"}
+
+        if donation.payment_status not in allowed_statuses:
+            logger.error("Donation contains an unsupported payment status.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {"payment_status": donation.payment_status},
+            status=status.HTTP_200_OK,
+        )
+
 
 class StripeWebhookView(APIView):
     """

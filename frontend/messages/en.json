@@ -55,6 +55,11 @@
     "confirmingPayment": "Processing...",
     "paymentConfirmationError": "Unable to confirm the payment. Check your payment details and try again.",
     "paymentSessionError": "Unable to prepare the payment form. Please try again.",
-    "secureStripePayment": "Secure payment powered by Stripe"
+    "secureStripePayment": "Secure payment powered by Stripe",
+    "paymentPending": "Your payment is still being processed. Please wait while we confirm the result.",
+    "paymentCompleted": "Thank you. Your donation payment was completed successfully.",
+    "paymentFailed": "Your donation payment failed and was not completed.",
+    "paymentCanceled": "Your payment was canceled or expired. Your donation was not completed.",
+    "paymentResultUnavailable": "We could not confirm your payment result. Please check again shortly."
   }
 }
