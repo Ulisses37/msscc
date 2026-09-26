@@ -15,6 +15,8 @@ type SortColumn =
   | "donation_date"
   | "payment_status";
 
+// Only these record fields are included in the donation search. Keeping the
+// list separate makes it clear which API values can produce a table match.
 const searchableDonationFields: (keyof DonationEntry)[] = [
   "donor_first_name",
   "donor_last_name",
@@ -120,6 +122,7 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
 export default function AdminDonationsPage() {
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
+  // Controlled input state keeps the visible search value and table filter in sync.
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
@@ -163,15 +166,19 @@ export default function AdminDonationsPage() {
       }
     }, []);
 
+    // Filter before sorting and pagination so every page and export operates on
+    // the same case-insensitive set of matching donation records.
     const filteredDonationItems = useMemo(() => {
       const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
 
+      // An empty (or whitespace-only) search restores the complete table.
       if (!normalizedQuery) {
         return donationItems;
       }
 
       return donationItems.filter((donation) => {
         const searchableValues = searchableDonationFields.map((field) => donation[field]);
+        // Also support searches such as "Jane Doe" across the two name fields.
         searchableValues.push(`${donation.donor_first_name} ${donation.donor_last_name}`);
 
         return searchableValues.some((value) =>
@@ -240,6 +247,7 @@ export default function AdminDonationsPage() {
 
     function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
       setSearchQuery(event.target.value);
+      // Start at the first page so a valid result is not hidden on a later page.
       setCurrentPage(1);
     }
 
@@ -323,11 +331,13 @@ export default function AdminDonationsPage() {
                 {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}
                 {hasDonations && (
                   <>
+                    {/* Stack search and export controls on small screens, then align them on wider screens. */}
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                       <div className="w-full max-w-sm">
                         <label htmlFor="donation-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
                           Search donations
                         </label>
+                        {/* The relative wrapper anchors the decorative icon while the input remains full-width and labeled. */}
                         <div className="relative">
                           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-msscc-gray-mid">
                             <circle cx="11" cy="11" r="7" />
@@ -355,6 +365,7 @@ export default function AdminDonationsPage() {
                         isExporting={isExporting}
                       />
                     </div>
+                    {/* Keep the search control visible while replacing an empty result table with clear feedback. */}
                     {hasSearchResults ? (
                       <>
                         <PostTable
