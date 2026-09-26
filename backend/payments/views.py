@@ -6,6 +6,8 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from donations.models import Donation
+
 from payments.serializers import PaymentSessionRequestSerializer
 from payments.services.stripe_service import create_payment_session
 
@@ -103,4 +105,178 @@ class PaymentSessionCreateView(APIView):
         return Response(
             payment_session,
             status=status.HTTP_201_CREATED,
+        )
+
+# Maps Stripe events to the lowercase values stored in Donation.payment_status.
+#
+# Checkout Session events cover completed, delayed, and expired payments.
+# PaymentIntent events also let the application recognize immediate card
+# successes, failures, and cancellations.
+PAYMENT_STATUS_BY_EVENT = {
+    "payment_intent.succeeded": "completed",
+    "payment_intent.payment_failed": "failed",
+    "payment_intent.canceled": "canceled",
+    "checkout.session.async_payment_succeeded": "completed",
+    "checkout.session.async_payment_failed": "failed",
+    "checkout.session.expired": "canceled",
+}
+
+
+def _get_payment_status(event_type, stripe_object):
+    """
+    Convert a supported Stripe event into an application payment status.
+
+    A Checkout Session can be completed before a delayed payment has actually
+    been paid. Therefore, checkout.session.completed is only treated as
+    completed when Stripe reports payment_status as paid.
+    """
+    if event_type == "checkout.session.completed":
+        if stripe_object.get("payment_status") == "paid":
+            return "completed"
+
+        # Keep an unpaid or processing Checkout Session pending.
+        return None
+
+    return PAYMENT_STATUS_BY_EVENT.get(event_type)
+
+
+def _get_internal_reference(stripe_object):
+    """
+    Find the internal donation reference attached to a Stripe object.
+
+    Checkout Sessions contain client_reference_id. PaymentIntents receive the
+    same reference through metadata when the session is created.
+    """
+    client_reference_id = stripe_object.get("client_reference_id")
+
+    if client_reference_id:
+        return client_reference_id
+
+    metadata = stripe_object.get("metadata") or {}
+    return metadata.get("internal_reference")
+
+class StripeWebhookView(APIView):
+    """
+    Receive verified Stripe events and update donation payment statuses.
+
+    This endpoint does not use login authentication because Stripe calls it
+    directly. Instead, every request must have a valid Stripe signature.
+    """
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        """Verify the Stripe event before updating a donation."""
+
+        webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+
+        if not webhook_secret:
+            logger.error("Stripe webhook secret is not configured.")
+            return Response(
+                {"detail": "Webhook is not configured."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        signature = request.headers.get("Stripe-Signature")
+
+        if not signature:
+            return Response(
+                {"detail": "Missing Stripe signature."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload=request.body,
+                sig_header=signature,
+                secret=webhook_secret,
+            )
+
+            # Stripe returns StripeObject resources instead of ordinary
+            # dictionaries. Convert the entire verified event so dictionary
+            # methods such as .get() can be used safely below.
+            event_data = event.to_dict()
+
+        except ValueError:
+            return Response(
+                {"detail": "Invalid webhook payload."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except stripe.SignatureVerificationError:
+            return Response(
+                {"detail": "Invalid webhook signature."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        event_type = event_data["type"]
+        stripe_object = event_data["data"]["object"]
+
+        # Continue with the existing webhook-processing code below.
+
+        new_status = _get_payment_status(event_type, stripe_object)
+
+        # Stripe sends many event types. Unsupported events are acknowledged
+        # without changing any database records.
+        if new_status is None:
+            return Response(
+                {"received": True},
+                status=status.HTTP_200_OK,
+            )
+
+        reference_id = _get_internal_reference(stripe_object)
+
+        # Only donation references belong in the Donation table. This prevents
+        # future membership events from updating donation records.
+        if not reference_id or not reference_id.startswith("DON-"):
+            logger.warning(
+                "Stripe payment event has no valid donation reference. event_id=%s",
+                event_data.get("id"),
+            )
+            return Response(
+                {"received": True},
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            donation = Donation.objects.get(reference_id=reference_id)
+        except Donation.DoesNotExist:
+            # Returning 200 prevents Stripe from retrying an event that cannot
+            # be matched to a record in this environment.
+            logger.warning(
+                "Stripe payment event did not match a donation. event_id=%s",
+                event_data.get("id"),
+            )
+            return Response(
+                {"received": True},
+                status=status.HTTP_200_OK,
+            )
+        except Donation.MultipleObjectsReturned:
+            # Do not update anything if the reference is unexpectedly duplicated.
+            logger.error(
+                "Stripe payment event matched multiple donations. event_id=%s",
+                event_data.get("id"),
+            )
+            return Response(
+                {"received": True},
+                status=status.HTTP_200_OK,
+            )
+
+        # A late failure or expiration event must not change an already
+        # completed donation back to failed or canceled.
+        if donation.payment_status == "completed" and new_status != "completed":
+            return Response(
+                {"received": True},
+                status=status.HTTP_200_OK,
+            )
+
+        # Duplicate webhook deliveries are safe because the same value is not
+        # written again.
+        if donation.payment_status != new_status:
+            donation.payment_status = new_status
+            donation.save(update_fields=["payment_status"])
+
+        return Response(
+            {"received": True},
+            status=status.HTTP_200_OK,
         )
