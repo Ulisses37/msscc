@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { DonationSummary } from '@/components/support/DonationSummary';
@@ -13,6 +13,18 @@ const inputClassName =
 interface DonationResponse {
   reference_id: string;
 }
+
+type PaymentStatus = 'pending' | 'completed' | 'failed' | 'canceled';
+
+interface PaymentStatusResponse {
+  payment_status?: unknown;
+}
+
+const isPaymentStatus = (value: unknown): value is PaymentStatus =>
+  value === 'pending' ||
+  value === 'completed' ||
+  value === 'failed' ||
+  value === 'canceled';
 
 export function DonationForm() {
   const t = useTranslations('SupportPage');
@@ -40,12 +52,86 @@ export function DonationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  // This result comes from the Donation record updated by Stripe's signed
+  // webhook. A successful browser redirect alone is not treated as proof of
+  // payment.
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(
+    null,
+  );
+  const [paymentStatusError, setPaymentStatusError] = useState(false);
+
   // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
 
   // Stripe uses this client secret to render the Payment Element.
   // This is not the Stripe account's secret API key.
   const [clientSecret, setClientSecret] = useState('');
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get(
+      'session_id',
+    );
+
+    if (!sessionId) return;
+
+    let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let attemptCount = 0;
+    const maximumAttempts = 10;
+
+    // The webhook may arrive just after Stripe redirects the browser. Poll
+    // briefly so a pending record can change to its authoritative outcome.
+    const checkPaymentStatus = async () => {
+      attemptCount += 1;
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/payments/status/?session_id=${encodeURIComponent(sessionId)}`,
+          { cache: 'no-store' },
+        );
+        const data = (await response
+          .json()
+          .catch(() => null)) as PaymentStatusResponse | null;
+        const nextStatus = data?.payment_status;
+
+        if (!response.ok || !isPaymentStatus(nextStatus)) {
+          throw new Error('Payment status request failed.');
+        }
+
+        if (isCancelled) return;
+
+        setPaymentStatus(nextStatus);
+        setPaymentStatusError(false);
+
+        if (nextStatus === 'pending' && attemptCount < maximumAttempts) {
+          timeoutId = setTimeout(checkPaymentStatus, 1500);
+        }
+      } catch {
+        if (!isCancelled) {
+          setPaymentStatusError(true);
+        }
+      }
+    };
+
+    // Show an honest pending state while the first database lookup runs.
+    setPaymentStatus('pending');
+    setPaymentStatusError(false);
+    void checkPaymentStatus();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const paymentStatusMessage = paymentStatus
+    ? {
+        pending: t('paymentPending'),
+        completed: t('paymentCompleted'),
+        failed: t('paymentFailed'),
+        canceled: t('paymentCanceled'),
+      }[paymentStatus]
+    : '';
 
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
     email.trim(),
@@ -144,6 +230,31 @@ export function DonationForm() {
       <h2 className="mb-6 mt-16 text-2xl font-bold text-[#264653]">
         {t('heading')}
       </h2>
+
+      {paymentStatusError && (
+        <p
+          className="mb-6 max-w-[600px] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          role="alert"
+        >
+          {t('paymentResultUnavailable')}
+        </p>
+      )}
+
+      {!paymentStatusError && paymentStatus && (
+        <p
+          className={`mb-6 max-w-[600px] rounded-md border p-4 text-sm ${
+            paymentStatus === 'completed'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : paymentStatus === 'pending'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-red-200 bg-red-50 text-red-800'
+          }`}
+          role={paymentStatus === 'pending' ? 'status' : 'alert'}
+          aria-live="polite"
+        >
+          {paymentStatusMessage}
+        </p>
+      )}
 
       <form
         className="max-w-[600px] space-y-6"
