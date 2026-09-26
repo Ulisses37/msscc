@@ -19,6 +19,7 @@ export const PublicNavbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Collapse the mobile menu after a navigation so page content is visible again.
   useEffect(() => {
     setIsMenuOpen(false);
   }, [pathname]);
@@ -38,6 +39,7 @@ export const PublicNavbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-msscc-teal shadow-sm" aria-label={t('menu')}>
+      {/* Match the admin navigation with a compact, single-column menu below `lg`. */}
       <div className="lg:hidden">
         <button
           type="button"
@@ -74,6 +76,7 @@ export const PublicNavbar = () => {
         )}
       </div>
 
+      {/* Larger screens retain the original horizontal public navigation. */}
       <div className="container mx-auto hidden flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 py-3 lg:flex">
         {navLinks.map((link) => {
           // Check if the current path matches the link to highlight it

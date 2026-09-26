@@ -24,7 +24,7 @@ export function LanguageToggle() {
     router.replace(pathname, { locale: nextLocale });
   };
 
-  // Shared button styles for consistency
+  // Keep the split toggle compact on phones; restore its standard padding and text at `sm`.
   const baseBtnStyle = "whitespace-nowrap px-2 py-1 text-[0.6875rem] font-medium transition-colors focus:outline-none sm:px-3 sm:text-sm";
   const activeStyle = "bg-[#264653] text-white";
   const inactiveStyle = "bg-white text-[#264653] hover:bg-teal-50";

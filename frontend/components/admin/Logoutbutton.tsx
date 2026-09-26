@@ -1,6 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 
-/** Calls logout from AuthContext and redirects to home. */
+/** Calls logout and uses compact mobile sizing to fit the banner action row. */
 export function LogoutButton() {
   const { logout } = useAuth();
 
