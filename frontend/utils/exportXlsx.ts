@@ -9,6 +9,7 @@ export type XlsxColumn<Row> = {
 };
 
 export function createXlsxSheetData<Row>(rows: Row[], columns: XlsxColumn<Row>[]): SheetData {
+  // Build a styled header followed by page-provided typed cells for each exported record.
   const headerRow: XlsxCell[] = columns.map((column) => ({
     value: column.header,
     type: String,
@@ -31,12 +32,14 @@ export async function downloadXlsx<Row>(
   rows: Row[],
   columns: XlsxColumn<Row>[],
 ): Promise<void> {
+  // Load the browser-only writer on demand so normal admin-page visits do not pay its bundle cost.
   const { default: writeExcelFile } = await import("write-excel-file/browser");
   const sheetData = createXlsxSheetData(rows, columns);
 
   await writeExcelFile(sheetData, {
     sheet: sheetName,
     columns: columns.map((column) => ({ width: column.width })),
+    // Keep column headings visible while an administrator scrolls through a large worksheet.
     stickyRowsCount: 1,
   }).toFile(filename);
 }

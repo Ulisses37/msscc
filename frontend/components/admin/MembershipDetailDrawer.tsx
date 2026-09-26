@@ -75,6 +75,7 @@ function formatDateTime(value: string): string {
 }
 
 function DetailField({ label, value, preserveWhitespace = false }: DetailFieldProps) {
+  // Labels stack above values on small screens so long values never force horizontal drawer scrolling.
   return (
     <div className="grid min-w-0 grid-cols-1 gap-1 border-b border-msscc-gray-light py-3 last:border-b-0 sm:grid-cols-[minmax(6.75rem,0.8fr)_minmax(0,1.2fr)] sm:gap-3">
       <dt className="text-label uppercase tracking-label text-msscc-gray-mid">{label}</dt>
@@ -107,12 +108,14 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
   const hasEmail = Boolean(membership.email?.trim());
 
   useEffect(() => {
+    // Portaling to document.body separates the fixed drawer from wide/scrollable admin table containers.
     setPortalTarget(document.body);
   }, []);
 
   useEffect(() => {
     if (!portalTarget) return;
 
+    // Treat the drawer as a modal: preserve page state, stop background scrolling, and move focus to Close.
     const previouslyFocusedElement = document.activeElement as HTMLElement | null;
     const previousBodyOverflow = document.body.style.overflow;
     const previousDocumentOverflow = document.documentElement.style.overflow;
@@ -135,6 +138,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      // Restore the table's prior scroll and focus behavior when the drawer is closed or unmounted.
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousDocumentOverflow;
@@ -144,8 +148,10 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
 
   if (!portalTarget) return null;
 
+  // Dynamic viewport units keep the close button and content inside the visible mobile browser area.
   return createPortal(
     <div className="fixed inset-0 z-50 flex h-[100dvh] w-[100dvw] max-w-[100dvw] justify-end overflow-hidden" role="presentation">
+      {/* The backdrop provides a pointer-based close path while the header button remains keyboard accessible. */}
       <button
         type="button"
         className="absolute inset-0 cursor-default bg-black/45"

@@ -9,6 +9,7 @@ export const AdminNavbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Collapse the mobile menu after a navigation so the next page is not obscured.
   useEffect(() => {
     setIsMenuOpen(false);
   }, [pathname]);
@@ -18,6 +19,7 @@ export const AdminNavbar = () => {
 
   return (
     <nav className="w-full bg-msscc-pink" aria-label="Admin navigation">
+      {/* Phones and tablets use a toggle plus a vertically scrollable link list. */}
       <div className="lg:hidden">
         <button
           type="button"
@@ -54,6 +56,7 @@ export const AdminNavbar = () => {
         )}
       </div>
 
+      {/* The full navigation replaces the toggle when the viewport reaches `lg`. */}
       <div className="container mx-auto hidden flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 py-3 lg:flex">
         {adminNavLinks.map((link) => {
           const isActive = isLinkActive(link.href);

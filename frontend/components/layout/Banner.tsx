@@ -45,10 +45,10 @@ export const Banner = () =>{
       {/* FB ICON  */}
       <SocialIcon />
 
-      {/* to try with blur div className= backdrop-blur-sm px-4 py-2 rounded-md */}
-      {/* Logo */}
+      {/* Mobile bottom padding reserves room for the action buttons below the logo. */}
       <div className="relative z-10 flex h-full items-center justify-center pb-12 sm:pb-0">
         <div className="px-4 py-2 rounded-md cursor-pointer" onClick={handleLogoClick}>
+          {/* Constrain the logo around the mobile action row; desktop uses its natural bounds. */}
           <Image
             src={mssccLogo}
             alt="MSSCC Logo"
@@ -59,7 +59,7 @@ export const Banner = () =>{
         </div>
       </div>
 
-      {/* Bottom-right actions: social media buttons will go left of LoginButton */}
+      {/* Center actions on phones, then restore the bottom-right desktop position at `sm`. */}
       <div className="absolute bottom-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 items-center justify-center gap-2 sm:left-auto sm:right-4 sm:max-w-none sm:translate-x-0">
         {!isAdminRoute && <LanguageToggle />}
         {isAuthenticated && (

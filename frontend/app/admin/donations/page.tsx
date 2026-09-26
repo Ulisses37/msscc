@@ -15,6 +15,8 @@ type SortColumn =
   | "donation_date"
   | "payment_status";
 
+// Only these record fields are included in the donation search. Keeping the
+// list separate makes it clear which API values can produce a table match.
 const searchableDonationFields: (keyof DonationEntry)[] = [
   "donor_first_name",
   "donor_last_name",
@@ -24,6 +26,8 @@ const searchableDonationFields: (keyof DonationEntry)[] = [
   "message",
 ];
 
+// This ordered catalog supplies both the field checkboxes and the exported column headings.
+// keyof keeps every selectable field tied to an actual value returned by the donation API.
 const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "donation_id", label: "Donation ID" },
   { key: "donor_first_name", label: "First name" },
@@ -38,6 +42,7 @@ const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "created_at", label: "Created at" },
 ];
 
+// Start with the same high-value fields shown in the summary table; admins can add detail fields.
 const defaultDonationExportFields: (keyof DonationEntry)[] = [
   "donation_date",
   "donor_first_name",
@@ -46,6 +51,7 @@ const defaultDonationExportFields: (keyof DonationEntry)[] = [
   "amount",
 ];
 
+// Spreadsheet widths are defined per API field because XLSX columns need explicit readable sizing.
 const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
   donation_id: 15,
   donor_first_name: 18,
@@ -60,6 +66,7 @@ const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
   created_at: 22,
 };
 
+// Parse date-only API values in local time so spreadsheet dates do not shift across time zones.
 function parseDateOnly(value: string): Date | null {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
@@ -70,6 +77,8 @@ function parseDateOnly(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// Convert API values to native spreadsheet cell types so Excel can sort and format them correctly.
+// Unparseable values fall back to text rather than being dropped from the export.
 function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEntry): XlsxCell {
   const value = donation[field];
 
@@ -120,13 +129,16 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
 export default function AdminDonationsPage() {
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
+  // Controlled input state keeps the visible search value and table filter in sync.
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("ascending");
+  // Keep the complete selected API record so the drawer always shows data from the row the admin chose.
   const [selectedDonation, setSelectedDonation] = useState<DonationEntry | null>(null);
+  // Export preferences live on the page while the reusable menu only renders and updates the controls.
   const [exportFormat, setExportFormat] = useState<ExportFormat>("csv");
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof DonationEntry)[]>(defaultDonationExportFields);
   const [isExporting, setIsExporting] = useState(false);
@@ -163,15 +175,19 @@ export default function AdminDonationsPage() {
       }
     }, []);
 
+    // Filter before sorting and pagination so every page and export operates on
+    // the same case-insensitive set of matching donation records.
     const filteredDonationItems = useMemo(() => {
       const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
 
+      // An empty (or whitespace-only) search restores the complete table.
       if (!normalizedQuery) {
         return donationItems;
       }
 
       return donationItems.filter((donation) => {
         const searchableValues = searchableDonationFields.map((field) => donation[field]);
+        // Also support searches such as "Jane Doe" across the two name fields.
         searchableValues.push(`${donation.donor_first_name} ${donation.donor_last_name}`);
 
         return searchableValues.some((value) =>
@@ -240,11 +256,13 @@ export default function AdminDonationsPage() {
 
     function handleSearchChange(event: React.ChangeEvent<HTMLInputElement>) {
       setSearchQuery(event.target.value);
+      // Start at the first page so a valid result is not hidden on a later page.
       setCurrentPage(1);
     }
 
     async function handleExport(format: ExportFormat, fields: (keyof DonationEntry)[]) {
       setExportError(null);
+      // Preserve the field-picker order and translate API keys into administrator-friendly headings.
       const selectedFieldOptions = fields.map((field) => {
         const fieldOption = donationExportFields.find((option) => option.key === field);
 
@@ -266,6 +284,7 @@ export default function AdminDonationsPage() {
           getValue: (donation) => donation[field],
         }));
 
+        // Export the complete filtered/sorted result set, not only the currently paginated table page.
         downloadCsv(`donations-${dateStamp}.csv`, sortedDonationItems, selectedColumns);
         return;
       }
@@ -276,6 +295,7 @@ export default function AdminDonationsPage() {
         getCell: (donation) => createDonationXlsxCell(donation, field),
       }));
 
+      // XLSX generation loads an additional browser library, so expose progress and recoverable errors.
       setIsExporting(true);
       try {
         await downloadXlsx(`donations-${dateStamp}.xlsx`, "Donations", sortedDonationItems, selectedColumns);
@@ -288,6 +308,7 @@ export default function AdminDonationsPage() {
     }
 
     const closeDonationDetails = useCallback(() => {
+      // Clearing the selection unmounts the drawer without changing the donation or table data.
       setSelectedDonation(null);
     }, []);
 
@@ -323,11 +344,13 @@ export default function AdminDonationsPage() {
                 {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}
                 {hasDonations && (
                   <>
+                    {/* Stack search and export controls on small screens, then align them on wider screens. */}
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                       <div className="w-full max-w-sm">
                         <label htmlFor="donation-search" className="mb-2 block text-label uppercase tracking-label text-msscc-gray-mid">
                           Search donations
                         </label>
+                        {/* The relative wrapper anchors the decorative icon while the input remains full-width and labeled. */}
                         <div className="relative">
                           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-msscc-gray-mid">
                             <circle cx="11" cy="11" r="7" />
@@ -343,6 +366,7 @@ export default function AdminDonationsPage() {
                           />
                         </div>
                       </div>
+                      {/* The shared menu connects format/field controls to this page's donation export handler. */}
                       <DataExportMenu
                         entityLabel="donations"
                         fields={donationExportFields}
@@ -355,8 +379,10 @@ export default function AdminDonationsPage() {
                         isExporting={isExporting}
                       />
                     </div>
+                    {/* Keep the search control visible while replacing an empty result table with clear feedback. */}
                     {hasSearchResults ? (
                       <>
+                        {/* Stable backend IDs keep the visual selection attached to the correct row after sorting. */}
                         <PostTable
                           dataEntries={paginate(sortedDonationItems, currentPage, itemsPerPage)}
                           columns={columns}
@@ -378,6 +404,7 @@ export default function AdminDonationsPage() {
                 }
       </main>
 
+      {/* Only mount the viewport-level drawer after a row has supplied its donation record. */}
       {selectedDonation && (
         <DonationDetailDrawer
           donation={selectedDonation}

@@ -1,6 +1,6 @@
 import type { LoginButtonProps } from '@/types/auth';
 
-/** Renders a single unconditional "Login" button. */
+/** Renders a single login action sized to fit the mobile banner action row. */
 export function LoginButton({ onLoginClick }: LoginButtonProps) {
   return (
     <button
