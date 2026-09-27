@@ -27,7 +27,15 @@ export function PermissionCard (
     <div className={`border rounded-md p-6 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x min-h-32 items-center bg-gray-50`}>
       <div className = "basis-2/12 w-full md:w-auto">
         <h1 className = "text-black text-[clamp(0.75rem,2vw,1.25rem)]">{adminInformation.first_name} {adminInformation.last_name}</h1>
-        {adminInformation.is_executive && <p className = "text-gray-500 text-[clamp(0.5rem,1vw,1rem)]">Executive</p> }
+          {adminInformation.email == "msscc.scrumloards.dev@gmail.com" ? (
+            <p className="text-white text-[clamp(.5rem,1vw,1rem)] bg-green-400 hover:bg-green-600 text-center mx-8 cursor-pointer">
+              Promote
+            </p>
+          )  : (
+            adminInformation.is_executive && (
+            <p className="text-gray-500 text-[clamp(0.5rem,1vw,1rem)]">Executive</p>
+          )
+        )}
       </div>
       <p className = "basis-3/12 w-full md:w-auto flex items-center justify-center text-black text-[clamp(0.5rem,1.5vw,1.0rem)]">{adminInformation.email}</p>
 
