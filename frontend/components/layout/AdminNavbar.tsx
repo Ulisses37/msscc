@@ -4,17 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { adminNavLinks } from '@/config/adminNavLinks';
-import { hasPermission } from '../admin/AdminPermssionHandler';
+import { hasPermission, fetchLocalStorageAdmin } from '../admin/AdminPermssionHandler';
+
 
 export const AdminNavbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [adminPermissions, setAdminPermissions] = useState<[string, boolean][]>([]);
 
   // Collapse the mobile menu after a navigation so the next page is not obscured.
   useEffect(() => {
     setIsMenuOpen(false);
-    fetchAdminPermissions(setAdminPermissions);
   }, [pathname]);
 
   const isLinkActive = (href: string) =>
@@ -43,7 +42,7 @@ export const AdminNavbar = () => {
               const isActive = isLinkActive(link.href);
 
               {/* check if link is allowed for the admin */}
-              if (hasPermission({adminPermissions: adminPermissions, permissionNeeded: link.label})){
+              if (hasPermission({adminPermissions: fetchLocalStorageAdmin()?.permissionData, permissionNeeded: link.label})){
                 return (
                   <Link
                     key={link.href}
@@ -68,7 +67,7 @@ export const AdminNavbar = () => {
           const isActive = isLinkActive(link.href);
 
           {/* check if link is allowed for the admin */}
-          if (hasPermission({adminPermissions: adminPermissions, permissionNeeded: link.label})){
+          if (hasPermission({adminPermissions: fetchLocalStorageAdmin()?.permissionData, permissionNeeded: link.label})){
             return (
               <Link
                 key={link.href}
@@ -91,18 +90,4 @@ export const AdminNavbar = () => {
   );
 };
 
-function fetchAdminPermissions(
-    setAdminPermissions: React.Dispatch<React.SetStateAction<[string, boolean][]>>
-){
-  const current_admin = localStorage.getItem("msscc_user");
-  if (!current_admin) return;
 
-  const userData: {
-    userId: string;
-    email: string;
-    firstName: string;
-    permissionData: Record<string, boolean>;
-  } = JSON.parse(current_admin);
-
-  setAdminPermissions(Object.entries(userData.permissionData));
-}

@@ -3,9 +3,12 @@
 import { Banner } from '@/components/layout/Banner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { WelcomeBanner } from "@/components/admin/WelcomeBanner";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminNavbar } from "@/components/layout/AdminNavbar";
 import { AdminFooter } from "@/components/layout/AdminFooter";
+import { fetchLocalStorageAdmin, hasPermission } from '@/components/admin/AdminPermssionHandler';
+import { adminNavLinks } from '@/config/adminNavLinks';
+import { useEffect } from 'react';
 
 export default function AdminLayout({
                                       children,
@@ -14,6 +17,12 @@ export default function AdminLayout({
 }>) {
   const pathname = usePathname();
   const isDashboard = pathname === '/admin/dashboard';
+  const router = useRouter();
+
+  useEffect(() => {
+    console.log(pathname);
+    verifyPermissions({pathname: pathname, router: router});
+  }, [pathname]);
 
   return (
     <div className="flex min-h-screen flex-col bg-msscc-white">
@@ -34,4 +43,30 @@ export default function AdminLayout({
       <AdminFooter />
     </div>
   );
+}
+
+function verifyPermissions(
+  {
+    pathname,
+    router,
+  } : {
+    pathname: string;
+    router: ReturnType<typeof useRouter>
+  }
+){
+  // If link does not exist
+  const currentLink = adminNavLinks.find((link) => link.href === pathname);
+  if (!currentLink){
+    router.push("/admin");
+    return false;
+  }
+
+  // check if page link is eligible for this admin
+  const eligible = hasPermission(
+    {
+      adminPermissions: fetchLocalStorageAdmin()?.permissionData,
+      permissionNeeded: currentLink.label
+      })
+
+  if (!eligible) router.push("/admin");
 }
