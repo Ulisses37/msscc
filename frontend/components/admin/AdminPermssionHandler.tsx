@@ -26,10 +26,13 @@ export function hasPermission(
   {
     adminPermissions,
     permissionNeeded,
+    isExecutive,
   } : {
     adminPermissions?: Record<string, boolean>;
     permissionNeeded: string;
+    isExecutive: boolean;
   }): boolean {
+    if (isExecutive) return true;
     if (!adminPermissions) return false;
 
     const Permission = getPagePermission(permissionNeeded);
@@ -47,6 +50,7 @@ export function fetchLocalStorageAdmin(){
     email: string;
     firstName: string;
     permissionData: Record<string, boolean>;
+    isExecutive: boolean;
   } = JSON.parse(current_admin);
 
   return userData;
