@@ -65,11 +65,11 @@ class DonationSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def create(self, validated_data):
-        """Set server-controlled fields without requiring a database migration."""
+        """Create a donation with server-controlled payment fields."""
         donation = Donation.objects.create(
             **validated_data,
             donation_date=timezone.localdate(),
-            payment_status="pending",
+            payment_status=Donation.PaymentStatus.PENDING,
             reference_id="pending",
         )
         donation.reference_id = f"DON-{donation.donation_id:08d}"
