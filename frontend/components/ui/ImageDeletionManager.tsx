@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type ImageItem = {
   media_asset_id: number;
@@ -158,8 +159,10 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal((
+    <div className="fixed left-0 top-0 z-[9999] flex h-[100dvh] w-[100vw] items-center justify-center overflow-y-auto bg-black/50 p-4">
       <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
         <div className="flex items-center justify-between rounded-t-2xl border-b border-msscc-teal-dark bg-msscc-teal-light p-5">
           <div>
@@ -265,5 +268,5 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
         </div>
       </div>
     </div>
-  );
+  ), document.body);
 }

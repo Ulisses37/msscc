@@ -105,32 +105,31 @@ export default function ReplaceImage() {
 
 
   return (
-    <main className="bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
-      <h3 className="text-1xl mb-6">Replace Image</h3>
-
-      <div className="flex flex-col items-center gap-4">
-        Select what image you would like to replace:
-        <div className="flex gap-4">
+    <main className="w-full bg-msscc-white font-body text-msscc-gray-dark">
+      <h2 className="mb-2 font-heading text-xl font-medium text-msscc-teal">Replace Image</h2>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-msscc-gray-mid">Select a catagory and the image you would like to replace:</p>
+        <div className="flex flex-wrap gap-3">
           {(selectedModel === "events" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
+            <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
             onClick={() => setSelectedModel(prev =>prev === "events" ? null : "events")}>
               {selectedModel === null ? "Events" : "Cancel"}
             </button>
           )}
           {(selectedModel === "board-members" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
+            <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
             onClick={() => setSelectedModel(prev =>prev === "board-members" ? null : "board-members")}>
               {selectedModel === null ? "Board Members" : "Cancel"}
             </button>
           )}
           {(selectedModel === "partners" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
+            <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
             onClick={() => setSelectedModel(prev =>prev === "partners" ? null : "partners")}>
               {selectedModel === null ? "Partners" : "Cancel"}
             </button>
           )}
           {(selectedModel === "static-images" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
+            <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
             onClick={() => setSelectedModel(prev =>prev === "static-images" ? null : "static-images")}>
               {selectedModel === null ? "Icons" : "Cancel"}
             </button>
@@ -147,15 +146,16 @@ export default function ReplaceImage() {
           selectedModelId={selectedModelId}
         />
 
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-msscc-gray-mid">
           {selectedModel ? `Pick an image` : "No category selected."}
-          <div className="grid grid-cols-2 divide-x divide-slate-300 rounded-md overflow-hidden text-sm text-slate-600">
+          <div className="grid grid-cols-2 divide-x divide-msscc-gray-light overflow-hidden rounded-md border border-msscc-gray-light text-sm text-msscc-gray-mid">
             <button
               onClick={() =>
                 setImageMode(prev => prev === "upload" ? null : "upload")
               }
-              className={`flex items-center justify-center p-3 transition bg-msscc-teal text-white ${
-                imageMode === "upload" ? "bg-msscc-teal text-white" : "hover:bg-msscc-teal-light"
+              disabled={!(selectedModel)}
+              className={`flex items-center justify-center p-3 text-btn transition ${
+                imageMode === "upload" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
               }`}
             >
               Import New Image
@@ -164,8 +164,9 @@ export default function ReplaceImage() {
               onClick={() =>
                 setImageMode(prev => prev === "select" ? null : "select")
               }
-              className={`flex items-center justify-center p-3 transition bg-msscc-teal text-white ${
-                imageMode === "select" ? "bg-msscc-teal text-white" : "hover:bg-msscc-teal-light"
+              disabled={!(selectedModel)}
+              className={`flex items-center justify-center p-3 text-btn transition ${
+                imageMode === "select" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
               }`}
             >
               Select Existing Image
@@ -212,11 +213,11 @@ export default function ReplaceImage() {
                 (imageMode === "upload" && !selectedFile) ||
                 (imageMode === "select" && !selectedReplacementId)
               }
-              className="rounded-md bg-msscc-teal text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
+              className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:bg-msscc-gray-light"
             >
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
-            <span className="text-sm text-slate-700">
+            <span className="text-sm text-msscc-gray-mid">
               {selectedFile ? selectedFile.name : 'No file selected.'}
               {selectedReplacementId && imageMode === "select" && (
                 <span className="ml-2">Selected: {selectedReplacementId}</span>
@@ -225,9 +226,9 @@ export default function ReplaceImage() {
           </div>
         )}
 
-        {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+        {submitError && <p className="text-sm text-msscc-danger">{submitError}</p>}
         {uploadedUrl && (
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-msscc-teal">
             Image uploaded successfully: <span className="underline">{uploadedUrl}</span>
           </p>
         )}

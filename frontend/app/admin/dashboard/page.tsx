@@ -57,14 +57,14 @@ export default function Dashboard() {
 
   {/* Control for admins*/}
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
-      <h1 className="text-3xl font-semibold mb-6">Administrative Dashboard</h1>
+    <main className="min-h-screen space-y-10 bg-msscc-white p-10 font-body text-msscc-gray-dark flex flex-col items-center">
+      <h1 className="mb-6 font-heading text-3xl font-semibold text-msscc-teal">Administrative Dashboard</h1>
 
       {/** Must have ability to upload images: Debug element */}
-      <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-xl font-medium">Import Images</h2>
-          <p className="text-sm text-slate-600 mt-2">
+          <h2 className="font-heading text-xl font-medium text-msscc-teal">Import Images</h2>
+          <p className="mt-2 text-sm text-msscc-gray-mid">
             Select an image and submit it to upload to the backend.
           </p>
         </div>
@@ -82,19 +82,19 @@ export default function Dashboard() {
               type="button"
               onClick={handleSubmit}
               disabled={!selectedFile || isSubmitting}
-              className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
+              className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:bg-msscc-gray-light"
             >
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
 
-            <span className="text-sm text-slate-700">
+            <span className="text-sm text-msscc-gray-mid">
               {selectedFile ? selectedFile.name : 'No file selected.'}
             </span>
           </div>
 
-          {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+          {submitError && <p className="text-sm text-msscc-danger">{submitError}</p>}
           {uploadedUrl && (
-            <p className="text-sm text-green-700">
+            <p className="text-sm text-msscc-teal">
               Image uploaded successfully: <span className="underline">{uploadedUrl}</span>
             </p>
           )}
@@ -102,18 +102,18 @@ export default function Dashboard() {
       </section>
 
       {/** Must have ability to delete images from storage: Debug Element */}
-      <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-xl font-medium">Delete Stored Images</h2>
-          <p className="text-sm text-slate-600 mt-2">
-            Open the image deletion manager to select IDs from storage.
+          <h2 className="font-heading text-xl font-medium text-msscc-teal">Delete Stored Images</h2>
+          <p className="mt-2 text-sm text-msscc-gray-mid">
+            Select Media and Images from storage to delete.
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setShowDeleteManager(true)}
-          className="rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700"
+          className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
         >
           {showDeleteManager ? 'In Progress' : 'Click to Start'}
         </button>
@@ -124,7 +124,7 @@ export default function Dashboard() {
         <ImageDeletionManager onClose={() => setShowDeleteManager(false)} />
       )}
 
-      <section className="w-full max-w-2xl bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <section className="w-full max-w-2xl bg-white border border-msscc-gray-light rounded-xl shadow-sm p-6">
         <ReplaceImage />
       </section>
     </main>
