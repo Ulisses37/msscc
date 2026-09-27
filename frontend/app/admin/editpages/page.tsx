@@ -129,6 +129,23 @@ export default function EditPagesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+
+  const handlePreviewLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const previewDocument = event.currentTarget.contentDocument;
+
+    if (!previewDocument) return;
+
+    const preventInteraction = (interactionEvent: Event) => {
+      interactionEvent.preventDefault();
+      interactionEvent.stopPropagation();
+    };
+
+    ['click', 'dblclick', 'submit'].forEach((eventName) => {
+      previewDocument.addEventListener(eventName, preventInteraction, true);
+    });
+  };
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -292,7 +309,7 @@ export default function EditPagesPage() {
     }
 };
 
-  const handleViewLivePage = () => {
+  const handlePreviewPage = () => {
     if (selectedPageId === null) return;
 
     const selectedPage = pages.find(
@@ -306,18 +323,44 @@ export default function EditPagesPage() {
         ? '/en'
         : `/en/${selectedPage.page_slug}`;
 
-    // Open the selcted page in a new tab
-    window.open(pagePath, '_blank');
+    setPreviewPath(pagePath);
+    setIsPreviewOpen(true);
   };
 
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         {/* Save Status Toast */}
         {saveMessage && (
-          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-sm font-semibold text-msscc-gray-dark shadow-md">
+          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-label font-semibold text-msscc-gray-dark shadow-md">
             {saveMessage}
           </div>
         )}
+         {isPreviewOpen && previewPath && (
+           <div
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+             role="dialog"
+             aria-modal="true"
+             aria-label="Page preview"
+           >
+             <div className="relative aspect-video max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl">
+               <button
+                 type="button"
+                 onClick={() => setIsPreviewOpen(false)}
+                 className="absolute right-6 top-2 z-10 rounded-full bg-white px-2 text-msscc-gray-dark shadow hover:bg-gray-100 opacity-45"
+                 aria-label="Close page preview"
+               >
+                 ×
+               </button>
+               <iframe
+                 src={previewPath}
+                 title="Selected page preview"
+                  tabIndex={-1}
+                  onLoad={handlePreviewLoad}
+                  className="h-full w-full border-0"
+               />
+             </div>
+           </div>
+         )}
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
@@ -334,11 +377,11 @@ export default function EditPagesPage() {
           View Live Page Button
           <button
             type="button"
-            onClick={handleViewLivePage}
+            onClick={handlePreviewPage}
             disabled={selectedPageId === null}
             className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            View Live Page
+            Preview Page
           </button>
         </div>*/}
 
@@ -346,15 +389,11 @@ export default function EditPagesPage() {
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
-
-              {/*adjust Save and Preview here*/}
-
               {/* Save and Preview Buttons */}
-
               <div className="mb-8 flex flex-row items-end gap-1.5">
                 <button
                   type="button"
-                  onClick={handleViewLivePage}
+                  onClick={handlePreviewPage}
                   disabled={selectedPageId === null}
                   className="whitespace-nowrap rounded-sm border border-msscc-teal px-2.5 py-2 text-msscc-teal text-btn transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
