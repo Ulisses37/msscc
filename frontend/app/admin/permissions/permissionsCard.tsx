@@ -2,6 +2,7 @@
 import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
+import { getToolTip } from "@/components/admin/AdminPermssionHandler";
 
 function formatPermissionKey(key: string): string {
     return key
@@ -72,14 +73,18 @@ function PermissionIcon({ currentPermission, onToggle }: {
     onToggle: () => void
   }) {
     return (
-      <button onClick={onToggle}
-        className={`${currentPermission.hasPermission ? "bg-green-500 hover:bg-green-700 border-green-500 hover:border-green-700": "bg-gray-500 hover:bg-gray-700 border-gray-500 hover:border-gray-500 opacity-50"}
-        text-white border-2 p-1 md:p-1 text-[clamp(0.25rem,1.2vw,0.75rem)] rounded-sm inline-flex items-center justify-center leading-none h-8 md:h-10 w-full text-center`}>
+      <div
+      className={`
+        ${currentPermission.hasPermission ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-600"}
+        cursor-pointer text-white text-[clamp(0.25rem, 1.2vw, 0.75rem)] rounded-sm py-1 w-full text-center
+        `}
+      onClick={onToggle}
+      title={getToolTip(currentPermission.permissionName)}
+      >
         {formatPermissionKey(currentPermission.permissionName)}
-      </button>
+      </div>
     );
 }
-
 
 export function AdminPopup({
   currentAdminList,
