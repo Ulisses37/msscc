@@ -10,10 +10,12 @@ import { hasPermission, fetchLocalStorageAdmin } from '../admin/AdminPermssionHa
 export const AdminNavbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [localAdminPermissions, setLocalAdminPermissions] = useState<Record<string, boolean> | undefined>();
 
   // Collapse the mobile menu after a navigation so the next page is not obscured.
   useEffect(() => {
     setIsMenuOpen(false);
+    setLocalAdminPermissions(fetchLocalStorageAdmin()?.permissionData);
   }, [pathname]);
 
   const isLinkActive = (href: string) =>
@@ -42,7 +44,7 @@ export const AdminNavbar = () => {
               const isActive = isLinkActive(link.href);
 
               {/* check if link is allowed for the admin */}
-              if (hasPermission({adminPermissions: fetchLocalStorageAdmin()?.permissionData, permissionNeeded: link.label})){
+              if (hasPermission({adminPermissions: localAdminPermissions, permissionNeeded: link.label})){
                 return (
                   <Link
                     key={link.href}
@@ -67,7 +69,7 @@ export const AdminNavbar = () => {
           const isActive = isLinkActive(link.href);
 
           {/* check if link is allowed for the admin */}
-          if (hasPermission({adminPermissions: fetchLocalStorageAdmin()?.permissionData, permissionNeeded: link.label})){
+          if (hasPermission({adminPermissions: localAdminPermissions, permissionNeeded: link.label})){
             return (
               <Link
                 key={link.href}
