@@ -4,14 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { adminNavLinks } from '@/config/adminNavLinks';
+import { hasPermission } from '../admin/AdminPermssionHandler';
 
 export const AdminNavbar = () => {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [adminPermissions, setAdminPermissions] = useState<[string, boolean][]>([]);
 
   // Collapse the mobile menu after a navigation so the next page is not obscured.
   useEffect(() => {
     setIsMenuOpen(false);
+    fetchAdminPermissions(setAdminPermissions);
   }, [pathname]);
 
   const isLinkActive = (href: string) =>
@@ -39,18 +42,21 @@ export const AdminNavbar = () => {
             {adminNavLinks.map((link) => {
               const isActive = isLinkActive(link.href);
 
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`block border-b border-white/15 px-4 py-3 text-nav-admin !text-white transition-colors last:border-b-0 hover:bg-msscc-pink-dark ${
-                    isActive ? 'bg-msscc-pink-dark font-bold' : 'opacity-80'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
+              {/* check if link is allowed for the admin */}
+              if (hasPermission({adminPermissions: adminPermissions, permissionNeeded: link.label})){
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`block border-b border-white/15 px-4 py-3 text-nav-admin !text-white transition-colors last:border-b-0 hover:bg-msscc-pink-dark ${
+                      isActive ? 'bg-msscc-pink-dark font-bold' : 'opacity-80'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              }
             })}
           </div>
         )}
@@ -61,23 +67,42 @@ export const AdminNavbar = () => {
         {adminNavLinks.map((link) => {
           const isActive = isLinkActive(link.href);
 
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={isActive ? 'page' : undefined}
-              className={`relative text-nav-admin font-medium !text-white transition-opacity hover:opacity-100 ${
-                isActive ? 'opacity-100' : 'opacity-70'
-              }`}
-            >
-              {link.label}
-              {isActive && (
-                <span className="absolute -bottom-1 left-0 w-full border-b-2 border-white" />
-              )}
-            </Link>
-          );
-        })}
+          {/* check if link is allowed for the admin */}
+          if (hasPermission({adminPermissions: adminPermissions, permissionNeeded: link.label})){
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative text-nav-admin font-medium !text-white transition-opacity hover:opacity-100 ${
+                  isActive ? 'opacity-100' : 'opacity-70'
+                }`}
+              >
+                {link.label}
+                {isActive && (
+                  <span className="absolute -bottom-1 left-0 w-full border-b-2 border-white" />
+                )}
+              </Link>
+            );
+          }
+          })}
       </div>
     </nav>
   );
 };
+
+function fetchAdminPermissions(
+    setAdminPermissions: React.Dispatch<React.SetStateAction<[string, boolean][]>>
+){
+  const current_admin = localStorage.getItem("msscc_user");
+  if (!current_admin) return;
+
+  const userData: {
+    userId: string;
+    email: string;
+    firstName: string;
+    permissionData: Record<string, boolean>;
+  } = JSON.parse(current_admin);
+
+  setAdminPermissions(Object.entries(userData.permissionData));
+}
