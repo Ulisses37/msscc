@@ -9,9 +9,11 @@ import { DonationForm } from '@/components/support/DonationForm';
 import type { DbContentBlock } from '@/types/content';
 
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 export default function SupportPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const locale = params?.locale;
 
@@ -19,6 +21,7 @@ export default function SupportPage() {
     const loadPageContent = async () => {
       try {
         const data = await fetchPageContent('support');
+        if (previewReceivedRef.current) return;
         setContentBlocks(data);
       } catch (error) {
         console.error('Error fetching page content:', error);

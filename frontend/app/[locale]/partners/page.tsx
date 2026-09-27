@@ -16,6 +16,7 @@ import type { DbContentBlock } from '@/types/content';
 
 // Utils Imports
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 interface PartnerLinkProps {
   name: string;
@@ -58,6 +59,7 @@ function PartnerLink({ name, href }: PartnerLinkProps) {
 
 export default function PartnersPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('partners'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const [partners, setPartners] = useState<PartnerRecord[]>([]);
   const params = useParams();
   const locale = params?.locale;
@@ -68,6 +70,7 @@ export default function PartnersPage() {
     const loadPageContent = async () => {
       try {
         const data = await fetchPageContent('partners');
+        if (previewReceivedRef.current) return;
         setContentBlocks(data);
       } catch (error) {
         console.error('Error fetching page content:', error);

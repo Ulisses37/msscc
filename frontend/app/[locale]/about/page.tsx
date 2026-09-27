@@ -13,6 +13,7 @@ import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 interface BoardMember {
   boardMemberName: string;
@@ -27,6 +28,7 @@ export default function AboutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('about'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const locale = params?.locale;
   const isJapanese = locale === 'ja';
@@ -36,6 +38,7 @@ export default function AboutPage() {
     const loadPageContent = async () => {
       try {
         const data = await fetchPageContent('about');
+        if (previewReceivedRef.current) return;
         setContentBlocks(data);
       } catch (error) {
         console.error('Error fetching page content:', error);
