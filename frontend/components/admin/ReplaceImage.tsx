@@ -105,32 +105,32 @@ export default function ReplaceImage() {
 
 
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
+    <main className="bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center gap-10">
       <h3 className="text-1xl mb-6">Replace Image</h3>
 
-      <div className="flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-4">
         Select what image you would like to replace:
         <div className="flex gap-4">
           {(selectedModel === "events" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
             onClick={() => setSelectedModel(prev =>prev === "events" ? null : "events")}>
               {selectedModel === null ? "Events" : "Cancel"}
             </button>
           )}
           {(selectedModel === "board-members" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
             onClick={() => setSelectedModel(prev =>prev === "board-members" ? null : "board-members")}>
               {selectedModel === null ? "Board Members" : "Cancel"}
             </button>
           )}
           {(selectedModel === "partners" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
             onClick={() => setSelectedModel(prev =>prev === "partners" ? null : "partners")}>
               {selectedModel === null ? "Partners" : "Cancel"}
             </button>
           )}
           {(selectedModel === "static-images" || selectedModel === null) && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            <button className="px-4 py-2 bg-msscc-teal text-white rounded hover:bg-msscc-teal-dark"
             onClick={() => setSelectedModel(prev =>prev === "static-images" ? null : "static-images")}>
               {selectedModel === null ? "Icons" : "Cancel"}
             </button>
@@ -149,13 +149,13 @@ export default function ReplaceImage() {
 
         <div className="text-sm text-slate-600">
           {selectedModel ? `Pick an image` : "No category selected."}
-          <div className="grid grid-cols-2 divide-x divide-slate-300 border rounded-md overflow-hidden text-sm text-slate-600">
+          <div className="grid grid-cols-2 divide-x divide-slate-300 rounded-md overflow-hidden text-sm text-slate-600">
             <button
               onClick={() =>
                 setImageMode(prev => prev === "upload" ? null : "upload")
               }
-              className={`flex items-center justify-center p-3 transition ${
-                imageMode === "upload" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"
+              className={`flex items-center justify-center p-3 transition bg-msscc-teal text-white ${
+                imageMode === "upload" ? "bg-msscc-teal text-white" : "hover:bg-msscc-teal-light"
               }`}
             >
               Import New Image
@@ -164,8 +164,8 @@ export default function ReplaceImage() {
               onClick={() =>
                 setImageMode(prev => prev === "select" ? null : "select")
               }
-              className={`flex items-center justify-center p-3 transition ${
-                imageMode === "select" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50"
+              className={`flex items-center justify-center p-3 transition bg-msscc-teal text-white ${
+                imageMode === "select" ? "bg-msscc-teal text-white" : "hover:bg-msscc-teal-light"
               }`}
             >
               Select Existing Image
@@ -212,7 +212,7 @@ export default function ReplaceImage() {
                 (imageMode === "upload" && !selectedFile) ||
                 (imageMode === "select" && !selectedReplacementId)
               }
-              className="rounded-md bg-slate-900 text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
+              className="rounded-md bg-msscc-teal text-white px-4 py-2 text-sm font-medium disabled:bg-slate-400"
             >
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
