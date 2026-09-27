@@ -6,10 +6,9 @@
 const permissionsCategories: Record<string, string[]> = {
   Finances: ["Members", "Donations", "Partners"],
   Text_Editing: ["Edit Pages"],
-  Board_Members: ["Board Members"],
+  Board_Members: ["Board Members", "Board of Directors"],
   Events: ["Events", "Volunteers"],
   Executive: ["Permissions Pages"],
-  Help: ["Dashboard", "Documentation Pages", "Help Pages"],
 }
 
 // find which category the submitted page belongs to
@@ -34,7 +33,7 @@ export function hasPermission(
     if (!adminPermissions) return false;
 
     const Permission = getPagePermission(permissionNeeded);
-    if(!Permission) return false;
+    if(!Permission) return true;
 
   return !!adminPermissions[Permission];
 }

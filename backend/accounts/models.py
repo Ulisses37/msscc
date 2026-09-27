@@ -24,11 +24,11 @@ class AdminUserManager(BaseUserManager):
 def default_permissions():
     """Return the default permissions for a new admin user."""
     return {
-        "Events Manipulation": False,
-        "Send Emails": False,
-        "View Member Records": False,
-        "Page Edit": False,
-        "Translation Edit": False,
+        "Finances": False,
+        "Text_Editing": False,
+        "Board_Members": False,
+        "Events": False,
+        "Executive": False,
     }
 
 
