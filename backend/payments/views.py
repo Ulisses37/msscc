@@ -45,6 +45,44 @@ class PaymentSessionCreateView(APIView):
         # validated values are passed to the payment service.
         validated_data = serializer.validated_data
 
+        internal_reference = validated_data["internal_reference"]
+
+        # Donation payment sessions must match a real pending Donation. This
+        # prevents a completed, failed, or canceled donation from starting a
+        # second Stripe payment and prevents the browser from changing the
+        # amount after the Donation record has been created.
+        if internal_reference.startswith("DON-"):
+            try:
+                donation = Donation.objects.only(
+                    "amount",
+                    "payment_status",
+                ).get(reference_id=internal_reference)
+            except Donation.DoesNotExist:
+                return Response(
+                    {"detail": "Donation was not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except Donation.MultipleObjectsReturned:
+                logger.error(
+                    "Payment session request matched multiple donations."
+                )
+                return Response(
+                    {"detail": "Unable to create payment session."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            if donation.payment_status != "pending":
+                return Response(
+                    {"detail": "This donation cannot start another payment."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            if donation.amount != validated_data["amount"]:
+                return Response(
+                    {"detail": "Payment amount does not match the donation."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         # Construct the return URL on the server. Accepting a complete return
         # URL from the browser could allow an attacker to redirect a user to
         # an untrusted website.
@@ -62,7 +100,7 @@ class PaymentSessionCreateView(APIView):
                 amount=validated_data["amount"],
                 currency=validated_data["currency"],
                 payment_purpose=validated_data["payment_purpose"],
-                internal_reference=validated_data["internal_reference"],
+                internal_reference=internal_reference,
                 return_url=return_url,
             )
 

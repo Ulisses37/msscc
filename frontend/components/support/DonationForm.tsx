@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { DonationSummary } from '@/components/support/DonationSummary';
@@ -51,6 +51,7 @@ export function DonationForm() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const submissionInFlight = useRef(false);
 
   // This result comes from the Donation record updated by Stripe's signed
   // webhook. A successful browser redirect alone is not treated as proof of
@@ -66,6 +67,37 @@ export function DonationForm() {
   // Stripe uses this client secret to render the Payment Element.
   // This is not the Stripe account's secret API key.
   const [clientSecret, setClientSecret] = useState('');
+
+  const clearReturnedSessionFromUrl = () => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('session_id');
+    window.history.replaceState(
+      {},
+      '',
+      `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+    );
+  };
+
+  const handleEditDonationDetails = () => {
+    // Preserve the entered form values, but discard the old Stripe session
+    // and Donation reference. The next submission creates a new attempt so
+    // late webhooks from the failed attempt cannot overwrite the new one.
+    setClientSecret('');
+    setSubmittedReference('');
+    setPaymentStatus(null);
+    setPaymentStatusError(false);
+    setSubmitError('');
+    clearReturnedSessionFromUrl();
+  };
+
+  const handleStartNewAttempt = () => {
+    setClientSecret('');
+    setSubmittedReference('');
+    setPaymentStatus(null);
+    setPaymentStatusError(false);
+    setSubmitError('');
+    clearReturnedSessionFromUrl();
+  };
 
   useEffect(() => {
     const sessionId = new URLSearchParams(window.location.search).get(
@@ -160,8 +192,16 @@ export function DonationForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formIsValid || clientSecret || isSubmitting) return;
+    if (
+      !formIsValid ||
+      clientSecret ||
+      isSubmitting ||
+      submissionInFlight.current
+    ) {
+      return;
+    }
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     setSubmitError('');
 
@@ -221,6 +261,7 @@ export function DonationForm() {
         donationWasCreated ? t('paymentSessionError') : t('submitError'),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -232,16 +273,23 @@ export function DonationForm() {
       </h2>
 
       {paymentStatusError && (
-        <p
+        <div
           className="mb-6 max-w-[600px] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
           role="alert"
         >
-          {t('paymentResultUnavailable')}
-        </p>
+          <p>{t('paymentResultUnavailable')}</p>
+          <button
+            type="button"
+            onClick={handleStartNewAttempt}
+            className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60"
+          >
+            {t('startNewDonationAttempt')}
+          </button>
+        </div>
       )}
 
       {!paymentStatusError && paymentStatus && (
-        <p
+        <div
           className={`mb-6 max-w-[600px] rounded-md border p-4 text-sm ${
             paymentStatus === 'completed'
               ? 'border-green-200 bg-green-50 text-green-800'
@@ -252,15 +300,26 @@ export function DonationForm() {
           role={paymentStatus === 'pending' ? 'status' : 'alert'}
           aria-live="polite"
         >
-          {paymentStatusMessage}
-        </p>
+          <p>{paymentStatusMessage}</p>
+
+          {(paymentStatus === 'failed' || paymentStatus === 'canceled') && (
+            <button
+              type="button"
+              onClick={handleStartNewAttempt}
+              className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60"
+            >
+              {t('startNewDonationAttempt')}
+            </button>
+          )}
+        </div>
       )}
 
-      <form
-        className="max-w-[600px] space-y-6"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      {!paymentStatus && (
+        <form
+          className="max-w-[600px] space-y-6"
+          onSubmit={handleSubmit}
+          noValidate
+        >
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -437,9 +496,11 @@ export function DonationForm() {
           <StripePaymentElement
             clientSecret={clientSecret}
             email={email}
+            onEditDonationDetails={handleEditDonationDetails}
           />
         )}
-      </form>
+        </form>
+      )}
     </section>
   );
 }
