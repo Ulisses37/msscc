@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -12,10 +12,12 @@ import {
 interface StripePaymentElementProps {
   clientSecret: string;
   email: string;
+  onEditDonationDetails: () => void;
 }
 
 interface CheckoutPaymentFormProps {
   email: string;
+  onEditDonationDetails: () => void;
 }
 
 // Load Stripe once instead of creating a new Stripe instance every time
@@ -24,12 +26,16 @@ const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
 );
 
-function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
+function CheckoutPaymentForm({
+  email,
+  onEditDonationDetails,
+}: CheckoutPaymentFormProps) {
   const t = useTranslations("SupportPage");
   const checkoutState = useCheckoutElements();
 
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
+  const confirmationInFlight = useRef(false);
 
   // Checkout is only available after Stripe has successfully initialized.
   // Defining it here also allows the email synchronization effect to run
@@ -106,10 +112,15 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
   const handleConfirmPayment = async () => {
     // Prevent confirmation until Stripe reports that all required payment
     // information has been entered.
-    if (!checkout.canConfirm || isConfirming) {
+    if (
+      !checkout.canConfirm ||
+      isConfirming ||
+      confirmationInFlight.current
+    ) {
       return;
     }
 
+    confirmationInFlight.current = true;
     setIsConfirming(true);
     setConfirmationError("");
 
@@ -125,10 +136,12 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
        */
       if (result.type === "error") {
         setConfirmationError(t("paymentConfirmationError"));
+        confirmationInFlight.current = false;
         setIsConfirming(false);
       }
     } catch {
       setConfirmationError(t("paymentConfirmationError"));
+      confirmationInFlight.current = false;
       setIsConfirming(false);
     }
   };
@@ -153,8 +166,23 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
         disabled={!checkout.canConfirm || isConfirming}
         className="mt-5 w-full rounded-md bg-pink-700 px-4 py-3 font-semibold text-white transition-colors hover:bg-pink-800 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
       >
-        {isConfirming ? t("confirmingPayment") : t("confirmPayment")}
+        {isConfirming
+          ? t("confirmingPayment")
+          : confirmationError
+            ? t("tryPaymentAgain")
+            : t("confirmPayment")}
       </button>
+
+      {confirmationError && (
+        <button
+          type="button"
+          onClick={onEditDonationDetails}
+          disabled={isConfirming}
+          className="mt-3 w-full rounded-md border border-slate-400 bg-white px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {t("editDonationDetails")}
+        </button>
+      )}
     </div>
   );
 }
@@ -162,6 +190,7 @@ function CheckoutPaymentForm({ email }: CheckoutPaymentFormProps) {
 export function StripePaymentElement({
   clientSecret,
   email,
+  onEditDonationDetails,
 }: StripePaymentElementProps) {
   const t = useTranslations("SupportPage");
 
@@ -192,7 +221,10 @@ export function StripePaymentElement({
         stripe={stripePromise}
         options={{ clientSecret }}
       >
-        <CheckoutPaymentForm email={email} />
+        <CheckoutPaymentForm
+          email={email}
+          onEditDonationDetails={onEditDonationDetails}
+        />
       </CheckoutElementsProvider>
     </div>
   );
