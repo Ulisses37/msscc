@@ -11,6 +11,7 @@ export interface UserPayload {
   firstName: string;
 
   permissionData: JSON;
+  isExecutive: boolean;
 }
 
 /** Shape of the value provided by AuthContext. */
