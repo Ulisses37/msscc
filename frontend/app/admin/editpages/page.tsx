@@ -321,8 +321,8 @@ export default function EditPagesPage() {
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
-        <div className="mb-8 flex flex-col items-end gap-3">
-          {/* The Save Button */}
+        {/*<div className="mb-8 flex flex-col items-end gap-3">
+          The Save Button
           <button
             type="button"
             onClick={handleSave}
@@ -331,7 +331,7 @@ export default function EditPagesPage() {
           >
             {isSaving ? 'Saving...' : 'Save'}
           </button>
-          {/* View Live Page Button */}
+          View Live Page Button
           <button
             type="button"
             onClick={handleViewLivePage}
@@ -340,10 +340,36 @@ export default function EditPagesPage() {
           >
             View Live Page
           </button>
-        </div>
+        </div>*/}
+
+        {/* Colors: Red/Orange/Blue/Black/Green */}
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
+
+              {/*adjust Save and Preview here*/}
+
+              {/* Save and Preview Buttons */}
+
+              <div className="mb-8 flex flex-row items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleViewLivePage}
+                  disabled={selectedPageId === null}
+                  className="whitespace-nowrap rounded-sm border border-msscc-teal px-2.5 py-2 text-msscc-teal text-btn transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Preview Page
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving || selectedPageId === null}
+                  className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+
                 {/* Dropdown to select page to edit */}
                 <div className="mb-8">
                   <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -400,6 +426,10 @@ export default function EditPagesPage() {
                 >
                   + Image
                 </button>
+
+                {/* Too be added: Snippet Preview */}
+
+
             </div>
 
             {/* Loop through blocks array to show each created block */}
