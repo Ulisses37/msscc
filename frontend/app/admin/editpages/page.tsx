@@ -36,6 +36,14 @@ type dbContentBlock = {
   media_url: string | null;
 };
 
+const snippetBlockRenderers: Record<BlockType, () => React.ReactNode> = {
+  header: () => <div className="h-4 w-3/5 rounded-sm bg-[#D72638]" />,
+  subheader: () => <div className="h-2 w-2/5 rounded-sm bg-[#D72638] opacity-70" />,
+  paragraph: () => <div className="mx-3 h-8 w-4/5 rounded-sm bg-[#000000] text-center right-2" />,
+  caption: () => <div className="h-2 w-1/4 p-0 m-0 rounded-sm bg-msscc-gray-mid" />,
+  image: () => <div className="h-20 w-2/3 rounded-sm bg-msscc-teal-sky" />,
+};
+
 export default function EditPagesPage() {
   // Block array
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
@@ -389,28 +397,7 @@ export default function EditPagesPage() {
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
-        {/*<div className="mb-8 flex flex-col items-end gap-3">
-          The Save Button
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || selectedPageId === null}
-            className="rounded-sm bg-msscc-pink px-5 py-2 text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
-          View Live Page Button
-          <button
-            type="button"
-            onClick={handlePreviewPage}
-            disabled={selectedPageId === null}
-            className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Preview Page
-          </button>
-        </div>*/}
 
-        {/* Colors: Red/Orange/Blue/Black/Green */}
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
@@ -499,7 +486,28 @@ export default function EditPagesPage() {
                   + Image
                 </button>
 
-                {/* Too be added: Snippet Preview */}
+                {/* Snippet Preview */}
+                <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                  Snipet Preview
+                </label>
+                <div className="mt-4 w-full overflow-visible rounded-md border border-msscc-gray-light bg-white shadow-sm">
+
+                  <div className="border-b border-msscc-gray-light bg-msscc-teal px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-white">
+                    {selectedLanguage === 'en' ? "Navigation Bar" : "ナビゲーションバー"}
+                  </div>
+                  <div className="space-y-2.5 bg-msscc-gray-faint p-2">
+                    {blocks.map((block) => (
+                      <div key={block.id}>
+                        {snippetBlockRenderers[block.type]()}
+                      </div>
+                    ))}
+                    <hr className="h-0.5 border-0 bg-msscc-gray-dark"/>
+                    <div className="flex items-center justify-center h-20 bg-msscc-teal-light text-white">
+                      {selectedLanguage === 'en' ? "Page Contents" : "ページの内容"}
+                    </div>
+                  </div>
+                  <div className="h-2 bg-msscc-teal-dark" />
+                </div>
 
 
             </div>
