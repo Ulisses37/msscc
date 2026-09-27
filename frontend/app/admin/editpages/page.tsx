@@ -131,21 +131,20 @@ export default function EditPagesPage() {
   const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
 
-  const handlePreviewLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
-    const previewDocument = event.currentTarget.contentDocument;
+  useEffect(() => {
+    if (!isPreviewOpen) return;
 
-    if (!previewDocument) return;
-
-    const preventInteraction = (interactionEvent: Event) => {
-      interactionEvent.preventDefault();
-      interactionEvent.stopPropagation();
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsPreviewOpen(false);
+      }
     };
 
-    ['click', 'dblclick', 'submit'].forEach((eventName) => {
-      previewDocument.addEventListener(eventName, preventInteraction, true);
-    });
-  };
+    window.addEventListener('keydown', closeWithEscape, true);
+    return () => window.removeEventListener('keydown', closeWithEscape, true);
+  }, [isPreviewOpen]);
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -181,6 +180,28 @@ export default function EditPagesPage() {
     };
     fetchContent();
   }, [selectedPageId]);
+
+  const handlePreviewLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const previewDocument = event.currentTarget.contentDocument;
+
+    if (!previewDocument) return;
+
+    const preventInteraction = (interactionEvent: Event) => {
+      if (
+        interactionEvent.type === 'keydown' &&
+        (interactionEvent as KeyboardEvent).key === 'Escape'
+      ) {
+        setIsPreviewOpen(false);
+      }
+
+      interactionEvent.preventDefault();
+      interactionEvent.stopPropagation();
+    };
+
+    ['click', 'dblclick', 'submit','keydown'].forEach((eventName) => {
+      previewDocument.addEventListener(eventName, preventInteraction, true);
+    });
+  };
 
   const handleSave = async () => {
     // Prevent saving if no page is selected
@@ -320,8 +341,8 @@ export default function EditPagesPage() {
 
     const pagePath =
       selectedPage.page_slug === 'home'
-        ? '/en'
-        : `/en/${selectedPage.page_slug}`;
+        ? `/${selectedLanguage}`
+        : `/${selectedLanguage}/${selectedPage.page_slug}`;
 
     setPreviewPath(pagePath);
     setIsPreviewOpen(true);
@@ -338,15 +359,19 @@ export default function EditPagesPage() {
          {isPreviewOpen && previewPath && (
            <div
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+               onClick={() => setIsPreviewOpen(false)}
              role="dialog"
              aria-modal="true"
              aria-label="Page preview"
            >
-             <div className="relative aspect-video max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl">
+             <div
+               className="relative aspect-video max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl"
+               onClick={(event) => event.stopPropagation()}
+             >
                <button
                  type="button"
                  onClick={() => setIsPreviewOpen(false)}
-                 className="absolute right-6 top-2 z-10 rounded-full bg-white px-2 text-msscc-gray-dark shadow hover:bg-gray-100 opacity-45"
+                 className="absolute right-6 top-2 z-10 rounded-full bg-white px-2 text-msscc-gray-dark shadow hover:bg-gray-100 opacity-75"
                  aria-label="Close page preview"
                >
                  ×
@@ -390,7 +415,7 @@ export default function EditPagesPage() {
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
               {/* Save and Preview Buttons */}
-              <div className="mb-8 flex flex-row items-end gap-1.5">
+              <div className="mb-0 flex flex-row items-end gap-1.5">
                 <button
                   type="button"
                   onClick={handlePreviewPage}
@@ -407,7 +432,14 @@ export default function EditPagesPage() {
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
+
               </div>
+              <button type="button"
+                className="whitespace-nowrap rounded-sm border border-msscc-teal px-2.5 py-2 text-msscc-teal text-btn transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => setSelectedLanguage(selectedLanguage === 'en' ? 'ja' : 'en')}
+              >
+                {selectedLanguage === 'en' ? 'Preview EN' : 'プレビュー・日本語'}
+              </button>
 
                 {/* Dropdown to select page to edit */}
                 <div className="mb-8">
@@ -427,6 +459,7 @@ export default function EditPagesPage() {
               {pages.map((page) => (
                 <option key={page.page_id} value={page.page_id}>
                   {page.page_title_en}
+                  {/*selectedLanguage === 'en' ? page.page_title_en : page.page_title_ja*/}
                 </option>
               ))}
               </select>
