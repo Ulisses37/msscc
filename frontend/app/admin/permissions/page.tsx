@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 
 export default function AdminPermissionPage() {
   const [adminRecords, setAdminRecords] = useState<AdminRecord[]>([]);
-  const [currentUserInformation, setCurrentLogIn] = useState<AdminRecord | null>(null);
 
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null)
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
@@ -30,25 +29,6 @@ export default function AdminPermissionPage() {
   return (
     <div className="flex justify-center min-h-screen">
       <div className="border w-full max-w-[2400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
-          <div> {/* Delete once SCRUM-74 is completed*/}
-
-            <button
-              onClick={() => handleLogin("JaneDoe@gmail.com")}
-              className="bg-green-500 text-white py-2 px-4 m-2">
-              Log in as Jane Doe (Executive)
-            </button>
-            <button
-              onClick={() => {handleLogin("AlexNguyen@gmail.com")}}
-              className="bg-green-500 text-white py-2 px-4 m-2">
-              Log in as Alex Nguyen (Non-Executive)
-            </button>
-            <button
-              onClick={() => {handleLogout()}}
-              className="bg-gray-500 text-white py-2 px-4 m-2">
-              Log out
-            </button>
-          </div>{/* Delete once SCRUM-74 is completed*/}
-
           <div className="my-5 flex items-center">
             <div className="text-3xl text-left font-bold ml-2">Admin Permissions</div>
             <div
@@ -58,13 +38,11 @@ export default function AdminPermissionPage() {
               +
               </div>
             <div className="flex-1 shrink justify-end align-right flex">
-              {currentUserInformation?.is_executive &&
               <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded whitespace-nowrap
               text-[clamp(0.75rem,1.2vw,1rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] px-[clamp(0.75rem,1vw,1rem)]"
               onClick={() => updateDatabase()}>
               Update
               </button>
-            }
           </div>
         </div>
         {adminPopupType != "" && <AdminPopup
@@ -78,7 +56,6 @@ export default function AdminPermissionPage() {
           <PermissionCard
            key={record.id}
            adminInformation={record}
-           currentUserInformation={currentUserInformation ?? null}
            onPermissionToggle={handlePermissionToggle}
            setSelectedAdmin={setSelectedAdmin}
            setAdminPopUpType={setAdminPopUpType}
@@ -120,26 +97,5 @@ export default function AdminPermissionPage() {
             };
         })
     );
-  }
-
-  function handleLogin(email: string) {
-    const wasExecutive = currentUserInformation?.is_executive ?? false;
-    const user = getCurrentUser(email);
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    if (wasExecutive) {
-        window.location.reload(); // discard unsaved changes
-    } else {
-        setCurrentLogIn(user);
-    }
-}
-
-  function handleLogout() {
-    const wasExecutive = currentUserInformation?.is_executive ?? false;
-    localStorage.removeItem("currentUser");
-    if (wasExecutive) {
-        window.location.reload(); // discard unsaved changes
-    } else {
-        setCurrentLogIn(null);
-    }
   }
 }
