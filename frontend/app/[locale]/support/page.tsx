@@ -10,6 +10,7 @@ import type { DbContentBlock } from '@/types/content';
 
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { FallBack } from '@/components/content/ContentFallBack';
 
 export default function SupportPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
@@ -41,6 +42,7 @@ export default function SupportPage() {
             locale={String(locale)}
           />
         ))}
+        {!contentBlocks.length && <FallBack source="support" />}
       </section>
 
       <DonationForm />

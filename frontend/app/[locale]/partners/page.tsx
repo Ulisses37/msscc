@@ -9,6 +9,7 @@ import Link from 'next/link';  // To be used if partner objects have links to th
 // Components
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { PartnerCard } from './PartnerCard';
+import { FallBack } from '@/components/content/ContentFallBack'
 
 
 // Types
@@ -141,6 +142,7 @@ export default function PartnersPage() {
             locale={String(locale)}
           />
         ))}
+        {!contentBlocks.length && <FallBack source="partners" />}
       </section>
 
       {/* Partner Links */}
