@@ -39,7 +39,7 @@ export default function HomePage() {
       }
     };
 
-    loadPageContent();
+    //loadPageContent();
   }, []);
 
   return (
@@ -53,6 +53,9 @@ export default function HomePage() {
             locale={String(locale)}
           />
         ))}
+        {!contentBlocks.length && (
+          <p className="text-center text-gray-500">No content available.</p>
+        )}
       </section>
     </main>
   );
