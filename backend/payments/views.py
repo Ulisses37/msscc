@@ -1,7 +1,9 @@
-import logging
+
 
 import stripe
+import logging
 from django.conf import settings
+from django.db import DatabaseError, transaction
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -47,6 +49,11 @@ class PaymentSessionCreateView(APIView):
 
         internal_reference = validated_data["internal_reference"]
 
+        # Begin with the validated request amount for reusable, non-donation
+        # payment types. Donation requests replace this with the stored amount
+        # after the reference and amount have both been verified below.
+        payment_amount = validated_data["amount"]
+
         # Donation payment sessions must match a real pending Donation. This
         # prevents a completed, failed, or canceled donation from starting a
         # second Stripe payment and prevents the browser from changing the
@@ -70,8 +77,16 @@ class PaymentSessionCreateView(APIView):
                     {"detail": "Unable to create payment session."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
+            except DatabaseError:
+                # Database exceptions can include backend-specific details.
+                # Record only the failed operation and return a fixed message.
+                logger.error("Database error while loading a donation for payment.")
+                return Response(
+                    {"detail": "Payment processing is temporarily unavailable."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
-            if donation.payment_status != "pending":
+            if donation.payment_status != Donation.PaymentStatus.PENDING:
                 return Response(
                     {"detail": "This donation cannot start another payment."},
                     status=status.HTTP_409_CONFLICT,
@@ -82,6 +97,10 @@ class PaymentSessionCreateView(APIView):
                     {"detail": "Payment amount does not match the donation."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            # Once the request has been verified, use the amount stored by the
+            # application instead of trusting the duplicate browser value.
+            payment_amount = donation.amount
 
         # Construct the return URL on the server. Accepting a complete return
         # URL from the browser could allow an attacker to redirect a user to
@@ -97,7 +116,7 @@ class PaymentSessionCreateView(APIView):
         try:
             # Call the reusable service created in SCRUM-561.
             payment_session = create_payment_session(
-                amount=validated_data["amount"],
+                amount=payment_amount,
                 currency=validated_data["currency"],
                 payment_purpose=validated_data["payment_purpose"],
                 internal_reference=internal_reference,
@@ -148,12 +167,15 @@ class PaymentSessionCreateView(APIView):
 # PaymentIntent events also let the application recognize immediate card
 # successes, failures, and cancellations.
 PAYMENT_STATUS_BY_EVENT = {
-    "payment_intent.succeeded": "completed",
-    "payment_intent.payment_failed": "failed",
-    "payment_intent.canceled": "canceled",
-    "checkout.session.async_payment_succeeded": "completed",
-    "checkout.session.async_payment_failed": "failed",
-    "checkout.session.expired": "canceled",
+    # Map only the Stripe events that are allowed to change Donation records.
+    # Using TextChoices values keeps this mapping aligned with the model and
+    # its database constraint.
+    "payment_intent.succeeded": Donation.PaymentStatus.COMPLETED,
+    "payment_intent.payment_failed": Donation.PaymentStatus.FAILED,
+    "payment_intent.canceled": Donation.PaymentStatus.CANCELED,
+    "checkout.session.async_payment_succeeded": Donation.PaymentStatus.COMPLETED,
+    "checkout.session.async_payment_failed": Donation.PaymentStatus.FAILED,
+    "checkout.session.expired": Donation.PaymentStatus.CANCELED,
 }
 
 
@@ -167,7 +189,7 @@ def _get_payment_status(event_type, stripe_object):
     """
     if event_type == "checkout.session.completed":
         if stripe_object.get("payment_status") == "paid":
-            return "completed"
+            return Donation.PaymentStatus.COMPLETED
 
         # Keep an unpaid or processing Checkout Session pending.
         return None
@@ -189,6 +211,43 @@ def _get_internal_reference(stripe_object):
 
     metadata = stripe_object.get("metadata") or {}
     return metadata.get("internal_reference")
+
+
+def _update_donation_payment_status(reference_id, new_status):
+    """Atomically update only the payment status of one donation."""
+    # Validate before opening a transaction or issuing a database query. This
+    # also protects callers other than the webhook view from writing new,
+    # unsupported status strings.
+    if new_status not in Donation.PaymentStatus.values:
+        raise ValueError("Unsupported donation payment status.")
+
+    # The row lock serializes concurrent Stripe deliveries for this Donation.
+    # Without it, two events could both read an old value and then write their
+    # results in an unsafe order.
+    with transaction.atomic():
+        donation = (
+            Donation.objects.select_for_update()
+            .only("donation_id", "payment_status")
+            .get(reference_id=reference_id)
+        )
+
+        # Stripe events may arrive more than once or out of order. Once a
+        # donation is completed, a late failure or expiration cannot undo it.
+        if (
+            donation.payment_status == Donation.PaymentStatus.COMPLETED
+            and new_status != Donation.PaymentStatus.COMPLETED
+        ):
+            return False
+
+        if donation.payment_status == new_status:
+            # Stripe retries events. Avoid a duplicate write when the desired
+            # status is already stored.
+            return False
+
+        # QuerySet.update() makes the permitted database field explicit and
+        # avoids writing any donor or payment amount fields.
+        Donation.objects.filter(pk=donation.pk).update(payment_status=new_status)
+        return True
 
 
 class PaymentStatusView(APIView):
@@ -265,10 +324,16 @@ class PaymentStatusView(APIView):
                 {"detail": "Payment status is temporarily unavailable."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        except DatabaseError:
+            # Do not log the exception, session ID, donation reference, or any
+            # Stripe response data. The fixed 503 is safe for the browser.
+            logger.error("Database error while retrieving a donation payment status.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
-        allowed_statuses = {"pending", "completed", "failed", "canceled"}
-
-        if donation.payment_status not in allowed_statuses:
+        if donation.payment_status not in Donation.PaymentStatus.values:
             logger.error("Donation contains an unsupported payment status.")
             return Response(
                 {"detail": "Payment status is temporarily unavailable."},
@@ -365,7 +430,9 @@ class StripeWebhookView(APIView):
             )
 
         try:
-            donation = Donation.objects.get(reference_id=reference_id)
+            # The helper validates the status, locks the matching row, and
+            # restricts the update to the payment_status column.
+            _update_donation_payment_status(reference_id, new_status)
         except Donation.DoesNotExist:
             # Returning 200 prevents Stripe from retrying an event that cannot
             # be matched to a record in this environment.
@@ -387,20 +454,18 @@ class StripeWebhookView(APIView):
                 {"received": True},
                 status=status.HTTP_200_OK,
             )
-
-        # A late failure or expiration event must not change an already
-        # completed donation back to failed or canceled.
-        if donation.payment_status == "completed" and new_status != "completed":
-            return Response(
-                {"received": True},
-                status=status.HTTP_200_OK,
+        except DatabaseError:
+            # A temporary database failure should return a retryable response.
+            # Do not include the exception, donation reference, or Stripe
+            # payload in the response or log entry.
+            logger.error(
+                "Database error while processing a Stripe event. event_id=%s",
+                event_data.get("id"),
             )
-
-        # Duplicate webhook deliveries are safe because the same value is not
-        # written again.
-        if donation.payment_status != new_status:
-            donation.payment_status = new_status
-            donation.save(update_fields=["payment_status"])
+            return Response(
+                {"detail": "Webhook processing is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response(
             {"received": True},

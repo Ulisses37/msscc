@@ -1,13 +1,31 @@
-from rest_framework import generics, permissions
+import logging
+
+from django.db import DatabaseError
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
 
 from donations.models import Donation, Membership
 from donations.serializers import DonationSerializer, MembershipSerializer
+
+
+logger = logging.getLogger(__name__)
 
 
 class DonationListCreateView(generics.ListCreateAPIView):
     """List donation records or create a new donation."""
 
     serializer_class = DonationSerializer
+
+    def create(self, request, *args, **kwargs):
+        """Create a donation without exposing database failure details."""
+        try:
+            return super().create(request, *args, **kwargs)
+        except DatabaseError:
+            logger.error("Database error while creating a donation.")
+            return Response(
+                {"detail": "Unable to save the donation at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
     # def get_permissions(self):
     #     """Allow public donations while protecting the donor list."""

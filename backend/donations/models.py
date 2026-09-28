@@ -4,6 +4,14 @@ from django.db import models
 class Donation(models.Model):
     """Donation record to store donation information."""
 
+    class PaymentStatus(models.TextChoices):
+        """Payment states that may be stored for a donation."""
+
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELED = "canceled", "Canceled"
+
     donation_id = models.AutoField(primary_key=True)
     donor_first_name = models.CharField(max_length=255)
     donor_last_name = models.CharField(max_length=255)
@@ -12,7 +20,11 @@ class Donation(models.Model):
     donation_date = models.DateField()
     is_anonymous = models.BooleanField()
     message = models.TextField()
-    payment_status = models.CharField(max_length=255)
+    payment_status = models.CharField(
+        max_length=10,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+    )
     reference_id = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -20,6 +32,19 @@ class Donation(models.Model):
         ordering = ["-donation_date", "-created_at", "donation_id"]
         verbose_name = "Donation"
         verbose_name_plural = "Donations"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    payment_status__in=[
+                        "pending",
+                        "completed",
+                        "failed",
+                        "canceled",
+                    ]
+                ),
+                name="donation_valid_payment_status",
+            )
+        ]
 
     def __str__(self):
         """Return a readable donor summary for admin screens."""

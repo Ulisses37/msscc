@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -65,15 +66,17 @@ class DonationSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def create(self, validated_data):
-        """Set server-controlled fields without requiring a database migration."""
-        donation = Donation.objects.create(
-            **validated_data,
-            donation_date=timezone.localdate(),
-            payment_status="pending",
-            reference_id="pending",
-        )
-        donation.reference_id = f"DON-{donation.donation_id:08d}"
-        donation.save(update_fields=["reference_id"])
+        """Create a donation with server-controlled payment fields."""
+        with transaction.atomic():
+            donation = Donation.objects.create(
+                **validated_data,
+                donation_date=timezone.localdate(),
+                payment_status=Donation.PaymentStatus.PENDING,
+                reference_id="pending",
+            )
+            donation.reference_id = f"DON-{donation.donation_id:08d}"
+            donation.save(update_fields=["reference_id"])
+
         return donation
 
 
