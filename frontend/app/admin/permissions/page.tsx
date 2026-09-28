@@ -2,7 +2,7 @@
 import { AdminRecord} from "./adminRecord";
 import { PermissionCard, AdminPopup } from "./permissionsCard";
 import { useEffect, useState } from "react";
-
+import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler";
 
 
 
@@ -11,6 +11,8 @@ export default function AdminPermissionPage() {
 
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null)
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
+
+  const currentLogInEmail = fetchLocalStorageAdmin()?.email
 
   useEffect(() => {
     fetch("http://localhost:8000/api/admins/")
@@ -59,6 +61,7 @@ export default function AdminPermissionPage() {
            onPermissionToggle={handlePermissionToggle}
            setSelectedAdmin={setSelectedAdmin}
            setAdminPopUpType={setAdminPopUpType}
+           currentLogInEmail={currentLogInEmail}
           />
         ))}
       </div>
@@ -78,10 +81,6 @@ export default function AdminPermissionPage() {
     ).then(() => {
         window.location.reload();
     });
-  }
-
-  function getCurrentUser(logInEmail: string){
-    return adminRecords.find(record => record.email === logInEmail) ?? null;
   }
 
   function handlePermissionToggle(id: number, permissionName: string) {
