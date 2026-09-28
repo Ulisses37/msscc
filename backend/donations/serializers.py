@@ -69,7 +69,7 @@ class DonationSerializer(serializers.ModelSerializer):
         donation = Donation.objects.create(
             **validated_data,
             donation_date=timezone.localdate(),
-            payment_status="incomplete",
+            payment_status="pending",
             reference_id="pending",
         )
         donation.reference_id = f"DON-{donation.donation_id:08d}"

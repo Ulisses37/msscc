@@ -211,3 +211,6 @@ if not STRIPE_SECRET_KEY:
     raise RuntimeError(
         "STRIPE_SECRET_KEY environment variable is required."
     )
+
+# Stripe uses this secret to prove that webhook requests came from Stripe.
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
