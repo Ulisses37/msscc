@@ -1,7 +1,7 @@
 'use client';
 
 // React
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // uuid
 import { v4 as uuidv4 } from 'uuid';
@@ -34,6 +34,15 @@ type dbContentBlock = {
   content_ja: string;
   media_asset: number | null;
   media_url: string | null;
+};
+
+//Costants for Snippet preview
+const snippetBlockRenderers: Record<BlockType, () => React.ReactNode> = {
+  header: () => <div className="h-4 w-3/5 rounded-sm bg-[#D72638]" />,
+  subheader: () => <div className="h-2 w-2/5 rounded-sm bg-[#D72638] opacity-70" />,
+  paragraph: () => <div className="mx-3 h-8 w-4/5 rounded-sm bg-[#000000] text-center right-2" />,
+  caption: () => <div className="h-2 w-1/4 p-0 m-0 rounded-sm bg-msscc-gray-mid" />,
+  image: () => <div className="h-20 w-2/3 rounded-sm bg-msscc-teal-sky" />,
 };
 
 export default function EditPagesPage() {
@@ -129,6 +138,48 @@ export default function EditPagesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [deletedBlockIds, setDeletedBlockIds] = useState<number[]>([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+
+  // Outgoing edits for Preview Render
+  const sendPreviewBlocks = () => {
+    if (!previewFrameRef.current?.contentWindow || selectedPageId === null) return;
+
+    const previewBlocks = blocks.map((block, index) => ({
+      content_id: Number(block.id) || index,
+      page_id: selectedPageId,
+      display_order: index,
+      content_type: block.type,
+      content_en: block.contentEn,
+      content_ja: block.contentJa,
+      media_asset: block.mediaAssetId ?? null,
+      media_url: block.mediaUrl ?? null,
+    }));
+
+    previewFrameRef.current.contentWindow.postMessage(
+      { type: 'MSSCC_PREVIEW_BLOCKS', isPreview: true, blocks: previewBlocks },
+      window.location.origin,
+    );
+  };
+
+  useEffect(() => {
+    if (isPreviewOpen) sendPreviewBlocks();
+  }, [blocks, isPreviewOpen, selectedPageId]);
+
+  useEffect(() => {
+    if (!isPreviewOpen) return;
+
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsPreviewOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', closeWithEscape, true);
+    return () => window.removeEventListener('keydown', closeWithEscape, true);
+  }, [isPreviewOpen]);
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -164,6 +215,32 @@ export default function EditPagesPage() {
     };
     fetchContent();
   }, [selectedPageId]);
+
+  //Renders Preview Render
+  const handlePreviewLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const previewDocument = event.currentTarget.contentDocument;
+
+    if (!previewDocument) return;
+
+    const preventInteraction = (interactionEvent: Event) => {
+      if (
+        interactionEvent.type === 'keydown' &&
+        (interactionEvent as KeyboardEvent).key === 'Escape'
+      ) {
+        setIsPreviewOpen(false);
+      }
+
+      interactionEvent.preventDefault();
+      interactionEvent.stopPropagation();
+    };
+
+    ['click', 'dblclick', 'submit','keydown'].forEach((eventName) => {
+      previewDocument.addEventListener(eventName, preventInteraction, true);
+    });
+
+    sendPreviewBlocks();
+    window.setTimeout(sendPreviewBlocks, 250);
+  };
 
   const handleSave = async () => {
     // Prevent saving if no page is selected
@@ -290,9 +367,9 @@ export default function EditPagesPage() {
         setSaveMessage('');
       }, 5000);
     }
-};
+  };
 
-  const handleViewLivePage = () => {
+  const handlePreviewInitialization = () => {
     if (selectedPageId === null) return;
 
     const selectedPage = pages.find(
@@ -303,47 +380,89 @@ export default function EditPagesPage() {
 
     const pagePath =
       selectedPage.page_slug === 'home'
-        ? '/en'
-        : `/en/${selectedPage.page_slug}`;
+        ? `/${selectedLanguage}`
+        : `/${selectedLanguage}/${selectedPage.page_slug}`;
 
-    // Open the selcted page in a new tab
-    window.open(pagePath, '_blank');
+    setPreviewPath(`${pagePath}?preview=1`);
+    setIsPreviewOpen(true);
   };
 
   return (
     <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
         {/* Save Status Toast */}
         {saveMessage && (
-          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-sm font-semibold text-msscc-gray-dark shadow-md">
+          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-label font-semibold text-msscc-gray-dark shadow-md">
             {saveMessage}
           </div>
         )}
+         {isPreviewOpen && previewPath && (
+           <div
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+               onClick={() => setIsPreviewOpen(false)}
+             role="dialog"
+             aria-modal="true"
+             aria-label="Page preview"
+           >
+             <div
+               className="relative aspect-video max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl"
+               onClick={(event) => event.stopPropagation()}
+             >
+               <button
+                 type="button"
+                 onClick={() => setIsPreviewOpen(false)}
+                 className="absolute right-6 top-2 z-10 rounded-full bg-white px-2 text-msscc-gray-dark shadow hover:bg-gray-100 opacity-75"
+                 aria-label="Close page preview"
+               >
+                 ×
+               </button>
+               <iframe
+                  ref={previewFrameRef}
+                 src={previewPath}
+                 title="Selected page preview"
+                  tabIndex={-1}
+                  onLoad={handlePreviewLoad}
+                  className="h-full w-full border-0"
+               />
+             </div>
+           </div>
+         )}
         <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
             Edit Pages Page
         </h1>
-        <div className="mb-8 flex flex-col items-end gap-3">
-          {/* The Save Button */}
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || selectedPageId === null}
-            className="rounded-sm bg-msscc-pink px-5 py-2 text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? 'Saving...' : 'Save'}
-          </button>
-          {/* View Live Page Button */}
-          <button
-            type="button"
-            onClick={handleViewLivePage}
-            disabled={selectedPageId === null}
-            className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            View Live Page
-          </button>
-        </div>
+
         <div className="flex flex-col md:flex-row gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
             <div className="md:w-48 flex flex-col space-y-3">
+              {/* Save and Preview Buttons */}
+              <div className="mb-0 flex flex-row items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={handlePreviewInitialization}
+                  disabled={selectedPageId === null}
+                  className="whitespace-nowrap rounded-sm border border-msscc-teal px-2.5 py-2 text-msscc-teal text-btn transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Preview Page
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving || selectedPageId === null}
+                  className="rounded-sm bg-msscc-pink px-2 py-2 left-6 w-20 text-white text-btn transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+
+              </div>
+              <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-0">
+                Switch Localization
+              </label>
+              <button type="button"
+                className="whitespace-nowrap rounded-sm border border-msscc-pink px-2.5 py-2 text-msscc-white bg-msscc-pink text-btn transition-colors hover:bg-msscc-pink-dark hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => setSelectedLanguage(selectedLanguage === 'en' ? 'ja' : 'en')}
+              >
+                {selectedLanguage === 'en' ? 'EN' : '日本語'}
+              </button>
+
                 {/* Dropdown to select page to edit */}
                 <div className="mb-8">
                   <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -362,6 +481,7 @@ export default function EditPagesPage() {
               {pages.map((page) => (
                 <option key={page.page_id} value={page.page_id}>
                   {page.page_title_en}
+                  {/*selectedLanguage === 'en' ? page.page_title_en : page.page_title_ja*/}
                 </option>
               ))}
               </select>
@@ -400,6 +520,31 @@ export default function EditPagesPage() {
                 >
                   + Image
                 </button>
+
+                {/* Snippet Preview */}
+                <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+                  Snippet Preview
+                </label>
+                <div className="mt-4 w-full overflow-visible rounded-md border border-msscc-gray-light bg-white shadow-sm">
+
+                  <div className="border-b border-msscc-gray-light bg-msscc-teal px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-wider text-white">
+                    {selectedLanguage === 'en' ? "Navigation Bar" : "ナビゲーションバー"}
+                  </div>
+                  <div className="space-y-2.5 bg-msscc-gray-faint p-2">
+                    {blocks.map((block) => (
+                      <div key={block.id}>
+                        {snippetBlockRenderers[block.type]()}
+                      </div>
+                    ))}
+                    <hr className="h-0.5 border-0 bg-msscc-gray-dark"/>
+                    <div className="flex items-center justify-center h-20 bg-msscc-teal-light text-white">
+                      {selectedLanguage === 'en' ? "Page Contents" : "ページの内容"}
+                    </div>
+                  </div>
+                  <div className="h-2 bg-msscc-teal-dark" />
+                </div>
+
+
             </div>
 
             {/* Loop through blocks array to show each created block */}

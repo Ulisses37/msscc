@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import mssccLogo from '@/public/images/msscc-logo.png';
 import { SocialIcon } from './SocialLink'
@@ -25,8 +25,10 @@ export const Banner = () =>{
   };
 
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const isAdminRoute = pathname.startsWith('/admin');
+  const isPreviewMode = searchParams.get('preview') === '1';
 
   const handleLogoClick = () => {
     // Public home routes (with and without locale prefix). Clicking the logo
@@ -62,13 +64,15 @@ export const Banner = () =>{
       {/* Center actions on phones, then restore the bottom-right desktop position at `sm`. */}
       <div className="absolute bottom-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 items-center justify-center gap-2 sm:left-auto sm:right-4 sm:max-w-none sm:translate-x-0">
         {!isAdminRoute && <LanguageToggle />}
-        {isAuthenticated && (
+        {!isPreviewMode && isAuthenticated && (
           <>
             <PortalToggle isAdminRoute={isAdminRoute} />
             <LogoutButton />
           </>
         )}
-        {!isAuthenticated && <LoginButton onLoginClick={handleLoginClick} />}
+        {!isPreviewMode && !isAuthenticated && (
+          <LoginButton onLoginClick={handleLoginClick} />
+        )}
       </div>
 
       {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
