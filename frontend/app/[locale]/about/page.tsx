@@ -14,6 +14,7 @@ import type { DbContentBlock } from '@/types/content';
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { FallBack } from "@/components/content/ContentFallBack";
 
 interface BoardMember {
   boardMemberName: string;
@@ -101,6 +102,7 @@ export default function AboutPage() {
             locale={String(locale)}
           />
         ))}
+        {!contentBlocks.length && <FallBack source="about" />}
       </section>
 
       <div className="bg-msscc-teal p-0 m-0 min-h-screen">

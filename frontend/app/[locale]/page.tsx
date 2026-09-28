@@ -3,8 +3,7 @@
 // React and Next Imports
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import img from '@/assets/Illustration.jpg';
+import { FallBack } from '@/components/content/ContentFallBack';
 
 // Components
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
@@ -39,7 +38,7 @@ export default function HomePage() {
       }
     };
 
-    //loadPageContent();
+    loadPageContent();
   }, []);
 
   return (
@@ -53,9 +52,7 @@ export default function HomePage() {
             locale={String(locale)}
           />
         ))}
-        {!contentBlocks.length && (
-          <p className="text-center text-gray-500">No content available.</p>
-        )}
+        {!contentBlocks.length && <FallBack source="home" />}
       </section>
     </main>
   );
