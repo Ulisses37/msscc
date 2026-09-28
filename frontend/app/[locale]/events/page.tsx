@@ -13,6 +13,7 @@ import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer'
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 // Types
 import type { DbContentBlock } from '@/types/content';
@@ -25,6 +26,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('events'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;
@@ -58,6 +60,7 @@ export default function EventsPage() {
   const loadPageContent = async () => {
     try {
       const data = await fetchPageContent('events');
+        if (previewReceivedRef.current) return;
       setContentBlocks(data);
     } catch (error) {
       console.error('Error fetching page content:', error);

@@ -13,9 +13,11 @@ import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 export default function MembershipPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('membership'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const locale = params?.locale;
 
@@ -24,6 +26,7 @@ export default function MembershipPage() {
     const loadPageContent = async () => {
       try {
         const data = await fetchPageContent('membership');
+        if (previewReceivedRef.current) return;
         setContentBlocks(data);
       } catch (error) {
         console.error('Error fetching page content:', error);

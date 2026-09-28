@@ -16,6 +16,7 @@ class AdminTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["first_name"] = user.first_name
 
         token["permissions_data"] = user.permissions_data
+        token["is_executive"] = user.is_executive
 
         return token
 

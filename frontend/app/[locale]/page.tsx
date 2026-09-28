@@ -14,6 +14,7 @@ import type { DbContentBlock } from '@/types/content';
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
+import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 /**
  * This is the general view home page
@@ -22,6 +23,7 @@ import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 
 export default function HomePage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('home'),);
+  const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const locale = params?.locale;
 
@@ -30,6 +32,7 @@ export default function HomePage() {
     const loadPageContent = async () => {
       try {
         const data = await fetchPageContent('home');
+        if (previewReceivedRef.current) return;
         setContentBlocks(data);
       } catch (error) {
         console.error('Error fetching page content:', error);
