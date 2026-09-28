@@ -176,3 +176,28 @@ def update_admin(request, admin_id):
     serializer.save()
     return Response(AdminUserSerializer(admin).data, status=status.HTTP_200_OK)
 
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def set_executive(request, admin_id):
+    """Promote an existing admin to an executive admin"""
+
+    if request.user.email != "msscc.scrumlords.dev@gmail.com":
+        return Response(
+            {"detail": "You are not allowed to change executive status."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    admin = get_object_or_404(AdminUser, pk=admin_id)
+
+    is_executive = request.data.get("is_executive")
+    if not isinstance(is_executive, bool):
+        return Response(
+            {"detail": "is_executive must be true or false."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    admin.is_executive = is_executive
+    admin.save(update_fields=["is_executive"])
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+

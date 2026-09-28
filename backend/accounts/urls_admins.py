@@ -1,6 +1,6 @@
 from django.urls import path
 
-from accounts.views import get_admin, list_admins, update_permissions, create_admin, delete_admin, update_admin
+from accounts.views import get_admin, list_admins, update_permissions, create_admin, delete_admin, update_admin, set_executive
 
 urlpatterns = [
     path("", list_admins),
@@ -8,5 +8,6 @@ urlpatterns = [
     path("<int:admin_id>/permissions/", update_permissions),
     path("create/", create_admin),
     path("delete/<int:admin_id>", delete_admin),
-    path("update/<int:admin_id>", update_admin)
+    path("update/<int:admin_id>", update_admin),
+    path("promote-executive/<int:admin_id>",  set_executive),
 ]

@@ -13,6 +13,7 @@ export function decodeTokenPayload(accessToken: string): UserPayload {
     firstName: decoded.first_name,
 
     permissionData: decoded.permissions_data,
+    isExecutive: decoded.is_executive,
   };
 }
 
