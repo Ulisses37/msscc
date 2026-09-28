@@ -17,6 +17,7 @@ import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 
 // Types
 import type { DbContentBlock } from '@/types/content';
+import { FallBack } from '@/components/content/ContentFallBack';
 
 /**
  * EventsPage Component
@@ -92,6 +93,7 @@ export default function EventsPage() {
           locale={String(locale)}
         />
       ))}
+      {!contentBlocks.length && <FallBack source="events" />}
     </section>
 
       {/* Header */}
