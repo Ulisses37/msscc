@@ -3,9 +3,11 @@
 import { Banner } from '@/components/layout/Banner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { WelcomeBanner } from "@/components/admin/WelcomeBanner";
-import { usePathname } from 'next/navigation';
+import { usePathname, redirect } from 'next/navigation';
 import { AdminNavbar } from "@/components/layout/AdminNavbar";
 import { AdminFooter } from "@/components/layout/AdminFooter";
+import { fetchLocalStorageAdmin, hasPermission } from '@/components/admin/AdminPermssionHandler';
+import { adminNavLinks } from '@/config/adminNavLinks';
 
 export default function AdminLayout({
                                       children,
@@ -14,6 +16,18 @@ export default function AdminLayout({
 }>) {
   const pathname = usePathname();
   const isDashboard = pathname === '/admin/dashboard';
+
+  if (pathname != "/admin"){
+    const currentLink = adminNavLinks.find((link) => link.href === pathname);
+    if (!currentLink) redirect('/admin');
+
+    const eligible = hasPermission ({
+      adminPermissions: fetchLocalStorageAdmin()?.permissionData,
+      permissionNeeded: currentLink.label
+    })
+  if (!eligible) redirect('/admin');
+  }
+
 
   return (
     <div className="flex min-h-screen flex-col bg-msscc-white">

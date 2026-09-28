@@ -11,6 +11,8 @@ export function decodeTokenPayload(accessToken: string): UserPayload {
     userId: decoded.user_id,
     email: decoded.email,
     firstName: decoded.first_name,
+
+    permissionData: decoded.permissions_data,
   };
 }
 
