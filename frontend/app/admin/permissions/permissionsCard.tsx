@@ -2,7 +2,8 @@
 import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
-import { getToolTip } from "@/components/admin/AdminPermssionHandler";
+import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
+import { createCipheriv } from "crypto";
 
 function formatPermissionKey(key: string): string {
     return key
@@ -30,10 +31,30 @@ export function PermissionCard (
     <div className={`border rounded-md p-6 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x min-h-32 items-center bg-gray-50`}>
       <div className = "basis-2/12 w-full md:w-auto">
         <h1 className = "text-black text-[clamp(0.75rem,2vw,1.25rem)]">{adminInformation.first_name} {adminInformation.last_name}</h1>
-          {currentLogInEmail == "msscc.scrumlords.dev@gmail.com" && !(adminInformation.is_executive) ? (
-            <p className="text-white text-[clamp(.5rem,1vw,1rem)] bg-green-400 hover:bg-green-600 text-center mx-8 cursor-pointer">
-              Promote
-            </p>
+          {currentLogInEmail == "msscc.scrumlords.dev@gmail.com" ? (
+            adminInformation.is_executive ? (
+              <p
+                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-red-400 hover:bg-red-600 text-center mx-8 cursor-pointer"
+                onClick={() => confirmAndPromote
+                  ({
+                    selectedAdmin:adminInformation,
+                    moteType: "demote",
+                })}
+              >
+                Demote
+              </p>
+            ) : (
+                <p
+                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-green-400 hover:bg-green-600 text-center mx-8 cursor-pointer"
+                onClick={() => confirmAndPromote
+                  ({
+                    selectedAdmin:adminInformation,
+                    moteType: "promote",
+                })}
+              >
+                Promote
+              </p>
+              )
           )  : (
             adminInformation.is_executive && (
             <p className="text-gray-500 text-[clamp(0.5rem,1vw,1rem)]">Executive</p>
@@ -347,3 +368,63 @@ async function confirmAndDelete({
     window.alert("Network Error. Please reload the page and try again.");
   }
 }
+
+async function confirmAndPromote(
+  {
+    selectedAdmin,
+    moteType,
+  }:{
+    selectedAdmin: AdminRecord;
+    moteType: "promote" | "demote";
+}){
+  const token = localStorage.getItem("msscc_access_token");
+  const devEmail = fetchLocalStorageAdmin()?.email;
+
+  if(devEmail != "msscc.scrumlords.dev@gmail.com") return; // not approved dev email
+
+  const confirmationOne = window.confirm(`Are you sure you want to ${moteType}:\n`
+     + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
+
+  if (!confirmationOne){ // canceled
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:8000/api/admins/promote-executive/${selectedAdmin.id}`,
+      {
+        method: "PATCH",
+        headers:{
+          "Content-Type" : "application/json",
+          ...(token ? { Authorization: `Bearer ${token}`} : {}),
+        },
+        body: JSON.stringify({ is_executive: moteType === "promote"}),
+      });
+
+
+    if (res.ok){
+      window.location.reload();
+      return;
+    }
+
+    if (res.status === 400){
+      const data = await res.json();
+      window.alert(data.detail);
+      return;
+    }
+
+    if (res.status === 401) {
+      window.alert("Authentication failed. Please log in again.");
+      return;
+    }
+
+    if (res.status === 403 || res.status === 404) {
+      const data = await res.json();
+      window.alert(data.detail);
+      return;
+    }
+
+  } catch{
+    window.alert("Network Error. Please reload the page and try again.");
+  }
+}
+

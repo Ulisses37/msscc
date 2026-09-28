@@ -30,16 +30,6 @@ const permissionCategories: Record<string, CategoryData> = {
   },
 }
 
-// Translation map between broad Permission categories and its pages
-// Too add another page to a category, just append it to the [] array
-const permissionsories: Record<string, string[]> = {
-  Finances: ["Members", "Donations", "Partners"],
-  Text_Editing: ["Edit Pages"],
-  Board_Members: ["Board Members", "Board of Directors"],
-  Events: ["Events", "Volunteers"],
-  Executive: ["Permissions Pages"],
-}
-
 // find which category the submitted page belongs to
 function getPagePermission(page: string): string | undefined {
   for (const [category, data] of Object.entries(permissionCategories)){
