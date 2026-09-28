@@ -61,6 +61,7 @@ export function hasPermission(
 }
 
 export function fetchLocalStorageAdmin(){
+  if (typeof window === 'undefined') return undefined;
   const current_admin = localStorage.getItem("msscc_user");
   if (!current_admin) return;
 
