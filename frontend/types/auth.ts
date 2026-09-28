@@ -9,6 +9,8 @@ export interface UserPayload {
   userId: number;
   email: string;
   firstName: string;
+
+  permissionData: JSON;
 }
 
 /** Shape of the value provided by AuthContext. */

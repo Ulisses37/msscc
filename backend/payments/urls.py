@@ -1,6 +1,6 @@
 from django.urls import path
 
-from payments.views import PaymentSessionCreateView
+from payments.views import PaymentSessionCreateView, StripeWebhookView
 
 
 urlpatterns = [
@@ -12,5 +12,11 @@ urlpatterns = [
         "session/",
         PaymentSessionCreateView.as_view(),
         name="payment-session-create",
+    ),
+    # POST /api/payments/webhook/
+    path(
+        "webhook/",
+        StripeWebhookView.as_view(),
+        name="stripe-webhook",
     ),
 ]
