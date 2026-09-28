@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { DonationSummary } from '@/components/support/DonationSummary';
@@ -13,6 +13,18 @@ const inputClassName =
 interface DonationResponse {
   reference_id: string;
 }
+
+type PaymentStatus = 'pending' | 'completed' | 'failed' | 'canceled';
+
+interface PaymentStatusResponse {
+  payment_status?: unknown;
+}
+
+const isPaymentStatus = (value: unknown): value is PaymentStatus =>
+  value === 'pending' ||
+  value === 'completed' ||
+  value === 'failed' ||
+  value === 'canceled';
 
 export function DonationForm() {
   const t = useTranslations('SupportPage');
@@ -39,6 +51,15 @@ export function DonationForm() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const submissionInFlight = useRef(false);
+
+  // This result comes from the Donation record updated by Stripe's signed
+  // webhook. A successful browser redirect alone is not treated as proof of
+  // payment.
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(
+    null,
+  );
+  const [paymentStatusError, setPaymentStatusError] = useState(false);
 
   // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
@@ -46,6 +67,103 @@ export function DonationForm() {
   // Stripe uses this client secret to render the Payment Element.
   // This is not the Stripe account's secret API key.
   const [clientSecret, setClientSecret] = useState('');
+
+  const clearReturnedSessionFromUrl = () => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('session_id');
+    window.history.replaceState(
+      {},
+      '',
+      `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+    );
+  };
+
+  const handleEditDonationDetails = () => {
+    // Preserve the entered form values, but discard the old Stripe session
+    // and Donation reference. The next submission creates a new attempt so
+    // late webhooks from the failed attempt cannot overwrite the new one.
+    setClientSecret('');
+    setSubmittedReference('');
+    setPaymentStatus(null);
+    setPaymentStatusError(false);
+    setSubmitError('');
+    clearReturnedSessionFromUrl();
+  };
+
+  const handleStartNewAttempt = () => {
+    setClientSecret('');
+    setSubmittedReference('');
+    setPaymentStatus(null);
+    setPaymentStatusError(false);
+    setSubmitError('');
+    clearReturnedSessionFromUrl();
+  };
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get(
+      'session_id',
+    );
+
+    if (!sessionId) return;
+
+    let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let attemptCount = 0;
+    const maximumAttempts = 10;
+
+    // The webhook may arrive just after Stripe redirects the browser. Poll
+    // briefly so a pending record can change to its authoritative outcome.
+    const checkPaymentStatus = async () => {
+      attemptCount += 1;
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/payments/status/?session_id=${encodeURIComponent(sessionId)}`,
+          { cache: 'no-store' },
+        );
+        const data = (await response
+          .json()
+          .catch(() => null)) as PaymentStatusResponse | null;
+        const nextStatus = data?.payment_status;
+
+        if (!response.ok || !isPaymentStatus(nextStatus)) {
+          throw new Error('Payment status request failed.');
+        }
+
+        if (isCancelled) return;
+
+        setPaymentStatus(nextStatus);
+        setPaymentStatusError(false);
+
+        if (nextStatus === 'pending' && attemptCount < maximumAttempts) {
+          timeoutId = setTimeout(checkPaymentStatus, 1500);
+        }
+      } catch {
+        if (!isCancelled) {
+          setPaymentStatusError(true);
+        }
+      }
+    };
+
+    // Show an honest pending state while the first database lookup runs.
+    setPaymentStatus('pending');
+    setPaymentStatusError(false);
+    void checkPaymentStatus();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const paymentStatusMessage = paymentStatus
+    ? {
+        pending: t('paymentPending'),
+        completed: t('paymentCompleted'),
+        failed: t('paymentFailed'),
+        canceled: t('paymentCanceled'),
+      }[paymentStatus]
+    : '';
 
   const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
     email.trim(),
@@ -74,8 +192,16 @@ export function DonationForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formIsValid || clientSecret || isSubmitting) return;
+    if (
+      !formIsValid ||
+      clientSecret ||
+      isSubmitting ||
+      submissionInFlight.current
+    ) {
+      return;
+    }
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     setSubmitError('');
 
@@ -135,6 +261,7 @@ export function DonationForm() {
         donationWasCreated ? t('paymentSessionError') : t('submitError'),
       );
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   };
@@ -145,11 +272,54 @@ export function DonationForm() {
         {t('heading')}
       </h2>
 
-      <form
-        className="max-w-[600px] space-y-6"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      {paymentStatusError && (
+        <div
+          className="mb-6 max-w-[600px] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          role="alert"
+        >
+          <p>{t('paymentResultUnavailable')}</p>
+          <button
+            type="button"
+            onClick={handleStartNewAttempt}
+            className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60"
+          >
+            {t('startNewDonationAttempt')}
+          </button>
+        </div>
+      )}
+
+      {!paymentStatusError && paymentStatus && (
+        <div
+          className={`mb-6 max-w-[600px] rounded-md border p-4 text-sm ${
+            paymentStatus === 'completed'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : paymentStatus === 'pending'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-red-200 bg-red-50 text-red-800'
+          }`}
+          role={paymentStatus === 'pending' ? 'status' : 'alert'}
+          aria-live="polite"
+        >
+          <p>{paymentStatusMessage}</p>
+
+          {(paymentStatus === 'failed' || paymentStatus === 'canceled') && (
+            <button
+              type="button"
+              onClick={handleStartNewAttempt}
+              className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60"
+            >
+              {t('startNewDonationAttempt')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {!paymentStatus && (
+        <form
+          className="max-w-[600px] space-y-6"
+          onSubmit={handleSubmit}
+          noValidate
+        >
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -326,9 +496,11 @@ export function DonationForm() {
           <StripePaymentElement
             clientSecret={clientSecret}
             email={email}
+            onEditDonationDetails={handleEditDonationDetails}
           />
         )}
-      </form>
+        </form>
+      )}
     </section>
   );
 }
