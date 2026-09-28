@@ -48,7 +48,23 @@ function EventsFallback() {
 }
 
 function SupportFallback() {
-  return <p>Get help and support!</p>;
+  return (
+    <div>
+      <h2 className="font-heading text-[64px] font-normal text-[#D72638]">Every Donation Counts</h2><br />
+      <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
+        Investing in this partnership means investing in a future where knowledge and cultural appreciation bring people together. Your support ensures that this connection continues to thrive for generations to come.
+
+        Philanthropic donations play a vital role in sustaining our mission, ensuring that every dollar directly supports meaningful programs and contributes to the long-term strength and growth of our organization.
+
+        Your sponsorship may be tax-deductible. Please consult with your tax advisor as to the deductibility of your sponsorship.
+      </p><br />
+      <h2 className="font-heading text-[64px] font-normal text-[#D72638]">Sponsorship</h2><br />
+      <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
+        Corporate sponsorships not only elevate the impact of our mission but also provide essential overhead support that ensures the sustainability and operational strength of our organization. By partnering with us, sponsors play a key role in expanding our reach, enhancing program quality, and fostering long-term community engagement. We’d love the opportunity to discuss how a larger corporate donation could impact our growth.
+      </p><br />
+
+    </div>
+  );
 }
 
 
