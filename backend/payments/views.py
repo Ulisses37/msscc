@@ -45,6 +45,44 @@ class PaymentSessionCreateView(APIView):
         # validated values are passed to the payment service.
         validated_data = serializer.validated_data
 
+        internal_reference = validated_data["internal_reference"]
+
+        # Donation payment sessions must match a real pending Donation. This
+        # prevents a completed, failed, or canceled donation from starting a
+        # second Stripe payment and prevents the browser from changing the
+        # amount after the Donation record has been created.
+        if internal_reference.startswith("DON-"):
+            try:
+                donation = Donation.objects.only(
+                    "amount",
+                    "payment_status",
+                ).get(reference_id=internal_reference)
+            except Donation.DoesNotExist:
+                return Response(
+                    {"detail": "Donation was not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            except Donation.MultipleObjectsReturned:
+                logger.error(
+                    "Payment session request matched multiple donations."
+                )
+                return Response(
+                    {"detail": "Unable to create payment session."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+            if donation.payment_status != "pending":
+                return Response(
+                    {"detail": "This donation cannot start another payment."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            if donation.amount != validated_data["amount"]:
+                return Response(
+                    {"detail": "Payment amount does not match the donation."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         # Construct the return URL on the server. Accepting a complete return
         # URL from the browser could allow an attacker to redirect a user to
         # an untrusted website.
@@ -52,12 +90,9 @@ class PaymentSessionCreateView(APIView):
         # Stripe replaces {CHECKOUT_SESSION_ID} with the actual session ID
         # when it sends the user back to the application.
         return_url = (
-            f"{settings.FRONTEND_URL.rstrip('/')}/payment/return"
+            f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
             "?session_id={CHECKOUT_SESSION_ID}"
         )
-
-        # for testing purposes, we can use a static return URL to avoid having to deal with the session ID in the frontend.
-        return_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
 
         try:
             # Call the reusable service created in SCRUM-561.
@@ -65,7 +100,7 @@ class PaymentSessionCreateView(APIView):
                 amount=validated_data["amount"],
                 currency=validated_data["currency"],
                 payment_purpose=validated_data["payment_purpose"],
-                internal_reference=validated_data["internal_reference"],
+                internal_reference=internal_reference,
                 return_url=return_url,
             )
 
@@ -154,6 +189,97 @@ def _get_internal_reference(stripe_object):
 
     metadata = stripe_object.get("metadata") or {}
     return metadata.get("internal_reference")
+
+
+class PaymentStatusView(APIView):
+    """Return the webhook-confirmed status for one Stripe Checkout Session."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Resolve a Stripe session to its donation and return only its status."""
+
+        session_id = request.query_params.get("session_id", "").strip()
+
+        # Checkout Session IDs are safe browser values, but reject malformed
+        # input before making a request to Stripe.
+        valid_prefix = session_id.startswith(("cs_test_", "cs_live_"))
+
+        if not valid_prefix or len(session_id) > 255:
+            return Response(
+                {"detail": "A valid payment session is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not settings.STRIPE_SECRET_KEY:
+            logger.error("Stripe secret key is not configured.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(
+                session_id,
+                api_key=settings.STRIPE_SECRET_KEY,
+            )
+            session_data = checkout_session.to_dict()
+        except stripe.InvalidRequestError:
+            # Do not return Stripe's raw error or reveal whether another
+            # internal payment reference exists.
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except stripe.StripeError as exc:
+            logger.error(
+                "Unable to retrieve Stripe payment session. request_id=%s",
+                getattr(exc, "request_id", None),
+            )
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        reference_id = _get_internal_reference(session_data)
+
+        if not reference_id or not reference_id.startswith("DON-"):
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            donation = Donation.objects.only("payment_status").get(
+                reference_id=reference_id,
+            )
+        except Donation.DoesNotExist:
+            return Response(
+                {"detail": "Payment status was not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Donation.MultipleObjectsReturned:
+            logger.error("Payment status lookup matched multiple donations.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        allowed_statuses = {"pending", "completed", "failed", "canceled"}
+
+        if donation.payment_status not in allowed_statuses:
+            logger.error("Donation contains an unsupported payment status.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {"payment_status": donation.payment_status},
+            status=status.HTTP_200_OK,
+        )
+
 
 class StripeWebhookView(APIView):
     """

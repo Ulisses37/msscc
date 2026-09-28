@@ -1,20 +1,39 @@
 'use client'
 
+type CategoryData = {
+  pages: string[];
+  tooltip: string;
+}
 
 // Translation map between broad Permission categories and its pages
 // Too add another page to a category, just append it to the [] array
-const permissionsCategories: Record<string, string[]> = {
-  Finances: ["Members", "Donations", "Partners"],
-  Text_Editing: ["Edit Pages"],
-  Board_Members: ["Board Members", "Board of Directors"],
-  Events: ["Events", "Volunteers"],
-  Executive: ["Permissions Pages"],
+const permissionCategories: Record<string, CategoryData> = {
+  Finances: {
+    pages: ["Members", "Donations", "Partners"],
+    tooltip: "Allows for managing the financial pages: \nMembers, Donations, Partners"
+  },
+  Text_Editing: {
+    pages: ["Edit Pages"],
+    tooltip: "Allows editing of common page text, translation, and images:\nEdit Pages"
+  },
+  Board_Members: {
+    pages:  ["Board Members", "Board of Directors"],
+    tooltip: "Allows managing of board members names, images, and descriptions:\nBoard of Directors"
+  },
+  Events: {
+    pages: ["Events", "Volunteers"],
+    tooltip: "Allows creation and editing of Events and Volunteers:\nEvents"
+  },
+  Executive: {
+    pages: ["Permissions Pages"],
+    tooltip: "Allows for editing of admin information and permission:\nPermissions Pages"
+  },
 }
 
 // find which category the submitted page belongs to
 function getPagePermission(page: string): string | undefined {
-  for (const [category, subcategories] of Object.entries(permissionsCategories)){
-    if (subcategories.includes(page)){
+  for (const [category, data] of Object.entries(permissionCategories)){
+    if (data.pages.includes(page)){
       return category;
     }
   }
@@ -26,10 +45,13 @@ export function hasPermission(
   {
     adminPermissions,
     permissionNeeded,
+    isExecutive,
   } : {
     adminPermissions?: Record<string, boolean>;
     permissionNeeded: string;
+    isExecutive: boolean;
   }): boolean {
+    if (isExecutive) return true;
     if (!adminPermissions) return false;
 
     const Permission = getPagePermission(permissionNeeded);
@@ -48,7 +70,12 @@ export function fetchLocalStorageAdmin(){
     email: string;
     firstName: string;
     permissionData: Record<string, boolean>;
+    isExecutive: boolean;
   } = JSON.parse(current_admin);
 
   return userData;
+}
+
+export function getToolTip(category: string): string | undefined {
+  return permissionCategories[category]?.tooltip;
 }
