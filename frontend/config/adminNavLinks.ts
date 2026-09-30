@@ -15,3 +15,11 @@ export const adminNavLinks: NavLink[] = [
   { label: 'Board of Directors', href: '/admin/board-of-directors'},
   { label: 'Partners', href: '/admin/partners'},
 ];
+
+export const adminSubLinks: NavLink[] = [ // For non-navbar pages.
+  // Label must match a category in permissionCategories from
+  // frontend\components\admin\AdminPermssionHandler.tsx
+  // feel free to update Pages: list of a category or just use an existing one.
+  // i,e, /admin/volunteer can fall under new category Volunteer or existing category Events
+  { label: 'Volunteer', href: '/admin/volunteer/'},
+]

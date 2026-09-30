@@ -6,7 +6,7 @@ type CategoryData = {
 }
 
 // Translation map between broad Permission categories and its pages
-// Too add another page to a category, just append it to the [] array
+// Too add another page to a category, just append it to the pages: [] array
 const permissionCategories: Record<string, CategoryData> = {
   Finances: {
     pages: ["Members", "Donations", "Partners"],
