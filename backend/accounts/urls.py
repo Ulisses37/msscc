@@ -4,9 +4,6 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import (
     AdminTokenObtainPairView,
     LogoutView,
-    list_admins,
-    get_admin,
-    update_permissions,
     password_reset_request,
     password_reset_confirm,
 )
