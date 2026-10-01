@@ -90,6 +90,43 @@ function tokenize(command) {
     .filter((token) => token && !token.startsWith('-'));
 }
 
+const READ_ONLY_PROGRAMS = new Set([
+  'cat', 'type', 'get-content', 'gc', 'more', 'less', 'head', 'tail',
+  'select-string', 'sls', 'findstr', 'grep', 'rg', 'ls', 'dir', 'get-childitem', 'gci', 'wc',
+]);
+const READ_ONLY_GIT = new Set(['diff', 'log', 'show', 'status', 'blame', 'ls-files']);
+const GIT_OPTIONS_WITH_VALUE = new Set(['-C', '-c', '--git-dir', '--work-tree']);
+
+function rawTokens(segment) {
+  return (segment.match(/"[^"]*"|'[^']*'|\S+/g) ?? []).map((token) =>
+    token.replace(/^['"]|['"]$/g, ''),
+  );
+}
+
+function isReadOnlySegment(segment) {
+  if (segment.includes('>')) return false;
+  const tokens = rawTokens(segment);
+  const program = (tokens[0] ?? '').toLowerCase().replace(/\.exe$/, '');
+  if (READ_ONLY_PROGRAMS.has(program)) return true;
+  if (program !== 'git') return false;
+  for (let i = 1; i < tokens.length; i += 1) {
+    if (GIT_OPTIONS_WITH_VALUE.has(tokens[i])) {
+      i += 1;
+    } else if (!tokens[i].startsWith('-')) {
+      return READ_ONLY_GIT.has(tokens[i]);
+    }
+  }
+  return false;
+}
+
+function protectedTokensIn(command) {
+  return command
+    .split(/&&|\|\||[;|\n]/)
+    .filter((segment) => !isReadOnlySegment(segment.trim()))
+    .flatMap(tokenize)
+    .filter(isProtected);
+}
+
 function normalize(candidate) {
   return candidate.replace(/\\/g, '/').replace(/^['"]+|['"]+$/g, '').trim();
 }
@@ -108,7 +145,7 @@ function isProtected(candidate) {
 
 let payload;
 try {
-  payload = JSON.parse(readFileSync(0, 'utf8') || '{}');
+  payload = JSON.parse((readFileSync(0, 'utf8') || '{}').replace(/^\uFEFF/, ''));
 } catch {
   respond(true, 'Secret guard could not parse the hook payload, so the tool call was blocked.');
 }
@@ -138,7 +175,7 @@ if (secretHits.length > 0) {
 const protectedHits = [
   ...new Set([
     ...(isReadOnlyTool ? [] : found.paths.filter(isProtected)),
-    ...commandTokens.filter(isProtected),
+    ...found.commands.flatMap(protectedTokensIn),
   ]),
 ];
 if (protectedHits.length > 0) {

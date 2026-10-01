@@ -1,7 +1,7 @@
 # Security and command approval
 
 ## Secrets
-- Never read, print, create, copy, or edit `.env`, `.env.local`, or any other env file. Use `backend/.env.example` and `frontend/.env.local.example` for variable names only.
+- Never read, print, create, copy, or edit `.env`, `.env.local`, or any other env file except for the example files, `backend/.env.example` and `frontend/.env.local.example` for variable names only.
 - Never print, log, or echo secret values (`*_SECRET_KEY`, `*_API_KEY`, `*_PASSWORD`, `STRIPE_WEBHOOK_SECRET`, `S3_*` credentials). Do not run `manage.py shell` or scripts that would print settings values.
 - Never hardcode a secret, token, password, or connection string in code, tests, docs, or commit messages. Read config with `os.environ` / `os.getenv` (backend) or `process.env` (frontend).
 - New env vars: add the name with an empty or placeholder value to the matching `.env.example` file. The human fills in real values.
