@@ -1,0 +1,12 @@
+#!/bin/sh
+# Cline PreToolUse hook (macOS/Linux). Delegates to the shared Node guard.
+# Must be executable: git update-index --chmod=+x .clinerules/hooks/PreToolUse
+HOOK_DIR=$(cd "$(dirname "$0")" && pwd)
+GUARD="$HOOK_DIR/../../.cline/guards/secret-guard.mjs"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo '{"cancel": true, "errorMessage": "Secret guard needs Node.js on PATH. Install Node 22 or fix PATH, then retry."}'
+  exit 0
+fi
+
+node "$GUARD"

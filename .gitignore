@@ -23,3 +23,6 @@ backend/staticfiles/
 
 # Temporary Files
 *.tmp
+tmp/
+backend/tmp/
+frontend/tmp/

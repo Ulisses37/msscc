@@ -1,0 +1,60 @@
+# Cline context filter (gitignore syntax).
+# Keeps these out of Cline's automatic context gathering, listing, and search.
+# This file alone is NOT an access boundary: the PreToolUse hooks in
+# .clinerules/hooks/ are what actually block reads, edits, and commands
+# that target secret files. Keep the two lists in sync.
+
+# Secrets and environment files (examples stay visible)
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local databases and dumps
+*.sqlite3
+*.sql
+*.dump
+*.bak
+
+# Dependencies and virtual environments
+node_modules/
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+
+# Build output and caches
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/coverage/
+*.tsbuildinfo
+__pycache__/
+*.pyc
+backend/staticfiles/
+.ruff_cache/
+.pytest_cache/
+
+# Lockfiles (large, machine-generated; Cline should not hand-edit them)
+frontend/package-lock.json
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Binary media that adds tokens without adding context
+docs/images/
+frontend/public/**/*.png
+frontend/public/**/*.jpg
+frontend/public/**/*.jpeg
+frontend/public/**/*.webp
+frontend/assets/**/*.png
+frontend/assets/**/*.jpg
