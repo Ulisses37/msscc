@@ -306,7 +306,7 @@ The team uses [Cline](https://docs.cline.bot) in VS Code. Project rules, skills,
 2. In Cline's settings, turn on **Enable Hooks** (Settings, Features) and, if shown, **Skills**.
 3. Click the scale icon below the Cline chat box. Confirm the six rules, two skills, and the `PreToolUse` hook are listed and toggled on.
 4. Check your personal global rules and skills folders (`Documents\Cline\Rules` and `%USERPROFILE%\.cline\skills` on Windows). A global skill with the same name as a project skill overrides it.
-5. Verify the guard: ask Cline to read `backend/.env.example` (it should work), then `backend/.env` (it should be blocked with a "secret file" message). If the second read succeeds, hooks are not running; tell the team before using Cline on this repo.
+5. Verify the guard: create a decoy with `Set-Content backend\hooktest.pem "not-a-real-key"`, then start a new Cline task and ask it to read the file. Tell it this is a hook test and the file holds a dummy value, or it may refuse on its own. It might still refuse or push back afterwards. Keep trying until it works. You might have to start multiple new chats. The hook should run and the reply should show "Aborted"; Cline does not display the block reason in chat. If Cline shows the file's contents instead, hooks are not running; tell the team before using Cline on this repo. Delete the decoy afterward with `Remove-Item backend\hooktest.pem`.
 
 #### Auto-approve settings
 
