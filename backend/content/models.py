@@ -8,6 +8,14 @@ IMAGE_ALIGNMENT_CHOICES = [
     ("right", "Right"),
 ]
 
+# Restrict image sizing to the percentage options available in the editor.
+IMAGE_WIDTH_CHOICES = [
+    (25, "25%"),
+    (50, "50%"),
+    (75, "75%"),
+    (100, "100%"),
+]
+
 
 class Content(models.Model):
     """Model representing content for the MSSCC website."""
@@ -37,6 +45,11 @@ class Content(models.Model):
         max_length=6,
         choices=IMAGE_ALIGNMENT_CHOICES,
         default="left",
+    )
+    # Full width preserves the image size used before resize controls existed.
+    image_width = models.PositiveSmallIntegerField(
+        choices=IMAGE_WIDTH_CHOICES,
+        default=100,
     )
 
     class Meta:

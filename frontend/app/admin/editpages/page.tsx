@@ -7,7 +7,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 // Types
-import type { BlockType, ContentBlock, ImageAlignment } from '@/types/content';
+import type {
+  BlockType,
+  ContentBlock,
+  ImageAlignment,
+  ImageWidth,
+} from '@/types/content';
 
 // Components
 import BilingualInput from '@/components/admin/BilingualInput';
@@ -35,6 +40,7 @@ type dbContentBlock = {
   media_asset: number | null;
   media_url: string | null;
   image_alignment: ImageAlignment;
+  image_width: ImageWidth;
 };
 
 //Costants for Snippet preview
@@ -57,8 +63,10 @@ export default function EditPagesPage() {
       type: type,
       contentEn: '',
       contentJa: '',
-      // New image blocks begin with the same alignment as existing content.
-      ...(type === 'image' ? { imageAlignment: 'left' as const } : {}),
+      // New image blocks begin with the same layout as existing content.
+      ...(type === 'image'
+        ? { imageAlignment: 'left' as const, imageWidth: 100 as const }
+        : {}),
     };
     setBlocks([...blocks, newBlock]);
   };
@@ -161,6 +169,8 @@ export default function EditPagesPage() {
       media_url: block.mediaUrl ?? null,
       // Preview unsaved alignment changes before writing them to the database.
       image_alignment: block.imageAlignment ?? 'left',
+      // Preview unsaved width changes before writing them to the database.
+      image_width: block.imageWidth ?? 100,
     }));
 
     previewFrameRef.current.contentWindow.postMessage(
@@ -214,6 +224,8 @@ export default function EditPagesPage() {
           mediaUrl: item.media_url,
           // Support records created before the alignment field was available.
           imageAlignment: item.image_alignment ?? 'left',
+          // Support records created before the width field was available.
+          imageWidth: item.image_width ?? 100,
         }));
         setBlocks(loadedBlocks);
       } catch (error) {
@@ -294,8 +306,9 @@ export default function EditPagesPage() {
           content_en: block.contentEn,
           content_ja: block.contentJa,
           media_asset: mediaAssetId,
-          // Persist the editor selection for both new and existing content blocks.
+          // Persist image layout selections for both new and existing content blocks.
           image_alignment: block.imageAlignment ?? 'left',
+          image_width: block.imageWidth ?? 100,
         };
 
         // Perform POST to backend
@@ -588,6 +601,7 @@ export default function EditPagesPage() {
                         contentJa={block.contentJa}
                         imageUrl={block.mediaUrl ?? null}
                         imageAlignment={block.imageAlignment ?? 'left'}
+                        imageWidth={block.imageWidth ?? 100}
                         onUpdateEn={(val) =>
                           updateBlock({ ...block, contentEn: val })
                         }
@@ -596,6 +610,9 @@ export default function EditPagesPage() {
                         }
                         onUpdateAlignment={(value) =>
                           updateBlock({ ...block, imageAlignment: value })
+                        }
+                        onUpdateWidth={(value) =>
+                          updateBlock({ ...block, imageWidth: value })
                         }
                         onSelectFile={(file) => {
                           const previewUrl = URL.createObjectURL(file);

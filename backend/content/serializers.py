@@ -27,4 +27,5 @@ class ContentSerializer(serializers.ModelSerializer):
             "content_en",
             "content_ja",
             "image_alignment",
+            "image_width",
         ]

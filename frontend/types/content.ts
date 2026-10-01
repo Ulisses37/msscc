@@ -5,6 +5,8 @@ export type BlockType = 'header' | 'subheader' | 'paragraph' | 'caption' | 'imag
 
 export type ImageAlignment = 'left' | 'center' | 'right';
 
+export type ImageWidth = 25 | 50 | 75 | 100;
+
 /**
  * Defines the data structure of a text block created in the Page Edit page
  */
@@ -19,6 +21,7 @@ export interface ContentBlock{
   mediaUrl?: string | null; // Used to preview/display image
   file?: File | null; // Used to display image locally if not yet saved to backend yet
   imageAlignment?: ImageAlignment;
+  imageWidth?: ImageWidth;
 }
 
 /**
@@ -36,4 +39,5 @@ export interface DbContentBlock {
   media_asset: number | null;
   media_url: string | null;
   image_alignment: ImageAlignment;
+  image_width: ImageWidth;
 }

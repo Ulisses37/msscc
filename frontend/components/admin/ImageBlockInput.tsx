@@ -2,16 +2,18 @@
 
 import React from 'react';
 
-import type { ImageAlignment } from '@/types/content';
+import type { ImageAlignment, ImageWidth } from '@/types/content';
 
 interface ImageBlockInputProps {
   contentEn: string;
   contentJa: string;
   imageUrl: string | null;
   imageAlignment: ImageAlignment;
+  imageWidth: ImageWidth;
   onUpdateEn: (value: string) => void;
   onUpdateJa: (value: string) => void;
   onUpdateAlignment: (value: ImageAlignment) => void;
+  onUpdateWidth: (value: ImageWidth) => void;
   onSelectFile: (file: File) => void;
   onDelete: () => void;
 }
@@ -21,9 +23,11 @@ export default function ImageBlockInput({
   contentJa,
   imageUrl,
   imageAlignment,
+  imageWidth,
   onUpdateEn,
   onUpdateJa,
   onUpdateAlignment,
+  onUpdateWidth,
   onSelectFile,
   onDelete,
 }: ImageBlockInputProps) {
@@ -88,6 +92,34 @@ export default function ImageBlockInput({
                 }`}
               >
                 {alignment}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {/* Update width in the parent block so preview and save use the same value. */}
+      <fieldset className="mb-6">
+        <legend className="mb-2 text-label uppercase text-msscc-gray-mid">
+          Image Width
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {([25, 50, 75, 100] as const).map((width) => {
+            const isSelected = imageWidth === width;
+
+            return (
+              <button
+                key={width}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => onUpdateWidth(width)}
+                className={`rounded-sm border px-4 py-2 text-btn ${
+                  isSelected
+                    ? 'border-msscc-pink bg-msscc-pink text-white'
+                    : 'border-msscc-gray-light bg-white text-msscc-gray-dark'
+                }`}
+              >
+                {width}%
               </button>
             );
           })}
