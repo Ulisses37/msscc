@@ -45,7 +45,10 @@ export default function MembershipPage() {
       const items = await response.json();
 
       // 2. Find the specific membership form item
-      const formItem = items.find((item: any) => item.file_name === "Printable_Membership_Form.pdf");
+      const formItem = items.find(
+        (item: { file_name: string; file_url: string }) =>
+          item.file_name === "Printable_Membership_Form.pdf",
+      );
       if (!formItem || !formItem.file_url) {
         alert("Membership form not found on the server.");
         return;

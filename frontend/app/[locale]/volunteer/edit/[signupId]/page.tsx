@@ -45,8 +45,8 @@ export default function VolunteerEditPage() {
           phone: data.phone || '',
         });
         setEventTitle(data.event_details?.title || "Event Volunteer");
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unexpected error.");
       } finally {
         setLoading(false);
       }
@@ -75,8 +75,8 @@ export default function VolunteerEditPage() {
       
       setSuccessMessage("Changes saved successfully!");
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
       setIsProcessing(false);
     }
@@ -91,8 +91,8 @@ export default function VolunteerEditPage() {
 
       if (!response.ok) throw new Error("Deletion failed.");
       router.push(`/${locale}/events`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unexpected error.");
       setShowDeleteConfirm(false);
     } finally {
       setIsProcessing(false);
@@ -216,5 +216,3 @@ const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left
    backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 };
 const modalContentStyle: React.CSSProperties = { backgroundColor: 'white', padding: '2.5rem', borderRadius: '12px',
    maxWidth: '30rem', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' };
-const secondaryButtonStyle = { backgroundColor: 'transparent', border: '1px solid var(--color-gray-mid)',
-   borderRadius: '10px', padding: '10px 24px', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-body)' };

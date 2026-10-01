@@ -12,12 +12,27 @@ export default function VolunteerSignupPage() {
   const { id, locale } = useParams();
   const router = useRouter();
 
+  interface VolunteerSlot {
+    volunteer_slot_id: number;
+    position_name: string;
+    capacity: number;
+    filled_count: number;
+  }
+
+  interface SignupSuccessData {
+    volunteer_signup_id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+  }
+
   const [event, setEvent] = useState<Event | null>(null);
-  const [slots, setSlots] = useState<any[]>([]);
+  const [slots, setSlots] = useState<VolunteerSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submittedData, setSubmittedData] = useState<any | null>(null);
+  const [submittedData, setSubmittedData] = useState<SignupSuccessData | null>(null);
 
   const [selectedSlotId, setSelectedSlotId] = useState<number | ''>('');
   const [formData, setFormData] = useState({
@@ -83,8 +98,8 @@ export default function VolunteerSignupPage() {
       const successData = await res.json();
       setSubmittedData(successData);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
-      setSubmitError(err.message);
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
       setIsSubmitting(false);
     }

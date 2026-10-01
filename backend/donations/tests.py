@@ -57,10 +57,10 @@ class DonationPaymentDataTests(TestCase):
     def test_all_expected_payment_statuses_are_allowed(self):
         donation = self.create_donation()
 
-        for status in Donation.PaymentStatus.values:
-            Donation.objects.filter(pk=donation.pk).update(payment_status=status)
+        for payment_status_value in Donation.PaymentStatus.values:
+            Donation.objects.filter(pk=donation.pk).update(payment_status=payment_status_value)
             donation.refresh_from_db()
-            self.assertEqual(donation.payment_status, status)
+            self.assertEqual(donation.payment_status, payment_status_value)
 
     def test_database_rejects_an_unsupported_payment_status(self):
         donation = self.create_donation()
