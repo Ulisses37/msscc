@@ -2,12 +2,16 @@
 
 import React from 'react';
 
+import type { ImageAlignment } from '@/types/content';
+
 interface ImageBlockInputProps {
   contentEn: string;
   contentJa: string;
   imageUrl: string | null;
+  imageAlignment: ImageAlignment;
   onUpdateEn: (value: string) => void;
   onUpdateJa: (value: string) => void;
+  onUpdateAlignment: (value: ImageAlignment) => void;
   onSelectFile: (file: File) => void;
   onDelete: () => void;
 }
@@ -16,8 +20,10 @@ export default function ImageBlockInput({
   contentEn,
   contentJa,
   imageUrl,
+  imageAlignment,
   onUpdateEn,
   onUpdateJa,
+  onUpdateAlignment,
   onSelectFile,
   onDelete,
 }: ImageBlockInputProps) {
@@ -59,6 +65,34 @@ export default function ImageBlockInput({
           />
         </div>
       )}
+
+      {/* Update alignment in the parent block so preview and save use the same value. */}
+      <fieldset className="mb-6">
+        <legend className="mb-2 text-label uppercase text-msscc-gray-mid">
+          Image Alignment
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {(['left', 'center', 'right'] as const).map((alignment) => {
+            const isSelected = imageAlignment === alignment;
+
+            return (
+              <button
+                key={alignment}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => onUpdateAlignment(alignment)}
+                className={`rounded-sm border px-4 py-2 text-btn capitalize ${
+                  isSelected
+                    ? 'border-msscc-pink bg-msscc-pink text-white'
+                    : 'border-msscc-gray-light bg-white text-msscc-gray-dark'
+                }`}
+              >
+                {alignment}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
 
       {/* Input fields for image caption */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,5 +1,11 @@
 import type { DbContentBlock } from '@/types/content';
 
+const IMAGE_ALIGNMENT_CLASSES = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+} as const;
+
 interface ContentBlockRendererProps {
   block: DbContentBlock;
   locale: string;
@@ -50,13 +56,16 @@ export function ContentBlockRenderer({
         );
 
       case 'image':
+        const alignmentClass = IMAGE_ALIGNMENT_CLASSES[block.image_alignment] ?? 'text-left';
+
+        // Align the figure so the image and its caption move together.
         return (
-          <figure>
+          <figure className={alignmentClass}>
             {block.media_url && (
               <img
                 src={block.media_url}
                 alt={content}
-                className="max-w-full h-auto"
+                className="inline-block h-auto max-w-full"
               />
             )}
 
