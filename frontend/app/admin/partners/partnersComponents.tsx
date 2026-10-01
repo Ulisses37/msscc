@@ -227,7 +227,7 @@ export function EditPartnerProp(
 }){
   const [partnerInfo, setInfo] = useState<PartnerProp>(partner);
   const [orderError, setOrderError] = useState<string>("");
-  const [websiteError, setWebsiteError] = useState<string>("");
+  const [, setWebsiteError] = useState<string>("");
   const [contributionError, setContributionError] = useState<string>("");
   const [currentDisplayOrder, setCurrentDisplayOrder] = useState<number | string>(partnerInfo.DisplayOrder);
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
@@ -490,7 +490,7 @@ function handleOrderChange(
     value: string;
     UsedDisplayOrders: number[];
     setOrderError: (value: string) => void;
-    setInfo: (value: any) => void;
+    setInfo: (value: PartnerProp | ((prev: PartnerProp) => PartnerProp)) => void;
     CategoryTitle: string;
     currentDisplayOrder: number;
   } ){
@@ -512,7 +512,7 @@ function handleOrderChange(
     } else {
       setOrderError("");
     }
-    setInfo(prev => ({ ...prev, DisplayOrder: value }));
+    setInfo(prev => ({ ...prev, DisplayOrder: Number(value) }));
   }
 
 function validateAndSubmit(
@@ -581,7 +581,7 @@ function validateContribution(
   } : {
     contributionAmount: string;
     setContributionError: (value: string) => void;
-    setInfo: (value: any) => void;
+    setInfo: (value: PartnerProp | ((prev: PartnerProp) => PartnerProp)) => void;
   }){
     const currentAmount = Number(contributionAmount);
     if (currentAmount < 0){
@@ -590,5 +590,5 @@ function validateContribution(
     }else{
       setContributionError("");
     }
-    setInfo(prev => ({...prev, ContributionAmount: contributionAmount}));
+    setInfo(prev => ({...prev, ContributionAmount: Number(contributionAmount)}));
 }

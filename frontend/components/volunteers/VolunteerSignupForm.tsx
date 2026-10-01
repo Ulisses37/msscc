@@ -12,7 +12,13 @@ export interface VolunteerSlot {
   filled_count: number;
 }
 
-export function VolunteerSignupForm({ event, onClose }: { event: any, onClose: () => void }) {
+export function VolunteerSignupForm({
+  event,
+  onClose,
+}: {
+  event: { id: number; title: string };
+  onClose: () => void;
+}) {
   const [slots, setSlots] = useState<VolunteerSlot[]>([]);
   const [formData, setFormData] = useState({
     first_name: '',

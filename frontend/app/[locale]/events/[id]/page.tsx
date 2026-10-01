@@ -7,7 +7,6 @@ import { getEventById, getEvents } from '@/services/eventService';
 import { EventDetail } from '@/components/events/EventDetails';
 import type { Event } from '@/types/event';
 import { EventNavigation } from '@/components/events/EventNavigation';
-import Button from '@/components/ui/Button'; // Import your Button component
 import { EventCalendar } from '@/components/events/EventCalendar';
 import { EventMap } from '@/components/events/EventMap';
 

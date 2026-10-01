@@ -3,7 +3,6 @@ import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
 import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
-import { createCipheriv } from "crypto";
 
 function formatPermissionKey(key: string): string {
     return key
