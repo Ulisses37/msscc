@@ -5,7 +5,7 @@ paths:
 
 # Backend style (Django / DRF)
 
-Source: team coding style guide, section 2 (PEP 8 baseline). Until the committed Ruff config lands, code must pass `ruff check backend` with Ruff's default rules (pyflakes plus core pycodestyle errors).
+Source: team coding style guide, section 2 (PEP 8 baseline).Until the committed Ruff config lands, code must pass ruff check backend --select E4,E7,E9,F (pyflakes plus core pycodestyle errors).
 
 ## Formatting
 - 4-space indent, max 100 characters per line, double quotes for strings.

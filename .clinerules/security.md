@@ -12,7 +12,7 @@
 ## Command approval
 Set `requires_approval=false` ONLY for these read-only checks, run exactly as written:
 - Frontend (in `frontend/`): `npm run lint`, `npx tsc --noEmit`
-- Backend lint (from repo root): `ruff check backend`, `ruff format --check backend`
+- Backend lint (from repo root): `ruff check backend --select E4,E7,E9,F`, `ruff format --check backend`
 - Django (in `backend/`, venv active): `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py showmigrations`
 - Git: `git status`, `git diff`, `git log`, `git branch`, `git show`
 
