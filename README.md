@@ -17,6 +17,7 @@ A bilingual (English/Japanese) website for the [Matsuyama-Sacramento Sister City
   - [Prerequisites](#prerequisites)
   - [Repository Structure](#repository-structure)
   - [Documentation](#documentation)
+  - [AI Assistant (Cline)](#ai-assistant-cline)
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Timeline](#timeline)
@@ -287,6 +288,43 @@ Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 - [Local Development and Testing Setup](./docs/MSSCC_Dev_Setup_Guide.md)
 - Deployment Guide (To be added next semester)
+
+### AI Assistant (Cline)
+
+The team uses [Cline](https://docs.cline.bot) in VS Code. Project rules, skills, and access guards are committed to the repo so everyone's Cline follows the same conventions.
+
+| Path | Purpose |
+|---|---|
+| `.clinerules/*.md` | Always-on rules: security and command approval, project context, Git/Jira workflow, docs updates. Frontend and backend style rules load only when working in those folders. |
+| `.cline/skills/` | On-demand skills: `stripe-webhook-testing`, `django-migrations`. |
+| `.clinerules/hooks/` | `PreToolUse` hook (`PreToolUse.ps1` on Windows) that blocks any read, edit, or command touching `.env` files, keys, or the guard itself. Logic lives in `.cline/guards/secret-guard.mjs` and needs Node.js on PATH. |
+| `.clineignore` | Keeps secrets, dependencies, and build output out of Cline's automatic context. Not an access boundary on its own; the hook is. |
+
+#### Setup
+
+1. Open the **repo root** (`msscc/`) as the VS Code workspace. Opening only `frontend/` or `backend/` skips the rules.
+2. In Cline's settings, turn on **Enable Hooks** (Settings, Features) and, if shown, **Skills**.
+3. Click the scale icon below the Cline chat box. Confirm the six rules, two skills, and the `PreToolUse` hook are listed and toggled on.
+4. Check your personal global rules and skills folders (`Documents\Cline\Rules` and `%USERPROFILE%\.cline\skills` on Windows). A global skill with the same name as a project skill overrides it.
+5. Verify the guard: ask Cline to read `backend/.env.example` (it should work), then `backend/.env` (it should be blocked with a "secret file" message). If the second read succeeds, hooks are not running; tell the team before using Cline on this repo.
+
+#### Auto-approve settings
+
+Code changes always need your approval. Only read-only checks run on their own.
+
+| Setting | Value |
+|---|---|
+| Read project files | On |
+| Read all files | Off |
+| Edit project files | Off |
+| Edit all files | Off |
+| Execute safe commands | On |
+| Execute all commands | Off |
+| Use the browser | Off |
+| Use MCP servers | Off |
+| YOLO mode | Off |
+
+"Execute safe commands" relies on the model's judgment. The command list in `.clinerules/security.md` steers it toward lint, type, and Django checks only. Anything that writes files, installs packages, changes git state, or touches the shared database still asks first.
 
 
 ## Testing
