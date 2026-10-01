@@ -1,13 +1,18 @@
 'use client';
 
 // React
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // uuid
 import { v4 as uuidv4 } from 'uuid';
 
 // Types
-import { ContentBlock, BlockType } from '@/types/content';
+import type {
+  BlockType,
+  ContentBlock,
+  ImageAlignment,
+  ImageWidth,
+} from '@/types/content';
 
 // Components
 import BilingualInput from '@/components/admin/BilingualInput';
@@ -34,6 +39,8 @@ type dbContentBlock = {
   content_ja: string;
   media_asset: number | null;
   media_url: string | null;
+  image_alignment: ImageAlignment;
+  image_width: ImageWidth;
 };
 
 //Costants for Snippet preview
@@ -56,6 +63,10 @@ export default function EditPagesPage() {
       type: type,
       contentEn: '',
       contentJa: '',
+      // New image blocks begin with the same layout as existing content.
+      ...(type === 'image'
+        ? { imageAlignment: 'left' as const, imageWidth: 100 as const }
+        : {}),
     };
     setBlocks([...blocks, newBlock]);
   };
@@ -144,7 +155,7 @@ export default function EditPagesPage() {
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
 
   // Outgoing edits for Preview Render
-  const sendPreviewBlocks = () => {
+  const sendPreviewBlocks = useCallback(() => {
     if (!previewFrameRef.current?.contentWindow || selectedPageId === null) return;
 
     const previewBlocks = blocks.map((block, index) => ({
@@ -156,17 +167,21 @@ export default function EditPagesPage() {
       content_ja: block.contentJa,
       media_asset: block.mediaAssetId ?? null,
       media_url: block.mediaUrl ?? null,
+      // Preview unsaved alignment changes before writing them to the database.
+      image_alignment: block.imageAlignment ?? 'left',
+      // Preview unsaved width changes before writing them to the database.
+      image_width: block.imageWidth ?? 100,
     }));
 
     previewFrameRef.current.contentWindow.postMessage(
       { type: 'MSSCC_PREVIEW_BLOCKS', isPreview: true, blocks: previewBlocks },
       window.location.origin,
     );
-  };
+  }, [blocks, selectedPageId]);
 
   useEffect(() => {
     if (isPreviewOpen) sendPreviewBlocks();
-  }, [blocks, isPreviewOpen, selectedPageId]);
+  }, [isPreviewOpen, sendPreviewBlocks]);
 
   useEffect(() => {
     if (!isPreviewOpen) return;
@@ -207,6 +222,10 @@ export default function EditPagesPage() {
           contentJa: item.content_ja,
           mediaAssetId: item.media_asset,
           mediaUrl: item.media_url,
+          // Support records created before the alignment field was available.
+          imageAlignment: item.image_alignment ?? 'left',
+          // Support records created before the width field was available.
+          imageWidth: item.image_width ?? 100,
         }));
         setBlocks(loadedBlocks);
       } catch (error) {
@@ -287,6 +306,9 @@ export default function EditPagesPage() {
           content_en: block.contentEn,
           content_ja: block.contentJa,
           media_asset: mediaAssetId,
+          // Persist image layout selections for both new and existing content blocks.
+          image_alignment: block.imageAlignment ?? 'left',
+          image_width: block.imageWidth ?? 100,
         };
 
         // Perform POST to backend
@@ -578,11 +600,19 @@ export default function EditPagesPage() {
                         contentEn={block.contentEn}
                         contentJa={block.contentJa}
                         imageUrl={block.mediaUrl ?? null}
+                        imageAlignment={block.imageAlignment ?? 'left'}
+                        imageWidth={block.imageWidth ?? 100}
                         onUpdateEn={(val) =>
                           updateBlock({ ...block, contentEn: val })
                         }
                         onUpdateJa={(val) =>
                           updateBlock({ ...block, contentJa: val })
+                        }
+                        onUpdateAlignment={(value) =>
+                          updateBlock({ ...block, imageAlignment: value })
+                        }
+                        onUpdateWidth={(value) =>
+                          updateBlock({ ...block, imageWidth: value })
                         }
                         onSelectFile={(file) => {
                           const previewUrl = URL.createObjectURL(file);

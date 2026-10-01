@@ -1,4 +1,17 @@
-import type { DbContentBlock } from '@/types/content';
+import type { DbContentBlock, ImageWidth } from '@/types/content';
+
+const IMAGE_ALIGNMENT_CLASSES = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+} as const;
+
+const IMAGE_WIDTH_CLASSES: Record<ImageWidth, string> = {
+  25: 'w-1/4',
+  50: 'w-1/2',
+  75: 'w-3/4',
+  100: 'w-full',
+};
 
 interface ContentBlockRendererProps {
   block: DbContentBlock;
@@ -50,13 +63,18 @@ export function ContentBlockRenderer({
         );
 
       case 'image':
+        const alignmentClass = IMAGE_ALIGNMENT_CLASSES[block.image_alignment] ?? 'text-left';
+        const widthClass = IMAGE_WIDTH_CLASSES[block.image_width] ?? 'w-full';
+
+        // Align the figure so the image and its caption move together.
         return (
-          <figure>
+          <figure className={alignmentClass}>
+            {/* Apply width to the image without constraining its caption. */}
             {block.media_url && (
               <img
                 src={block.media_url}
                 alt={content}
-                className="max-w-full h-auto"
+                className={`inline-block h-auto max-w-full ${widthClass}`}
               />
             )}
 
