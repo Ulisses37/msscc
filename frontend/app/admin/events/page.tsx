@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { Event } from '@/types/event';
 import { getEvents, getMediaAssetById } from '@/services/eventService';
 import EventForm, { EventFormData } from '@/components/admin/EventForm';
@@ -32,6 +32,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const searchParams = useSearchParams();
+  const mainRef = useRef<HTMLElement>(null);
 
   // Fetch existing events on load
   useEffect(() => {
@@ -60,6 +61,13 @@ export default function EventsPage() {
     }
   }
 }, [events, searchParams]);
+
+  // Auto-scroll to the event form whenever Create Event or Edit is clicked on
+  useEffect(() => {
+    if (showForm && mainRef.current) {
+      mainRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showForm, selectedEvent]);
 
   const handleSubmit = async (data: EventFormData, imageFile: File | null) => {
     setIsSubmitting(true);
@@ -280,10 +288,10 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-msscc-white font-body text-msscc-gray-dark">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-msscc-white font-body text-msscc-gray-dark">
 
       {/* ── Left Sidebar ────────────────────────────────────── */}
-      <aside className="w-64 flex-shrink-0 border-r border-msscc-gray-light p-6 flex flex-col gap-6">
+      <aside className="w-full lg:w-64 flex-shrink-0 border-r border-msscc-gray-light p-6 flex flex-col gap-6">
 
         {/* Create Event Button */}
         <button
@@ -356,7 +364,7 @@ export default function EventsPage() {
       </aside>
 
       {/* ── Main Form Area ───────────────────────────────────── */}
-      <main className="flex-1 p-10 max-w-content mx-auto">
+      <main ref={mainRef} className="flex-1 p-4 sm:p-10 max-w-content mx-auto w-full">
 
         <h1 className="font-heading text-display text-msscc-teal border-b border-msscc-gray-light pb-4 mb-10">
           {isEditing ? 'Edit Event' : 'Create Event'}
