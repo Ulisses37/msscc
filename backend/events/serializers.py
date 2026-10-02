@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from events.models import Event, VolunteerSignup, VolunteerSlot
+from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 
 
 # serializer allows for easier access to event metadata
@@ -28,6 +28,34 @@ class EventSerializer(serializers.ModelSerializer):
             "media_asset",
             "calendar_link",
         ]
+
+
+class EventImageSerializer(serializers.ModelSerializer):
+    """Serialize an additional event image and its directly usable media URL."""
+
+    media_url = serializers.SerializerMethodField()
+
+    def get_media_url(self, obj: EventImage) -> str | None:
+        """Return the associated media file URL when the asset still exists."""
+        if obj.media_asset and obj.media_asset.file:
+            return obj.media_asset.file.url
+
+        return None
+
+    class Meta:
+        model = EventImage
+        fields = [
+            "event_image_id",
+            "event",
+            "media_asset",
+            "media_url",
+            "caption_en",
+            "caption_ja",
+            "display_order",
+            "image_width",
+            "image_alignment",
+        ]
+        read_only_fields = ["event_image_id", "media_url"]
 
 
 class VolunteerSlotSerializer(serializers.ModelSerializer):

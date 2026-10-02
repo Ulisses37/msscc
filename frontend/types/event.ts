@@ -1,6 +1,20 @@
+import type { ImageAlignment, ImageWidth } from '@/types/content';
+
 export interface MediaAsset {
   fileUrl: string;
   altText: string;
+}
+
+export interface EventImage {
+  id: number;
+  eventId: number;
+  mediaAssetId: number | null;
+  mediaUrl: string | null;
+  captionEn: string;
+  captionJa: string;
+  displayOrder: number;
+  imageWidth: ImageWidth;
+  imageAlignment: ImageAlignment;
 }
 
 export interface Event {

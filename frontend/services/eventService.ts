@@ -1,4 +1,5 @@
-import type { Event } from '@/types/event';
+import type { ImageAlignment, ImageWidth } from '@/types/content';
+import type { Event, EventImage } from '@/types/event';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 interface RawEvent {
@@ -26,6 +27,28 @@ interface RawMediaAsset {
   file_url: string | null;
   alt_text_en: string;
   alt_text_ja: string;
+}
+
+interface RawEventImage {
+  event_image_id: number;
+  event: number;
+  media_asset: number | null;
+  media_url: string | null;
+  caption_en: string;
+  caption_ja: string;
+  display_order: number;
+  image_width: ImageWidth;
+  image_alignment: ImageAlignment;
+}
+
+export interface EventImagePayload {
+  event: number;
+  media_asset: number | null;
+  caption_en: string;
+  caption_ja: string;
+  display_order: number;
+  image_width: ImageWidth;
+  image_alignment: ImageAlignment;
 }
 
 /**
@@ -127,6 +150,79 @@ export async function getEventById(id: number): Promise<Event | undefined> {
   return event;
 }
 
+/**
+ * Fetch the additional images associated with one event.
+ */
+export async function getEventImages(eventId: number): Promise<EventImage[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/events/images/?event_id=${eventId}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch event images: ${response.status}`);
+  }
+
+  const images: RawEventImage[] = await response.json();
+
+  return images.map(mapEventImage);
+}
+
+/**
+ * Create an additional image association for an event.
+ */
+export async function createEventImage(
+  payload: EventImagePayload,
+): Promise<EventImage> {
+  const response = await fetch(`${API_BASE_URL}/api/events/images/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create event image: ${response.status}`);
+  }
+
+  return mapEventImage(await response.json());
+}
+
+/**
+ * Update an existing event image association.
+ */
+export async function updateEventImage(
+  eventImageId: number,
+  payload: EventImagePayload,
+): Promise<EventImage> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/events/images/${eventImageId}/`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to update event image: ${response.status}`);
+  }
+
+  return mapEventImage(await response.json());
+}
+
+/**
+ * Delete an event image association without deleting its reusable media asset.
+ */
+export async function deleteEventImage(eventImageId: number): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/events/images/${eventImageId}/`,
+    { method: 'DELETE' },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete event image: ${response.status}`);
+  }
+}
+
 function mapMediaAsset(raw: RawMediaAsset): {
   fileUrl: string;
   altText: string;
@@ -134,5 +230,19 @@ function mapMediaAsset(raw: RawMediaAsset): {
   return {
     fileUrl: raw.file_url ?? '',
     altText: raw.alt_text_en,
+  };
+}
+
+function mapEventImage(raw: RawEventImage): EventImage {
+  return {
+    id: raw.event_image_id,
+    eventId: raw.event,
+    mediaAssetId: raw.media_asset,
+    mediaUrl: raw.media_url,
+    captionEn: raw.caption_en,
+    captionJa: raw.caption_ja,
+    displayOrder: raw.display_order,
+    imageWidth: raw.image_width,
+    imageAlignment: raw.image_alignment,
   };
 }
