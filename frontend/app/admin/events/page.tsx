@@ -6,6 +6,8 @@ import { getEvents, getMediaAssetById } from '@/services/eventService';
 import EventForm, { EventFormData } from '@/components/admin/EventForm';
 import { useSearchParams } from 'next/navigation';
 
+type EventFilter = 'upcoming' | 'past';
+
 /**
  * Helper function for formatting time to string format for EventForm.tsx
  */
@@ -31,8 +33,35 @@ export default function EventsPage() {
   const [eventError, setEventError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
   const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
+
+  // Use the event end time to decide whether an event is still upcoming or has passed.
+  const currentTime = Date.now();
+  const filteredEvents = events
+    .filter((event) => {
+      const endTime = new Date(event.endDatetime).getTime();
+
+      return eventFilter === 'upcoming'
+        ? endTime >= currentTime
+        : endTime < currentTime;
+    })
+    .sort((firstEvent, secondEvent) => {
+      // Show the next upcoming event first so admins can find it quickly.
+      if (eventFilter === 'upcoming') {
+        return (
+          new Date(firstEvent.startDatetime).getTime()
+          - new Date(secondEvent.startDatetime).getTime()
+        );
+      }
+
+      // Show the most recently completed event first in the past-events list.
+      return (
+        new Date(secondEvent.endDatetime).getTime()
+        - new Date(firstEvent.endDatetime).getTime()
+      );
+    });
 
   // Fetch existing events on load
   useEffect(() => {
@@ -306,7 +335,30 @@ export default function EventsPage() {
           + Create Event
         </button>
 
-        {/* Event List Placeholder */}
+        {/* Upcoming and Past Event Filter Buttons */}
+        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+          {(['upcoming', 'past'] as const).map((filter) => {
+            const isActive = eventFilter === filter;
+            const label = filter === 'upcoming' ? 'Upcoming' : 'Past';
+
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setEventFilter(filter)}
+                aria-pressed={isActive}
+                className={`w-full rounded-sm border px-3 py-2 text-btn tracking-btn transition-colors ${
+                  isActive
+                    ? 'border-msscc-pink bg-msscc-pink text-white'
+                    : 'border-msscc-gray-light bg-msscc-white text-msscc-gray-dark hover:border-msscc-pink hover:text-msscc-pink'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
         {isLoadingEvents ? (
           <p className="text-msscc-gray-mid text-body-sm">
             Loading events...
@@ -315,13 +367,13 @@ export default function EventsPage() {
           <p className="text-msscc-danger text-body-sm">
             {eventError}
           </p>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <p className="text-msscc-gray-mid text-body-sm">
-            No events exist.
+            No {eventFilter} events.
           </p>
         ) : (
           <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <div
                 key={event.id}
                 className="border border-msscc-gray-light rounded-sm p-3"
