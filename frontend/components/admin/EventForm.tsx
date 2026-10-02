@@ -2,11 +2,16 @@
 
 // React and next
 import Image from 'next/image';
-import { useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
 // Components
+import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { ImportImage } from '@/components/ui/ImportImage';
+
+// Types
+import type { ImageAlignment, ImageWidth } from '@/types/content';
+import type { EventImage } from '@/types/event';
 
 export interface EventFormData {
   titleEn: string;
@@ -20,13 +25,28 @@ export interface EventFormData {
   sendVolunteerReminders: boolean;
 }
 
+export interface EventPhotoFormData {
+  localId: string;
+  eventImageId: number | null;
+  mediaAssetId: number | null;
+  mediaUrl: string | null;
+  file: File | null;
+  captionEn: string;
+  captionJa: string;
+  imageAlignment: ImageAlignment;
+  imageWidth: ImageWidth;
+}
+
 interface EventFormProps {
   initialData?: EventFormData;
   initialImageUrl?: string | null;
+  initialEventPhotos?: EventImage[];
   volunteerSlots?: number;
   onSubmit: (
     data: EventFormData,
     imageFile: File | null,
+    eventPhotos: EventPhotoFormData[],
+    deletedEventPhotoIds: number[],
   ) => Promise<void>;
   isSubmitting?: boolean;
   submitLabel?: string;
@@ -54,6 +74,7 @@ export default function EventForm({
     sendVolunteerReminders: false,
   },
   initialImageUrl = null,
+  initialEventPhotos = [],
   volunteerSlots = 0,
   onSubmit,
   isSubmitting = false,
@@ -65,7 +86,113 @@ export default function EventForm({
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [eventPhotos, setEventPhotos] = useState<EventPhotoFormData[]>(
+    initialEventPhotos.map((photo) => ({
+      localId: `saved-${photo.id}`,
+      eventImageId: photo.id,
+      mediaAssetId: photo.mediaAssetId,
+      mediaUrl: photo.mediaUrl,
+      file: null,
+      captionEn: photo.captionEn,
+      captionJa: photo.captionJa,
+      imageAlignment: photo.imageAlignment,
+      imageWidth: photo.imageWidth,
+    })),
+  );
+  const [deletedEventPhotoIds, setDeletedEventPhotoIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState('');
+  const previewUrlsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const previewUrls = previewUrlsRef.current;
+
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  const addEventPhoto = () => {
+    setEventPhotos((currentPhotos) => [
+      ...currentPhotos,
+      {
+        localId: crypto.randomUUID(),
+        eventImageId: null,
+        mediaAssetId: null,
+        mediaUrl: null,
+        file: null,
+        captionEn: '',
+        captionJa: '',
+        imageAlignment: 'left',
+        imageWidth: 100,
+      },
+    ]);
+  };
+
+  const updateEventPhoto = (
+    localId: string,
+    updates: Partial<EventPhotoFormData>,
+  ) => {
+    setEventPhotos((currentPhotos) =>
+      currentPhotos.map((photo) =>
+        photo.localId === localId ? { ...photo, ...updates } : photo,
+      ),
+    );
+  };
+
+  const selectEventPhotoFile = (photo: EventPhotoFormData, file: File) => {
+    if (photo.mediaUrl && previewUrlsRef.current.has(photo.mediaUrl)) {
+      URL.revokeObjectURL(photo.mediaUrl);
+      previewUrlsRef.current.delete(photo.mediaUrl);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    previewUrlsRef.current.add(previewUrl);
+    updateEventPhoto(photo.localId, { file, mediaUrl: previewUrl });
+  };
+
+  const deleteEventPhoto = (photo: EventPhotoFormData) => {
+    const isConfirmed = window.confirm(
+      'Are you sure you want to remove this event photo?',
+    );
+
+    if (!isConfirmed) return;
+
+    if (photo.mediaUrl && previewUrlsRef.current.has(photo.mediaUrl)) {
+      URL.revokeObjectURL(photo.mediaUrl);
+      previewUrlsRef.current.delete(photo.mediaUrl);
+    }
+
+    const eventImageId = photo.eventImageId;
+
+    if (eventImageId !== null) {
+      setDeletedEventPhotoIds((currentIds) => [
+        ...currentIds,
+        eventImageId,
+      ]);
+    }
+
+    setEventPhotos((currentPhotos) =>
+      currentPhotos.filter((currentPhoto) => currentPhoto.localId !== photo.localId),
+    );
+  };
+
+  const moveEventPhoto = (index: number, direction: 'up' | 'down') => {
+    setEventPhotos((currentPhotos) => {
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+      if (targetIndex < 0 || targetIndex >= currentPhotos.length) {
+        return currentPhotos;
+      }
+
+      const reorderedPhotos = [...currentPhotos];
+      [reorderedPhotos[index], reorderedPhotos[targetIndex]] = [
+        reorderedPhotos[targetIndex],
+        reorderedPhotos[index],
+      ];
+
+      return reorderedPhotos;
+    });
+  };
 
   const handleTranslate = async (
     fieldEn: keyof EventFormData,
@@ -107,6 +234,9 @@ export default function EventForm({
     if (requireImage && !selectedFile && !initialImageUrl) {
       missingFields.push('Image');
     }
+    if (eventPhotos.some((photo) => !photo.file && !photo.mediaAssetId)) {
+      missingFields.push('an image for each Event Photo');
+    }
 
     if (missingFields.length > 0) {
       setSaveError(
@@ -126,7 +256,12 @@ export default function EventForm({
     }
 
     try {
-      await onSubmit(formData, selectedFile);
+      await onSubmit(
+        formData,
+        selectedFile,
+        eventPhotos,
+        deletedEventPhotoIds,
+      );
     } catch (error) {
       console.error('Event form submission failed:', error);
       setSaveError('Failed to save event. Please try again.');
@@ -374,6 +509,81 @@ export default function EventForm({
           />
         </div>
       </div>
+
+      {/* Additional Event Photos */}
+      <section className="mt-8 border-t border-msscc-gray-light pt-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-heading text-heading-2 text-msscc-teal">
+              Event Photos
+            </h2>
+            <p className="mt-1 text-body-sm text-msscc-gray-mid">
+              Add ordered photos and bilingual captions to the event.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={addEventPhoto}
+            className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-left text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:w-auto"
+          >
+            +Image
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {eventPhotos.map((photo, index) => (
+            <div key={photo.localId} className="space-y-2">
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => moveEventPhoto(index, 'up')}
+                  disabled={index === 0}
+                  className="rounded-sm border border-msscc-gray-light px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ↑ Move Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveEventPhoto(index, 'down')}
+                  disabled={index === eventPhotos.length - 1}
+                  className="rounded-sm border border-msscc-gray-light px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ↓ Move Down
+                </button>
+              </div>
+
+              <ImageBlockInput
+                contentEn={photo.captionEn}
+                contentJa={photo.captionJa}
+                imageUrl={photo.mediaUrl}
+                imageAlignment={photo.imageAlignment}
+                imageWidth={photo.imageWidth}
+                onUpdateEn={(captionEn) =>
+                  updateEventPhoto(photo.localId, { captionEn })
+                }
+                onUpdateJa={(captionJa) =>
+                  updateEventPhoto(photo.localId, { captionJa })
+                }
+                onUpdateAlignment={(imageAlignment) =>
+                  updateEventPhoto(photo.localId, { imageAlignment })
+                }
+                onUpdateWidth={(imageWidth) =>
+                  updateEventPhoto(photo.localId, { imageWidth })
+                }
+                onSelectFile={(file) => selectEventPhotoFile(photo, file)}
+                onDelete={() => deleteEventPhoto(photo)}
+              />
+            </div>
+          ))}
+
+          {eventPhotos.length === 0 && (
+            <div className="rounded-md border border-dashed border-msscc-gray-light px-4 py-10 text-center text-body-sm text-msscc-gray-mid">
+              No additional event photos have been added.
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Send Volunteer Reminders Checkbox (hidden when there are no volunteer slots) */}
       {volunteerSlots > 0 && (
