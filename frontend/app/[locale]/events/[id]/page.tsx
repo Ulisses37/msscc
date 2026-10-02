@@ -31,13 +31,13 @@ export default function EventDetailPage() {
 
       setEvent(data);
 
-      // Fetch all published events, sort chronologically, find adjacent events
+      // Fetch all published events that have not passed in date, sort chronologically, find adjacent events
       const allEvents = await getEvents();
       const sorted = allEvents
-        .filter((e) => e.isPublished)
-        .sort((a, b) =>
-          new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
-        );
+      .filter((e) => e.isPublished && new Date(e.endDatetime).getTime() >= Date.now())
+      .sort((a, b) =>
+        new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
+      );
 
       const currentIndex = sorted.findIndex((e) => e.id === Number(id));
       setPreviousEvent(currentIndex > 0 ? sorted[currentIndex - 1] : null);
@@ -115,14 +115,13 @@ export default function EventDetailPage() {
       </Link>
 
       {/* 60/40 layout — left: event detail, right: calendar */}
-      <div style={{
-        display: 'flex',
+      <div className="flex flex-col lg:flex-row" style={{
         gap: 'var(--space-10)',
         alignItems: 'flex-start',
       }}>
 
         {/* Left — 60% — full event detail */}
-        <div style={{ flex: '0 0 60%' }}>
+        <div className="w-full lg:flex-[0_0_60%]">
           {event && (
             <EventDetail
               event={event}
@@ -136,8 +135,7 @@ export default function EventDetailPage() {
         </div>
 
         {/* Right — 40% — calendar placeholder for now */}
-        <div style={{
-          flex: '0 0 40%',
+        <div className="w-full lg:flex-[0_0_40%]" style={{
           position: 'sticky',
           top: 'var(--space-10)',
         }}>
