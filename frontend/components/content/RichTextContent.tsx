@@ -40,9 +40,19 @@ function renderNodes(nodes: RichTextNode[]): React.ReactNode[] {
     // Display saved line breaks.
     if (node.type === 'br') return <br key={key} />;
     // Display bold content.
-    if (node.type === 'strong') return <strong key={key}>{renderNodes(node.children)}</strong>;
+    if (node.type === 'strong') {
+      return (
+        <strong key={key} className="font-bold">
+          {renderNodes(node.children)}
+        </strong>
+      );
+    }
 
     // The only remaining supported type is italic.
-    return <em key={key}>{renderNodes(node.children)}</em>;
+    return (
+      <em key={key} className="italic">
+        {renderNodes(node.children)}
+      </em>
+    );
   });
 }

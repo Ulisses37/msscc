@@ -240,10 +240,20 @@ function serializeEditorContent(editor: HTMLDivElement): string {
 
     // Keep line breaks as <br>.
     if (node.tagName === 'BR') return '<br>';
-    // Convert both browser versions of bold into <strong>.
+    // Convert browser versions of bold into <strong>.
     if (node.tagName === 'STRONG' || node.tagName === 'B') return `<strong>${content}</strong>`;
-    // Convert both browser versions of italic into <em>.
+    // Convert browser versions of italic into <em>.
     if (node.tagName === 'EM' || node.tagName === 'I') return `<em>${content}</em>`;
+    // Handle browsers that represent Bold/Italic using styled <span> elements, and
+    // convert that formatting into the standard <strong> and <em> tags used in this website.
+    if (node.tagName === 'SPAN') {
+      const isBold = node.style.fontWeight === 'bold' || node.style.fontWeight === '700';
+      const isItalic = node.style.fontStyle === 'italic';
+
+      if (isBold && isItalic) return `<strong><em>${content}</em></strong>`;
+      if (isBold) return `<strong>${content}</strong>`;
+      if (isItalic) return `<em>${content}</em>`;
+    }
     // Browsers may use DIV or P for new lines, so turn them into <br>.
     if (node.tagName === 'DIV' || node.tagName === 'P') {
       return `${index > 0 ? '<br>' : ''}${content}`;
