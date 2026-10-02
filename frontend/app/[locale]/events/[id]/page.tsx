@@ -115,14 +115,13 @@ export default function EventDetailPage() {
       </Link>
 
       {/* 60/40 layout — left: event detail, right: calendar */}
-      <div style={{
-        display: 'flex',
+      <div className="flex flex-col lg:flex-row" style={{
         gap: 'var(--space-10)',
         alignItems: 'flex-start',
       }}>
 
         {/* Left — 60% — full event detail */}
-        <div style={{ flex: '0 0 60%' }}>
+        <div className="w-full lg:flex-[0_0_60%]">
           {event && (
             <EventDetail
               event={event}
@@ -136,8 +135,7 @@ export default function EventDetailPage() {
         </div>
 
         {/* Right — 40% — calendar placeholder for now */}
-        <div style={{
-          flex: '0 0 40%',
+        <div className="w-full lg:flex-[0_0_40%]" style={{
           position: 'sticky',
           top: 'var(--space-10)',
         }}>
