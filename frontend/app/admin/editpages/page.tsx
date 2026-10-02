@@ -198,7 +198,7 @@ export default function EditPagesPage() {
   useEffect(() => {
     const fetchPages = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/page/get-all/');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/page/get-all/`);
         const data = await response.json();
         setPages(data);
       } catch (error) {
@@ -212,7 +212,9 @@ export default function EditPagesPage() {
     if (selectedPageId === null) return;
     const fetchContent = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/content/page/${selectedPageId}/`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/content/page/${selectedPageId}/`,
+        );
         const data = await response.json();
         const loadedBlocks: ContentBlock[] = data.map((item: dbContentBlock) => ({
           id: item.content_id.toString(),
@@ -313,7 +315,7 @@ export default function EditPagesPage() {
         // Perform POST to backend
         if (Number.isNaN(contentId)) {
           const response = await fetch(
-            'http://127.0.0.1:8000/api/content/create/',
+            `${process.env.NEXT_PUBLIC_API_URL}/api/content/create/`,
             {
               method: 'POST',
               headers: {
@@ -339,7 +341,7 @@ export default function EditPagesPage() {
         // Perform PATCH to backend
         else {
           const response = await fetch(
-            `http://127.0.0.1:8000/api/content/update/${contentId}/`,
+            `${process.env.NEXT_PUBLIC_API_URL}/api/content/update/${contentId}/`,
             {
               method: 'PATCH',
               headers: {
@@ -358,7 +360,7 @@ export default function EditPagesPage() {
       // Perform DELETE to backend
       for (const contentId of deletedBlockIds) {
         const response = await fetch(
-          `http://127.0.0.1:8000/api/content/delete/${contentId}/`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/content/delete/${contentId}/`,
           {
             method: 'DELETE',
           },
