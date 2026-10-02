@@ -1,15 +1,15 @@
 from django.conf import settings
 from django.core.management import call_command
+from django.db.models import QuerySet
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
-from rest_framework import generics
-
-from rest_framework import viewsets
+from rest_framework import generics, permissions, viewsets
 
 from emails.messages import send_volunteer_thanks_email
-from events.models import Event, VolunteerSignup, VolunteerSlot
+from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 from events.serializers import (
+    EventImageSerializer,
     EventSerializer,
     VolunteerSignupSerializer,
     VolunteerSlotSerializer,
@@ -29,6 +29,23 @@ class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     lookup_field = "event_id"
+
+
+class EventImageViewSet(viewsets.ModelViewSet):
+    """Create and manage additional images associated with events."""
+
+    serializer_class = EventImageSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self) -> QuerySet[EventImage]:
+        """Return event images in display order, optionally for one event."""
+        queryset = EventImage.objects.select_related("event", "media_asset")
+        event_id = self.request.query_params.get("event_id")
+
+        if event_id:
+            queryset = queryset.filter(event_id=event_id)
+
+        return queryset.order_by("display_order", "event_image_id")
 
 
 class VolunteerSlotViewSet(viewsets.ModelViewSet):

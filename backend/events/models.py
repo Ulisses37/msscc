@@ -1,6 +1,20 @@
 from django.db import models
 
 
+EVENT_IMAGE_ALIGNMENT_CHOICES = [
+    ("left", "Left"),
+    ("center", "Center"),
+    ("right", "Right"),
+]
+
+EVENT_IMAGE_WIDTH_CHOICES = [
+    (25, "25%"),
+    (50, "50%"),
+    (75, "75%"),
+    (100, "100%"),
+]
+
+
 class Event(models.Model):
     """Event record for activities shown on the site."""
 
@@ -36,6 +50,47 @@ class Event(models.Model):
     def __str__(self):
         """Return the event title."""
         return self.title_en
+
+
+class EventImage(models.Model):
+    """Additional image displayed as part of an event's detail content."""
+
+    event_image_id = models.AutoField(primary_key=True)
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    media_asset = models.ForeignKey(
+        "media.MediaAsset",
+        on_delete=models.SET_NULL,
+        related_name="event_images",
+        blank=True,
+        null=True,
+    )
+    caption_en = models.TextField(blank=True)
+    caption_ja = models.TextField(blank=True)
+    # Lower values render first on the event details page.
+    display_order = models.PositiveIntegerField(default=0)
+    image_width = models.PositiveSmallIntegerField(
+        choices=EVENT_IMAGE_WIDTH_CHOICES,
+        default=100,
+    )
+    image_alignment = models.CharField(
+        max_length=6,
+        choices=EVENT_IMAGE_ALIGNMENT_CHOICES,
+        default="left",
+    )
+
+    class Meta:
+        ordering = ["event", "display_order", "event_image_id"]
+        db_table = "event_image"
+        verbose_name = "Event Image"
+        verbose_name_plural = "Event Images"
+
+    def __str__(self) -> str:
+        """Return the image position and associated event title."""
+        return f"Image {self.display_order} for {self.event}"
 
 
 class VolunteerSlot(models.Model):
