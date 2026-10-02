@@ -1,4 +1,6 @@
+import { RichTextContent } from '@/components/content/RichTextContent';
 import type { DbContentBlock, ImageWidth } from '@/types/content';
+import { getRichTextPlainText } from '@/utils/richText';
 
 const IMAGE_ALIGNMENT_CLASSES = {
   left: 'text-left',
@@ -37,28 +39,28 @@ export function ContentBlockRenderer({
       case 'header':
         return (
           <h2 className="font-heading text-[64px] font-normal text-[#D72638]">
-            {content}
+            <RichTextContent value={content} />
           </h2>
         );
 
         case 'subheader':
         return (
           <h4 className="font-heading text-[18px] font-bold text-msscc-gray-dark">
-            {content}
+            <RichTextContent value={content} />
           </h4>
         );
 
       case 'paragraph':
         return (
           <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
-            {content}
+            <RichTextContent value={content} />
           </p>
         );
 
       case 'caption':
         return (
           <p className="font-body text-caption text-msscc-gray-mid">
-            {content}
+            <RichTextContent value={content} />
           </p>
         );
 
@@ -73,14 +75,14 @@ export function ContentBlockRenderer({
             {block.media_url && (
               <img
                 src={block.media_url}
-                alt={content}
+                alt={getRichTextPlainText(content)}
                 className={`inline-block h-auto max-w-full ${widthClass}`}
               />
             )}
 
             {content && (
               <figcaption className="font-body text-caption text-msscc-gray-mid">
-                {content}
+                <RichTextContent value={content} />
               </figcaption>
             )}
           </figure>
