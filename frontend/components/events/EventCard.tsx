@@ -41,33 +41,30 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <div
+      className="flex flex-col sm:flex-row"
       style={{
         border: '0.5px solid var(--color-gray-light)',
         borderRadius: 'var(--radius-md)',
         backgroundColor: 'var(--color-white)',
-        display: 'flex',
-        flexDirection: 'row',
         overflow: 'hidden',
         transition: 'border-color 0.15s ease, background-color 0.15s ease',
       }}
     >
 
       {/* Image — links to event detail page */}
-      <Link href={eventUrl} style={{ flexShrink: 0, position: 'relative', display: 'block' }}>
+      <Link href={eventUrl} className="w-full sm:w-auto" style={{ flexShrink: 0, position: 'relative', display: 'block' }}>
         {event.media?.fileUrl ? (
           <Image
             src={event.media.fileUrl}
             alt={event.media.altText ?? title}
             width={400}
             height={300}
-            style={{ width: '400px', height: '100%', objectFit: 'cover' }}
+            className="w-full h-[260px] sm:w-[400px] sm:h-full"
+            style={{ objectFit: 'cover' }}
           />
         ) : (
           // Placeholder when no image is provided
-          <div style={{
-            width: '400px',
-            height: '100%',
-            minHeight: '150px',
+          <div className="w-full h-[260px] sm:w-[400px] sm:h-full" style={{
             backgroundColor: 'var(--color-gray-faint)',
             display: 'flex',
             alignItems: 'center',
@@ -93,7 +90,7 @@ export function EventCard({ event }: EventCardProps) {
         )}
 
         {/* Date badge — always visible regardless of image */}
-        <div style={{
+        <div className="max-w-[90%]" style={{
           position: 'absolute',
           bottom: 'var(--space-2)',
           left: 'var(--space-2)',
@@ -112,7 +109,7 @@ export function EventCard({ event }: EventCardProps) {
       </Link>
 
       {/* Card body */}
-      <div style={{
+      <div className="min-w-0" style={{
         padding: 'var(--space-4)',
         display: 'flex',
         flexDirection: 'column',
@@ -129,6 +126,8 @@ export function EventCard({ event }: EventCardProps) {
             fontSize: 'var(--fs-heading-3)',
             textDecoration: 'none',
             lineHeight: 1.3,
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
           }}
         >
           {title}
