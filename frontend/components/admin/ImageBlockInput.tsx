@@ -2,6 +2,7 @@
 
 import React from 'react';
 
+import { RichTextInput } from '@/components/admin/RichTextInput';
 import type { ImageAlignment, ImageWidth } from '@/types/content';
 
 interface ImageBlockInputProps {
@@ -128,29 +129,19 @@ export default function ImageBlockInput({
 
       {/* Input fields for image caption */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block mb-2 text-label uppercase text-msscc-gray-mid">
-            English Caption
-          </label>
-          <textarea
-            className="w-full p-4 border border-msscc-gray-light rounded-md"
-            rows={4}
-            value={contentEn}
-            onChange={(e) => onUpdateEn(e.target.value)}
-          />
-        </div>
+        <RichTextInput
+          label="English Caption"
+          language="en"
+          value={contentEn}
+          onUpdate={onUpdateEn}
+        />
 
-        <div>
-          <label className="block mb-2 text-label uppercase text-msscc-gray-mid">
-            Japanese Caption
-          </label>
-          <textarea
-            className="w-full p-4 border border-msscc-gray-light rounded-md"
-            rows={4}
-            value={contentJa}
-            onChange={(e) => onUpdateJa(e.target.value)}
-          />
-        </div>
+        <RichTextInput
+          label="Japanese Caption"
+          language="ja"
+          value={contentJa}
+          onUpdate={onUpdateJa}
+        />
       </div>
     </div>
   );
