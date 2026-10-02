@@ -57,13 +57,6 @@ export function ContentBlockRenderer({
           </p>
         );
 
-      case 'caption':
-        return (
-          <p className="font-body text-caption text-msscc-gray-mid">
-            <RichTextContent value={content} />
-          </p>
-        );
-
       case 'image':
         const alignmentClass = IMAGE_ALIGNMENT_CLASSES[block.image_alignment] ?? 'text-left';
         const widthClass = IMAGE_WIDTH_CLASSES[block.image_width] ?? 'w-full';

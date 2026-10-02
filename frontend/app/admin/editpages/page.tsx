@@ -48,7 +48,6 @@ const snippetBlockRenderers: Record<BlockType, () => React.ReactNode> = {
   header: () => <div className="h-4 w-3/5 rounded-sm bg-[#D72638]" />,
   subheader: () => <div className="h-2 w-2/5 rounded-sm bg-[#D72638] opacity-70" />,
   paragraph: () => <div className="mx-3 h-8 w-4/5 rounded-sm bg-[#000000] text-center right-2" />,
-  caption: () => <div className="h-2 w-1/4 p-0 m-0 rounded-sm bg-msscc-gray-mid" />,
   image: () => <div className="h-20 w-2/3 rounded-sm bg-msscc-teal-sky" />,
 };
 
@@ -529,12 +528,6 @@ export default function EditPagesPage() {
                     className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
                 >
                     + Paragraph
-                </button>
-                <button
-                    onClick={() => addBlock('caption')}
-                    className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
-                >
-                    + Caption
                 </button>
                 <button
                   onClick={() => addBlock('image')}

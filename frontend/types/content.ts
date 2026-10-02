@@ -1,7 +1,7 @@
 /**
  * Defines the type of text blocks created in the Page Edit page
  */
-export type BlockType = 'header' | 'subheader' | 'paragraph' | 'caption' | 'image';
+export type BlockType = 'header' | 'subheader' | 'paragraph' | 'image';
 
 export type ImageAlignment = 'left' | 'center' | 'right';
 
