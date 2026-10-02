@@ -31,13 +31,13 @@ export default function EventDetailPage() {
 
       setEvent(data);
 
-      // Fetch all published events, sort chronologically, find adjacent events
+      // Fetch all published events that have not passed in date, sort chronologically, find adjacent events
       const allEvents = await getEvents();
       const sorted = allEvents
-        .filter((e) => e.isPublished)
-        .sort((a, b) =>
-          new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
-        );
+      .filter((e) => e.isPublished && new Date(e.endDatetime).getTime() >= Date.now())
+      .sort((a, b) =>
+        new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
+      );
 
       const currentIndex = sorted.findIndex((e) => e.id === Number(id));
       setPreviousEvent(currentIndex > 0 ? sorted[currentIndex - 1] : null);
