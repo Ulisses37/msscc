@@ -34,18 +34,32 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
+  const [searchQuery, setSearchQuery] = useState('');
   const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
 
   // Use the event end time to decide whether an event is still upcoming or has passed.
   const currentTime = Date.now();
-  const filteredEvents = events
-    .filter((event) => {
-      const endTime = new Date(event.endDatetime).getTime();
+  const dateFilteredEvents = events.filter((event) => {
+    const endTime = new Date(event.endDatetime).getTime();
 
-      return eventFilter === 'upcoming'
-        ? endTime >= currentTime
-        : endTime < currentTime;
+    return eventFilter === 'upcoming'
+      ? endTime >= currentTime
+      : endTime < currentTime;
+  });
+
+  // Normalize the query so English searches ignore case and surrounding spaces.
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+
+  // Search both bilingual titles while keeping results inside the active date filter.
+  const filteredEvents = dateFilteredEvents
+    .filter((event) => {
+      if (!normalizedSearchQuery) return true;
+
+      return (
+        event.titleEn.toLocaleLowerCase().includes(normalizedSearchQuery)
+        || event.titleJa.toLocaleLowerCase().includes(normalizedSearchQuery)
+      );
     })
     .sort((firstEvent, secondEvent) => {
       // Show the next upcoming event first so admins can find it quickly.
@@ -335,83 +349,118 @@ export default function EventsPage() {
           + Create Event
         </button>
 
-        {/* Upcoming and Past Event Filter Buttons */}
-        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
-          {(['upcoming', 'past'] as const).map((filter) => {
-            const isActive = eventFilter === filter;
-            const label = filter === 'upcoming' ? 'Upcoming' : 'Past';
+        {/* Event List Filters, Search, and Results */}
+        <section className="flex flex-col gap-5 rounded-md border border-msscc-gray-light p-4">
+          <h2 className="border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
+            Event List
+          </h2>
 
-            return (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setEventFilter(filter)}
-                aria-pressed={isActive}
-                className={`w-full rounded-sm border px-3 py-2 text-btn tracking-btn transition-colors ${
-                  isActive
-                    ? 'border-msscc-pink bg-msscc-pink text-white'
-                    : 'border-msscc-gray-light bg-msscc-white text-msscc-gray-dark hover:border-msscc-pink hover:text-msscc-pink'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        {isLoadingEvents ? (
-          <p className="text-msscc-gray-mid text-body-sm">
-            Loading events...
-          </p>
-        ) : eventError ? (
-          <p className="text-msscc-danger text-body-sm">
-            {eventError}
-          </p>
-        ) : filteredEvents.length === 0 ? (
-          <p className="text-msscc-gray-mid text-body-sm">
-            No {eventFilter} events.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className="border border-msscc-gray-light rounded-sm p-3"
-              >
-                <p className="font-heading text-msscc-teal">
-                  {event.titleEn}
-                </p>
-
-                <p className="text-body-sm text-msscc-gray-mid">
-                  {new Date(event.startDatetime).toLocaleString()}
-                </p>
-
-                <p className="text-body-sm">
-                  {event.isPublished ? 'Published' : 'Unpublished'}
-                </p>
-
-                {/* Edit and Delete Buttons */}
-                <div className="flex gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEditEvent(event)}
-                    className="text-body-sm text-msscc-teal underline"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEvent(event)}
-                    className="text-body-sm text-msscc-danger underline"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+          {/* Event Title Search */}
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="event-search"
+              className="text-label tracking-label text-msscc-gray-mid"
+            >
+              Search by title
+            </label>
+            <input
+              id="event-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search events..."
+              className="w-full rounded-md border border-msscc-gray-light bg-msscc-white px-3 py-2 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
+            />
           </div>
-        )}
+
+          {/* Upcoming and Past Event Filter Buttons */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-label tracking-label text-msscc-gray-mid">
+              Filter events
+            </legend>
+
+            <div className="flex flex-row gap-2">
+              {(['upcoming', 'past'] as const).map((filter) => {
+                const isActive = eventFilter === filter;
+                const label = filter === 'upcoming' ? 'Upcoming' : 'Past';
+
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setEventFilter(filter)}
+                    aria-pressed={isActive}
+                    className={`w-full rounded-sm border px-3 py-2 text-btn tracking-btn transition-colors ${
+                      isActive
+                        ? 'border-msscc-pink bg-msscc-pink text-white'
+                        : 'border-msscc-gray-light bg-msscc-white text-msscc-gray-dark hover:border-msscc-pink hover:text-msscc-pink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {isLoadingEvents ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              Loading events...
+            </p>
+          ) : eventError ? (
+            <p className="text-msscc-danger text-body-sm">
+              {eventError}
+            </p>
+          ) : dateFilteredEvents.length === 0 ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              No {eventFilter} events.
+            </p>
+          ) : filteredEvents.length === 0 ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              No events match your search.
+            </p>
+          ) : (
+            <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto">
+              {filteredEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="rounded-sm border border-msscc-gray-light p-3"
+                >
+                  <p className="font-heading text-msscc-teal">
+                    {event.titleEn}
+                  </p>
+
+                  <p className="text-body-sm text-msscc-gray-mid">
+                    {new Date(event.startDatetime).toLocaleString()}
+                  </p>
+
+                  <p className="text-body-sm">
+                    {event.isPublished ? 'Published' : 'Unpublished'}
+                  </p>
+
+                  {/* Edit and Delete Buttons */}
+                  <div className="mt-2 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleEditEvent(event)}
+                      className="text-body-sm text-msscc-teal underline"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(event)}
+                      className="text-body-sm text-msscc-danger underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
       </aside>
 
