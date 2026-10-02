@@ -332,7 +332,7 @@ export default function EventForm({
                 className="block text-center rounded-sm bg-msscc-pink px-4 py-2 text-white no-underline text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
                 style={{ color: '#FFFFFF' }}
               >
-                Add Volunteer Shifts
+                Manage Volunteer Shifts
               </Link>
             ) : (
               <div>
