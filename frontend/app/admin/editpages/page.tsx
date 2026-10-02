@@ -48,7 +48,6 @@ const snippetBlockRenderers: Record<BlockType, () => React.ReactNode> = {
   header: () => <div className="h-4 w-3/5 rounded-sm bg-[#D72638]" />,
   subheader: () => <div className="h-2 w-2/5 rounded-sm bg-[#D72638] opacity-70" />,
   paragraph: () => <div className="mx-3 h-8 w-4/5 rounded-sm bg-[#000000] text-center right-2" />,
-  caption: () => <div className="h-2 w-1/4 p-0 m-0 rounded-sm bg-msscc-gray-mid" />,
   image: () => <div className="h-20 w-2/3 rounded-sm bg-msscc-teal-sky" />,
 };
 
@@ -199,7 +198,7 @@ export default function EditPagesPage() {
   useEffect(() => {
     const fetchPages = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/page/get-all/');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/page/get-all/`);
         const data = await response.json();
         setPages(data);
       } catch (error) {
@@ -213,7 +212,9 @@ export default function EditPagesPage() {
     if (selectedPageId === null) return;
     const fetchContent = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/content/page/${selectedPageId}/`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/content/page/${selectedPageId}/`,
+        );
         const data = await response.json();
         const loadedBlocks: ContentBlock[] = data.map((item: dbContentBlock) => ({
           id: item.content_id.toString(),
@@ -314,7 +315,7 @@ export default function EditPagesPage() {
         // Perform POST to backend
         if (Number.isNaN(contentId)) {
           const response = await fetch(
-            'http://127.0.0.1:8000/api/content/create/',
+            `${process.env.NEXT_PUBLIC_API_URL}/api/content/create/`,
             {
               method: 'POST',
               headers: {
@@ -340,7 +341,7 @@ export default function EditPagesPage() {
         // Perform PATCH to backend
         else {
           const response = await fetch(
-            `http://127.0.0.1:8000/api/content/update/${contentId}/`,
+            `${process.env.NEXT_PUBLIC_API_URL}/api/content/update/${contentId}/`,
             {
               method: 'PATCH',
               headers: {
@@ -359,7 +360,7 @@ export default function EditPagesPage() {
       // Perform DELETE to backend
       for (const contentId of deletedBlockIds) {
         const response = await fetch(
-          `http://127.0.0.1:8000/api/content/delete/${contentId}/`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/content/delete/${contentId}/`,
           {
             method: 'DELETE',
           },
@@ -529,12 +530,6 @@ export default function EditPagesPage() {
                     className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
                 >
                     + Paragraph
-                </button>
-                <button
-                    onClick={() => addBlock('caption')}
-                    className="bg-msscc-pink hover:bg-msscc-pink-dark text-white text-btn tracking-btn px-4 py-2 rounded-sm transition-colors text-left"
-                >
-                    + Caption
                 </button>
                 <button
                   onClick={() => addBlock('image')}
