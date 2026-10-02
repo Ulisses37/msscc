@@ -18,14 +18,14 @@ export default function AdminLayout({
   const isDashboard = pathname === '/admin/dashboard';
 
   if (pathname != "/admin"){
-    const currentLink = adminNavLinks.find((link) => link.href === pathname);
-    if (!currentLink) redirect('/admin');
+  //   const currentLink = adminNavLinks.find((link) => link.href === pathname);
+  //   if (!currentLink) redirect('/admin');
 
-    const eligible = hasPermission ({
-      adminPermissions: fetchLocalStorageAdmin()?.permissionData,
-      permissionNeeded: currentLink.label
-    })
-  if (!eligible) redirect('/admin');
+  //   const eligible = hasPermission ({
+  //     adminPermissions: fetchLocalStorageAdmin()?.permissionData,
+  //     permissionNeeded: currentLink.label
+  //   })
+  // if (!eligible) redirect('/admin');
   }
 
 
