@@ -18,6 +18,21 @@ interface VolunteerSlot {
   event: number;
 }
 
+function formatSlotDate(datetime: string): string {
+  return new Date(datetime).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function formatSlotTime(datetime: string): string {
+  return new Date(datetime).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function VolunteerShiftsPage() {
   const { id, locale } = useParams();
   const router = useRouter();
@@ -63,6 +78,66 @@ export default function VolunteerShiftsPage() {
       >
         ← Back to event
       </Link>
+
+      {/* Shift list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {shifts.map((shift) => (
+          <div
+            key={shift.volunteer_slot_id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '0.5px solid var(--color-gray-light)',
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-4) var(--space-6)',
+              backgroundColor: 'var(--color-white)',
+            }}
+          >
+            {/* Shift date and time */}
+            <div style={{ flex: '0 0 35%' }}>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--fs-body-sm)',
+                color: 'var(--color-gray-dark)',
+                margin: 0,
+                fontWeight: 700,
+              }}>
+                {formatSlotDate(shift.start_datetime)}
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--fs-body-sm)',
+                color: 'var(--color-gray-mid)',
+                margin: 0,
+              }}>
+                {formatSlotTime(shift.start_datetime)} – {formatSlotTime(shift.end_datetime)}
+              </p>
+            </div>
+
+            {/* Position name and filled count */}
+            <div style={{ flex: '0 0 40%' }}>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--fs-body-sm)',
+                color: 'var(--color-gray-dark)',
+                margin: 0,
+                fontWeight: 700,
+              }}>
+                {shift.position_name}
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: 'var(--fs-caption)',
+                color: '#dc2626',
+                margin: 0,
+              }}>
+                {shift.filled_count} of {shift.capacity} filled
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
 
     </main>
   );
