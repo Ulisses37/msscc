@@ -137,9 +137,8 @@ export default function EventsPage() {
       {/* Responsive event grid */}
       {!loading && events.length > 0 && (
         <div style={{
-          display: 'grid',
-          gridTemplateRows: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gridAutoFlow: 'column',
+          display: 'flex',
+          flexDirection: 'column',
           gap: 'var(--space-6)',
           maxHeight: '100vh',
           overflowY: 'auto',
