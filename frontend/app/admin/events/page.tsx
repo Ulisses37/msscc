@@ -1,10 +1,23 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import type { Event } from '@/types/event';
-import { getEvents, getMediaAssetById } from '@/services/eventService';
-import EventForm, { EventFormData } from '@/components/admin/EventForm';
 import { useSearchParams } from 'next/navigation';
+
+import EventForm, {
+  type EventFormData,
+  type EventPhotoFormData,
+} from '@/components/admin/EventForm';
+import {
+  createEventImage,
+  deleteEventImage,
+  getEventImages,
+  getEvents,
+  getMediaAssetById,
+  updateEventImage,
+} from '@/services/eventService';
+import type { Event, EventImage } from '@/types/event';
+
+type EventFilter = 'upcoming' | 'past';
 
 /**
  * Helper function for formatting time to string format for EventForm.tsx
@@ -30,9 +43,54 @@ export default function EventsPage() {
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [eventError, setEventError] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  // Additional photos use separate EventImage records rather than the event's primary image.
+  const [selectedEventImages, setSelectedEventImages] = useState<EventImage[]>([]);
+  // Remount the form after saving so local photo IDs are replaced with database IDs.
+  const [formVersion, setFormVersion] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
+  const [searchQuery, setSearchQuery] = useState('');
   const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
+
+  // Use the event end time to decide whether an event is still upcoming or has passed.
+  const currentTime = Date.now();
+  const dateFilteredEvents = events.filter((event) => {
+    const endTime = new Date(event.endDatetime).getTime();
+
+    return eventFilter === 'upcoming'
+      ? endTime >= currentTime
+      : endTime < currentTime;
+  });
+
+  // Normalize the query so English searches ignore case and surrounding spaces.
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+
+  // Search both bilingual titles while keeping results inside the active date filter.
+  const filteredEvents = dateFilteredEvents
+    .filter((event) => {
+      if (!normalizedSearchQuery) return true;
+
+      return (
+        event.titleEn.toLocaleLowerCase().includes(normalizedSearchQuery)
+        || event.titleJa.toLocaleLowerCase().includes(normalizedSearchQuery)
+      );
+    })
+    .sort((firstEvent, secondEvent) => {
+      // Show the next upcoming event first so admins can find it quickly.
+      if (eventFilter === 'upcoming') {
+        return (
+          new Date(firstEvent.startDatetime).getTime()
+          - new Date(secondEvent.startDatetime).getTime()
+        );
+      }
+
+      // Show the most recently completed event first in the past-events list.
+      return (
+        new Date(secondEvent.endDatetime).getTime()
+        - new Date(firstEvent.endDatetime).getTime()
+      );
+    });
 
   // Fetch existing events on load
   useEffect(() => {
@@ -69,7 +127,67 @@ export default function EventsPage() {
     }
   }, [showForm, selectedEvent]);
 
-  const handleSubmit = async (data: EventFormData, imageFile: File | null) => {
+  // Both primary images and additional photos must become media assets before association.
+  const uploadMediaAsset = async (file: File): Promise<number> => {
+    const imageFormData = new FormData();
+    imageFormData.append('image', file);
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+      { method: 'POST', body: imageFormData },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Image upload failed: ${response.status}`);
+    }
+
+    const imageData = await response.json();
+    return imageData.media_asset_id;
+  };
+
+  const saveEventPhotos = async (
+    eventId: number,
+    eventPhotos: EventPhotoFormData[],
+    deletedEventPhotoIds: number[],
+  ): Promise<void> => {
+    // Remove deleted associations first so the remaining records define the final photo set.
+    for (const eventImageId of deletedEventPhotoIds) {
+      await deleteEventImage(eventImageId);
+    }
+
+    for (let index = 0; index < eventPhotos.length; index += 1) {
+      const photo = eventPhotos[index];
+      // Existing photos reuse their media asset unless the admin selected a replacement.
+      const mediaAssetId = photo.file
+        ? await uploadMediaAsset(photo.file)
+        : photo.mediaAssetId;
+
+      const payload = {
+        event: eventId,
+        media_asset: mediaAssetId,
+        caption_en: photo.captionEn,
+        caption_ja: photo.captionJa,
+        // Array order mirrors the Move Up and Move Down controls in EventForm.
+        display_order: index,
+        image_width: photo.imageWidth,
+        image_alignment: photo.imageAlignment,
+      };
+
+      if (photo.eventImageId === null) {
+        // Unsaved form entries do not receive an EventImage ID until this POST succeeds.
+        await createEventImage(payload);
+      } else {
+        await updateEventImage(photo.eventImageId, payload);
+      }
+    }
+  };
+
+  const handleSubmit = async (
+    data: EventFormData,
+    imageFile: File | null,
+    eventPhotos: EventPhotoFormData[],
+    deletedEventPhotoIds: number[],
+  ) => {
     setIsSubmitting(true);
     setSaveMessage('');
     setSaveError('');
@@ -77,15 +195,7 @@ export default function EventsPage() {
     try {
       let mediaAssetId = null;
       if (imageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append('image', imageFile);
-        const imageRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
-          { method: 'POST', body: imageFormData },
-        );
-        if (!imageRes.ok) throw new Error('Image upload failed.');
-        const imageData = await imageRes.json();
-        mediaAssetId = imageData.media_asset_id;
+        mediaAssetId = await uploadMediaAsset(imageFile);
       }
 
       const res = await fetch(
@@ -109,12 +219,19 @@ export default function EventsPage() {
         },
       );
 
-      // if (!res.ok) throw new Error('Failed to create event.');
       if (!res.ok) {
         const errorBody = await res.json();
         console.error('Backend error:', errorBody);
         throw new Error('Failed to create event.');
       }
+
+      const createdEvent = await res.json();
+      // The event must exist before additional photos can reference its database ID.
+      await saveEventPhotos(
+        createdEvent.event_id,
+        eventPhotos,
+        deletedEventPhotoIds,
+      );
 
       setSaveMessage('Event created successfully.');
     } catch (error) {
@@ -128,6 +245,8 @@ export default function EventsPage() {
   const handleUpdateEvent = async (
     data: EventFormData,
     imageFile: File | null,
+    eventPhotos: EventPhotoFormData[],
+    deletedEventPhotoIds: number[],
   ) => {
     if (!selectedEvent) return;
 
@@ -140,23 +259,7 @@ export default function EventsPage() {
 
       // Upload a replacement image only if the admin selected one.
       if (imageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append('image', imageFile);
-
-        const imageResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
-          {
-            method: 'POST',
-            body: imageFormData,
-          },
-        );
-
-        if (!imageResponse.ok) {
-          throw new Error(`Image upload failed: ${imageResponse.status}`);
-        }
-
-        const imageData = await imageResponse.json();
-        mediaAssetId = imageData.media_asset_id;
+        mediaAssetId = await uploadMediaAsset(imageFile);
       }
 
       const response = await fetch(
@@ -185,6 +288,16 @@ export default function EventsPage() {
         throw new Error(`Failed to update event: ${response.status}`);
       }
 
+      await saveEventPhotos(
+        selectedEvent.id,
+        eventPhotos,
+        deletedEventPhotoIds,
+      );
+
+      // Refetch to capture IDs and media URLs assigned to newly created photo records.
+      const refreshedEventImages = await getEventImages(selectedEvent.id);
+      setSelectedEventImages(refreshedEventImages);
+
       // Update the list of events in the display after a save occurs
       setEvents((prevEvents) =>
         prevEvents.map((event) =>
@@ -205,6 +318,26 @@ export default function EventsPage() {
             : event,
         ),
       );
+
+      setSelectedEvent((currentEvent) =>
+        currentEvent
+          ? {
+              ...currentEvent,
+              titleEn: data.titleEn,
+              titleJa: data.titleJa,
+              descriptionEn: data.descriptionEn,
+              descriptionJa: data.descriptionJa,
+              locationEn: data.locationEn,
+              locationJa: data.locationJa,
+              startDatetime: data.startDatetime,
+              endDatetime: data.endDatetime,
+              mediaAssetId,
+              sendVolunteerReminders: data.sendVolunteerReminders,
+            }
+          : currentEvent,
+      );
+      // Reinitialize EventForm from the authoritative records returned after the save.
+      setFormVersion((currentVersion) => currentVersion + 1);
 
       setSaveMessage('Event updated successfully.');
     } catch (error) {
@@ -258,33 +391,33 @@ export default function EventsPage() {
   };
 
   const handleEditEvent = async (event: Event) => {
-    try {
-      let media = undefined;
+    // Load both image collections together, but allow either one to fail independently.
+    const [media, eventImages] = await Promise.all([
+      event.mediaAssetId
+        ? getMediaAssetById(event.mediaAssetId).catch((error) => {
+            console.error('Failed to load primary event image:', error);
+            return undefined;
+          })
+        : Promise.resolve(undefined),
+      getEventImages(event.id).catch((error) => {
+        console.error('Failed to load additional event photos:', error);
+        return [];
+      }),
+    ]);
 
-      if (event.mediaAssetId) {
-        media = await getMediaAssetById(event.mediaAssetId);
-      }
+    setSelectedEventImages(eventImages);
+    setSelectedEvent({
+      ...event,
+      media: media?.file_url
+        ? {
+            fileUrl: media.file_url,
+            altText: media.alt_text_en,
+          }
+        : undefined,
+    });
 
-      setSelectedEvent({
-        ...event,
-        media: media?.file_url
-          ? {
-              fileUrl: media.file_url,
-              altText: media.alt_text_en,
-            }
-          : undefined,
-      });
-
-      setIsEditing(true);
-      setShowForm(true);
-    } catch (error) {
-      console.error('Failed to load event media:', error);
-
-      // Still open the event form even if its image fails to load.
-      setSelectedEvent(event);
-      setIsEditing(true);
-      setShowForm(true);
-    }
+    setIsEditing(true);
+    setShowForm(true);
   };
 
   return (
@@ -298,6 +431,8 @@ export default function EventsPage() {
           type="button"
           onClick={() => {
             setSelectedEvent(null);
+            // Prevent photos from the previously edited event appearing in the create form.
+            setSelectedEventImages([]);
             setIsEditing(false);
             setShowForm(true);
           }}
@@ -306,60 +441,118 @@ export default function EventsPage() {
           + Create Event
         </button>
 
-        {/* Event List Placeholder */}
-        {isLoadingEvents ? (
-          <p className="text-msscc-gray-mid text-body-sm">
-            Loading events...
-          </p>
-        ) : eventError ? (
-          <p className="text-msscc-danger text-body-sm">
-            {eventError}
-          </p>
-        ) : events.length === 0 ? (
-          <p className="text-msscc-gray-mid text-body-sm">
-            No events exist.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className="border border-msscc-gray-light rounded-sm p-3"
-              >
-                <p className="font-heading text-msscc-teal">
-                  {event.titleEn}
-                </p>
+        {/* Event List Filters, Search, and Results */}
+        <section className="flex flex-col gap-5 rounded-md border border-msscc-gray-light p-4">
+          <h2 className="border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
+            Event List
+          </h2>
 
-                <p className="text-body-sm text-msscc-gray-mid">
-                  {new Date(event.startDatetime).toLocaleString()}
-                </p>
-
-                <p className="text-body-sm">
-                  {event.isPublished ? 'Published' : 'Unpublished'}
-                </p>
-
-                {/* Edit and Delete Buttons */}
-                <div className="flex gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEditEvent(event)}
-                    className="text-body-sm text-msscc-teal underline"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEvent(event)}
-                    className="text-body-sm text-msscc-danger underline"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+          {/* Event Title Search */}
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="event-search"
+              className="text-label tracking-label text-msscc-gray-mid"
+            >
+              Search by title
+            </label>
+            <input
+              id="event-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search events..."
+              className="w-full rounded-md border border-msscc-gray-light bg-msscc-white px-3 py-2 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
+            />
           </div>
-        )}
+
+          {/* Upcoming and Past Event Filter Buttons */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-label tracking-label text-msscc-gray-mid">
+              Filter events
+            </legend>
+
+            <div className="flex flex-row gap-2">
+              {(['upcoming', 'past'] as const).map((filter) => {
+                const isActive = eventFilter === filter;
+                const label = filter === 'upcoming' ? 'Upcoming' : 'Past';
+
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setEventFilter(filter)}
+                    aria-pressed={isActive}
+                    className={`w-full rounded-sm border px-3 py-2 text-btn tracking-btn transition-colors ${
+                      isActive
+                        ? 'border-msscc-pink bg-msscc-pink text-white'
+                        : 'border-msscc-gray-light bg-msscc-white text-msscc-gray-dark hover:border-msscc-pink hover:text-msscc-pink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {isLoadingEvents ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              Loading events...
+            </p>
+          ) : eventError ? (
+            <p className="text-msscc-danger text-body-sm">
+              {eventError}
+            </p>
+          ) : dateFilteredEvents.length === 0 ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              No {eventFilter} events.
+            </p>
+          ) : filteredEvents.length === 0 ? (
+            <p className="text-msscc-gray-mid text-body-sm">
+              No events match your search.
+            </p>
+          ) : (
+            <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto">
+              {filteredEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className="rounded-sm border border-msscc-gray-light p-3"
+                >
+                  <p className="font-heading text-msscc-teal">
+                    {event.titleEn}
+                  </p>
+
+                  <p className="text-body-sm text-msscc-gray-mid">
+                    {new Date(event.startDatetime).toLocaleString()}
+                  </p>
+
+                  <p className="text-body-sm">
+                    {event.isPublished ? 'Published' : 'Unpublished'}
+                  </p>
+
+                  {/* Edit and Delete Buttons */}
+                  <div className="mt-2 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleEditEvent(event)}
+                      className="text-body-sm text-msscc-teal underline"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(event)}
+                      className="text-body-sm text-msscc-danger underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
       </aside>
 
@@ -373,7 +566,7 @@ export default function EventsPage() {
         {showForm ? (
           isEditing && selectedEvent ? (
             <EventForm
-              key={selectedEvent.id}
+              key={`${selectedEvent.id}-${formVersion}`}
               eventId={selectedEvent.id}
               volunteerSlots={selectedEvent.volunteerSlots}
               initialData={{
@@ -388,6 +581,7 @@ export default function EventsPage() {
                 sendVolunteerReminders: selectedEvent.sendVolunteerReminders,
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
+              initialEventPhotos={selectedEventImages}
               onSubmit={handleUpdateEvent}
               isSubmitting={isSubmitting}
               submitLabel="Save Changes"
