@@ -151,6 +151,14 @@ TypeScript runs in `strict` mode. `npx tsc --noEmit` should be clean for files y
 - Static UI text goes in `messages/en.json` and `messages/ja.json`. Add every new key to both files in the same change.
 - Admin-editable content comes from the backend's `_en` and `_ja` fields. Do not hardcode it in components.
 
+### Testing
+
+- Test files are named `<SourceName>.test.ts` or `<SourceName>.test.tsx` and are colocated next to the source file they test, not in a top-level `__tests__` directory.
+- End-to-end tests go in `frontend/e2e/` when we add them.
+- Jest is the runner. Configuration lives in `frontend/jest.config.js`. Run `npm test` in `frontend/`.
+- Relative imports are fine. `@/` also works in Jest. Never hit live services or real secrets from tests.
+- Test files are excluded from `tsc` and `next build` type-checking via `frontend/tsconfig.json` (see the `exclude` list). Do not add them back to the type-check scope.
+
 ## 4. Git and Jira
 
 - One branch per story: `type/SCRUM-<storyID>-short-description`. Types are `feature`, `fix`, `chore`, `docs`.
@@ -166,6 +174,7 @@ TypeScript runs in `strict` mode. `npx tsc --noEmit` should be clean for files y
 | Ruff (backend lint) | `backend/ruff.toml` | `ruff check backend` from the repo root |
 | ESLint (frontend lint) | `frontend/.eslintrc.json` | `npm run lint` in `frontend/` |
 | TypeScript | `frontend/tsconfig.json` | `npx tsc --noEmit` in `frontend/` |
+| Jest (frontend tests) | `frontend/jest.config.js` | `npm test` in `frontend/` |
 | Pre-commit | `.pre-commit-config.yaml` | `pre-commit install` once per clone; runs Ruff (with `--fix`) and ESLint on staged files at commit time |
 | Editor defaults | `.editorconfig` | applied by your editor |
 | Cline rules | `.clinerules/` | loaded by Cline |
