@@ -37,6 +37,31 @@ export default function VolunteerSignupsPage() {
     loadSignups();
   }, [id]);
 
+  const handleRemoveSignup = async (signup: VolunteerSignup) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to remove ${signup.first_name} ${signup.last_name} from this shift?`,
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signup.volunteer_signup_id}/`,
+      { method: 'DELETE' },
+    );
+
+    if (!res.ok) throw new Error('Failed to remove signup.');
+
+    setSignups((prev) =>
+      prev.filter((s) => s.volunteer_signup_id !== signup.volunteer_signup_id),
+    );
+
+  } catch (err) {
+    console.error('Signup removal failed:', err);
+    setError('Failed to remove signup. Please try again.');
+  }
+};
+
   return (
     <main style={{
       minHeight: '100vh',
@@ -111,6 +136,7 @@ export default function VolunteerSignupsPage() {
             {signups.map((signup) => (
               <div
                 key={signup.volunteer_signup_id}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                 style={{
                   border: '0.5px solid var(--color-gray-light)',
                   borderRadius: 'var(--radius-md)',
@@ -118,31 +144,41 @@ export default function VolunteerSignupsPage() {
                   backgroundColor: 'var(--color-white)',
                 }}
               >
-                <p style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 'var(--fs-body-sm)',
-                  color: 'var(--color-gray-dark)',
-                  fontWeight: 700,
-                  margin: 0,
-                }}>
-                  {signup.first_name} {signup.last_name}
-                </p>
-                <p style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 'var(--fs-caption)',
-                  color: 'var(--color-gray-mid)',
-                  margin: 0,
-                }}>
-                  {signup.email} · {signup.phone}
-                </p>
-                <p style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: 'var(--fs-caption)',
-                  color: 'var(--color-gray-mid)',
-                  margin: 0,
-                }}>
-                  Status: {signup.status} · Signed up {formatDateTime(signup.submitted_at)}
-                </p>
+                <div>
+                  <p style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--fs-body-sm)',
+                    color: 'var(--color-gray-dark)',
+                    fontWeight: 700,
+                    margin: 0,
+                  }}>
+                    {signup.first_name} {signup.last_name}
+                  </p>
+                  <p style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--fs-caption)',
+                    color: 'var(--color-gray-mid)',
+                    margin: 0,
+                  }}>
+                    {signup.email} · {signup.phone}
+                  </p>
+                  <p style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--fs-caption)',
+                    color: 'var(--color-gray-mid)',
+                    margin: 0,
+                  }}>
+                    Status: {signup.status} · Signed up {formatDateTime(signup.submitted_at)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSignup(signup)}
+                  className="rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
+                >
+                  Remove
+                </button>
               </div>
             ))}
           </div>
