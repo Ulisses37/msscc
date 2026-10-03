@@ -8,9 +8,9 @@ type CategoryData = {
 // Translation map between broad Permission categories and its pages
 // Too add another page to a category, just append it to the pages[] array
 const permissionCategories: Record<string, CategoryData> = {
-  Finances: {
-    pages: ["Members", "Donations", "Partners"],
-    tooltip: "Allows for managing the financial pages: \nMembers, Donations, Partners"
+  Finances: { // Permission Title that correlates to what is visible on the admin Permissions Page
+    pages: ["Members", "Donations", "Partners"], // list of acceptable NavLink Labels, if you create a new Label, add it to this array under its Permission Title
+    tooltip: "Allows for managing the financial pages: \nMembers, Donations, Partners" // tool tip of what the permission does
   },
   Text_Editing: {
     pages: ["Edit Pages"],
@@ -28,6 +28,7 @@ const permissionCategories: Record<string, CategoryData> = {
     pages: ["Permissions Pages"],
     tooltip: "Allows for editing of admin information and permission:\nPermissions Pages"
   },
+  // If you end up creating a new Permission Title, you will need to update the database directly to append it 
 }
 
 // find which category the submitted page belongs to
