@@ -496,6 +496,16 @@ For JetBrains IDEs, see section 10.
 
 The workflow triggers on `pull_request` and on `push` to `main`. Both lint jobs compare the changed files against `main`, so CI mostly reports on files this branch touched. Tests and TypeScript checks are not part of CI yet, so run the `run-checks` Cline skill locally before opening a PR.
 
+### 12.7 Using Cline
+
+Cline asks you to approve each command. Wait for the previous command to finish before approving the next, or it is marked Skipped. Keep Cline's Execute commands and Edit files auto-approve off.
+
+Since Cline v4.1.7 there is one Execute commands toggle, and our test showed it approves every command, so leave it off. Older versions had separate Execute safe commands and Execute all commands options; keep both off there too.
+
+If a rule or skill seems ignored, open Cline's Rules and Skills panels and check it is switched on.
+
+The full rule and skill list, the auto-approve table, and the `PreToolUse` guard test live in the [README's Cline section](../README.md#ai-assistant-cline).
+
 ---
 
 *Last updated October 2026 -- SCRUM Lords*

@@ -10,9 +10,12 @@
 - Stripe work is test mode only (`sk_test_`, `pk_test_`, `cs_test_`). Stop and ask if anything looks like a live key or live object.
 
 ## Command approval
-Set `requires_approval=false` ONLY for these read-only checks, run exactly as written, from the repo root.
+
+Cline's **Execute commands** auto-approve stays off, so every command is approved by the human one at a time before it runs. There is no command this rule can mark as approved on its own; "read-only" below means safe to propose without extra explanation.
 
 `<py>` means the backend venv interpreter: `backend\venv\Scripts\python.exe` on Windows, `backend/venv/bin/python` on macOS/Linux. Never use bare `python`, `py`, `pip`, or `ruff`.
+
+Propose these read-only checks exactly as written, from the repo root. The list:
 
 - Frontend: `npm --prefix frontend run lint`, `npx --prefix frontend tsc --noEmit -p frontend`
 - Backend lint: `<py> -m ruff check backend`, `<py> -m ruff check --force-exclude <paths under backend/>`
@@ -21,7 +24,9 @@ Set `requires_approval=false` ONLY for these read-only checks, run exactly as wr
 - Frontend tests: `npm --prefix frontend test`
 - Backend tests: `<py> -m pytest backend` (optional path under `backend/`)
 
-Set `requires_approval=true` for everything else, including:
+If the command tool has a `requires_approval` field, use `false` only for the read-only list above, and `true` for everything else.
+
+Ask for explicit approval for everything else, including:
 - Any command with `--fix`, `--write`, or that formats files (`ruff format` without `--check`)
 - `npm install`, `npm ci`, `npm uninstall`, `pip install`, `pip uninstall`
 - `<py> backend/manage.py migrate`, `makemigrations` (without `--check`), `test`, `shell`, `dbshell`, `flush`, `createsuperuser`, `loaddata`

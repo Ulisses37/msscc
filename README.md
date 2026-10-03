@@ -295,7 +295,7 @@ The team uses [Cline](https://docs.cline.bot) in VS Code. Project rules, skills,
 
 | Path | Purpose |
 |---|---|
-| `.clinerules/*.md` | Always-on rules: security and command approval, project context, Git/Jira workflow, docs updates. Frontend and backend style rules load only when working in those folders. |
+| `.clinerules/*.md` | Always-on rules: security and command approval, project context, Git/Jira workflow, docs updates, testing conventions. Frontend and backend style rules load only when working in those folders. |
 | `.cline/skills/` | On-demand skills: `stripe-webhook-testing`, `django-migrations`, and `run-checks` (read-only lint, type-check, and test sweep that never applies fixes). |
 | `.clinerules/hooks/` | `PreToolUse` hook (`PreToolUse.ps1` on Windows) that blocks any read, edit, or command touching `.env` files, keys, or the guard itself. Logic lives in `.cline/guards/secret-guard.mjs` and needs Node.js on PATH. |
 | `.clineignore` | Keeps secrets, dependencies, and build output out of Cline's automatic context. Not an access boundary on its own; the hook is. |
@@ -304,27 +304,28 @@ The team uses [Cline](https://docs.cline.bot) in VS Code. Project rules, skills,
 
 1. Open the **repo root** (`msscc/`) as the VS Code workspace. Opening only `frontend/` or `backend/` skips the rules.
 2. In Cline's settings, turn on **Enable Hooks** (Settings, Features) and, if shown, **Skills**.
-3. Click the scale icon below the Cline chat box. Confirm the six rules, two skills, and the `PreToolUse` hook are listed and toggled on.
+3. Click the scale icon below the Cline chat box. Confirm the seven rules, three skills, and the `PreToolUse` hook are listed and toggled on. If a rule or skill seems ignored, come back to this panel and check it is switched on.
 4. Check your personal global rules and skills folders (`Documents\Cline\Rules` and `%USERPROFILE%\.cline\skills` on Windows). A global skill with the same name as a project skill overrides it.
 5. Verify the guard: create a decoy with `Set-Content backend\hooktest.pem "not-a-real-key"`, then start a new Cline task and ask it to read the file. Tell it this is a hook test and the file holds a dummy value, or it may refuse on its own. It might still refuse or push back afterwards. Keep trying until it works. You might have to start multiple new chats. The hook should run and the reply should show "Aborted"; Cline does not display the block reason in chat. If Cline shows the file's contents instead, hooks are not running; tell the team before using Cline on this repo. Delete the decoy afterward with `Remove-Item backend\hooktest.pem`.
 
 #### Auto-approve settings
 
-Code changes always need your approval. Only read-only checks run on their own.
+Code changes always need your approval, and so does every command.
 
 | Setting | Value |
 |---|---|
-| Read project files | On |
-| Read all files | Off |
-| Edit project files | Off |
-| Edit all files | Off |
-| Execute safe commands | On |
-| Execute all commands | Off |
-| Use the browser | Off |
+| Read files | On |
+| Edit files | Off |
+| Execute commands | Off |
+| Fetch web content | Off |
 | Use MCP servers | Off |
 | YOLO mode | Off |
 
-"Execute safe commands" relies on the model's judgment. The command list in `.clinerules/security.md` steers it toward lint, type, and Django checks only. Anything that writes files, installs packages, changes git state, or touches the shared database still asks first.
+Older Cline versions had separate Execute safe commands and Execute all commands options. Keep both off there too. "Execute safe commands" relied on the model's judgment of what was safe.
+
+Our own test on the single toggle showed it ran `curl.exe --version`, which `.clinerules/security.md` lists as needing approval, with no prompt, and the maintainers have not documented what it approves (v4.1.7 and later). Leave it off.
+
+The command list in `.clinerules/security.md` tells Cline which commands are safe to propose.
 
 
 ## Testing

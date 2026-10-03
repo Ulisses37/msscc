@@ -1,6 +1,6 @@
 ---
 name: run-checks
-description: Run frontend lint, type-check, and tests plus backend Ruff, pytest, and Django checks, then report pass or fail in a table. Use before committing or opening a PR. Read-only - never applies fixes, never installs packages, never modifies files.
+description: Run frontend lint, type-check, and tests plus backend Ruff, pytest, and Django checks, then report pass or fail in a table. Use for "run all tests", "run all checks", "check everything", or "verify the project", and before committing or opening a PR. Read-only - never applies fixes, never installs packages, never modifies files.
 ---
 
 # Run checks
@@ -9,7 +9,7 @@ Report only. Never run a command that modifies code (`--fix`, `--write`, `ruff f
 
 `<py>` means the backend venv interpreter: `backend\venv\Scripts\python.exe` on Windows, `backend/venv/bin/python` on macOS/Linux. All commands run from the repo root. Never use bare `python`, `py`, `pip`, or `ruff`.
 
-Run the steps independently. A failing step does not cancel the others.
+Run each step as its own separate command. Never join steps with `&&`, `;`, or `|`. Windows PowerShell 5.1 cannot parse `&&`, chained commands need approval, and one failure would hide the other results.
 
 ## 1. Frontend lint
 
@@ -93,4 +93,4 @@ A non-zero exit means a model change has no migration.
 | Django check | PASS / FAIL |
 | Migrations up to date | PASS / FAIL |
 
-List the concrete errors under each FAIL. Do not paraphrase a Django system check warning as a failure without quoting it. Do not offer to apply fixes unless asked.
+Quote error output exactly. You may add one line labelled 'Likely cause', but only if you have looked at the relevant code or `git diff`; never state a cause as fact otherwise. Do not apply or offer fixes unless asked.
