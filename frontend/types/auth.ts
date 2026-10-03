@@ -10,7 +10,7 @@ export interface UserPayload {
   email: string;
   firstName: string;
 
-  permissionData: JSON;
+  permissionData: Record<string, boolean>;
   isExecutive: boolean;
 }
 
