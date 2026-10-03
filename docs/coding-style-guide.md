@@ -181,6 +181,7 @@ TypeScript runs in `strict` mode. `npx tsc --noEmit` should be clean for files y
 | Tool | Where it is configured | How to run it |
 |---|---|---|
 | Ruff (backend lint) | `backend/ruff.toml` | `ruff check backend` from the repo root |
+| pytest (backend tests) | `backend/pytest.ini` | `backend\venv\Scripts\python.exe -m pytest backend` (Windows) or `backend/venv/bin/python -m pytest backend` (macOS/Linux), from the repo root |
 | ESLint (frontend lint) | `frontend/.eslintrc.json` | `npm run lint` in `frontend/` |
 | TypeScript | `frontend/tsconfig.json` | `npx tsc --noEmit` in `frontend/` |
 | Jest (frontend tests) | `frontend/jest.config.js` | `npm test` in `frontend/` |
