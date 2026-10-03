@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSignupsBySlotId, VolunteerSignup } from '@/services/volunteerService';
+import {
+  AdminVolunteerForm,
+  type VolunteerFormData,
+} from '@/components/admin/AdminVolunteerForm';
 
 function formatDateTime(datetime: string): string {
   return new Date(datetime).toLocaleString('en-US', {
@@ -20,6 +24,12 @@ export default function VolunteerSignupsPage() {
   const [signups, setSignups] = useState<VolunteerSignup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedSignup, setSelectedSignup] = useState<VolunteerSignup | null>(null);
 
   useEffect(() => {
     const loadSignups = async () => {
@@ -38,29 +48,125 @@ export default function VolunteerSignupsPage() {
   }, [id]);
 
   const handleRemoveSignup = async (signup: VolunteerSignup) => {
-  const confirmed = window.confirm(
-    `Are you sure you want to remove ${signup.first_name} ${signup.last_name} from this shift?`,
-  );
-
-  if (!confirmed) return;
-
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signup.volunteer_signup_id}/`,
-      { method: 'DELETE' },
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${signup.first_name} ${signup.last_name} from this shift?`,
     );
 
-    if (!res.ok) throw new Error('Failed to remove signup.');
+    if (!confirmed) return;
 
-    setSignups((prev) =>
-      prev.filter((s) => s.volunteer_signup_id !== signup.volunteer_signup_id),
-    );
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signup.volunteer_signup_id}/`,
+        { method: 'DELETE' },
+      );
 
-  } catch (err) {
-    console.error('Signup removal failed:', err);
-    setError('Failed to remove signup. Please try again.');
-  }
-};
+      if (!res.ok) throw new Error('Failed to remove signup.');
+
+      setSignups((prev) =>
+        prev.filter((s) => s.volunteer_signup_id !== signup.volunteer_signup_id),
+      );
+
+    } catch (err) {
+      console.error('Signup removal failed:', err);
+      setError('Failed to remove signup. Please try again.');
+    }
+  };
+
+  const handleAddVolunteer = async (data: VolunteerFormData) => {
+    setIsSubmitting(true);
+    setSaveMessage('');
+    setSaveError('');
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slot: Number(id),
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            status: 'approved',
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error('Failed to add volunteer.');
+
+      const newSignup = await res.json();
+      setSignups((prev) => [newSignup, ...prev]);
+
+      setSaveMessage('Volunteer added successfully.');
+      setTimeout(() => {
+        setSaveMessage('');
+        setShowForm(false);
+      }, 1500);
+
+    } catch (err) {
+      console.error('Add volunteer failed:', err);
+      setSaveError('Failed to add volunteer. Please try again.');
+      setTimeout(() => setSaveError(''), 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateVolunteer = async (data: VolunteerFormData) => {
+    if (!selectedSignup) return;
+
+    setIsSubmitting(true);
+    setSaveMessage('');
+    setSaveError('');
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${selectedSignup.volunteer_signup_id}/`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email,
+            phone: data.phone,
+          }),
+        },
+      );
+
+      if (!res.ok) throw new Error('Failed to update volunteer.');
+
+      const updatedSignup = await res.json();
+      setSignups((prev) =>
+        prev.map((s) =>
+          s.volunteer_signup_id === selectedSignup.volunteer_signup_id ? updatedSignup : s,
+        ),
+      );
+
+      setSaveMessage('Volunteer updated successfully.');
+      setTimeout(() => {
+        setSaveMessage('');
+        setShowForm(false);
+        setIsEditing(false);
+        setSelectedSignup(null);
+      }, 1500);
+
+    } catch (err) {
+      console.error('Update volunteer failed:', err);
+      setSaveError('Failed to update volunteer. Please try again.');
+      setTimeout(() => setSaveError(''), 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSignup = (signup: VolunteerSignup) => {
+    setSelectedSignup(signup);
+    setIsEditing(true);
+    setShowForm(true);
+  };
 
   return (
     <main style={{
@@ -94,14 +200,27 @@ export default function VolunteerSignupsPage() {
         padding: 'var(--space-6)',
       }}>
 
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          color: 'var(--color-teal)',
-          fontSize: 'var(--fs-heading-3)',
-          marginBottom: 'var(--space-6)',
-        }}>
-          Volunteer Signups
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-heading)',
+            color: 'var(--color-teal)',
+            fontSize: 'var(--fs-heading-3)',
+            margin: 0,
+          }}>
+            Volunteer Signups
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedSignup(null);
+              setIsEditing(false);
+              setShowForm(true);
+            }}
+            className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors"
+          >
+            + Add Volunteer
+          </button>
+        </div>
 
         {/* Loading state */}
         {isLoading && (
@@ -172,19 +291,54 @@ export default function VolunteerSignupsPage() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSignup(signup)}
-                  className="rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
-                >
-                  Remove
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleEditSignup(signup)}
+                    className="rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSignup(signup)}
+                    className="rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
 
       </div>
+
+      {showForm && (
+      <AdminVolunteerForm
+        initialData={
+          isEditing && selectedSignup
+            ? {
+                firstName: selectedSignup.first_name,
+                lastName: selectedSignup.last_name,
+                email: selectedSignup.email,
+                phone: selectedSignup.phone,
+              }
+            : undefined
+        }
+        onClose={() => {
+          setShowForm(false);
+          setIsEditing(false);
+          setSelectedSignup(null);
+        }}
+        onSubmit={isEditing ? handleUpdateVolunteer : handleAddVolunteer}
+        isSubmitting={isSubmitting}
+        submitLabel={isEditing ? 'Save Changes' : 'Add Volunteer'}
+        successMessage={saveMessage}
+        errorMessage={saveError}
+      />
+    )}
+
     </main>
   );
 }
