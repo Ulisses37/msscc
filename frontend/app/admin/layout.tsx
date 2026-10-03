@@ -7,7 +7,7 @@ import { usePathname, redirect } from 'next/navigation';
 import { AdminNavbar } from "@/components/layout/AdminNavbar";
 import { AdminFooter } from "@/components/layout/AdminFooter";
 import { fetchLocalStorageAdmin, hasPermission } from '@/components/admin/AdminPermssionHandler';
-import { adminNavLinks } from '@/config/adminNavLinks';
+import { adminNavLinks, adminSubPages } from '@/config/adminNavLinks';
 
 export default function AdminLayout({
                                       children,
@@ -18,14 +18,23 @@ export default function AdminLayout({
   const isDashboard = pathname === '/admin/dashboard';
 
   if (pathname != "/admin"){
-  //   const currentLink = adminNavLinks.find((link) => link.href === pathname);
-  //   if (!currentLink) redirect('/admin');
+    let currentLink = adminNavLinks.find((link) => link.href === pathname); //returns if link is in navbar
 
-  //   const eligible = hasPermission ({
-  //     adminPermissions: fetchLocalStorageAdmin()?.permissionData,
-  //     permissionNeeded: currentLink.label
-  //   })
-  // if (!eligible) redirect('/admin');
+    if (!currentLink) { // page is not in navbar but is subpage
+      currentLink = adminSubPages.find((link) => pathname.startsWith(link.href));
+    }
+
+    if (!currentLink) redirect ('/admin'); // page is not real (or not added to \frontend\config\adminNavLinks.ts)
+
+    const localAdmin = fetchLocalStorageAdmin();
+
+    const eligible = hasPermission ({
+      adminPermissions: localAdmin?.permissionData,
+      permissionNeeded: currentLink.label,
+      isExecutive: localAdmin?.isExecutive ?? false,
+    })
+
+    if (!eligible) redirect('/admin');
   }
 
 
