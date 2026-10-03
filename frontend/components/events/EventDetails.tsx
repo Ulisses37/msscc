@@ -75,6 +75,7 @@ export function EventDetail({
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
   const location = locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn;
+  const isPastEvent = new Date(event.endDatetime).getTime() < Date.now();
   return (
     <article style={{
       maxWidth: '75rem',
@@ -103,7 +104,7 @@ export function EventDetail({
           </div>
 
           {/* Button below image */}
-          {onVolunteer && (
+          {!isPastEvent && onVolunteer && (
             <div style={{ marginBottom: 'var(--space-6)' }}>
               <Button text="Volunteer for this Event" width="auto" padding="12px 24px"
               onClick={onVolunteer} />
@@ -174,7 +175,7 @@ export function EventDetail({
         </p>
 
         {/* Volunteer slots */}
-        {event.volunteerSlots > 0 && (
+        {!isPastEvent && event.volunteerSlots > 0 && (
           <p style={{
             fontFamily: 'var(--font-body)',
             fontSize: 'var(--fs-body-sm)',
@@ -207,7 +208,7 @@ export function EventDetail({
       </div>
 
       {/* Button below location if no image, below description if description exists */}
-      {!event.media?.fileUrl && onVolunteer && (
+      {!event.media?.fileUrl && !isPastEvent && onVolunteer && (
         <div style={{ marginBottom: 'var(--space-6)' }}>
           <Button text="Volunteer for this Event" width="auto" padding="12px 24px" onClick={onVolunteer} />
         </div>

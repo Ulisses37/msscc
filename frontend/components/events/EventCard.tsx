@@ -38,6 +38,7 @@ export function EventCard({ event }: EventCardProps) {
   const eventUrl = `/${locale}/events/${event.id}`;
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
+  const isPastEvent = new Date(event.endDatetime).getTime() < Date.now();
 
   return (
     <div
@@ -157,7 +158,7 @@ export function EventCard({ event }: EventCardProps) {
         )}
 
         {/* Volunteer slots */}
-        {event.volunteerSlots > 0 && (
+        {!isPastEvent && event.volunteerSlots > 0 && (
           <p style={{
             fontFamily: 'var(--font-body)',
             fontSize: 'var(--fs-body-sm)',
