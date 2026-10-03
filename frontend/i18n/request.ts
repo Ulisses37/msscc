@@ -10,6 +10,13 @@ const LOCALES = ['en', 'ja'] as const;
 type Locale = (typeof LOCALES)[number];
 
 /**
+ * Check whether a requested locale is supported by the website.
+ */
+function isLocale(locale: string | undefined): locale is Locale {
+  return locale !== undefined && LOCALES.includes(locale as Locale);
+}
+
+/**
  * i18n Request Configuration (next-intl v4.x)
  * This function is called on every server-side request to provide
  * the correct translation messages to Server Components.
@@ -20,7 +27,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   // Validation: If the language in the URL is not supported,
   // we trigger a 404 to prevent the app from rendering in an unknown state.
-  if (!LOCALES.includes(locale as any)) {
+  if (!isLocale(locale)) {
     notFound();
   }
 
@@ -30,7 +37,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
     return {
       locale,
-      messages
+      messages,
     };
   } catch (error) {
     // Fallback: If a JSON file is missing or corrupted,
