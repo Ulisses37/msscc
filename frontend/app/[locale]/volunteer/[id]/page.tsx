@@ -79,6 +79,25 @@ export default function VolunteerShiftsPage() {
         ← Back to event
       </Link>
 
+      {/* Empty state */}
+      {!isLoadingShifts && !shiftError && shifts.length === 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '50vh',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-gray-mid)',
+            fontSize: 'var(--fs-body)',
+            margin: 0,
+          }}>
+            No volunteer shifts available for this event at this time.
+          </p>
+        </div>
+      )}
+
       {/* Shift list */}
       <div style={{
         display: 'flex',
