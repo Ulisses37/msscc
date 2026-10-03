@@ -204,7 +204,7 @@ export default function VolunteerSignupsPage() {
         padding: 'var(--space-6)',
       }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3" style={{ marginBottom: 'var(--space-10)' }}>
           <h2 style={{
             fontFamily: 'var(--font-heading)',
             color: 'var(--color-teal)',
@@ -302,7 +302,7 @@ export default function VolunteerSignupsPage() {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <div className="flex gap-2 justify-center sm:justify-end">
                   <button
                     type="button"
                     onClick={() => handleEditSignup(signup)}
