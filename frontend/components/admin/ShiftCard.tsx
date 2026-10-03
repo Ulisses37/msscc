@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 interface ShiftCardProps {
   shiftId: number;
+  eventId: number;
   date: string;
   startTime: string;
   endTime: string;
@@ -16,6 +17,7 @@ interface ShiftCardProps {
 
 export function ShiftCard({
   shiftId,
+  eventId,
   date,
   startTime,
   endTime,
@@ -81,8 +83,9 @@ export function ShiftCard({
       {/* View Volunteers, Edit and Delete buttons */}
       <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:flex-[0_0_auto] sm:justify-end">
         <Link
-          href={`/admin/volunteer/${shiftId}/signups`}
-          className="rounded-sm bg-msscc-pink px-3 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors text-center whitespace-nowrap"
+          href={`/admin/volunteer/${shiftId}/signups?event_id=${eventId}`}
+          className="rounded-sm bg-msscc-pink px-3 py-2 text-white no-underline text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors text-center whitespace-nowrap"
+          style={{ color: '#FFFFFF' }}
         >
           View Volunteers
         </Link>

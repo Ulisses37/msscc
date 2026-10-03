@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSignupsBySlotId, VolunteerSignup } from '@/services/volunteerService';
 
@@ -15,6 +15,8 @@ function formatDateTime(datetime: string): string {
 
 export default function VolunteerSignupsPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get('event_id');
   const [signups, setSignups] = useState<VolunteerSignup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,7 +47,7 @@ export default function VolunteerSignupsPage() {
       {/* Back link */}
       <div style={{ padding: 'var(--space-4) var(--space-6)' }}>
         <Link
-          href="/admin/events"
+          href={eventId ? `/admin/volunteer/${eventId}` : '/admin/events'}
           style={{
             color: 'var(--color-gray-dark)',
             fontSize: 'var(--fs-body-sm)',
