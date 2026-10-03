@@ -326,6 +326,7 @@ const handleDeleteShift = async (shift: VolunteerSlot) => {
                   <ShiftCard
                     key={shift.volunteer_slot_id}
                     shiftId={shift.volunteer_slot_id}
+                    eventId={Number(id)}
                     date={new Date(shift.start_datetime).toLocaleDateString()}
                     startTime={new Date(shift.start_datetime).toLocaleTimeString()}
                     endTime={new Date(shift.end_datetime).toLocaleTimeString()}

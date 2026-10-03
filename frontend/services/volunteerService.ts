@@ -8,7 +8,7 @@ export const getVolunteerEvents = async (): Promise<Event[]> => {
   return response.json();
 };
 
-// NEW: Fetch specific slots for an event based on your ERD
+// Fetch specific slots for an event based on your ERD
 export const getSlotsByEventId = async (eventId: number) => {
   const response = await fetch(`${API_BASE_URL}/api/events/slots/?event_id=${eventId}`);
   if (!response.ok) return [];
@@ -19,9 +19,34 @@ export const getSlotsByEventId = async (eventId: number) => {
 export const submitVolunteerSignup = async (data: any) => {
   return await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/`, {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json' 
+    headers: {
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(data),
   });
 };
+
+// Fetch all volunteer signups for a specific shift
+// Fetch all volunteer signups for a specific shift
+export interface VolunteerSignup {
+  volunteer_signup_id: number;
+  slot: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  status: string;
+  submitted_at: string;
+}
+
+export async function getSignupsBySlotId(slotId: number): Promise<VolunteerSignup[]> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/?slot_id=${slotId}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch signups for slot ${slotId}: ${res.status}`);
+  }
+
+  return res.json();
+}
