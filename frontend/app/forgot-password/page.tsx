@@ -4,8 +4,6 @@ import { useState } from 'react';
 
 import { isValidEmail } from '@/utils/emailValidation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,7 +21,7 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     try {
-      await fetch(`${API_BASE_URL}/api/auth/password-reset/`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/password-reset/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

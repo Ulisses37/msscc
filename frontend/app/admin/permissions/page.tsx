@@ -15,7 +15,7 @@ export default function AdminPermissionPage() {
   const currentLogInEmail = fetchLocalStorageAdmin()?.email
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/admins/")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`)
         .then(res => res.json())
         .then((data: AdminRecord[]) => {
             const sorted = data.map(record => ({
@@ -72,7 +72,7 @@ export default function AdminPermissionPage() {
   function updateDatabase() {
     Promise.all(
         adminRecords.map(record =>
-            fetch(`http://localhost:8000/api/admins/${record.id}/permissions/`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/${record.id}/permissions/`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ permissions: record.permissions }),

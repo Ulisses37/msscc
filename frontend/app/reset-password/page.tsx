@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +44,7 @@ export default function ResetPasswordPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/password-reset/confirm/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/password-reset/confirm/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, token, new_password: newPassword }),

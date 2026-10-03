@@ -268,9 +268,9 @@ async function validateAndSubmit({
 
   const token = localStorage.getItem("msscc_access_token");
   const url = (pType == "update") ?
-  `http://localhost:8000/api/admins/update/${admin_id}`
+  `${process.env.NEXT_PUBLIC_API_URL}/api/admins/update/${admin_id}`
   :
-  "http://localhost:8000/api/admins/create/"
+  `${process.env.NEXT_PUBLIC_API_URL}/api/admins/create/`
 
   const method = (pType == "update") ? "PATCH" : "POST"
 
@@ -336,7 +336,7 @@ async function confirmAndDelete({
   }
 
   try {
-    const res = await fetch(`http://localhost:8000/api/admins/delete/${selectedAdmin.id}`,{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/delete/${selectedAdmin.id}`,{
       method: "DELETE",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}`} : {}),
@@ -389,7 +389,7 @@ async function confirmAndPromote(
   }
 
   try {
-    const res = await fetch(`http://localhost:8000/api/admins/promote-executive/${selectedAdmin.id}`,
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/promote-executive/${selectedAdmin.id}`,
       {
         method: "PATCH",
         headers:{

@@ -424,7 +424,7 @@ async function updatePartnerTable(
   }){
     if (submissionType === "create"){
       fetch(
-        `http://localhost:8000/api/partners/create/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/partners/create/`,
         {
           method: "POST",
           headers: { "Content-Type" : "application/json" },
@@ -451,7 +451,7 @@ async function updatePartnerTable(
     }
   if (submissionType === "update") {
     fetch(
-      `http://localhost:8000/api/partners/${partner.PartnerID}/`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/partners/${partner.PartnerID}/`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -534,7 +534,7 @@ function validateAndSubmit(
 
     if (!confirmed) return;
 
-    fetch(`http://localhost:8000/api/partners/${partnerInfo.PartnerID}/delete/`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/${partnerInfo.PartnerID}/delete/`, {
     method: "DELETE",
     })
     .then(res => {

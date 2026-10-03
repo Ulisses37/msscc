@@ -51,8 +51,8 @@ export default function AboutPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:8000/api/board-members/").then(res => res.json()),
-      fetch("http://localhost:8000/api/media/").then(res => res.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/board-members/`).then(res => res.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
     ])
       .then(([members, mediaAssets]: [unknown[], unknown[]]) => {
         const mediaById = new Map(
