@@ -65,8 +65,17 @@ class VolunteerSlotViewSet(viewsets.ModelViewSet):
 
 
 class VolunteerSignupViewSet(viewsets.ModelViewSet):
-    queryset = VolunteerSignup.objects.all().order_by("-submitted_at")
     serializer_class = VolunteerSignupSerializer
+
+    # filter slot IDs properly
+    def get_queryset(self):
+        queryset = VolunteerSignup.objects.all().order_by("-submitted_at")
+        slot_id = self.request.query_params.get("slot_id")
+
+        if slot_id:
+            queryset = queryset.filter(slot_id=slot_id)
+
+        return queryset
 
     def perform_create(self, serializer):
         signup = serializer.save()
