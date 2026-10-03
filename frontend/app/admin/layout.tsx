@@ -8,6 +8,7 @@ import { AdminNavbar } from "@/components/layout/AdminNavbar";
 import { AdminFooter } from "@/components/layout/AdminFooter";
 import { fetchLocalStorageAdmin, hasPermission } from '@/components/admin/AdminPermssionHandler';
 import { adminNavLinks, adminSubPages } from '@/config/adminNavLinks';
+import { useEffect, useState } from 'react';
 
 export default function AdminLayout({
                                       children,
@@ -16,27 +17,32 @@ export default function AdminLayout({
 }>) {
   const pathname = usePathname();
   const isDashboard = pathname === '/admin/dashboard';
+  const [urlChecked, setUrlChecked] = useState(false);
 
-  if (pathname != "/admin"){
-    let currentLink = adminNavLinks.find((link) => link.href === pathname); //returns if link is in navbar
+  useEffect(() => {
+      if (pathname != "/admin"){
+        let currentLink = adminNavLinks.find((link) => link.href === pathname); //returns if link is in navbar
 
-    if (!currentLink) { // page is not in navbar but is subpage
-      currentLink = adminSubPages.find((link) => pathname.startsWith(link.href));
-    }
+        if (!currentLink) { // page is not in navbar but is subpage
+          currentLink = adminSubPages.find((link) => pathname.startsWith(link.href));
+        }
 
-    if (!currentLink) redirect ('/admin'); // page is not real (or not added to \frontend\config\adminNavLinks.ts)
+        if (!currentLink) redirect ('/admin'); // page is not real (or not added to \frontend\config\adminNavLinks.ts)
 
-    const localAdmin = fetchLocalStorageAdmin();
+        const localAdmin = fetchLocalStorageAdmin();
 
-    const eligible = hasPermission ({
-      adminPermissions: localAdmin?.permissionData,
-      permissionNeeded: currentLink.label,
-      isExecutive: localAdmin?.isExecutive ?? false,
-    })
+        const eligible = hasPermission ({
+          adminPermissions: localAdmin?.permissionData,
+          permissionNeeded: currentLink.label,
+          isExecutive: localAdmin?.isExecutive ?? false,
+        })
 
-    if (!eligible) redirect('/admin');
-  }
+        if (!eligible) redirect('/admin');
+      }
+    setUrlChecked(true);
+  }, [pathname]);
 
+  if(!urlChecked) return null;
 
   return (
     <div className="flex min-h-screen flex-col bg-msscc-white">
