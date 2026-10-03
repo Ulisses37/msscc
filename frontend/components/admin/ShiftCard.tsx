@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 interface ShiftCardProps {
   shiftId: number;
   date: string;
@@ -13,6 +15,7 @@ interface ShiftCardProps {
 }
 
 export function ShiftCard({
+  shiftId,
   date,
   startTime,
   endTime,
@@ -34,7 +37,7 @@ export function ShiftCard({
     >
 
       {/* Date and time */}
-      <div className="sm:flex-[0_0_35%]">
+      <div className="sm:flex-1">
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
@@ -55,7 +58,7 @@ export function ShiftCard({
       </div>
 
       {/* Position name and filled count */}
-      <div className="sm:flex-[0_0_40%]">
+      <div className="sm:flex-1">
         <p style={{
           fontFamily: 'var(--font-body)',
           fontSize: 'var(--fs-body-sm)',
@@ -75,24 +78,29 @@ export function ShiftCard({
         </p>
       </div>
 
-      {/* Edit and Delete buttons */}
-      <div className="flex gap-2 sm:flex-[0_0_20%] sm:justify-end">
+      {/* View Volunteers, Edit and Delete buttons */}
+      <div className="flex gap-2 flex-wrap sm:flex-nowrap sm:flex-[0_0_auto] sm:justify-end">
+        <Link
+          href={`/admin/volunteer/${shiftId}/signups`}
+          className="rounded-sm bg-msscc-pink px-3 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors text-center whitespace-nowrap"
+        >
+          View Volunteers
+        </Link>
         <button
           type="button"
           onClick={onEdit}
-          className="flex-1 sm:flex-none rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
+          className="rounded-sm bg-msscc-teal px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-teal-dark transition-colors"
         >
           Edit
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="flex-1 sm:flex-none rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
+          className="rounded-sm bg-msscc-danger px-4 py-2 text-white text-btn tracking-btn hover:opacity-80 transition-opacity"
         >
           Delete
         </button>
       </div>
-
     </div>
   );
 }
