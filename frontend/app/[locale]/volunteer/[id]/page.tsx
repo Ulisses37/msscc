@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-// import Button from '@/components/ui/Button';
+import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { getSlotsByEventId } from '@/services/volunteerService';
 
@@ -80,7 +80,13 @@ export default function VolunteerShiftsPage() {
       </Link>
 
       {/* Shift list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-4)',
+        maxWidth: '65rem',
+        margin: '0 auto',
+      }}>
         {shifts.map((shift) => (
           <div
             key={shift.volunteer_slot_id}
@@ -134,6 +140,24 @@ export default function VolunteerShiftsPage() {
               }}>
                 {shift.filled_count} of {shift.capacity} filled
               </p>
+            </div>
+
+            {/* Volunteer button or Full indicator */}
+            <div style={{ flex: '0 0 20%', display: 'flex', justifyContent: 'flex-end' }}>
+              {shift.filled_count >= shift.capacity ? (
+                <p style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--fs-body-sm)',
+                  color: 'var(--color-gray-mid)',
+                  margin: 0,
+                }}>
+                  Full
+                </p>
+              ) : (
+                <Link href={`/${locale}/volunteer/${id}/signup?slot_id=${shift.volunteer_slot_id}`}>
+                  <Button text="Volunteer" padding="8px 16px" fontSize="12px" />
+                </Link>
+              )}
             </div>
           </div>
         ))}
