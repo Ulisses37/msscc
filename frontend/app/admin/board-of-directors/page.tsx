@@ -24,8 +24,8 @@ export default function BoardOfDirectors() {
 
     useEffect(() => {
       Promise.all([
-        fetch("http://localhost:8000/api/board-members/").then(res => res.json()),
-        fetch("http://localhost:8000/api/media/").then(res => res.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/board-members/`).then(res => res.json()),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
       ])
         .then(([members, mediaAssets]: [unknown[], unknown[]]) => {
           console.log("raw members:", members);
@@ -151,7 +151,7 @@ async function updateMember(member: BoardMember | null, file?: File | null) {
     const formData = new FormData();
     formData.append("image", file, file.name);  // use original filename
 
-    const mediaRes = await fetch("http://localhost:8000/api/media/upload/", {
+    const mediaRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`, {
       method: "POST",
       body: formData,
     });
@@ -167,8 +167,8 @@ async function updateMember(member: BoardMember | null, file?: File | null) {
 
   fetch(
     isNew
-      ? `http://localhost:8000/api/board-members/create/`
-      : `http://localhost:8000/api/board-members/${member.boardMemberId}/update/`,
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/board-members/create/`
+      : `${process.env.NEXT_PUBLIC_API_URL}/api/board-members/${member.boardMemberId}/update/`,
     {
       method: isNew ? "POST" : "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -197,7 +197,7 @@ async function updateMember(member: BoardMember | null, file?: File | null) {
 
 function deleteMember(member: BoardMember | null) {
   if (!member) return;
-  fetch(`http://localhost:8000/api/board-members/${member.boardMemberId}/delete/`, {
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/board-members/${member.boardMemberId}/delete/`, {
     method: "DELETE",
   })
   .then(res => {

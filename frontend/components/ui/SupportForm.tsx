@@ -21,7 +21,7 @@ export default function SupportForm({ onClose }: SupportFormProps) {
 
   /**
    * ESC KEY HANDLING + SCROLL LOCK
-   * When the modal opensn disable page scrolling and add Escape key listener 
+   * When the modal opensn disable page scrolling and add Escape key listener
    * When the modal closes restore original scroll behavior,Remove Escape listener
    */
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function SupportForm({ onClose }: SupportFormProps) {
     try {
       // 1. Point to your actual backend (e.g., localhost:8000)
       // 2. Ensure headers include Content-Type
-      const res = await fetch('http://localhost:8000/api/admin/admin_support/', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/admin_support/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,8 +115,8 @@ export default function SupportForm({ onClose }: SupportFormProps) {
       {/* FORM START */}
       <form onSubmit={handleSubmit} className="space-y-5">
 
-        {/*INPUT VALIDATION 
-            HTML5 validation happens here via the "required" attribute. 
+        {/*INPUT VALIDATION
+            HTML5 validation happens here via the "required" attribute.
             This is where the browser checks:
               - Name must not be empty
               - Email must not be empty AND must be a valid email format
