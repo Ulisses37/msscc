@@ -1,11 +1,31 @@
 import Image from 'next/image';
-import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
+
+import { getRichTextPlainText } from '@/utils/richText';
+
+import { RichTextContent } from '@/components/content/RichTextContent';
 import Button from '@/components/ui/Button';
 
+import type { ImageAlignment, ImageWidth } from '@/types/content';
+import type { Event, EventImage } from '@/types/event';
+
+// Match the saved admin controls so public photos keep their configured presentation.
+const IMAGE_ALIGNMENT_CLASSES: Record<ImageAlignment, string> = {
+  left: 'text-left',
+  center: 'text-center',
+  right: 'text-right',
+};
+
+const IMAGE_WIDTH_CLASSES: Record<ImageWidth, string> = {
+  25: 'w-1/4',
+  50: 'w-1/2',
+  75: 'w-3/4',
+  100: 'w-full',
+};
 
 interface EventDetailProps {
   event: Event;
+  eventImages?: EventImage[];
   onVolunteer?: () => void;
 }
 
@@ -46,7 +66,11 @@ function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
-export function EventDetail({ event, onVolunteer }: EventDetailProps) {
+export function EventDetail({
+  event,
+  eventImages = [],
+  onVolunteer,
+}: EventDetailProps) {
   const { locale } = useParams();
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
@@ -204,6 +228,37 @@ export function EventDetail({ event, onVolunteer }: EventDetailProps) {
           ))}
         </div>
       )}
+
+      {eventImages.map((eventImage) => {
+        // Japanese pages fall back to English when a translated caption is unavailable.
+        const caption = locale === 'ja'
+          ? eventImage.captionJa || eventImage.captionEn
+          : eventImage.captionEn;
+        const alignmentClass = IMAGE_ALIGNMENT_CLASSES[eventImage.imageAlignment];
+        const widthClass = IMAGE_WIDTH_CLASSES[eventImage.imageWidth];
+
+        // Deleted media assets can leave valid EventImage records without a usable file URL.
+        if (!eventImage.mediaUrl) return null;
+
+        return (
+          <figure
+            key={eventImage.id}
+            className={`${alignmentClass} mt-6`}
+          >
+            <img
+              src={eventImage.mediaUrl}
+              alt={getRichTextPlainText(caption) || title}
+              className={`inline-block h-auto max-w-full rounded-md ${widthClass}`}
+            />
+
+            {caption && (
+              <figcaption className="mt-2 font-body text-caption text-msscc-gray-mid">
+                <RichTextContent value={caption} />
+              </figcaption>
+            )}
+          </figure>
+        );
+      })}
 
     </article>
   );

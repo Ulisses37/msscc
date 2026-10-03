@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter for navigation
 import Link from 'next/link';
-import { getEventById, getEvents } from '@/services/eventService';
+import { getEventById, getEventImages, getEvents } from '@/services/eventService';
 import { EventDetail } from '@/components/events/EventDetails';
-import type { Event } from '@/types/event';
+import type { Event, EventImage } from '@/types/event';
 import { EventNavigation } from '@/components/events/EventNavigation';
 import { EventCalendar } from '@/components/events/EventCalendar';
 import { EventMap } from '@/components/events/EventMap';
@@ -18,9 +18,12 @@ export default function EventDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [previousEvent, setPreviousEvent] = useState<Event | null>(null);
   const [nextEvent, setNextEvent] = useState<Event | null>(null);
+  const [eventImages, setEventImages] = useState<EventImage[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
+      // Prevent photos from the previous event appearing during client-side navigation.
+      setEventImages([]);
       const data = await getEventById(Number(id));
 
       if (!data || !data.isPublished) {
@@ -31,8 +34,17 @@ export default function EventDetailPage() {
 
       setEvent(data);
 
+      const [allEvents, images] = await Promise.all([
+        getEvents(),
+        getEventImages(Number(id)).catch((error) => {
+          // Additional photos should not prevent the rest of a published event from rendering.
+          console.error('Failed to load additional event images:', error);
+          return [];
+        }),
+      ]);
+      setEventImages(images);
+
       // Fetch all published events that have not passed in date, sort chronologically, find adjacent events
-      const allEvents = await getEvents();
       const sorted = allEvents
       .filter((e) => e.isPublished && new Date(e.endDatetime).getTime() >= Date.now())
       .sort((a, b) =>
@@ -125,6 +137,7 @@ export default function EventDetailPage() {
           {event && (
             <EventDetail
               event={event}
+              eventImages={eventImages}
               onVolunteer={
                 event.volunteerSlots > 0
                   ? () => router.push(`/${locale}/volunteer/${id}`)
