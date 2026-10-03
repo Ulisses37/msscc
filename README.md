@@ -296,7 +296,7 @@ The team uses [Cline](https://docs.cline.bot) in VS Code. Project rules, skills,
 | Path | Purpose |
 |---|---|
 | `.clinerules/*.md` | Always-on rules: security and command approval, project context, Git/Jira workflow, docs updates. Frontend and backend style rules load only when working in those folders. |
-| `.cline/skills/` | On-demand skills: `stripe-webhook-testing`, `django-migrations`. |
+| `.cline/skills/` | On-demand skills: `stripe-webhook-testing`, `django-migrations`, and `run-checks` (read-only lint, type-check, and test sweep that never applies fixes). |
 | `.clinerules/hooks/` | `PreToolUse` hook (`PreToolUse.ps1` on Windows) that blocks any read, edit, or command touching `.env` files, keys, or the guard itself. Logic lives in `.cline/guards/secret-guard.mjs` and needs Node.js on PATH. |
 | `.clineignore` | Keeps secrets, dependencies, and build output out of Cline's automatic context. Not an access boundary on its own; the hook is. |
 
@@ -329,7 +329,26 @@ Code changes always need your approval. Only read-only checks run on their own.
 
 ## Testing
 
-Testing will begin during Fall 2026.
+Backend tests use `pytest` against an in-memory SQLite database, never the shared Postgres. Frontend tests use `Jest`, colocated with the file they test.
+
+```powershell
+# Backend, from the repo root
+backend\venv\Scripts\python.exe -m pytest backend
+```
+
+```bash
+# Backend, macOS or Linux, from the repo root
+backend/venv/bin/python -m pytest backend
+```
+
+```powershell
+# Frontend tests, from the repo root
+npm --prefix frontend test
+```
+
+Checks to run before opening a PR, by hand: `npm --prefix frontend run lint`, `npx --prefix frontend tsc --noEmit -p frontend`, and Ruff on just the backend files you changed, `backend\venv\Scripts\python.exe -m ruff check --force-exclude <files you changed>` (macOS/Linux: `backend/venv/bin/python -m ruff check --force-exclude <files you changed>`). Linting all of `backend/` currently reports pre-existing violations in older files that nobody has cleaned up, which is why CI and the hook also lint changed files only. The `run-checks` Cline skill (`.cline/skills/run-checks/`) runs the same set and reports a table.
+
+At commit time the pre-commit hook runs Ruff (with `--fix`) on staged backend Python files, and ESLint on the whole frontend whenever any frontend file is staged. CI (`.github/workflows/ci.yml`) runs `lint-backend`, `lint-frontend`, and a placeholder `check` job on pull requests and on pushes to `main`, linting only the files changed against `main`. Tests and TypeScript are not yet in CI.
 
 ## Deployment
 
