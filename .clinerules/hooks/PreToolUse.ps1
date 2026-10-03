@@ -9,7 +9,6 @@ try {
     }
 
     $payload = [Console]::In.ReadToEnd()
-    $payload | Set-Content -Encoding UTF8 "$env:TEMP\cline-hook-last.json"
     $result = ($payload | & node $guard) -join ''
     if ([string]::IsNullOrWhiteSpace($result)) { throw 'guard returned no output' }
     Write-Output $result

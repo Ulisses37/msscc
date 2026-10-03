@@ -10,10 +10,13 @@
 - Stripe work is test mode only (`sk_test_`, `pk_test_`, `cs_test_`). Stop and ask if anything looks like a live key or live object.
 
 ## Command approval
-Set `requires_approval=false` ONLY for these read-only checks, run exactly as written:
-- Frontend (in `frontend/`): `npm run lint`, `npx tsc --noEmit`
-- Backend lint (from repo root): `ruff check backend --select E4,E7,E9,F`, `ruff format --check backend`
-- Django (in `backend/`, venv active): `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py showmigrations`
+Set `requires_approval=false` ONLY for these read-only checks, run exactly as written, from the repo root.
+
+`<py>` means the backend venv interpreter: `backend\venv\Scripts\python.exe` on Windows, `backend/venv/bin/python` on macOS/Linux. Never use bare `python`, `py`, `pip`, or `ruff`.
+
+- Frontend: `npm --prefix frontend run lint`, `npx --prefix frontend tsc --noEmit -p frontend`
+- Backend lint: `<py> -m ruff check backend`
+- Django: `<py> backend/manage.py check`, `<py> backend/manage.py makemigrations --check --dry-run`, `<py> backend/manage.py showmigrations`
 - Git: `git status`, `git diff`, `git log`, `git branch`, `git show`
 
 Set `requires_approval=true` for everything else, including:
