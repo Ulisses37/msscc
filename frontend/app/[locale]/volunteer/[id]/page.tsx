@@ -79,6 +79,44 @@ export default function VolunteerShiftsPage() {
         ← Back to event
       </Link>
 
+      {/* Loading state */}
+      {isLoadingShifts && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '50vh',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-gray-mid)',
+            fontSize: 'var(--fs-body)',
+            margin: 0,
+          }}>
+            Loading shifts...
+          </p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {!isLoadingShifts && shiftError && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '50vh',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-body)',
+            color: 'var(--color-danger)',
+            fontSize: 'var(--fs-body)',
+            margin: 0,
+          }}>
+            {shiftError}
+          </p>
+        </div>
+      )}
+
       {/* Empty state */}
       {!isLoadingShifts && !shiftError && shifts.length === 0 && (
         <div style={{
