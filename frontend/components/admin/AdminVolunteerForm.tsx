@@ -50,6 +50,20 @@ export function AdminVolunteerForm({
       return;
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setSaveError('Please enter a valid email address.');
+      return;
+    }
+
+    // Validate phone number length (10 digits, ignoring formatting characters)
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      setSaveError('Please enter a valid 10-digit phone number.');
+      return;
+    }
+
     try {
       await onSubmit(formData);
     } catch (error) {

@@ -66,6 +66,10 @@ export default function VolunteerSignupsPage() {
         prev.filter((s) => s.volunteer_signup_id !== signup.volunteer_signup_id),
       );
 
+      setSaveMessage('Volunteer removed successfully.');
+      setTimeout(() => setSaveMessage(''), 5000);
+
+
     } catch (err) {
       console.error('Signup removal failed:', err);
       setError('Failed to remove signup. Please try again.');
@@ -221,6 +225,13 @@ export default function VolunteerSignupsPage() {
             + Add Volunteer
           </button>
         </div>
+
+        {/* Page-level feedback for remove action */}
+        {saveMessage && (
+          <p style={{ color: 'var(--color-teal)', fontSize: 'var(--fs-body-sm)', marginBottom: 'var(--space-4)' }}>
+            {saveMessage}
+          </p>
+        )}
 
         {/* Loading state */}
         {isLoading && (
