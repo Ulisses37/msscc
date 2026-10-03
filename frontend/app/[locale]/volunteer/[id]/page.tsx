@@ -6,6 +6,8 @@ import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { getSlotsByEventId } from '@/services/volunteerService';
+import { getEventById } from '@/services/eventService';
+import type { Event } from '@/types/event';
 
 interface VolunteerSlot {
   volunteer_slot_id: number;
@@ -40,6 +42,7 @@ export default function VolunteerShiftsPage() {
   const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
   const [shiftError, setShiftError] = useState('');
+  const [event, setEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     const loadShifts = async () => {
@@ -55,6 +58,14 @@ export default function VolunteerShiftsPage() {
     };
 
     loadShifts();
+  }, [id]);
+
+  useEffect(() => {
+    const loadEvent = async () => {
+      const eventData = await getEventById(Number(id));
+      if (eventData) setEvent(eventData);
+    };
+    loadEvent();
   }, [id]);
 
   return (
@@ -78,6 +89,24 @@ export default function VolunteerShiftsPage() {
       >
         ← Back to event
       </Link>
+
+      {/* Corresponding Event Title */}
+      {event && (
+        <header style={{
+          borderBottom: '0.5px solid var(--color-gray-light)',
+          marginBottom: 'var(--space-10)',
+          paddingBottom: 'var(--space-6)',
+        }}>
+          <h1 style={{
+            fontFamily: 'var(--font-heading)',
+            color: 'var(--color-teal)',
+            fontSize: 'var(--fs-display)',
+            margin: 0,
+          }}>
+            {locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn}
+          </h1>
+        </header>
+      )}
 
       {/* Loading state */}
       {isLoadingShifts && (
