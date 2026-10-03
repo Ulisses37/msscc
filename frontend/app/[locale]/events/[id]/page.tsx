@@ -139,7 +139,8 @@ export default function EventDetailPage() {
               event={event}
               eventImages={eventImages}
               onVolunteer={
-                event.volunteerSlots > 0
+                event.volunteerSlots > 0 &&
+                new Date(event.endDatetime).getTime() >= Date.now()
                   ? () => router.push(`/${locale}/volunteer/${id}`)
                   : undefined
               }

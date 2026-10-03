@@ -14,6 +14,7 @@ import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer'
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useTranslation } from '@/hooks/useTranslation';
 
 // Types
 import type { DbContentBlock } from '@/types/content';
@@ -24,6 +25,7 @@ import { FallBack } from '@/components/content/ContentFallBack';
  * Displays a list of published events and a link to volunteer opportunities.
  */
 export default function EventsPage() {
+  const t = useTranslation('EventsPage');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('events'),);
@@ -41,9 +43,9 @@ export default function EventsPage() {
       const sorted = data
         .filter((event) => event.isPublished &&
         new Date(event.endDatetime).getTime() >= Date.now(),)
-        .sort((a, b) =>
-          new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
-        );
+          .sort((a, b) =>
+            new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime(),
+          );
 
         setEvents(sorted);
       } catch (error) {
@@ -58,18 +60,18 @@ export default function EventsPage() {
 
   // Fetch text content from the database to display on page
   useEffect(() => {
-  const loadPageContent = async () => {
-    try {
-      const data = await fetchPageContent('events');
+    const loadPageContent = async () => {
+      try {
+        const data = await fetchPageContent('events');
         if (previewReceivedRef.current) return;
-      setContentBlocks(data);
-    } catch (error) {
-      console.error('Error fetching page content:', error);
-    }
-  };
+        setContentBlocks(data);
+      } catch (error) {
+        console.error('Error fetching page content:', error);
+      }
+    };
 
-  loadPageContent();
-}, []);
+    loadPageContent();
+  }, [previewReceivedRef]);
 
   // Check if there are any volunteer opportunities among the events
   const hasVolunteerOpportunities = events.some(
@@ -149,8 +151,22 @@ export default function EventsPage() {
         </div>
       )}
 
+      <div className="mt-10 text-center">
+        <button
+          type="button"
+          onClick={() => router.push(`/${locale}/events/history`)}
+          className="text-body font-semibold text-msscc-teal underline underline-offset-4 hover:text-msscc-teal-dark"
+        >
+          {t('historyLink')}
+        </button>
+      </div>
+
       {/* Volunteer Opportunities Section */}
-      <div style={{ marginTop: 'var(--space-10)', borderTop: '1px solid var(--color-gray-light)', paddingTop: 'var(--space-8)' }}>
+      <div style={{
+        marginTop: 'var(--space-10)',
+        borderTop: '1px solid var(--color-gray-light)',
+        paddingTop: 'var(--space-8)',
+      }}>
         {hasVolunteerOpportunities ? (
           <div style={{ textAlign: 'center' }}>
             <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
@@ -170,6 +186,7 @@ export default function EventsPage() {
           </p>
         )}
       </div>
+
     </main>
   );
 }
