@@ -16,6 +16,7 @@ export const routing = defineRouting({
     // Navbar Links
     '/about': '/about',
     '/events': '/events',
+    '/events/history': '/events/history',
     '/support': '/support',
     '/membership': '/membership',
     '/partners': '/partners',

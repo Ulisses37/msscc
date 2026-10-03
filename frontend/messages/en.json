@@ -13,6 +13,18 @@
     "partners": "Partners"
   },
 
+  "EventsPage": {
+    "historyLink": "Click here to see past events!"
+  },
+
+  "EventHistoryPage": {
+    "backLink": "<- Back to Programs and Events",
+    "heading": "Event History",
+    "loading": "Loading past events...",
+    "error": "Unable to load past events. Please try again later.",
+    "empty": "No past events are available at this time."
+  },
+
   "SupportPage": {
     "heading": "Support Us Today",
     "email": "Email",

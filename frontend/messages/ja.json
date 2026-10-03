@@ -13,6 +13,18 @@
     "partners": "パートナー"
   },
 
+  "EventsPage": {
+    "historyLink": "過去のイベントはこちらからご覧ください！"
+  },
+
+  "EventHistoryPage": {
+    "backLink": "<- プログラムとイベントに戻る",
+    "heading": "イベント履歴",
+    "loading": "過去のイベントを読み込んでいます...",
+    "error": "過去のイベントを読み込めませんでした。後でもう一度お試しください。",
+    "empty": "現在、過去のイベントはありません。"
+  },
+
   "SupportPage": {
     "heading": "ご支援をお願いします",
     "email": "メールアドレス",
