@@ -22,6 +22,7 @@ Set `requires_approval=false` ONLY for these read-only checks, run exactly as wr
 Set `requires_approval=true` for everything else, including:
 - Any command with `--fix`, `--write`, or that formats files (`ruff format` without `--check`)
 - `npm install`, `npm ci`, `npm uninstall`, `pip install`, `pip uninstall`
+- `<py> -m pytest backend` (requires approval before running)
 - `python manage.py migrate`, `makemigrations` (without `--check`), `test`, `shell`, `dbshell`, `flush`, `createsuperuser`, `loaddata`
 - Any git command that changes state: `add`, `commit`, `push`, `pull`, `checkout`, `switch`, `reset`, `rebase`, `merge`, `stash`, `clean`
 - `stripe` CLI commands, `docker`, `mc`, `curl`, `Invoke-WebRequest`, `rm`, `del`, `Remove-Item`, `mv`, `Move-Item`

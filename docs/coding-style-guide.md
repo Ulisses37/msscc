@@ -100,6 +100,15 @@ One Django rule is turned off on purpose. `DJ001` forbids `null=True` on string 
 **Tests**
 - Tests live in each app's `tests.py`, or in `test_<topic>.py` files when one file gets too long.
 - Classes are named `<Thing>Tests`. Methods are named `test_<behavior>`.
+- Test classes and methods do not need docstrings; the name should say what is tested.
+- Use `django.test.TestCase`. Import from `django.test`, not `unittest`.
+- Use `full_clean()` to test model validation, not `IntegrityError`, because Django silently uses `""` for omitted `TextField`s.
+- For DRF views, use `APIClient` with `force_authenticate(user=...)`. Never rely on anonymous access for authenticated endpoints.
+- Test files must not send real emails, call external APIs, or read production secrets. Use `os.environ` or `override_settings()` for test-time values.
+- Run tests through the backend virtual environment:
+  - Windows: `backend\venv\Scripts\python.exe -m pytest backend`
+  - macOS/Linux: `backend/venv/bin/python -m pytest backend`
+- Tests use the in-memory SQLite database in `config/settings/test.py`. They never write to the shared PostgreSQL.
 
 ## 3. TypeScript and Next.js (`frontend/`)
 
