@@ -5,6 +5,8 @@ description: Test or debug the Stripe donation webhook (/api/payments/webhook/) 
 
 # Stripe webhook testing
 
+`<py>` means the backend venv interpreter: `backend\venv\Scripts\python.exe` on Windows, `backend/venv/bin/python` on macOS/Linux. Never use bare `python`, `py`, `pip`, or `ruff`.
+
 ## Ground rules
 - Test mode only, in the shared "msscc sandbox" Stripe account. Every key, session, and event must be a test object (`sk_test_`, `pk_test_`, `cs_test_`, `evt_` from the sandbox). If anything suggests live mode, stop and tell the human.
 - Never read, print, or edit `.env` files. The running Django server already has `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` loaded; rely on that. If a key seems missing, tell the human which variable name to check (see `backend/.env.example`).
@@ -37,8 +39,8 @@ The reference comes from `client_reference_id` on Checkout Sessions, or `metadat
 
 1. **Human starts the stack.** Ask the human to run, in separate terminals:
    ```powershell
-   # backend/, venv active
-   python manage.py runserver
+   # from repo root, backend venv interpreter
+   <py> backend/manage.py runserver
    # frontend/
    npm run dev
    # any folder
@@ -62,5 +64,5 @@ The reference comes from `client_reference_id` on Checkout Sessions, or `metadat
 
 ## Notes
 - Teammates' `stripe listen` sessions receive the same sandbox events. Duplicate deliveries are expected and handled idempotently.
-- Unit tests for this handler live in `backend/payments/tests.py`. Running them creates a test database on the shared Postgres server, so ask before running `python manage.py test payments`.
+- Unit tests for this handler live in `backend/payments/tests.py`. Run them from the repo root with `<py> -m pytest backend/payments`; `backend/pytest.ini` locks test settings to in-memory SQLite, so the shared Postgres is untouched.
 - Do not change webhook code as part of a test task. If a test reveals a bug, describe it and propose a fix separately.

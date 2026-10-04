@@ -45,6 +45,14 @@ const DEV_USER: UserPayload = {
   userId: 1,
   email: 'admin@msscc1.org',
   firstName: 'Bryan',
+  permissionData: {
+    Finances: false,
+    Text_Editing: false,
+    Board_Members: false,
+    Events: false,
+    Executive: false,
+  },
+  isExecutive: true,
 };
 
 /** Wraps the application and provides auth state to all descendants. */

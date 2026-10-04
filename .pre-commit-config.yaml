@@ -1,0 +1,20 @@
+# Pre-commit hooks for MSSCC. Installed from the backend venv with
+# pip install -r backend/requirements-dev.txt, then: pre-commit install.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff
+        name: ruff check backend
+        args: [--fix]
+        files: "^backend/.*\\.py$"
+        exclude: "^backend/.*/migrations/"
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint frontend
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+        files: "^frontend/.*\\.([cm]?[jt]sx?)$"

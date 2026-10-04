@@ -1,0 +1,3 @@
+# Force LF line endings for the githooks scripts so Git Bash on Windows
+# never checks them out as CRLF (which breaks hooks with \r: command not found).
+docs/dev/githooks/* text eol=lf

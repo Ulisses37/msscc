@@ -22,5 +22,11 @@ Bilingual (English/Japanese) website and admin portal for the Matsuyama-Sacramen
 - Change only what the task needs. Do not reformat, rename, or reorder untouched code. Never regenerate a whole file for a small change.
 - Do not add, remove, or upgrade dependencies without asking first.
 - Do not change behavior while doing cleanup or lint work. If a fix would change behavior, flag it instead.
-- Most of the team uses Windows. Give PowerShell commands, or both PowerShell and bash when they differ. On Windows, Python is `py -3.12` outside the venv.
+- Most of the team uses Windows. Give PowerShell commands, or both PowerShell and bash when they differ.
 - Run the read-only checks in `security.md` after editing and report the results.
+- The backend virtual environment already exists at `backend/venv/`. Do not look for it, create one, or try to activate it. Run every Python command through its interpreter:
+  - Windows: `backend\venv\Scripts\python.exe`
+  - macOS/Linux: `backend/venv/bin/python`
+  - Examples from the repo root (Windows): `backend\venv\Scripts\python.exe -m ruff check backend`, and `backend\venv\Scripts\python.exe backend\manage.py check`.
+  - Never use bare `python`, `py`, `pip`, or `ruff`. They point at the system Python, which does not have the project's packages.
+  - If the interpreter path does not exist, stop and tell the human to follow the dev setup guide.
