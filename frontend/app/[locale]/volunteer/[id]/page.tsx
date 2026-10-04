@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
-import { useRouter } from 'next/navigation';
 import { getSlotsByEventId } from '@/services/volunteerService';
 import { getEventById } from '@/services/eventService';
 import type { Event } from '@/types/event';
@@ -37,7 +36,6 @@ function formatSlotTime(datetime: string): string {
 
 export default function VolunteerShiftsPage() {
   const { id, locale } = useParams();
-  const router = useRouter();
 
   const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
