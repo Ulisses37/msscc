@@ -7,7 +7,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
-from .models import Donation
+from .models import AdminTableRevision, Donation
 from .serializers import DonationSerializer
 from .views import DonationListCreateView
 
@@ -123,3 +123,36 @@ class DonationDatabaseFailureTests(TestCase):
         )
         exposed_text = f"{response.data} {' '.join(captured_logs.output)}"
         self.assertNotIn("database-secret-for-test", exposed_text)
+
+
+class AdminTableRevisionTests(TestCase):
+    """Tests for initial admin table revision records."""
+
+    def test_initial_revision_records_exist_with_zero_revision(self):
+        """Ensure every refreshable admin table starts at the initial revision."""
+        revisions = AdminTableRevision.objects.in_bulk(field_name="table_name")
+
+        # This guards the data migration against missing or unintended polling targets.
+        self.assertEqual(set(revisions), {"donations", "memberships"})
+        self.assertEqual(revisions["donations"].revision, 0)
+        self.assertEqual(revisions["memberships"].revision, 0)
+
+    def test_model_uses_required_table_name_configuration(self):
+        """Protect identifiers that the revision triggers and API will depend on."""
+        table_name_field = AdminTableRevision._meta.get_field("table_name")
+
+        # A primary key permits only one revision record for each tracked table.
+        self.assertTrue(table_name_field.primary_key)
+        self.assertEqual(table_name_field.max_length, 32)
+        self.assertEqual(
+            dict(table_name_field.choices),
+            {
+                "donations": "Donations",
+                "memberships": "Memberships",
+            },
+        )
+        # PostgreSQL triggers in SCRUM-690 will reference this table directly.
+        self.assertEqual(
+            AdminTableRevision._meta.db_table,
+            "donations_admin_table_revision",
+        )
