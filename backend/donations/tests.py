@@ -3,14 +3,17 @@ from decimal import Decimal
 from importlib import import_module
 from unittest.mock import MagicMock, patch
 
+from django.contrib.auth import get_user_model
 from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase
 from rest_framework import status
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIClient, APIRequestFactory
 
 from .models import AdminTableRevision, Donation
 from .serializers import DonationSerializer
 from .views import DonationListCreateView
+
+User = get_user_model()
 
 
 class DonationPaymentDataTests(TestCase):
@@ -214,3 +217,64 @@ class AdminTableRevisionTriggerMigrationTests(TestCase):
             executed_sql[1],
         )
         self.assertEqual(executed_sql[2], "DROP FUNCTION IF EXISTS bump_admin_table_revision();")
+
+
+class AdminTableRevisionAPITests(TestCase):
+    """Tests for the admin table revision refresh endpoint."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="admin@example.com",
+            password="TestPass123!",
+            first_name="Admin",
+            last_name="User",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_get_returns_current_revisions_without_table_data(self):
+        """Return the two current refresh tokens in one request."""
+        AdminTableRevision.objects.filter(table_name="donations").update(revision=12)
+        AdminTableRevision.objects.filter(table_name="memberships").update(revision=4)
+
+        response = self.client.get("/api/donations/table-revisions/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {"donations": 12, "memberships": 4})
+
+    def test_get_returns_controlled_error_when_revision_record_is_missing(self):
+        """Do not fabricate a refresh token when revision setup is incomplete."""
+        AdminTableRevision.objects.filter(table_name="memberships").delete()
+
+        with self.assertLogs("donations.views", level="ERROR"):
+            response = self.client.get("/api/donations/table-revisions/")
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Table revisions are temporarily unavailable."},
+        )
+
+    @patch("donations.views.AdminTableRevision.objects.filter")
+    def test_get_returns_controlled_error_when_revision_query_fails(self, filter_revisions):
+        """Keep database failure details out of the revision polling response."""
+        filter_revisions.side_effect = DatabaseError("database-secret-for-test")
+
+        with self.assertLogs("donations.views", level="ERROR") as captured_logs:
+            response = self.client.get("/api/donations/table-revisions/")
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Table revisions are temporarily unavailable."},
+        )
+        exposed_text = f"{response.json()} {' '.join(captured_logs.output)}"
+        self.assertNotIn("database-secret-for-test", exposed_text)
+
+    def test_get_requires_authentication(self):
+        """Keep internal revision state unavailable to unauthenticated clients."""
+        client = APIClient()
+
+        response = client.get("/api/donations/table-revisions/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
