@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
-from unittest.mock import patch
+from importlib import import_module
+from unittest.mock import MagicMock, patch
 
 from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase
@@ -156,3 +157,60 @@ class AdminTableRevisionTests(TestCase):
             AdminTableRevision._meta.db_table,
             "donations_admin_table_revision",
         )
+
+
+class AdminTableRevisionTriggerMigrationTests(TestCase):
+    """Tests for the PostgreSQL revision-trigger migration."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.migration = import_module("donations.migrations.0005_admin_table_revision_triggers")
+
+    def create_schema_editor(self, vendor):
+        """Return a mock schema editor for the requested database vendor."""
+        schema_editor = MagicMock()
+        schema_editor.connection.vendor = vendor
+        return schema_editor
+
+    def test_postgresql_setup_creates_function_and_table_specific_triggers(self):
+        """Create one statement-level trigger for each refreshable admin table."""
+        schema_editor = self.create_schema_editor("postgresql")
+        cursor = schema_editor.connection.cursor.return_value.__enter__.return_value
+
+        self.migration.create_admin_table_revision_triggers(None, schema_editor)
+
+        executed_sql = [call.args[0] for call in cursor.execute.call_args_list]
+        self.assertEqual(len(executed_sql), 3)
+        self.assertIn("CREATE FUNCTION bump_admin_table_revision()", executed_sql[0])
+        self.assertIn("revision = revision + 1", executed_sql[0])
+        self.assertIn("changed_at = CURRENT_TIMESTAMP", executed_sql[0])
+        self.assertIn("WHERE table_name = TG_ARGV[0]", executed_sql[0])
+        self.assertIn("ON donations_donation", executed_sql[1])
+        self.assertIn("bump_admin_table_revision('donations')", executed_sql[1])
+        self.assertIn("ON donations_membership", executed_sql[2])
+        self.assertIn("bump_admin_table_revision('memberships')", executed_sql[2])
+
+    def test_non_postgresql_setup_skips_trigger_ddl(self):
+        """Keep SQLite test database setup compatible with PostgreSQL-only triggers."""
+        schema_editor = self.create_schema_editor("sqlite")
+
+        self.migration.create_admin_table_revision_triggers(None, schema_editor)
+
+        schema_editor.connection.cursor.assert_not_called()
+
+    def test_postgresql_reverse_drops_triggers_before_shared_function(self):
+        """Drop dependent triggers before their shared PostgreSQL function."""
+        schema_editor = self.create_schema_editor("postgresql")
+        cursor = schema_editor.connection.cursor.return_value.__enter__.return_value
+
+        self.migration.remove_admin_table_revision_triggers(None, schema_editor)
+
+        executed_sql = [call.args[0] for call in cursor.execute.call_args_list]
+        self.assertEqual(len(executed_sql), 3)
+        self.assertIn("DROP TRIGGER IF EXISTS donations_bump_admin_table_revision", executed_sql[0])
+        self.assertIn(
+            "DROP TRIGGER IF EXISTS memberships_bump_admin_table_revision",
+            executed_sql[1],
+        )
+        self.assertEqual(executed_sql[2], "DROP FUNCTION IF EXISTS bump_admin_table_revision();")
