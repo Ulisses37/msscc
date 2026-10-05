@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -200,6 +201,8 @@ export default function AdminMembershipsPage() {
     }
   }, []);
 
+  useVisibleTableRevisionPolling('memberships', fetchMemberships, 3000);
+
   // Filter before sorting and pagination so every page and export operates on
   // the same case-insensitive set of matching membership records.
   const filteredMembershipItems = useMemo(() => {
@@ -351,7 +354,7 @@ export default function AdminMembershipsPage() {
   }, []);
 
   useEffect(() => {
-    fetchMemberships();
+    void fetchMemberships();
   }, [fetchMemberships]);
 
   useEffect(() => {
