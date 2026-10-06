@@ -141,7 +141,8 @@ export default function AboutPage() {
             Directors
           </p>
         </div>
-        <div className="flex flex-wrap justify-center align-middle gap-12 mb-6 w-[70%] mx-auto">
+        {/* Two mobile columns prevent oversized single-card rows, while four columns keep the roster compact. */}
+        <div className="mx-auto mb-6 grid max-w-content grid-cols-2 gap-x-4 gap-y-8 px-4 sm:gap-x-6 md:grid-cols-4 md:gap-x-8 md:gap-y-10 md:px-6">
           {boardMembers.map((member) => {
           if (member.isDirector) {
             return (

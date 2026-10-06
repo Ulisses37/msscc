@@ -56,20 +56,21 @@ export function DirectorCard({
   boardMemberImageURL
 }: DirectorCardProps) {
   return (
-    <div className="text-center w-24 sm:w-32 md:w-40 lg:w-48">
+    <div className="w-full text-center">
+      {/* Larger two-column portraits use available space without exceeding the four-column cap. */}
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={boardMemberImageURL}
           alt={`${boardMemberName} portrait`}
-          className="mx-auto h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 lg:h-48 lg:w-48"
+          className="mx-auto h-32 w-32 sm:h-40 sm:w-40 md:h-40 md:w-40 lg:h-48 lg:w-48"
         />
       ) : (
-        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-white">
+        <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-200 text-sm text-white sm:h-40 sm:w-40 md:h-40 md:w-40 lg:h-48 lg:w-48">
           No photo
         </div>
       )}
-      <p className="mt-2 font-serif text-white text-[clamp(0.5rem,1.5vw,1.25rem)]">
+      <p className="mt-2 break-words font-serif text-white text-[clamp(0.75rem,1.5vw,1.25rem)]">
         {boardMemberName}
       </p>
     </div>
