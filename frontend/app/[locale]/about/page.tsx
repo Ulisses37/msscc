@@ -106,17 +106,18 @@ export default function AboutPage() {
       </section>
 
       <div className="bg-msscc-teal p-0 m-0 min-h-screen">
-        <p className="text-6xl text-center font-serif text-white mb-6 pt-8">
+        {/* Smaller mobile headings and side padding prevent the title from overflowing at 320px. */}
+        <p className="px-4 pt-8 text-center font-serif text-4xl leading-tight text-white sm:text-5xl lg:px-0 lg:text-6xl">
           Board of Directors
         </p>
 
-        <p className="text-3xl text-center font-serif text-white mb-4">
+        <p className="mb-6 px-4 pt-2 text-center font-serif text-2xl leading-snug text-white sm:text-3xl lg:px-0">
           Officers
         </p>
 
         {/* Officers Section */}
-        {/* Keep cards full-width through 767px so portraits and descriptions remain readable. */}
-        <div className="grid grid-cols-1 gap-2 px-2 text-center md:grid-cols-2 lg:grid-cols-6">
+        {/* Full-width mobile cards need shared gutters and extra vertical separation for readable bios. */}
+        <div className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-6 lg:gap-2 lg:px-2">
           <div className="hidden lg:col-span-1 lg:block" /> {/* left spacer */}
           {boardMembers.map((member) => {
             if (!member.isDirector) {

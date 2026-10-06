@@ -34,11 +34,17 @@ export function OfficerCard({
           </div>
         )}
       </div>
-      <p className="mt-2 break-words pb-3 pt-3 font-serif text-white text-[clamp(0.75rem,2vw,1.75rem)]">
-        <span className="block">{boardMemberName} -</span>
-        <span className="block leading-tight">{boardMemberRole}</span>
-      </p>
-      <p className="break-words font-serif text-white text-[clamp(0.25rem,1.5vw,1.0rem)]">
+      {/* Separate blocks avoid awkward wraps while preserving the established white serif treatment. */}
+      <div className="mt-3 break-words pb-3">
+        <p className="font-serif text-base leading-snug text-white sm:text-lg lg:text-[clamp(1rem,2vw,1.75rem)]">
+          {boardMemberName}
+        </p>
+        <p className="mt-1 font-serif text-sm leading-snug text-white sm:text-base lg:text-[clamp(0.875rem,1.5vw,1.25rem)]">
+          {boardMemberRole}
+        </p>
+      </div>
+      {/* Relaxed leading keeps multi-line officer descriptions scannable on narrow screens. */}
+      <p className="break-words font-serif text-sm leading-relaxed text-white lg:text-[clamp(0.875rem,1.5vw,1rem)]">
         {boardMemberCaption}
       </p>
     </div>
