@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -175,6 +176,8 @@ export default function AdminDonationsPage() {
       }
     }, []);
 
+    useVisibleTableRevisionPolling('donations', fetchDonations, 3000);
+
     // Filter before sorting and pagination so every page and export operates on
     // the same case-insensitive set of matching donation records.
     const filteredDonationItems = useMemo(() => {
@@ -313,7 +316,7 @@ export default function AdminDonationsPage() {
     }, []);
 
     useEffect(() => {
-      fetchDonations();
+      void fetchDonations();
     }, [fetchDonations]);
 
     useEffect(() => {

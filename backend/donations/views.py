@@ -3,12 +3,43 @@ import logging
 from django.db import DatabaseError
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from donations.models import Donation, Membership
+from donations.models import AdminTableRevision, Donation, Membership
 from donations.serializers import DonationSerializer, MembershipSerializer
 
-
 logger = logging.getLogger(__name__)
+
+
+class AdminTableRevisionView(APIView):
+    """Return revision values used to refresh authenticated admin tables."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Return both table revisions without exposing admin table records."""
+        try:
+            revisions = dict(
+                AdminTableRevision.objects.filter(
+                    table_name__in=AdminTableRevision.TableName.values
+                ).values_list("table_name", "revision")
+            )
+        except DatabaseError:
+            logger.error("Database error while retrieving admin table revisions.")
+            return Response(
+                {"detail": "Table revisions are temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        expected_table_names = set(AdminTableRevision.TableName.values)
+        if set(revisions) != expected_table_names:
+            logger.error("Admin table revision records are missing or unsupported.")
+            return Response(
+                {"detail": "Table revisions are temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response(revisions)
 
 
 class DonationListCreateView(generics.ListCreateAPIView):
