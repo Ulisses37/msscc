@@ -115,9 +115,10 @@ export default function AboutPage() {
         </p>
 
         {/* Officers Section */}
-        <div className="grid gap-2 grid-cols-6 justify-center text-center mb-6">
-          <div className="col-span-1" /> {/* left spacer */}
-            {boardMembers.map((member) => {
+        {/* Keep cards full-width through 767px so portraits and descriptions remain readable. */}
+        <div className="grid grid-cols-1 gap-2 px-2 text-center md:grid-cols-2 lg:grid-cols-6">
+          <div className="hidden lg:col-span-1 lg:block" /> {/* left spacer */}
+          {boardMembers.map((member) => {
             if (!member.isDirector) {
               return (
                 <OfficerCard
@@ -130,8 +131,8 @@ export default function AboutPage() {
               );
             }
           })}
-          </div>
-        <div className="col-span-1" /> {/* right spacer */}
+          <div className="hidden lg:col-span-1 lg:block" /> {/* right spacer */}
+        </div>
 
         {/* Directors Section */}
         <div className="text-center mt-12 mb-6">
