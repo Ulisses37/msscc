@@ -148,7 +148,7 @@ export default function ReplaceImage() {
 
         <div className="text-sm text-msscc-gray-mid">
           {selectedModel ? `Pick an image` : "No category selected."}
-          <div className="grid grid-cols-2 divide-x divide-msscc-gray-light overflow-hidden rounded-md border border-msscc-gray-light text-sm text-msscc-gray-mid">
+          <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-msscc-gray-mid sm:grid-cols-2 sm:divide-x sm:divide-msscc-gray-light sm:overflow-hidden sm:rounded-md sm:border sm:border-msscc-gray-light">
             <button
               onClick={() =>
                 setImageMode(prev => prev === "upload" ? null : "upload")
@@ -156,7 +156,7 @@ export default function ReplaceImage() {
               disabled={!(selectedModel)}
               className={`flex items-center justify-center p-3 text-btn transition ${
                 imageMode === "upload" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
-              }`}
+              } ${selectedModel ? "sm:rounded-l-md" : "opacity-50"}`}
             >
               Import New Image
             </button>
@@ -167,7 +167,7 @@ export default function ReplaceImage() {
               disabled={!(selectedModel)}
               className={`flex items-center justify-center p-3 text-btn transition ${
                 imageMode === "select" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
-              }`}
+              } ${selectedModel ? "sm:rounded-r-md" : "opacity-50"}`}
             >
               Select Existing Image
             </button>
@@ -195,7 +195,7 @@ export default function ReplaceImage() {
              <Image
                src={URL.createObjectURL(selectedFile)}
                alt="Selected for replacement"
-               className="max-w-sm border rounded"
+               className="w-full max-w-sm rounded border"
                width={400}
                height={300}
               />
@@ -204,7 +204,7 @@ export default function ReplaceImage() {
 
         {/* Inactive will reduce UI clutter */}
         {imageMode !== null && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={handleSubmit}
@@ -213,11 +213,11 @@ export default function ReplaceImage() {
                 (imageMode === "upload" && !selectedFile) ||
                 (imageMode === "select" && !selectedReplacementId)
               }
-              className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:bg-msscc-gray-light"
+              className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:bg-msscc-gray-light sm:w-auto"
             >
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
-            <span className="text-sm text-msscc-gray-mid">
+            <span className="break-all text-sm text-msscc-gray-mid">
               {selectedFile ? selectedFile.name : 'No file selected.'}
               {selectedReplacementId && imageMode === "select" && (
                 <span className="ml-2">Selected: {selectedReplacementId}</span>
@@ -228,7 +228,7 @@ export default function ReplaceImage() {
 
         {submitError && <p className="text-sm text-msscc-danger">{submitError}</p>}
         {uploadedUrl && (
-          <p className="text-sm text-msscc-teal">
+          <p className="break-all text-sm text-msscc-teal">
             Image uploaded successfully: <span className="underline">{uploadedUrl}</span>
           </p>
         )}
