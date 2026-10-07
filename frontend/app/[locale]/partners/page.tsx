@@ -34,24 +34,12 @@ interface PartnerRecord {
 }
 
 function PartnerLink({ name, href }: PartnerLinkProps) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <Link
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="partner-link"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        fontFamily: 'var(--font-body)',
-        color: hovered ? 'var(--color-teal)' : 'var(--color-gray-dark)',
-        textDecoration: 'underline',
-        textUnderlineOffset: '3px',
-        cursor: 'pointer',
-        transition: 'color 0.15s ease',
-      }}
+      className="break-words font-body text-msscc-gray-dark underline underline-offset-[3px] transition-colors hover:text-msscc-teal"
     >
       {name}
     </Link>
@@ -132,9 +120,14 @@ export default function PartnersPage() {
   const sponsors = partners.filter(partner => ['sponsor', 'sponsors'].includes(partner.categoryEn.toLowerCase()));
 
   return (
-    <main className="min-h-screen bg-[#fdfdfd] text-[#1a1a1a] p-10 font-sans flex flex-col items-center">
-      {/* Display Staff-Editable Content Blocks */}
-      <section className="mx-auto max-w-content px-6 py-10">
+    <main className="flex min-h-screen min-w-0 max-w-full flex-col items-center bg-[#fdfdfd] p-4 font-sans text-[#1a1a1a] sm:p-6 lg:p-10">
+      {/* Mobile-first padding preserves readable gutters, while width constraints prevent child
+          content from expanding the page beyond narrow viewports. */}
+      {/* Staff-entered headings use a fixed 64px size, so this page scales them on narrow screens.
+          Emergency wrapping also keeps long English and Japanese content inside the viewport. */}
+      <section
+        className="mx-auto w-full min-w-0 max-w-content px-4 py-8 [overflow-wrap:anywhere] sm:px-6 sm:py-10 [&_h2]:text-[clamp(2rem,10vw,4rem)]"
+      >
         {contentBlocks.map((block) => (
           <ContentBlockRenderer
             key={block.content_id}
@@ -146,26 +139,18 @@ export default function PartnersPage() {
       </section>
 
       {/* Partner Links */}
-      <section style={{
-        padding: 'var(--space-10) var(--space-6)',
-        maxWidth: '75rem',
-        width: '100%',
-        borderBottom: '0.5px solid var(--color-gray-light)',
-      }}>
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          color: '#dc2626',
-          fontSize: 'var(--fs-heading-2)',
-          marginBottom: 'var(--space-4)',
-        }}>
+      {/* Long partner names may contain few natural break points, so links can wrap without
+          widening the section or causing horizontal page scrolling. */}
+      <section className="w-full min-w-0 max-w-content border-b border-msscc-gray-light px-4 py-8 sm:px-6 sm:py-10">
+        <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
           Partner Links
         </h2>
-        <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
+        <p className="mb-4 break-words text-body leading-loose text-msscc-gray-dark">
           We are proud to celebrate our partner organizations and sponsors.
         </p>
-        <ul style={{ listStyle: 'disc', paddingLeft: 'var(--space-10)', lineHeight: 1.7 }}>
+        <ul className="list-disc space-y-2 break-words pl-6 leading-loose sm:pl-10">
           {partnerLinks.map((partner) => (
-            <li key={partner.id} style={{ marginBottom: 'var(--space-2)' }}>
+            <li key={partner.id}>
               <PartnerLink name={partner.name} href={partner.websiteUrl} />
             </li>
           ))}
@@ -173,21 +158,12 @@ export default function PartnersPage() {
       </section>
 
       {/* Donors and Sponsors */}
-      {/* Section Header and description */}
-      <section style={{
-        padding: 'var(--space-6) var(--space-6)',
-        maxWidth: '75rem',
-        width: '100%',
-      }}>
-        <h2 style={{
-          fontFamily: 'var(--font-heading)',
-          color: '#dc2626',
-          fontSize: 'var(--fs-heading-2)',
-          marginBottom: 'var(--space-4)',
-        }}>
+      {/* Keep acknowledgment copy responsive here; card layout changes belong to SCRUM-709. */}
+      <section className="w-full min-w-0 max-w-content px-4 py-6 sm:px-6">
+        <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
           Donor and Sponsor Acknowledgment
         </h2>
-        <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
+        <p className="mb-4 break-words text-body leading-loose text-msscc-gray-dark">
           We extend our sincerest thanks to the generous members, individuals, businesses, and organizations that support our success.
         </p>
       </section>
