@@ -56,20 +56,22 @@ export function DirectorCard({
   boardMemberImageURL
 }: DirectorCardProps) {
   return (
-    <div className="w-full text-center">
-      {/* Larger two-column portraits use available space without exceeding the four-column cap. */}
-      {boardMemberImageURL ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={boardMemberImageURL}
-          alt={`${boardMemberName} portrait`}
-          className="mx-auto h-32 w-32 sm:h-40 sm:w-40 md:h-40 md:w-40 lg:h-48 lg:w-48"
-        />
-      ) : (
-        <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-slate-200 text-sm text-white sm:h-40 sm:w-40 md:h-40 md:w-40 lg:h-48 lg:w-48">
-          No photo
-        </div>
-      )}
+    <div className="min-w-0 w-full text-center">
+      {/* Matching square frames crop varied uploads consistently and preserve the teal grid gutters. */}
+      <div className="mx-auto aspect-square w-full max-w-32 overflow-hidden sm:max-w-40 lg:max-w-48">
+        {boardMemberImageURL ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={boardMemberImageURL}
+            alt={`${boardMemberName} portrait`}
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center bg-slate-200 text-sm text-white">
+            No photo
+          </div>
+        )}
+      </div>
       <p className="mt-2 break-words font-serif text-white text-[clamp(0.75rem,1.5vw,1.25rem)]">
         {boardMemberName}
       </p>
