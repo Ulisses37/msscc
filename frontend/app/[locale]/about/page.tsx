@@ -91,10 +91,13 @@ export default function AboutPage() {
   if (error) return <main className="p-6 text-red-600">{error}</main>;
 
   return (
-    <main>
+    <main className="min-w-0 max-w-full">
 
       {/* Display Staff-Editable Content Blocks */}
-      <section className="mx-auto max-w-content px-6 py-10">
+      {/* Responsive editable headings and emergency wrapping keep long English content in view. */}
+      <section
+        className="mx-auto w-full min-w-0 max-w-content px-6 py-10 [overflow-wrap:anywhere] [&_h2]:text-[clamp(2rem,10vw,4rem)]"
+      >
         {contentBlocks.map((block) => (
           <ContentBlockRenderer
             key={block.content_id}
@@ -105,19 +108,21 @@ export default function AboutPage() {
         {!contentBlocks.length && <FallBack source="about" />}
       </section>
 
-      <div className="bg-msscc-teal p-0 m-0 min-h-screen">
-        <p className="text-6xl text-center font-serif text-white mb-6 pt-8">
+      <div className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0">
+        {/* Smaller mobile headings and side padding prevent the title from overflowing at 320px. */}
+        <p className="px-4 pt-8 text-center font-serif text-4xl leading-tight text-white sm:text-5xl lg:px-0 lg:text-6xl">
           Board of Directors
         </p>
 
-        <p className="text-3xl text-center font-serif text-white mb-4">
+        <p className="mb-6 px-4 pt-2 text-center font-serif text-2xl leading-snug text-white sm:text-3xl lg:px-0">
           Officers
         </p>
 
         {/* Officers Section */}
-        <div className="grid gap-2 grid-cols-6 justify-center text-center mb-6">
-          <div className="col-span-1" /> {/* left spacer */}
-            {boardMembers.map((member) => {
+        {/* Full-width mobile cards need shared gutters and extra vertical separation for readable bios. */}
+        <div className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-6 lg:gap-2 lg:px-2">
+          <div className="hidden lg:col-span-1 lg:block" /> {/* left spacer */}
+          {boardMembers.map((member) => {
             if (!member.isDirector) {
               return (
                 <OfficerCard
@@ -130,8 +135,8 @@ export default function AboutPage() {
               );
             }
           })}
-          </div>
-        <div className="col-span-1" /> {/* right spacer */}
+          <div className="hidden lg:col-span-1 lg:block" /> {/* right spacer */}
+        </div>
 
         {/* Directors Section */}
         <div className="text-center mt-12 mb-6">
@@ -139,7 +144,10 @@ export default function AboutPage() {
             Directors
           </p>
         </div>
-        <div className="flex flex-wrap justify-center align-middle gap-12 mb-6 w-[70%] mx-auto">
+        {/* Narrow gutters remain visible while keeping four Director frames inside a 768px viewport. */}
+        <div
+          className="mx-auto mb-6 grid max-w-content grid-cols-2 gap-x-2 gap-y-8 px-4 sm:gap-x-3 md:grid-cols-4 md:gap-y-10 md:px-6 lg:gap-x-4"
+        >
           {boardMembers.map((member) => {
           if (member.isDirector) {
             return (
