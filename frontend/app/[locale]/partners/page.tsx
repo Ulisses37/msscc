@@ -158,7 +158,7 @@ export default function PartnersPage() {
       </section>
 
       {/* Donors and Sponsors */}
-      {/* Keep acknowledgment copy responsive here; card layout changes belong to SCRUM-709. */}
+      {/* Keep acknowledgment copy separate from the responsive card groups below. */}
       <section className="w-full min-w-0 max-w-content px-4 py-6 sm:px-6">
         <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
           Donor and Sponsor Acknowledgment
@@ -168,37 +168,15 @@ export default function PartnersPage() {
         </p>
       </section>
 
-      {/* Donors and Sponsors side by side */}
-      <section style={{
-        padding: 'var(--space-4) var(--space-6)',
-        maxWidth: '75rem',
-        width: '100%',
-        display: 'flex',
-        gap: 'var(--space-6)',
-      }}>
+      {/* Stack groups until tablet width so neither card column is squeezed on mobile. */}
+      <section className="flex w-full min-w-0 max-w-content flex-col gap-6 px-4 py-4 sm:px-6 md:flex-row">
 
         {/* Donors box */}
-        <div style={{
-          flex: 1,
-          alignSelf: 'flex-start',
-          border: '0.5px solid var(--color-gray-light)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-gray-faint)',
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-heading)',
-            color: '#dc2626',
-            fontSize: 'var(--fs-heading-2)',
-            marginBottom: 'var(--space-4)',
-          }}>
+        <div className="w-full min-w-0 self-start rounded-lg border border-msscc-gray-light bg-msscc-gray-faint p-4 sm:p-6 md:flex-1">
+          <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
             Donors
           </h2>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-3)',
-          }}>
+          <div className="flex min-w-0 flex-col gap-3">
             {donors.map((donor) => (
               <PartnerCard
                 key={donor.id}
@@ -211,27 +189,11 @@ export default function PartnersPage() {
         </div>
 
         {/* Sponsors box */}
-        <div style={{
-          flex: 1,
-          alignSelf: 'flex-start',
-          border: '0.5px solid var(--color-gray-light)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-gray-faint)',
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-heading)',
-            color: '#dc2626',
-            fontSize: 'var(--fs-heading-2)',
-            marginBottom: 'var(--space-4)',
-          }}>
+        <div className="w-full min-w-0 self-start rounded-lg border border-msscc-gray-light bg-msscc-gray-faint p-4 sm:p-6 md:flex-1">
+          <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
             Sponsors
           </h2>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-3)',
-          }}>
+          <div className="flex min-w-0 flex-col gap-3">
             {sponsors.map((sponsor) => (
               <PartnerCard
                 key={sponsor.id}

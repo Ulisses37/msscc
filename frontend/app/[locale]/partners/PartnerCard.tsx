@@ -7,49 +7,26 @@ interface PartnerCardProps {
 
 export function PartnerCard({ name, imageUrl, description, websiteUrl }: PartnerCardProps) {
   return (
-    <div style={{
-      background: 'var(--color-white)',
-      border: '0.5px solid var(--color-gray-light)',
-      borderRadius: 'var(--radius-md)',
-      padding: 'var(--space-4)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--space-3)',
-    }}>
+    <div className="flex w-full min-w-0 flex-col gap-3 rounded-md border border-msscc-gray-light bg-msscc-white p-4">
 
-      {/* Image or placeholder — shows nothing extra if no image */}
+      {/* Dynamic media hosts can vary by deployment, so native images avoid rejecting valid partner logos. */}
       {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageUrl}
           alt={name}
-          style={{
-            width: '100%',
-            height: '80px',
-            objectFit: 'contain',
-          }}
+          className="h-20 w-full max-w-full object-contain"
         />
       )}
 
       {/* Name */}
-      <p style={{
-        fontFamily: 'var(--font-body)',
-        fontWeight: 700,
-        fontSize: 'var(--fs-body-sm)',
-        color: 'var(--color-gray-dark)',
-        margin: 0,
-      }}>
+      <p className="break-words font-body text-body-sm font-bold text-msscc-gray-dark">
         {name}
       </p>
 
       {/* Optional description */}
       {description && (
-        <p style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: 'var(--fs-caption)',
-          color: 'var(--color-gray-mid)',
-          margin: 0,
-          lineHeight: 1.5,
-        }}>
+        <p className="break-words font-body text-caption leading-relaxed text-msscc-gray-mid">
           {description}
         </p>
       )}
@@ -60,14 +37,7 @@ export function PartnerCard({ name, imageUrl, description, websiteUrl }: Partner
           href={websiteUrl}
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--fs-caption)',
-            color: 'var(--color-teal)',
-            textDecoration: 'underline',
-            textUnderlineOffset: '3px',
-            marginTop: 'auto',
-          }}
+          className="mt-auto break-words font-body text-caption text-msscc-teal underline underline-offset-[3px]"
         >
           Visit website →
         </a>
