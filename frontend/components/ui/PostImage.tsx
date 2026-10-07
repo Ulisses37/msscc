@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ImageLayout, SelectedConfig } from "./ImageConfiguration";
 
@@ -18,8 +18,10 @@ type ImageItem = {
 // A cache that maps the media asset ID to the media asset's information
 const imageCache = new Map<number, ImageItem>();
 
-async function fetchImageById(id: number): Promise<ImageItem> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`);
+async function fetchImageById(id: number, forceRefresh = false): Promise<ImageItem> {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`, {
+    cache: forceRefresh ? 'no-store' : 'default',
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to load image.`);
@@ -32,16 +34,25 @@ type PostImageProps = {
   mediaID: number;
   className?: string;
   configVariant?: SelectedConfig;
+  refreshKey?: number;
 };
 
-export default function PostImage({ mediaID, className, configVariant }: PostImageProps) {
+export default function PostImage({ mediaID, className, configVariant, refreshKey = 0 }: PostImageProps) {
   const [image, setImage] = useState<ImageItem | null>(() => imageCache.get(mediaID) ?? null,);
   const [isLoading, setIsLoading] = useState(() => !imageCache.has(mediaID),);
   const [error, setError] = useState<string | null>(null);
+  const previousRefreshKey = useRef(refreshKey);
   const layout = configVariant ? ImageLayout[configVariant] : ImageLayout.content; // Default to 'content' layout if no config provided
 
   useEffect(() => {
     if (!mediaID) return;
+
+    const shouldRefresh = previousRefreshKey.current !== refreshKey;
+    previousRefreshKey.current = refreshKey;
+
+    if (shouldRefresh) {
+      imageCache.delete(mediaID);
+    }
 
     const cachedImage = imageCache.get(mediaID);
 
@@ -58,7 +69,7 @@ export default function PostImage({ mediaID, className, configVariant }: PostIma
       setIsLoading(true);
 
       try {
-        const item = await fetchImageById(mediaID);
+        const item = await fetchImageById(mediaID, shouldRefresh);
         imageCache.set(mediaID, item);
         setImage(item);
       } catch (err) {
@@ -70,7 +81,7 @@ export default function PostImage({ mediaID, className, configVariant }: PostIma
     };
 
     fetchImage();
-  }, [mediaID]);
+  }, [mediaID, refreshKey]);
 
   if (isLoading) {
     return <div>Loading…</div>;
