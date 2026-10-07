@@ -26,6 +26,7 @@ export default function ReplaceImage() {
   const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<number | null>(null);
   const [selectedReplacementId, setSelectedReplacementId] = useState<number | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const selectUploadMode = () => {
     if (imageMode === "upload") {
@@ -131,6 +132,8 @@ export default function ReplaceImage() {
         const errorData = await response.json().catch(() => null);
         throw new Error(errorData?.error || 'Failed to update record.');
       }
+      setSelectedMediaAssetId(replacementId ?? null);
+      setRefreshKey((currentKey) => currentKey + 1);
       setSubmitError(null);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to update record.');
@@ -182,6 +185,7 @@ export default function ReplaceImage() {
             }}
             selectedId={selectedMediaAssetId}
             selectedModelId={selectedModelId}
+            refreshKey={refreshKey}
           />
         ) : (
           <div className="flex flex-col gap-4 rounded-lg border border-msscc-teal-light bg-white p-4 sm:flex-row sm:items-center">
@@ -190,6 +194,7 @@ export default function ReplaceImage() {
                 <PostImage
                   mediaID={selectedMediaAssetId}
                   configVariant="thumbnail"
+                  refreshKey={refreshKey}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -254,6 +259,7 @@ export default function ReplaceImage() {
               modelType={"media"}
               onSelect={(mediaAssetId) => setSelectedReplacementId(mediaAssetId)}
               selectedId={selectedReplacementId}
+              refreshKey={refreshKey}
             />
           ) : (
             <div className="flex flex-col gap-4 rounded-lg border border-msscc-teal-light bg-white p-4 sm:flex-row sm:items-center">
@@ -261,6 +267,7 @@ export default function ReplaceImage() {
                 <PostImage
                   mediaID={selectedReplacementId}
                   configVariant="thumbnail"
+                  refreshKey={refreshKey}
                   className="h-full w-full object-cover"
                 />
               </div>
