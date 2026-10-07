@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Donation(models.Model):
@@ -79,3 +80,28 @@ class Membership(models.Model):
     def __str__(self):
         """Return a readable member summary for admin screens."""
         return f"{self.first_name} {self.last_name} - {self.membership_type}"
+
+
+class AdminTableRevision(models.Model):
+    """Track revisions for admin tables that support automatic refreshes."""
+
+    class TableName(models.TextChoices):
+        """Table names supported by the admin refresh system."""
+
+        DONATIONS = "donations", "Donations"
+        MEMBERSHIPS = "memberships", "Memberships"
+
+    table_name = models.CharField(
+        max_length=32,
+        primary_key=True,
+        choices=TableName.choices,
+    )
+    revision = models.BigIntegerField(default=0)
+    changed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "donations_admin_table_revision"
+
+    def __str__(self):
+        """Return the tracked table name."""
+        return self.table_name

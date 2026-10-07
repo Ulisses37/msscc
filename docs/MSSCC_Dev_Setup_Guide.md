@@ -22,6 +22,7 @@ This guide walks you through setting up your local development environment from 
 9. [Verify Everything Works](#9-verify-everything-works)
 10. [JetBrains Setup (Optional)](#10-jetbrains-setup-optional)
 11. [Common Issues](#11-common-issues)
+12. [Testing](#12-testing)
 
 ---
 
@@ -397,4 +398,115 @@ Homebrew is not installed. Install it from https://brew.sh.
 
 ---
 
-*Last updated May 2026 -- SCRUM Lords*
+## 12. Testing
+
+Section 4 covers the VS Code extensions to install. Section 10 covers the equivalent JetBrains setup. This section covers the hooks, the test runners, and what CI checks.
+
+### 12.1 Install the git hooks
+
+Two things get installed once per clone. The pre-commit hook is owned by the pre-commit framework and does all the linting. The post-merge hook runs after every `git pull` and every merge, and reinstalls dependencies when they changed: `npm ci` in `frontend/` if `frontend/package-lock.json` changed, and `pip install -r requirements.txt` from `backend/` if `backend/requirements.txt` changed. If you get an error about script execution being disabled, run this first:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Then, from the repo root:
+
+```powershell
+backend\venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+backend\venv\Scripts\pre-commit.exe install
+.\docs\dev\githooks\install-hooks.ps1
+```
+
+```bash
+# macOS or Linux. The hook script is PowerShell, so it needs pwsh.
+backend/venv/bin/python -m pip install -r backend/requirements-dev.txt
+backend/venv/bin/pre-commit install
+pwsh ./docs/dev/githooks/install-hooks.ps1
+```
+
+The script's job is narrow: it copies the tracked `docs/dev/githooks/post-merge` hook into `.git/hooks/post-merge`, normalizes it to LF line endings so it works on Windows too, and stops there. It does not install `pre-commit`.
+
+Note that the hook keys off `requirements.txt`, not `requirements-dev.txt`.
+
+If you installed the older hand-rolled `pre-commit` hook from an earlier version of this repo, the framework moves it to `pre-commit.legacy` and runs both, so Ruff runs twice on every commit. Replace it once:
+
+```powershell
+backend\venv\Scripts\pre-commit.exe install --overwrite
+```
+
+### 12.2 What the hooks check, and what blocks a commit
+
+- Ruff runs with `--fix` on the staged files that match `backend/**/*.py`, skipping anything under a `migrations/` folder. It only looks at what you staged, so untouched files may still have violations. If it changed files, `git add` them and commit again.
+- ESLint runs the whole `next lint` for the frontend, not just your staged files. The hook is configured with `pass_filenames: false`, so one lint error anywhere in `frontend/` can block your commit even if you never touched that file. When that happens, fix it or ask the team.
+- ESLint does not auto-fix. Fix the reported errors by hand.
+- `git commit --no-verify` skips both hooks. Use it only for a deliberate emergency, never to get past a lint error.
+
+### 12.3 Backend tests
+
+Backend tests use `pytest` with `pytest-django`. Run them from the repo root:
+
+```powershell
+# Windows
+backend\venv\Scripts\python.exe -m pytest backend
+```
+
+```bash
+# macOS or Linux
+backend/venv/bin/python -m pytest backend
+```
+
+A single app, file, class, or test works too:
+
+```powershell
+backend\venv\Scripts\python.exe -m pytest backend/events/tests.py::EventListAPITests
+```
+
+`backend/pytest.ini` forces `DJANGO_SETTINGS_MODULE=config.settings.test` through its `addopts` (`--ds`) as well as the ini key, so a stray environment variable cannot point a test run somewhere else. `backend/config/settings/test.py` uses in-memory SQLite and dummy service keys, so tests never touch the shared PostgreSQL database or a live service. Tests live in `tests.py` or `test_<topic>.py` in each app, with `<Thing>Tests` classes.
+
+### 12.4 Frontend tests
+
+Frontend tests use `Jest` through `next/jest`. Run them from the repo root:
+
+```powershell
+npm --prefix frontend test
+```
+
+`npm --prefix frontend run test:watch` re-runs on every save and never exits, so do not use it in a script or in a terminal you intend to reuse. Test files are `<SourceName>.test.ts` or `.test.tsx`, colocated with the source, and `frontend/tsconfig.json` excludes them from `next build`.
+
+### 12.5 Editor extensions for the testing workflow
+
+Install these in VS Code, in addition to the list in section 4. They are personal to your machine: `.vscode/` is gitignored and there is no `.vscode/extensions.json` in this repo, so nothing here is shared or auto-installed.
+
+| Extension | Extension ID | Purpose |
+|---|---|---|
+| Ruff | `charliermarsh.ruff` | Shows Ruff diagnostics inline |
+| ESLint | `dbaeumer.vscode-eslint` | Surfaces ESLint errors inline (also listed in section 4) |
+| Jest | `orta.vscode-jest` | Runs and reports Jest results in the Test panel. Set `jest.rootPath` to `frontend` in your user settings, since the Jest config lives there. |
+
+For JetBrains IDEs, see section 10.
+
+### 12.6 Continuous integration
+
+`.github/workflows/ci.yml` has three jobs:
+
+- `check` is a placeholder that just echoes `ok`.
+- `lint-frontend` installs Node 22, then runs ESLint on the frontend files changed against the base branch.
+- `lint-backend` installs Python 3.12 and Ruff 0.16.9, then runs `ruff check --force-exclude` on the backend files changed against `main`.
+
+The workflow triggers on `pull_request` and on `push` to `main`. Both lint jobs compare the changed files against `main`, so CI mostly reports on files this branch touched. Tests and TypeScript checks are not part of CI yet, so run the `run-checks` Cline skill locally before opening a PR.
+
+### 12.7 Using Cline
+
+Cline asks you to approve each command. Wait for the previous command to finish before approving the next, or it is marked Skipped. Keep Cline's Execute commands and Edit files auto-approve off.
+
+Since Cline v4.1.7 there is one Execute commands toggle, and our test showed it approves every command, so leave it off. Older versions had separate Execute safe commands and Execute all commands options; keep both off there too.
+
+If a rule or skill seems ignored, open Cline's Rules and Skills panels and check it is switched on.
+
+The full rule and skill list, the auto-approve table, and the `PreToolUse` guard test live in the [README's Cline section](../README.md#ai-assistant-cline).
+
+---
+
+*Last updated October 2026 -- SCRUM Lords*
+

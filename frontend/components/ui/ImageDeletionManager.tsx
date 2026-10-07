@@ -109,7 +109,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
         .map((record) => record.media_asset)
         .filter((mediaAssetId): mediaAssetId is number => typeof mediaAssetId === 'number');
 
-      setInUseMediaAssetIds([...new Set(referencedIds)]);
+      setInUseMediaAssetIds(Array.from(new Set(referencedIds)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to determine media usage.');
     }

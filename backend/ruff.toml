@@ -1,0 +1,23 @@
+# Ruff configuration for the MSSCC backend.
+# Conventions and reasoning: docs/coding-style-guide.md
+# Run from the repo root: ruff check backend
+
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[lint]
+select = [
+    "E",    # pycodestyle errors (includes line length and bare except)
+    "W",    # pycodestyle warnings (trailing whitespace, final newline)
+    "F",    # pyflakes (unused imports, undefined names, wildcard imports)
+    "I",    # import sorting
+    "N",    # naming conventions
+    "UP",   # modern Python 3.12 syntax
+    "B",    # likely bugs
+    "DJ",   # Django model conventions
+    "T20",  # no print(); use logging
+]
+ignore = [
+    "DJ001",  # we allow null=True on string fields: null and "" can mean different things
+]

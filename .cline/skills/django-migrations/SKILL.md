@@ -5,25 +5,27 @@ description: Create, review, or apply Django migrations in backend/. Use when a 
 
 # Django migrations
 
+`<py>` means the backend venv interpreter: `backend\venv\Scripts\python.exe` on Windows, `backend/venv/bin/python` on macOS/Linux. Never use bare `python`, `py`, `pip`, or `ruff`.
+
 ## Ground rules
 - The dev PostgreSQL database is shared by all seven developers. `migrate` changes it for everyone. Never run `migrate` without explicit approval, and remind the human to announce it in Discord.
 - Never edit the database directly: no `dbshell`, raw SQL, `--fake`, `--fake-initial`, or edits to the `django_migrations` table. If one seems necessary, stop and explain why to the human.
 - Never edit or delete a migration that is already on `main` or already applied to the shared DB. Fix forward with a new migration.
 - Never point Django at a production database. Use `DJANGO_SETTINGS_MODULE=config.settings.development` (set in `.env`, which Cline does not read).
-- All commands run from `backend/` with the venv active.
+- All commands run from the repo root using the backend venv interpreter.
 
 ## Steps
 
 1. **Check the current state (read-only, no approval needed).**
    ```powershell
-   python manage.py showmigrations <app>
-   python manage.py makemigrations --check --dry-run
+   <py> backend/manage.py showmigrations <app>
+   <py> backend/manage.py makemigrations --check --dry-run
    ```
    `--check` exits non-zero if a model change has no migration yet.
 
 2. **Preview the migration before writing it.**
    ```powershell
-   python manage.py makemigrations <app> --dry-run --verbosity 3
+   <py> backend/manage.py makemigrations <app> --dry-run --verbosity 3
    ```
    Read the operations. Watch for:
    - `RemoveField` + `AddField` on what was meant to be a rename. That drops the column and its data. Use `RenameField` instead.
@@ -33,25 +35,25 @@ description: Create, review, or apply Django migrations in backend/. Use when a 
 
 3. **Write the migration (approval required).**
    ```powershell
-   python manage.py makemigrations <app> --name <short_description>
+   <py> backend/manage.py makemigrations <app> --name <short_description>
    ```
    `makemigrations` asks interactive questions when it suspects a rename. Cline's terminal cannot answer them. When a rename is possible, ask the human to run the command in their own terminal, or write the `RenameField` migration by hand as a file edit.
 
 4. **Review the generated file.** Show the human the operations and the SQL:
    ```powershell
-   python manage.py sqlmigrate <app> <migration_number>
+   <py> backend/manage.py sqlmigrate <app> <migration_number>
    ```
    Commit the migration in the same subtask as the model change.
 
 5. **Apply (approval required, human announces first).**
    ```powershell
-   python manage.py migrate <app>
+   <py> backend/manage.py migrate <app>
    ```
-   Then run `python manage.py showmigrations <app>` to confirm `[X]` on the new migration.
+   Then run `<py> backend/manage.py showmigrations <app>` to confirm `[X]` on the new migration.
 
 ## Conflicts
-- "Conflicting migrations detected" means two branches added migrations with the same parent. After syncing with `main`, preview and then (with approval) run `python manage.py makemigrations --merge`. Review the merge file before committing.
+- "Conflicting migrations detected" means two branches added migrations with the same parent. After syncing with `main`, preview and then (with approval) run `<py> backend/manage.py makemigrations --merge`. Review the merge file before committing.
 - `InconsistentMigrationHistory` or a "relation already exists" error means the shared DB does not match the files. Stop and hand off to the human; do not attempt `--fake`.
 
 ## Rollback
-Reversing a migration on the shared DB (`python manage.py migrate <app> <previous_number>`) affects everyone and can drop data. Explain the impact and get approval first.
+Reversing a migration on the shared DB (`<py> backend/manage.py migrate <app> <previous_number>`) affects everyone and can drop data. Explain the impact and get approval first.
