@@ -28,6 +28,7 @@ def default_permissions():
         "Text_Editing": False,
         "Board_Members": False,
         "Events": False,
+        "Media_Management": False,
         "Executive": False,
     }
 

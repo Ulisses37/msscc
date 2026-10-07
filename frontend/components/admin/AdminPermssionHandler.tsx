@@ -28,7 +28,11 @@ const permissionCategories: Record<string, CategoryData> = {
     pages: ["Permissions Pages"],
     tooltip: "Allows for editing of admin information and permission:\nPermissions Pages"
   },
-  // If you end up creating a new Permission Title, you will need to update the database directly to append it 
+  Media_Management: {
+    pages: ["Media"],
+    tooltip: "Allows for managing media assets:\nMedia"
+  }
+  // If you end up creating a new Permission Title, you will need to update the database directly to append it
 }
 
 // find which category the submitted page belongs to
