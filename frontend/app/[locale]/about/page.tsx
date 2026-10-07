@@ -91,10 +91,13 @@ export default function AboutPage() {
   if (error) return <main className="p-6 text-red-600">{error}</main>;
 
   return (
-    <main>
+    <main className="min-w-0 max-w-full">
 
       {/* Display Staff-Editable Content Blocks */}
-      <section className="mx-auto max-w-content px-6 py-10">
+      {/* Responsive editable headings and emergency wrapping keep long English content in view. */}
+      <section
+        className="mx-auto w-full min-w-0 max-w-content px-6 py-10 [overflow-wrap:anywhere] [&_h2]:text-[clamp(2rem,10vw,4rem)]"
+      >
         {contentBlocks.map((block) => (
           <ContentBlockRenderer
             key={block.content_id}
@@ -105,7 +108,7 @@ export default function AboutPage() {
         {!contentBlocks.length && <FallBack source="about" />}
       </section>
 
-      <div className="bg-msscc-teal p-0 m-0 min-h-screen">
+      <div className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0">
         {/* Smaller mobile headings and side padding prevent the title from overflowing at 320px. */}
         <p className="px-4 pt-8 text-center font-serif text-4xl leading-tight text-white sm:text-5xl lg:px-0 lg:text-6xl">
           Board of Directors
