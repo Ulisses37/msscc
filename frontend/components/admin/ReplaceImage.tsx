@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
+import PostImage from "@/components/ui/PostImage";
 import Image from "next/image";
 
 type ModelType = "media" | "events" | "board-members" | "partners" | "static-images";
@@ -25,6 +26,42 @@ export default function ReplaceImage() {
   const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<number | null>(null);
   const [selectedReplacementId, setSelectedReplacementId] = useState<number | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
+
+  const selectUploadMode = () => {
+    if (imageMode === "upload") {
+      setImageMode(null);
+      return;
+    }
+
+    setImageMode("upload");
+    setSelectedReplacementId(null);
+  };
+
+  const selectExistingImageMode = () => {
+    if (imageMode === "select") {
+      setImageMode(null);
+      return;
+    }
+
+    setImageMode("select");
+    setSelectedFile(null);
+  };
+
+  const handleModelSelection = (model: ModelType) => {
+    if (selectedModel === model) {
+      setSelectedModel(null);
+      setSelectedMediaAssetId(null);
+      setSelectedModelId(null);
+      setSelectedFile(null);
+      setSelectedReplacementId(null);
+      setImageMode(null);
+      setUploadedUrl(null);
+      setSubmitError(null);
+      return;
+    }
+
+    setSelectedModel(model);
+  };
 
   {/** Expect an image for transfer to storage */}
   const uploadImage = async (file: File) => {
@@ -112,47 +149,78 @@ export default function ReplaceImage() {
         <div className="flex flex-wrap gap-3">
           {(selectedModel === "events" || selectedModel === null) && (
             <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
-            onClick={() => setSelectedModel(prev =>prev === "events" ? null : "events")}>
+            onClick={() => handleModelSelection("events")}>
               {selectedModel === null ? "Events" : "Cancel"}
             </button>
           )}
           {(selectedModel === "board-members" || selectedModel === null) && (
             <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
-            onClick={() => setSelectedModel(prev =>prev === "board-members" ? null : "board-members")}>
+            onClick={() => handleModelSelection("board-members")}>
               {selectedModel === null ? "Board Members" : "Cancel"}
             </button>
           )}
           {(selectedModel === "partners" || selectedModel === null) && (
             <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
-            onClick={() => setSelectedModel(prev =>prev === "partners" ? null : "partners")}>
+            onClick={() => handleModelSelection("partners")}>
               {selectedModel === null ? "Partners" : "Cancel"}
             </button>
           )}
           {(selectedModel === "static-images" || selectedModel === null) && (
             <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
-            onClick={() => setSelectedModel(prev =>prev === "static-images" ? null : "static-images")}>
+            onClick={() => handleModelSelection("static-images")}>
               {selectedModel === null ? "Icons" : "Cancel"}
             </button>
           )}
         </div>
 
-        <RetrieveImageList
-          modelType={selectedModel}
-          onSelect={(mediaAssetId, modelId) => {
-            setSelectedMediaAssetId(mediaAssetId);
-            setSelectedModelId(modelId);
-          }}
-          selectedId={selectedMediaAssetId}
-          selectedModelId={selectedModelId}
-        />
+        {selectedModelId === null ? (
+          <RetrieveImageList
+            modelType={selectedModel}
+            onSelect={(mediaAssetId, modelId) => {
+              setSelectedMediaAssetId(mediaAssetId);
+              setSelectedModelId(modelId);
+            }}
+            selectedId={selectedMediaAssetId}
+            selectedModelId={selectedModelId}
+          />
+        ) : (
+          <div className="flex flex-col gap-4 rounded-lg border border-msscc-teal-light bg-white p-4 sm:flex-row sm:items-center">
+            <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded border bg-slate-100">
+              {selectedMediaAssetId ? (
+                <PostImage
+                  mediaID={selectedMediaAssetId}
+                  configVariant="thumbnail"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="px-3 text-center text-sm text-slate-500">No image available</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-slate-800">Selected image</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {selectedMediaAssetId ? `Media asset ${selectedMediaAssetId}` : "This record has no image."}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMediaAssetId(null);
+                  setSelectedModelId(null);
+                }}
+                className="mt-3 rounded-sm border border-msscc-teal px-3 py-2 text-sm text-msscc-teal transition-colors hover:bg-msscc-gray-faint"
+              >
+                Change Image
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="text-sm text-msscc-gray-mid">
           {selectedModel ? `Pick an image` : "No category selected."}
           <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-msscc-gray-mid sm:grid-cols-2 sm:divide-x sm:divide-msscc-gray-light sm:overflow-hidden sm:rounded-md sm:border sm:border-msscc-gray-light">
             <button
-              onClick={() =>
-                setImageMode(prev => prev === "upload" ? null : "upload")
-              }
+              type="button"
+              onClick={selectUploadMode}
               disabled={!(selectedModel)}
               className={`flex items-center justify-center p-3 text-btn transition ${
                 imageMode === "upload" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
@@ -161,9 +229,8 @@ export default function ReplaceImage() {
               Import New Image
             </button>
             <button
-              onClick={() =>
-                setImageMode(prev => prev === "select" ? null : "select")
-              }
+              type="button"
+              onClick={selectExistingImageMode}
               disabled={!(selectedModel)}
               className={`flex items-center justify-center p-3 text-btn transition ${
                 imageMode === "select" ? "bg-msscc-teal text-white" : "bg-white hover:bg-msscc-gray-faint"
@@ -182,11 +249,34 @@ export default function ReplaceImage() {
         )}
 
         {imageMode === "select" && (
-          <RetrieveImageList
-            modelType={"media"}
-            onSelect={(mediaAssetId) => setSelectedReplacementId(mediaAssetId)}
-            selectedId={selectedReplacementId}
-          />
+          selectedReplacementId === null ? (
+            <RetrieveImageList
+              modelType={"media"}
+              onSelect={(mediaAssetId) => setSelectedReplacementId(mediaAssetId)}
+              selectedId={selectedReplacementId}
+            />
+          ) : (
+            <div className="flex flex-col gap-4 rounded-lg border border-msscc-teal-light bg-white p-4 sm:flex-row sm:items-center">
+              <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded border bg-slate-100">
+                <PostImage
+                  mediaID={selectedReplacementId}
+                  configVariant="thumbnail"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-slate-800">Selected replacement</p>
+                <p className="mt-1 text-sm text-slate-500">Media asset {selectedReplacementId}</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReplacementId(null)}
+                  className="mt-3 rounded-sm border border-msscc-teal px-3 py-2 text-sm text-msscc-teal transition-colors hover:bg-msscc-gray-faint"
+                >
+                  Change Replacement
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {/* Inactive will reduce UI clutter */}
