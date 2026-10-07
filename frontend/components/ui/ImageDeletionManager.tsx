@@ -27,12 +27,14 @@ type MediaReferenceRecord = {
 {/** Allows for Exiting UI*/}
 type ImageDeletionManagerProps = {
   onClose: () => void;
+  /** Force the compact image list when the manager is used in a constrained layout. */
+  mobileLayout?: boolean;
 };
 
 {/* Need to Query API for media assets across all models for warnings of dependencies from active instances*/}
 
 
-export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
+export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDeletionManagerProps) {
   const [imageItems, setImageItems] = useState<ImageItem[]>([]);
   const [inUseMediaAssetIds, setInUseMediaAssetIds] = useState<number[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -40,6 +42,16 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+    return () => mediaQuery.removeEventListener('change', updateViewport);
+  }, []);
 
   {/* Fetch the list of media assets found in Database*/}
   const fetchImage = useCallback(async (clearMessage = true) => {
@@ -159,6 +171,139 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
     }
   };
 
+  const useMobileLayout = mobileLayout || isMobileViewport;
+
+  const renderEmptyState = (className: string) => (
+    <div className={className}>
+      {isLoading ? 'Loading images…' : 'No stored images found.'}
+    </div>
+  );
+
+  const renderMobileImageList = () => (
+    <div className="max-h-[55dvh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+      {imageItems.length === 0
+        ? renderEmptyState('px-4 py-10 text-center text-slate-500')
+        : imageItems.map((item) => {
+            const isInUse = inUseMediaAssetIds.includes(item.media_asset_id);
+            const isSelected = selectedIds.includes(item.media_asset_id);
+
+            return (
+              <div
+                key={item.media_asset_id}
+                className={`flex min-w-0 items-center gap-3 border-t border-msscc-gray-light p-3 first:border-t-0 ${
+                  isInUse ? 'bg-msscc-pink-faint' : 'bg-white'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelection(item.media_asset_id)}
+                  className="h-5 w-5 shrink-0 rounded border-slate-300 text-slate-900"
+                  aria-label={`Select ${item.file_name}`}
+                />
+                {item.file_url ? (
+                  <img
+                    src={item.file_url}
+                    alt={item.alt_text_en || item.file_name}
+                    className="h-14 w-14 shrink-0 rounded-md border border-slate-200 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-center text-[10px] text-slate-400">
+                    No preview
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800" title={item.file_name}>
+                    {item.file_name}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </p>
+                  {isInUse ? (
+                    <span className="mt-1 inline-flex rounded-full bg-msscc-pink-faint px-2 py-0.5 text-[11px] font-semibold text-msscc-danger">
+                      In use
+                    </span>
+                  ) : (
+                    <span className="mt-1 inline-flex text-[11px] text-slate-500">Unused</span>
+                  )}
+                </div>
+                {isSelected && isInUse && (
+                  <span
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white"
+                    title="Selected image is currently in use"
+                    aria-label="Warning: selected image is currently in use"
+                  >
+                    !
+                  </span>
+                )}
+              </div>
+            );
+          })}
+    </div>
+  );
+
+  const renderDesktopImageTable = () => (
+    <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+      <table className="min-w-full text-left text-sm">
+        <thead className="sticky top-0 z-10 bg-slate-50">
+          <tr className="text-slate-700">
+            <th className="px-4 py-3">Select</th>
+            <th className="px-4 py-3">Filename</th>
+            <th className="px-4 py-3">Upload Date</th>
+            <th className="px-4 py-3">In Use</th>
+          </tr>
+        </thead>
+        <tbody>
+          {imageItems.length === 0
+            ? <tr><td colSpan={4}>{renderEmptyState('px-4 py-10 text-center text-slate-500')}</td></tr>
+            : imageItems.map((item) => {
+                const isInUse = inUseMediaAssetIds.includes(item.media_asset_id);
+                const isSelected = selectedIds.includes(item.media_asset_id);
+
+                return (
+                  <tr key={item.media_asset_id} className={`border-t border-msscc-gray-light ${isInUse ? 'bg-msscc-pink-faint' : ''}`}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelection(item.media_asset_id)}
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                          aria-label={`Select ${item.file_name}`}
+                        />
+                        {isSelected && isInUse && (
+                          <span className="inline-flex h-4 w-3 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white" title="Selected image is currently in use" aria-label="Warning: selected image is currently in use">!</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {item.file_url ? (
+                          <img
+                            src={item.file_url}
+                            alt={item.alt_text_en || item.file_name}
+                            className="h-10 w-10 shrink-0 rounded-md border border-slate-200 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-center text-[9px] text-slate-400">
+                            No preview
+                          </div>
+                        )}
+                        <span className="truncate" title={item.file_name}>{item.file_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{new Date(item.created_at).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      {isInUse ? <span className="rounded-full bg-msscc-pink-faint px-2 py-1 text-xs font-semibold text-msscc-danger">In use</span> : <span className="text-xs text-slate-500">Unused</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+        </tbody>
+      </table>
+    </div>
+  );
+
   if (typeof document === 'undefined') return null;
 
   return createPortal((
@@ -176,8 +321,8 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
           </button>
         </div>
 
-        <div className="p-5">
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="p-3 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <button
               onClick={handleDelete}
               disabled={selectedIds.length === 0 || isDeleting || isLoading}
@@ -199,71 +344,8 @@ export function ImageDeletionManager({ onClose }: ImageDeletionManagerProps) {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-              <table className="min-w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50 z-10">
-                  <tr className="text-slate-700">
-                    <th className="px-4 py-3">Select</th>
-                    <th className="px-4 py-3">Filename</th>
-                    <th className="px-4 py-3">Upload Date</th>
-                    <th className="px-4 py-3">In Use</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/*Load Images and check*/}
-                  {imageItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
-                        {isLoading ? 'Loading images…' : 'No stored images found.'}
-                      </td>
-                    </tr>
-                  ) :
-                  (imageItems.map((item) => {
-                      const isInUse = inUseMediaAssetIds.includes(item.media_asset_id);
-
-                      return (
-                      <tr key={item.media_asset_id} className={`border-t border-msscc-gray-light ${isInUse ? 'bg-msscc-pink-faint' : ''}`}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(item.media_asset_id)}
-                            onChange={() => toggleSelection(item.media_asset_id)}
-                            className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                          />
-                          {selectedIds.includes(item.media_asset_id) && isInUse && (
-                            <span
-                              className="inline-flex h-4 w-3 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white"
-                              title="Selected image is currently in use"
-                              aria-label="Warning: selected image is currently in use"
-                            >
-                              !
-                            </span>
-                          )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">{item.file_name}</td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {new Date(item.created_at).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isInUse ? (
-                            <span className="rounded-full bg-msscc-pink-faint px-2 py-1 text-xs font-semibold text-msscc-danger">
-                              In use
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-500">Unused</span>
-                          )}
-                        </td>
-                      </tr>
-                      );
-                    })
-                  )}
-
-                </tbody>
-              </table>
-            </div>
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            {useMobileLayout ? renderMobileImageList() : renderDesktopImageTable()}
           </div>
         </div>
       </div>

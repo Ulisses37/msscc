@@ -46,7 +46,7 @@ export function ImportImage({
         onChange={handleChange}
         disabled={disabled}
         required={required}
-        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100 disabled:opacity-50"
+        className="block w-full text-xs text-slate-500 file:mr-0 file:mb-2 file:rounded file:border-0 file:bg-slate-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-700 hover:file:bg-slate-100 disabled:opacity-50 sm:file:mr-4 sm:file:mb-0 sm:text-sm sm:file:text-sm"
       />
     </div>
   );
