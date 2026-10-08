@@ -80,7 +80,7 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
             "status",
             "submitted_at",
         ]
-        read_only_fields = ["volunteer_signup_id", "submitted_at"]
+        read_only_fields = ["volunteer_signup_id", "status", "submitted_at"]
 
 
 class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):

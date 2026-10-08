@@ -82,7 +82,7 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        signup = serializer.save()
+        signup = serializer.save(status="approved")
         if signup.slot is not None:
             send_volunteer_thanks_email(signup)
 

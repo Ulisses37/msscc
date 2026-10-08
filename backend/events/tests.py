@@ -108,6 +108,9 @@ class VolunteerSignupEmailTests(TestCase):
         signup = VolunteerSignup.objects.get()
         mock_send_email.assert_called_once_with(signup)
         self.assertIsNotNone(signup.cancellation_token)
+        self.assertEqual(signup.status, "approved")
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.filled_count, 1)
 
     @patch("emails.messages.send_email")
     def test_confirmation_email_includes_unique_cancellation_url(self, mock_send_email):
@@ -246,6 +249,22 @@ class VolunteerCancellationLookupTests(TestCase):
         self.assertFalse(VolunteerSignup.objects.filter(pk=signup.pk).exists())
         self.assertTrue(VolunteerSignup.objects.filter(pk=other_signup.pk).exists())
 
+    def test_cancellation_frees_a_previously_full_slot(self):
+        signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
+        slot = signup.slot
+        slot.capacity = 1
+        slot.save(update_fields=["capacity"])
+        slot.refresh_from_db()
+
+        self.assertEqual(slot.filled_count, slot.capacity)
+
+        response = self.client.delete(f"/api/events/signups/cancel/{signup.cancellation_token}/")
+
+        self.assertEqual(response.status_code, 204)
+        slot.refresh_from_db()
+        self.assertEqual(slot.filled_count, 0)
+        self.assertLess(slot.filled_count, slot.capacity)
+
     def test_invalid_token_does_not_delete_any_signup(self):
         signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
         token = "00000000-0000-0000-0000-000000000000"
@@ -262,3 +281,16 @@ class VolunteerCancellationLookupTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertTrue(VolunteerSignup.objects.filter(pk=signup.pk).exists())
+
+    def test_repeated_cancellation_does_not_reduce_filled_count_below_zero(self):
+        signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
+        slot = signup.slot
+        cancellation_url = f"/api/events/signups/cancel/{signup.cancellation_token}/"
+
+        first_response = self.client.delete(cancellation_url)
+        second_response = self.client.delete(cancellation_url)
+
+        self.assertEqual(first_response.status_code, 204)
+        self.assertEqual(second_response.status_code, 404)
+        slot.refresh_from_db()
+        self.assertEqual(slot.filled_count, 0)

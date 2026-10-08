@@ -86,7 +86,6 @@ export default function VolunteerSignupPage() {
       email: formData.email,
       phone: formData.phone,
       slot_id: selectedSlotId === '' ? null : Number(selectedSlotId),
-      status: 'pending'
     };
 
     try {
