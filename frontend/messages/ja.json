@@ -48,6 +48,21 @@
     "errorMessage": "このキャンセルリンクは無効か、有効期限が切れています。サポートが必要な場合はお問い合わせください。"
   },
 
+  "MembershipPage": {
+    "informationHeading": "会員情報",
+    "email": "メールアドレス",
+    "firstName": "名",
+    "lastName": "姓",
+    "address": "住所",
+    "phoneOptional": "電話番号（任意）",
+    "membershipRequired": "会員種別を選択してください。",
+    "emailError": "有効なメールアドレスを入力してください。",
+    "firstNameRequired": "名を入力してください。",
+    "lastNameRequired": "姓を入力してください。",
+    "addressRequired": "住所を入力してください。",
+    "continueToPayment": "お支払いへ進む"
+  },
+
   "SupportPage": {
     "heading": "ご支援をお願いします",
     "email": "メールアドレス",

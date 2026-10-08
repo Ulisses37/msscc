@@ -1,5 +1,8 @@
 'use client';
 
+import { useState, type FocusEvent } from 'react';
+import { useTranslations } from 'next-intl';
+
 import {
   formatMembershipPrice,
   MEMBERSHIP_OPTIONS,
@@ -17,9 +20,25 @@ export function MembershipOptions({
   selectedOptionId,
   onOptionChange,
 }: MembershipOptionsProps) {
+  const t = useTranslations('MembershipPage');
+  const [selectionTouched, setSelectionTouched] = useState(false);
+  const showSelectionError = selectionTouched && selectedOptionId === null;
+
+  const handleGroupBlur = (event: FocusEvent<HTMLFieldSetElement>) => {
+    // Radio inputs blur while keyboard focus moves within the same group. Only
+    // mark the group touched after focus leaves the entire fieldset.
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setSelectionTouched(true);
+    }
+  };
+
   return (
     <fieldset
-      aria-describedby="membership-options-description"
+      aria-describedby={`membership-options-description${
+        showSelectionError ? ' membership-option-error' : ''
+      }`}
+      aria-invalid={showSelectionError}
+      onBlur={handleGroupBlur}
       className="min-w-0"
     >
       <legend className="text-xl font-semibold text-slate-800">
@@ -57,6 +76,7 @@ export function MembershipOptions({
                 value={option.id}
                 checked={isSelected}
                 onChange={() => onOptionChange(option.id)}
+                required
                 className="h-4 w-4 shrink-0 accent-pink-700"
               />
 
@@ -71,6 +91,16 @@ export function MembershipOptions({
           );
         })}
       </div>
+
+      {showSelectionError && (
+        <p
+          id="membership-option-error"
+          className="mt-2 text-sm text-red-600"
+          role="alert"
+        >
+          {t('membershipRequired')}
+        </p>
+      )}
     </fieldset>
   );
 }

@@ -48,6 +48,21 @@
     "errorMessage": "This cancellation link is invalid or has expired. Please contact us if you need assistance."
   },
 
+  "MembershipPage": {
+    "informationHeading": "Membership information",
+    "email": "Email",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "address": "Address",
+    "phoneOptional": "Phone number (optional)",
+    "membershipRequired": "Select a membership option.",
+    "emailError": "Enter a valid email address.",
+    "firstNameRequired": "Enter your first name.",
+    "lastNameRequired": "Enter your last name.",
+    "addressRequired": "Enter your address.",
+    "continueToPayment": "Continue to Payment"
+  },
+
   "SupportPage": {
     "heading": "Support Us Today",
     "email": "Email",
