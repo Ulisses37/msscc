@@ -6,9 +6,13 @@ import { useParams } from 'next/navigation';
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { FallBack } from '@/components/content/ContentFallBack';
 import { MembershipOptions } from '@/components/membership/MembershipOptions';
+import { MembershipSummary } from '@/components/membership/MembershipSummary';
 import Button from '@/components/ui/Button';
 
-import type { MembershipOptionId } from '@/constants/membershipOptions';
+import {
+  MEMBERSHIP_OPTIONS,
+  type MembershipOptionId,
+} from '@/constants/membershipOptions';
 import type { DbContentBlock } from '@/types/content';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
@@ -19,12 +23,17 @@ export default function MembershipPage() {
     getCachedPageContent('membership'),
   );
 
+  // Keep only the stable option ID in state. Both the controls and
+  // summary resolve the same catalog entry, so price is never duplicated.
   const [selectedOptionId, setSelectedOptionId] =
     useState<MembershipOptionId | null>(null);
 
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const params = useParams();
   const locale = String(params?.locale ?? 'en');
+
+  const selectedOption =
+    MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
 
   useEffect(() => {
     const loadPageContent = async () => {
@@ -124,6 +133,13 @@ export default function MembershipPage() {
           selectedOptionId={selectedOptionId}
           onOptionChange={setSelectedOptionId}
         />
+
+        <div className="mt-4">
+          <MembershipSummary
+            selectedOption={selectedOption}
+            locale={locale}
+          />
+        </div>
       </section>
     </main>
   );
