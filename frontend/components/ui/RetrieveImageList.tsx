@@ -20,6 +20,7 @@ type RetrieveImageListProps = {
   onSelect?: (mediaAssetId: number, modelId: number) => void;
   selectedId?: number | null;
   selectedModelId?: number | null;
+  refreshKey?: number;
 };
 
 const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
@@ -30,7 +31,13 @@ const MODEL_API_ENDPOINTS: Record<ModelType, string> = {
   "static-images": `${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/`,
 };
 
-export function RetrieveImageList({ modelType, onSelect, selectedId, selectedModelId }: RetrieveImageListProps) {
+export function RetrieveImageList({
+  modelType,
+  onSelect,
+  selectedId,
+  selectedModelId,
+  refreshKey = 0,
+}: RetrieveImageListProps) {
   const [imageRecords, setImageRecords] = useState<ImageRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +56,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
 
       try {
         const endpoint = MODEL_API_ENDPOINTS[modelType];
-        const response = await fetch(endpoint);
+        const response = await fetch(endpoint, { cache: 'no-store' });
 
         if (!response.ok) {
           throw new Error('Failed to load image list.');
@@ -95,7 +102,7 @@ export function RetrieveImageList({ modelType, onSelect, selectedId, selectedMod
     if (modelType) {
       fetchImageRecords();
     }
-  }, [modelType]);
+  }, [modelType, refreshKey]);
 
   // When null, show nothing
   if (modelType === null) {

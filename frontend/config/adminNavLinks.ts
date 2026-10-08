@@ -12,8 +12,9 @@ export const adminNavLinks: NavLink[] = [
   { label: 'Permissions Pages', href: '/admin/permissions' },
   { label: 'Documentation Pages', href: '/admin/documentation' },
   { label: 'Help Pages', href: '/admin/help' },
-  { label: 'Board of Directors', href: '/admin/board-of-directors' },
-  { label: 'Partners', href: '/admin/partners' },
+  { label: 'Board of Directors', href: '/admin/board-of-directors'},
+  { label: 'Partners', href: '/admin/partners'},
+  { label: 'Media', href: '/admin/media-manage' },
 ];
 
 export const adminSubPages: NavLink[] = [
@@ -23,5 +24,5 @@ export const adminSubPages: NavLink[] = [
   // I would recommend finding a existing category if you can, otherwise the new category will need to be added to each individual admin via the database
   // I am not adding a feature to do it through the website because I do not think the permissions should be so easily changeable
   // i,e, /admin/volunteer can fall under new category Volunteer or existing category Events
-  { label: 'Volunteers', href: '/admin/volunteer/' },
+  { label: 'Volunteers', href: '/admin/volunteer/'},
 ]

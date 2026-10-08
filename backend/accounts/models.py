@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+
 class AdminUserManager(BaseUserManager):
     """Custom manager for AdminUser using email as the unique identifier."""
 
@@ -28,6 +29,7 @@ def default_permissions():
         "Text_Editing": False,
         "Board_Members": False,
         "Events": False,
+        "Media_Management": False,
         "Executive": False,
     }
 
