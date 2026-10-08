@@ -315,7 +315,7 @@ export default function ReplaceImage() {
               {isSubmitting ? 'Submitting…' : 'Submit Image'}
             </button>
             <span className="break-all text-sm text-msscc-gray-mid">
-              {selectedFile ? selectedFile.name : 'No file selected.'}
+              {imageMode === "upload" ? selectedFile ? selectedFile.name : 'No file selected.' : ''}
               {selectedReplacementId && imageMode === "select" && (
                 <span className="ml-2">Selected: {selectedReplacementId}</span>
               )}
