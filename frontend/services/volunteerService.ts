@@ -75,3 +75,15 @@ export async function getVolunteerCancellationDetails(
 
   return response.json() as Promise<VolunteerCancellationDetails>;
 }
+
+/** Cancel a volunteer signup through its unique cancellation token. */
+export async function cancelVolunteerSignup(token: string): Promise<void> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/cancel/${token}/`,
+    { method: 'DELETE' },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to cancel volunteer signup.');
+  }
+}

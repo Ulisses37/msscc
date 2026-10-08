@@ -232,3 +232,33 @@ class VolunteerCancellationLookupTests(TestCase):
         response = self.client.get(f"/api/events/signups/cancel/{signup.cancellation_token}/")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_valid_token_deletes_only_matching_signup(self):
+        signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
+        other_signup = self.create_signup(
+            datetime.now(UTC) + timedelta(days=2),
+            email="kenji@example.com",
+        )
+
+        response = self.client.delete(f"/api/events/signups/cancel/{signup.cancellation_token}/")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(VolunteerSignup.objects.filter(pk=signup.pk).exists())
+        self.assertTrue(VolunteerSignup.objects.filter(pk=other_signup.pk).exists())
+
+    def test_invalid_token_does_not_delete_any_signup(self):
+        signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
+        token = "00000000-0000-0000-0000-000000000000"
+
+        response = self.client.delete(f"/api/events/signups/cancel/{token}/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(VolunteerSignup.objects.filter(pk=signup.pk).exists())
+
+    def test_expired_token_does_not_delete_signup(self):
+        signup = self.create_signup(datetime.now(UTC) - timedelta(minutes=1))
+
+        response = self.client.delete(f"/api/events/signups/cancel/{signup.cancellation_token}/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(VolunteerSignup.objects.filter(pk=signup.pk).exists())

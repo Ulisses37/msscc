@@ -1,4 +1,7 @@
-import { getVolunteerCancellationDetails } from '@/services/volunteerService';
+import {
+  cancelVolunteerSignup,
+  getVolunteerCancellationDetails,
+} from '@/services/volunteerService';
 
 describe('getVolunteerCancellationDetails', () => {
   const token = '4c551df5-ec8f-4cda-965a-3f48128c63df';
@@ -38,6 +41,24 @@ describe('getVolunteerCancellationDetails', () => {
 
     await expect(getVolunteerCancellationDetails(token)).rejects.toThrow(
       'Unable to load volunteer cancellation details.',
+    );
+  });
+
+  it('sends a delete request to cancel the volunteer signup', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true } as Response);
+
+    await expect(cancelVolunteerSignup(token)).resolves.toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledWith(
+      `https://api.example.test/api/events/signups/cancel/${token}/`,
+      { method: 'DELETE' },
+    );
+  });
+
+  it('rejects when the volunteer signup cannot be cancelled', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: false } as Response);
+
+    await expect(cancelVolunteerSignup(token)).rejects.toThrow(
+      'Unable to cancel volunteer signup.',
     );
   });
 });

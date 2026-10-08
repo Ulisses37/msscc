@@ -34,6 +34,13 @@
     "shift": "Shift date and time",
     "role": "Role",
     "reviewNotice": "Your volunteer shift has not been cancelled.",
+    "cancelAction": "Cancel volunteer shift",
+    "confirmationTitle": "Cancel this volunteer shift?",
+    "confirmationMessage": "This will permanently remove your volunteer signup. This action cannot be undone.",
+    "confirmAction": "Yes, cancel shift",
+    "dismissAction": "Go back",
+    "cancelling": "Cancelling...",
+    "cancellationError": "We could not cancel your volunteer shift. Please try again.",
     "loading": "Loading volunteer shift details...",
     "errorTitle": "Cancellation link unavailable",
     "errorMessage": "This cancellation link is invalid or has expired. Please contact us if you need assistance."

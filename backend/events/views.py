@@ -95,6 +95,19 @@ class VolunteerCancellationLookupView(APIView):
 
     def get(self, request, token):
         """Return signup details without changing the signup's state."""
+        signup = self.get_active_signup(token)
+
+        return Response(VolunteerCancellationDetailSerializer(signup).data)
+
+    def delete(self, request, token):
+        """Delete the signup associated with a valid cancellation link."""
+        signup = self.get_active_signup(token)
+        signup.delete()
+
+        return Response(status=204)
+
+    def get_active_signup(self, token):
+        """Return a signup only when its cancellation link is still valid."""
         try:
             signup = VolunteerSignup.objects.select_related("slot__event").get(
                 cancellation_token=token,
@@ -105,7 +118,7 @@ class VolunteerCancellationLookupView(APIView):
         if signup.slot is None or signup.slot.start_datetime <= timezone.now():
             raise NotFound()
 
-        return Response(VolunteerCancellationDetailSerializer(signup).data)
+        return signup
 
 
 @require_POST

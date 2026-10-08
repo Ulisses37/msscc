@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 
 import {
+  cancelVolunteerSignup,
   getVolunteerCancellationDetails,
   type VolunteerCancellationDetails,
 } from '@/services/volunteerService';
@@ -16,6 +17,9 @@ export default function VolunteerCancellationPage() {
   const [details, setDetails] = useState<VolunteerCancellationDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isConfirmingCancellation, setIsConfirmingCancellation] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancellationError, setCancellationError] = useState(false);
 
   useEffect(() => {
     const loadCancellationDetails = async () => {
@@ -32,6 +36,21 @@ export default function VolunteerCancellationPage() {
 
     loadCancellationDetails();
   }, [params.token]);
+
+  const handleCancellation = async () => {
+    setCancellationError(false);
+    setIsCancelling(true);
+
+    try {
+      await cancelVolunteerSignup(params.token);
+      setIsConfirmingCancellation(false);
+    } catch (error) {
+      console.error('Failed to cancel volunteer signup:', error);
+      setCancellationError(true);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,7 +110,59 @@ export default function VolunteerCancellationPage() {
         </dl>
 
         <p className="mt-6 font-body text-body-sm text-msscc-gray-mid">{t('reviewNotice')}</p>
+        {cancellationError && (
+          <p className="mt-4 font-body text-body-sm text-msscc-danger">{t('cancellationError')}</p>
+        )}
+        <button
+          type="button"
+          className="mt-6 rounded-sm bg-msscc-danger px-5 py-3 font-body text-btn tracking-btn text-white transition-colors hover:bg-msscc-teal-dark focus:outline-none focus:ring-2 focus:ring-msscc-teal"
+          onClick={() => setIsConfirmingCancellation(true)}
+        >
+          {t('cancelAction')}
+        </button>
       </div>
+
+      {isConfirmingCancellation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6"
+          role="presentation"
+        >
+          <div
+            aria-labelledby="cancellation-confirmation-title"
+            aria-modal="true"
+            className="w-full max-w-md border border-msscc-gray-light bg-msscc-white p-6 text-center sm:p-8"
+            role="dialog"
+          >
+            <h2
+              id="cancellation-confirmation-title"
+              className="font-heading text-heading-2 text-msscc-teal"
+            >
+              {t('confirmationTitle')}
+            </h2>
+            <p className="mt-4 font-body text-body text-msscc-gray-dark">
+              {t('confirmationMessage')}
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <button
+                type="button"
+                className="rounded-sm bg-msscc-danger px-5 py-3 font-body text-btn tracking-btn text-white transition-colors hover:bg-msscc-teal-dark focus:outline-none focus:ring-2 focus:ring-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isCancelling}
+                onClick={handleCancellation}
+              >
+                {isCancelling ? t('cancelling') : t('confirmAction')}
+              </button>
+              <button
+                type="button"
+                className="rounded-sm border border-msscc-teal px-5 py-3 font-body text-btn tracking-btn text-msscc-teal transition-colors hover:bg-msscc-gray-faint focus:outline-none focus:ring-2 focus:ring-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isCancelling}
+                onClick={() => setIsConfirmingCancellation(false)}
+              >
+                {t('dismissAction')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
