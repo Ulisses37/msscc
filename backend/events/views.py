@@ -2,15 +2,19 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db.models import QuerySet
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
-
 from rest_framework import generics, permissions, viewsets
+from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from emails.messages import send_volunteer_thanks_email
 from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 from events.serializers import (
     EventImageSerializer,
     EventSerializer,
+    VolunteerCancellationDetailSerializer,
     VolunteerSignupSerializer,
     VolunteerSlotSerializer,
 )
@@ -81,6 +85,27 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
         signup = serializer.save()
         if signup.slot is not None:
             send_volunteer_thanks_email(signup)
+
+
+class VolunteerCancellationLookupView(APIView):
+    """Return public signup details for a valid, unexpired cancellation link."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        """Return signup details without changing the signup's state."""
+        try:
+            signup = VolunteerSignup.objects.select_related("slot__event").get(
+                cancellation_token=token,
+            )
+        except VolunteerSignup.DoesNotExist as exc:
+            raise NotFound() from exc
+
+        if signup.slot is None or signup.slot.start_datetime <= timezone.now():
+            raise NotFound()
+
+        return Response(VolunteerCancellationDetailSerializer(signup).data)
 
 
 @require_POST

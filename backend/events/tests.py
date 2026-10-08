@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -168,3 +168,67 @@ class VolunteerSignupEmailTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         mock_send_email.assert_not_called()
+
+
+class VolunteerCancellationLookupTests(TestCase):
+    """Verify public cancellation-link lookup behavior."""
+
+    def create_signup(self, start_datetime, **overrides):
+        event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            start_datetime=start_datetime,
+            end_datetime=start_datetime + timedelta(hours=2),
+        )
+        slot = VolunteerSlot.objects.create(
+            event=event,
+            position_name="Greeter",
+            start_datetime=start_datetime,
+            end_datetime=start_datetime + timedelta(hours=2),
+        )
+        signup_data = {
+            "slot": slot,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+            **overrides,
+        }
+        return VolunteerSignup.objects.create(**signup_data)
+
+    def test_valid_token_returns_public_signup_details(self):
+        signup = self.create_signup(datetime.now(UTC) + timedelta(days=1))
+
+        response = self.client.get(f"/api/events/signups/cancel/{signup.cancellation_token}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "first_name": "Aiko",
+                "last_name": "Tanaka",
+                "event_title_en": "Cultural Exchange",
+                "event_title_ja": "文化交流",
+                "slot_start_datetime": (
+                    signup.slot.start_datetime.isoformat().replace("+00:00", "Z")
+                ),
+                "slot_end_datetime": signup.slot.end_datetime.isoformat().replace("+00:00", "Z"),
+                "role": "Greeter",
+            },
+        )
+        signup.refresh_from_db()
+        self.assertEqual(signup.status, "approved")
+
+    def test_unknown_token_returns_not_found(self):
+        token = "00000000-0000-0000-0000-000000000000"
+
+        response = self.client.get(f"/api/events/signups/cancel/{token}/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_expired_token_returns_not_found(self):
+        signup = self.create_signup(datetime.now(UTC) - timedelta(minutes=1))
+
+        response = self.client.get(f"/api/events/signups/cancel/{signup.cancellation_token}/")
+
+        self.assertEqual(response.status_code, 404)

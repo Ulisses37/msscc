@@ -25,6 +25,20 @@
     "empty": "No past events are available at this time."
   },
 
+  "VolunteerCancellationPage": {
+    "eyebrow": "Volunteer shift",
+    "title": "Review your volunteer shift",
+    "description": "Confirm these details before continuing with your cancellation request.",
+    "name": "Volunteer",
+    "event": "Event",
+    "shift": "Shift date and time",
+    "role": "Role",
+    "reviewNotice": "Your volunteer shift has not been cancelled.",
+    "loading": "Loading volunteer shift details...",
+    "errorTitle": "Cancellation link unavailable",
+    "errorMessage": "This cancellation link is invalid or has expired. Please contact us if you need assistance."
+  },
+
   "SupportPage": {
     "heading": "Support Us Today",
     "email": "Email",
