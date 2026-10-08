@@ -41,6 +41,8 @@
     "dismissAction": "Go back",
     "cancelling": "Cancelling...",
     "cancellationError": "We could not cancel your volunteer shift. Please try again.",
+    "successTitle": "Volunteer shift cancelled",
+    "successMessage": "Your volunteer signup has been cancelled successfully.",
     "loading": "Loading volunteer shift details...",
     "errorTitle": "Cancellation link unavailable",
     "errorMessage": "This cancellation link is invalid or has expired. Please contact us if you need assistance."

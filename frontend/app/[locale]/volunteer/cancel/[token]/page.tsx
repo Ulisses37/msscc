@@ -20,6 +20,7 @@ export default function VolunteerCancellationPage() {
   const [isConfirmingCancellation, setIsConfirmingCancellation] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancellationError, setCancellationError] = useState(false);
+  const [hasCancelled, setHasCancelled] = useState(false);
 
   useEffect(() => {
     const loadCancellationDetails = async () => {
@@ -44,6 +45,7 @@ export default function VolunteerCancellationPage() {
     try {
       await cancelVolunteerSignup(params.token);
       setIsConfirmingCancellation(false);
+      setHasCancelled(true);
     } catch (error) {
       console.error('Failed to cancel volunteer signup:', error);
       setCancellationError(true);
@@ -109,17 +111,34 @@ export default function VolunteerCancellationPage() {
           </div>
         </dl>
 
-        <p className="mt-6 font-body text-body-sm text-msscc-gray-mid">{t('reviewNotice')}</p>
-        {cancellationError && (
-          <p className="mt-4 font-body text-body-sm text-msscc-danger">{t('cancellationError')}</p>
+        {hasCancelled ? (
+          <div
+            aria-live="polite"
+            className="mt-6 border border-msscc-teal bg-msscc-gray-faint p-4"
+            role="status"
+          >
+            <h2 className="font-heading text-heading-2 text-msscc-teal">{t('successTitle')}</h2>
+            <p className="mt-2 font-body text-body-sm text-msscc-gray-dark">
+              {t('successMessage')}
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="mt-6 font-body text-body-sm text-msscc-gray-mid">{t('reviewNotice')}</p>
+            {cancellationError && (
+              <p className="mt-4 font-body text-body-sm text-msscc-danger" role="alert">
+                {t('cancellationError')}
+              </p>
+            )}
+            <button
+              type="button"
+              className="mt-6 rounded-sm bg-msscc-danger px-5 py-3 font-body text-btn tracking-btn text-white transition-colors hover:bg-msscc-teal-dark focus:outline-none focus:ring-2 focus:ring-msscc-teal"
+              onClick={() => setIsConfirmingCancellation(true)}
+            >
+              {t('cancelAction')}
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className="mt-6 rounded-sm bg-msscc-danger px-5 py-3 font-body text-btn tracking-btn text-white transition-colors hover:bg-msscc-teal-dark focus:outline-none focus:ring-2 focus:ring-msscc-teal"
-          onClick={() => setIsConfirmingCancellation(true)}
-        >
-          {t('cancelAction')}
-        </button>
       </div>
 
       {isConfirmingCancellation && (
