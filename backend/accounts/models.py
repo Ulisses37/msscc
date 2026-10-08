@@ -1,7 +1,8 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
-class AdminUserManager(BaseUserManager):  
+
+class AdminUserManager(BaseUserManager):
     """Custom manager for AdminUser using email as the unique identifier."""
 
     def create_user(self, email, password=None, **extra_fields):
