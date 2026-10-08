@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from emails.services import send_email
 
 
@@ -27,6 +29,9 @@ def send_volunteer_thanks_email(signup) -> None:
         "event_name": signup.slot.event.title_en,
         "start_datetime": signup.slot.start_datetime.strftime("%B %d, %Y at %I:%M %p"),
         "role": signup.slot.position_name,
+        "cancellation_url": (
+            f"{settings.FRONTEND_URL.rstrip('/')}/en/volunteer/cancel/{signup.cancellation_token}"
+        ),
     }
 
     send_email(
