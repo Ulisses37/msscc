@@ -13,12 +13,14 @@ interface MembershipOptionsProps {
   locale: string;
   selectedOptionId: MembershipOptionId | null;
   onOptionChange: (optionId: MembershipOptionId) => void;
+  disabled?: boolean;
 }
 
 export function MembershipOptions({
   locale,
   selectedOptionId,
   onOptionChange,
+  disabled = false,
 }: MembershipOptionsProps) {
   const t = useTranslations('MembershipPage');
   const [selectionTouched, setSelectionTouched] = useState(false);
@@ -72,10 +74,13 @@ export function MembershipOptions({
             >
               <input
                 type="radio"
+                disabled={disabled}
                 name="membershipOption"
                 value={option.id}
                 checked={isSelected}
-                onChange={() => onOptionChange(option.id)}
+                onChange={() => {
+                  if (!disabled) onOptionChange(option.id);
+                }}
                 required
                 className="h-4 w-4 shrink-0 accent-pink-700"
               />

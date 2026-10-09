@@ -8,6 +8,7 @@ import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer'
 import { FallBack } from '@/components/content/ContentFallBack';
 import { MembershipForm } from '@/components/membership/MembershipForm';
 import { MembershipOptions } from '@/components/membership/MembershipOptions';
+import { MembershipPaymentElement } from '@/components/membership/MembershipPaymentElement';
 import { MembershipSummary } from '@/components/membership/MembershipSummary';
 import Button from '@/components/ui/Button';
 
@@ -58,6 +59,8 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
   const [isPreparingPayment, setIsPreparingPayment] = useState(false);
   const [paymentSessionError, setPaymentSessionError] = useState(false);
+  const [membershipInformationValid, setMembershipInformationValid] = useState(false);
+  const [paymentState, setPaymentState] = useState<'ready' | 'confirming' | 'submitted'>('ready');
   const sessionRequestInFlight = useRef(false);
   const sessionRequestVersion = useRef(0);
 
@@ -67,6 +70,9 @@ function MembershipPageContent({ locale }: { locale: string }) {
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
 
   const handleOptionChange = (optionId: MembershipOptionId) => {
+    // An in-flight confirmation may already be charging this option. Do not
+    // allow another option/intent until Stripe has returned a failure.
+    if (paymentState !== 'ready') return;
     if (optionId === selectedOptionId) return;
 
     // Invalidate the prior option's in-flight result as well as any prepared
@@ -207,10 +213,12 @@ function MembershipPageContent({ locale }: { locale: string }) {
           locale={locale}
           selectedOptionId={selectedOptionId}
           onOptionChange={handleOptionChange}
+          disabled={paymentState !== 'ready'}
         />
 
         <MembershipForm
           selectedOptionId={selectedOptionId}
+          onValidityChange={setMembershipInformationValid}
           onContinueToPayment={handleContinueToPayment}
           isPreparingPayment={isPreparingPayment}
           isPaymentSessionReady={paymentSession !== null}
@@ -224,6 +232,17 @@ function MembershipPageContent({ locale }: { locale: string }) {
           <p role="alert" className="mt-3 text-sm text-red-600">
             {t('paymentSessionError')}
           </p>
+        )}
+        {/* The PaymentIntent secret only lives in memory and is passed directly
+            to Stripe Elements once the validated checkout has a session. */}
+        {paymentSession && (
+          <MembershipPaymentElement
+            key={paymentSession.sessionId}
+            clientSecret={paymentSession.clientSecret}
+            locale={locale}
+            membershipInformationValid={membershipInformationValid}
+            onPaymentStateChange={setPaymentState}
+          />
         )}
       </section>
     </main>
