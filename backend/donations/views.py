@@ -91,9 +91,16 @@ class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class MembershipListCreateView(generics.ListCreateAPIView):
-    """List membership records or create a new membership."""
+    """List membership records; only admins can create manual records."""
 
     serializer_class = MembershipSerializer
+
+    def get_permissions(self):
+        # Until the verified-payment lifecycle creates pending memberships,
+        # public callers cannot submit an active record or a paid amount.
+        if self.request.method == "POST":
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = Membership.objects.all()
@@ -124,3 +131,6 @@ class MembershipDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Membership.objects.all()
     serializer_class = MembershipSerializer
     lookup_field = "membership_id"
+    # Do not let a public caller mark a membership paid/active or delete it
+    # through the detail endpoint while the verified-payment flow is pending.
+    permission_classes = [permissions.IsAdminUser]

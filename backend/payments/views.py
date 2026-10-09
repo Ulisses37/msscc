@@ -53,56 +53,43 @@ class PaymentSessionCreateView(APIView):
 
         internal_reference = validated_data["internal_reference"]
 
-        # Begin with the validated request amount for reusable, non-donation
-        # payment types. Donation requests replace this with the stored amount
-        # after the reference and amount have both been verified below.
-        payment_amount = validated_data["amount"]
+        # Only an existing pending donation can use this checkout route. A
+        # client-controlled price must never reach Stripe for other references.
+        try:
+            donation = Donation.objects.only("amount", "payment_status").get(
+                reference_id=internal_reference
+            )
+        except Donation.DoesNotExist:
+            return Response(
+                {"detail": "Donation was not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Donation.MultipleObjectsReturned:
+            logger.error("Payment session request matched multiple donations.")
+            return Response(
+                {"detail": "Unable to create payment session."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except DatabaseError:
+            # Do not expose backend exception text in responses or logs.
+            logger.error("Database error while loading a donation for payment.")
+            return Response(
+                {"detail": "Payment processing is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
-        # Donation payment sessions must match a real pending Donation. This
-        # prevents a completed, failed, or canceled donation from starting a
-        # second Stripe payment and prevents the browser from changing the
-        # amount after the Donation record has been created.
-        if internal_reference.startswith("DON-"):
-            try:
-                donation = Donation.objects.only(
-                    "amount",
-                    "payment_status",
-                ).get(reference_id=internal_reference)
-            except Donation.DoesNotExist:
-                return Response(
-                    {"detail": "Donation was not found."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            except Donation.MultipleObjectsReturned:
-                logger.error("Payment session request matched multiple donations.")
-                return Response(
-                    {"detail": "Unable to create payment session."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-            except DatabaseError:
-                # Database exceptions can include backend-specific details.
-                # Record only the failed operation and return a fixed message.
-                logger.error("Database error while loading a donation for payment.")
-                return Response(
-                    {"detail": "Payment processing is temporarily unavailable."},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-
-            if donation.payment_status != Donation.PaymentStatus.PENDING:
-                return Response(
-                    {"detail": "This donation cannot start another payment."},
-                    status=status.HTTP_409_CONFLICT,
-                )
-
-            if donation.amount != validated_data["amount"]:
-                return Response(
-                    {"detail": "Payment amount does not match the donation."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Once the request has been verified, use the amount stored by the
-            # application instead of trusting the duplicate browser value.
-            payment_amount = donation.amount
+        if donation.payment_status != Donation.PaymentStatus.PENDING:
+            return Response(
+                {"detail": "This donation cannot start another payment."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        # The legacy donation frontend sends its stored amount back here.
+        # Compare it, but use the database amount for the actual Stripe call.
+        if donation.amount != validated_data["amount"]:
+            return Response(
+                {"detail": "Payment amount does not match the donation."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payment_amount = donation.amount
 
         # Construct the return URL on the server. Accepting a complete return
         # URL from the browser could allow an attacker to redirect a user to
@@ -124,11 +111,10 @@ class PaymentSessionCreateView(APIView):
                 return_url=return_url,
             )
 
-        except ValueError as exc:
-            # The serializer performs most validation, but the service also
-            # protects itself in case it is called from somewhere else.
+        except ValueError:
+            # Service errors may include sensitive upstream context; never echo them.
             return Response(
-                {"detail": str(exc)},
+                {"detail": "Invalid payment information."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
