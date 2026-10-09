@@ -123,6 +123,18 @@ class MembershipPaymentSessionTests(TestCase):
         self.assertEqual(response.data, {"detail": "Unable to create payment session."})
         self.assertNotIn("stripe-secret-for-test", str(response.data) + str(captured_logs.output))
 
+    @patch("payments.views.create_membership_payment_intent")
+    def test_session_creation_runtime_failure_does_not_expose_details(self, create_intent):
+        """A missing Stripe client secret must not leak an upstream exception."""
+        create_intent.side_effect = RuntimeError("private-client-secret-detail")
+        with self.assertLogs("payments.views", level="ERROR") as captured_logs:
+            response = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data, {"detail": "Unable to create payment session."})
+        self.assertNotIn(
+            "private-client-secret-detail", str(response.data) + str(captured_logs.output)
+        )
+
     @patch("payments.services.stripe_service.StripeClient")
     def test_missing_stripe_fields_produce_safe_response(self, stripe_client):
         intent = stripe_client.return_value.v1.payment_intents.create.return_value
