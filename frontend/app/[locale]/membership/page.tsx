@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { NextIntlClientProvider, useMessages, useTranslations } from 'next-intl';
 
@@ -15,9 +15,11 @@ import {
   MEMBERSHIP_OPTIONS,
   type MembershipOptionId,
 } from '@/constants/membershipOptions';
+import { createMembershipPaymentSession } from '@/services/paymentService';
 import type { DbContentBlock } from '@/types/content';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
+import type { PaymentSession } from '@/types/payment';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
@@ -53,11 +55,60 @@ function MembershipPageContent({ locale }: { locale: string }) {
   // form validation all use it, so membership details are never duplicated.
   const [selectedOptionId, setSelectedOptionId] =
     useState<MembershipOptionId | null>(null);
+  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
+  const [isPreparingPayment, setIsPreparingPayment] = useState(false);
+  const [paymentSessionError, setPaymentSessionError] = useState(false);
+  const sessionRequestInFlight = useRef(false);
+  const sessionRequestVersion = useRef(0);
 
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
 
   const selectedOption =
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
+
+  const handleOptionChange = (optionId: MembershipOptionId) => {
+    if (optionId === selectedOptionId) return;
+
+    // Invalidate the prior option's in-flight result as well as any prepared
+    // client secret; a PaymentIntent for one option cannot pay for another.
+    sessionRequestVersion.current += 1;
+    sessionRequestInFlight.current = false;
+    setSelectedOptionId(optionId);
+    setPaymentSession(null);
+    setPaymentSessionError(false);
+    setIsPreparingPayment(false);
+  };
+
+  const handleContinueToPayment = async () => {
+    if (!selectedOptionId || sessionRequestInFlight.current || paymentSession) {
+      return;
+    }
+
+    const requestVersion = ++sessionRequestVersion.current;
+    sessionRequestInFlight.current = true;
+    setIsPreparingPayment(true);
+    setPaymentSessionError(false);
+
+    try {
+      const session = await createMembershipPaymentSession({
+        membershipOptionId: selectedOptionId,
+      });
+      if (sessionRequestVersion.current === requestVersion) {
+        // SCRUM-508 will mount Stripe Elements using this client secret.
+        setPaymentSession(session);
+      }
+    } catch {
+      if (sessionRequestVersion.current === requestVersion) {
+        // Never show a raw backend error or Stripe response to the visitor.
+        setPaymentSessionError(true);
+      }
+    } finally {
+      if (sessionRequestVersion.current === requestVersion) {
+        sessionRequestInFlight.current = false;
+        setIsPreparingPayment(false);
+      }
+    }
+  };
 
   useEffect(() => {
     const loadPageContent = async () => {
@@ -155,15 +206,25 @@ function MembershipPageContent({ locale }: { locale: string }) {
         <MembershipOptions
           locale={locale}
           selectedOptionId={selectedOptionId}
-          onOptionChange={setSelectedOptionId}
+          onOptionChange={handleOptionChange}
         />
 
-        <MembershipForm selectedOptionId={selectedOptionId}>
+        <MembershipForm
+          selectedOptionId={selectedOptionId}
+          onContinueToPayment={handleContinueToPayment}
+          isPreparingPayment={isPreparingPayment}
+          isPaymentSessionReady={paymentSession !== null}
+        >
           <MembershipSummary
             selectedOption={selectedOption}
             locale={locale}
           />
         </MembershipForm>
+        {paymentSessionError && (
+          <p role="alert" className="mt-3 text-sm text-red-600">
+            {t('paymentSessionError')}
+          </p>
+        )}
       </section>
     </main>
   );
