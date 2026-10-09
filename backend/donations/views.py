@@ -95,6 +95,18 @@ class MembershipListCreateView(generics.ListCreateAPIView):
 
     serializer_class = MembershipSerializer
 
+    def create(self, request, *args, **kwargs):
+        """Never expose a database exception or claim a failed creation succeeded."""
+        try:
+            return super().create(request, *args, **kwargs)
+        except DatabaseError:
+            # Do not include submitted membership fields or SQL in logs.
+            logger.error("Database error while creating a membership.")
+            return Response(
+                {"detail": "Unable to save the membership at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
     def get_permissions(self):
         # Until the verified-payment lifecycle creates pending memberships,
         # public callers cannot submit an active record or a paid amount.
@@ -134,3 +146,25 @@ class MembershipDetailView(generics.RetrieveUpdateDestroyAPIView):
     # Do not let a public caller mark a membership paid/active or delete it
     # through the detail endpoint while the verified-payment flow is pending.
     permission_classes = [permissions.IsAdminUser]
+
+    def update(self, request, *args, **kwargs):
+        """Return a controlled failure if a membership write does not complete."""
+        try:
+            return super().update(request, *args, **kwargs)
+        except DatabaseError:
+            logger.error("Database error while updating a membership.")
+            return Response(
+                {"detail": "Unable to save the membership at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        """Do not report a successful deletion when the database rejected it."""
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except DatabaseError:
+            logger.error("Database error while deleting a membership.")
+            return Response(
+                {"detail": "Unable to delete the membership at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )

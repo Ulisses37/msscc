@@ -25,6 +25,13 @@ class StrictPaymentSerializer(serializers.Serializer):
 class StrictChoiceField(serializers.ChoiceField):
     """DRF's ChoiceField coerces integers to strings; IDs must be strings."""
 
+    # DRF's default invalid_choice message interpolates the rejected value.
+    # Never echo untrusted payment input, which might itself contain card data.
+    default_error_messages = {
+        **serializers.ChoiceField.default_error_messages,
+        "invalid_choice": "Unsupported value.",
+    }
+
     def to_internal_value(self, data):
         if not isinstance(data, str):
             raise serializers.ValidationError("Expected a string.")
