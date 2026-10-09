@@ -317,3 +317,83 @@ class SecurePaymentDatabaseTests(TestCase):
         )
         exposed_text = f"{response.data} {' '.join(captured_logs.output)}"
         self.assertNotIn("database-secret-for-test", exposed_text)
+
+
+class PaymentInputValidationTests(TestCase):
+    """Boundary cases for the two public payment-session contracts."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def membership_request(self, data):
+        return MembershipPaymentSessionCreateView.as_view()(
+            self.factory.post("/api/payments/membership/session/", data, format="json")
+        )
+
+    def donation_request(self, data):
+        return PaymentSessionCreateView.as_view()(
+            self.factory.post("/api/payments/session/", data, format="json")
+        )
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_membership_id_rejects_non_strings_and_unavailable_options(self, create_intent):
+        for option in (1, True, ["student"], {"id": "student"}, "unknown"):
+            with self.subTest(option=option):
+                response = self.membership_request(
+                    {"membership_option_id": option, "payment_purpose": "membership"}
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("membership_option_id", response.data)
+        create_intent.assert_not_called()
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_membership_rejects_price_currency_and_card_fields(self, create_intent):
+        for field in ("amount", "currency", "card_number", "cvc", "client_secret"):
+            with self.subTest(field=field):
+                response = self.membership_request(
+                    {"membership_option_id": "student", "payment_purpose": "membership",
+                     field: "private-test-value"}
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertNotIn("private-test-value", str(response.data))
+        create_intent.assert_not_called()
+
+    @patch("payments.views.create_payment_session")
+    def test_donation_requires_fields_and_validated_reference(self, create_session):
+        base = {"amount": "10.00", "currency": "usd", "payment_purpose": "Donation",
+                "internal_reference": "DON-00000001"}
+        for field in base:
+            with self.subTest(missing=field):
+                response = self.donation_request({k: v for k, v in base.items() if k != field})
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+        # A quote, Boolean condition and SQL comment must never be interpreted
+        # as a reference lookup or escape the validation boundary.
+        for reference in ("DON-1", "DON-00000001' OR 1=1 --", "MEM-00000001", 1):
+            with self.subTest(reference=reference):
+                response = self.donation_request({**base, "internal_reference": reference})
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("internal_reference", response.data)
+        create_session.assert_not_called()
+
+    @patch("payments.views.create_payment_session")
+    def test_donation_rejects_unsupported_currency_and_extra_fields(self, create_session):
+        base = {"amount": "10.00", "currency": "usd", "payment_purpose": "Donation",
+                "internal_reference": "DON-00000001"}
+        for override in ({"currency": "eur"}, {"currency": 1}, {"amount": True},
+                         {"payment_purpose": 1}, {"card_number": "private-test-value"},
+                         {"client_secret": "private-test-value"}):
+            with self.subTest(override=override):
+                response = self.donation_request({**base, **override})
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertNotIn("private-test-value", str(response.data))
+        create_session.assert_not_called()
+
+    @patch("payments.views.create_payment_session")
+    def test_unknown_reference_cannot_pass_browser_supplied_amount_to_stripe(self, create_session):
+        response = self.donation_request(
+            {"amount": "0.01", "currency": "usd", "payment_purpose": "Donation",
+             "internal_reference": "DON-99999999"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        create_session.assert_not_called()

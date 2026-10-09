@@ -278,3 +278,39 @@ class AdminTableRevisionAPITests(TestCase):
         response = client.get("/api/donations/table-revisions/")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class MembershipInputBoundaryTests(TestCase):
+    """Public checkout must not be able to create a paid membership directly."""
+
+    def test_public_cannot_create_an_active_membership(self):
+        from .models import Membership
+
+        # The public payment flow must not bypass Stripe verification by
+        # posting arbitrary paid/active flags directly to the record API.
+        response = APIClient().post(
+            "/api/donations/memberships/",
+            {"first_name": "O'Connor", "last_name": "Anne-Marie",
+             "amount_paid": "0.01", "payment_status": "completed", "status": "active"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Membership.objects.count(), 0)
+
+    def test_public_cannot_update_or_delete_an_existing_membership(self):
+        from .models import Membership
+
+        membership = Membership.objects.create(
+            first_name="O'Connor", last_name="Anne-Marie", email="member@example.com",
+            phone="555-0100", membership_type="student", amount_paid=Decimal("20.00"),
+            start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
+            payment_status="pending", reference_id="MEM-00000001", status="pending", notes="",
+        )
+        url = f"/api/donations/memberships/{membership.pk}/"
+        client = APIClient()
+        self.assertEqual(client.patch(url, {"status": "active"}, format="json").status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(client.delete(url).status_code, status.HTTP_401_UNAUTHORIZED)
+        membership.refresh_from_db()
+        self.assertEqual(membership.status, "pending")
+        self.assertEqual(Membership.objects.count(), 1)
