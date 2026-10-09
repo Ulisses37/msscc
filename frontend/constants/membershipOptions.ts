@@ -6,7 +6,6 @@ export type MembershipOptionId =
 
 export interface MembershipOption {
   id: MembershipOptionId;
-  name: string;
   displayPriceInCents: number;
   currency: 'USD';
 }
@@ -17,25 +16,21 @@ export interface MembershipOption {
 export const MEMBERSHIP_OPTIONS: readonly MembershipOption[] = [
   {
     id: 'student',
-    name: 'Student Membership',
     displayPriceInCents: 2_000,
     currency: 'USD',
   },
   {
     id: 'individual',
-    name: 'Individual Membership',
     displayPriceInCents: 3_500,
     currency: 'USD',
   },
   {
     id: 'family',
-    name: 'Family Membership',
     displayPriceInCents: 5_000,
     currency: 'USD',
   },
   {
     id: 'corporate',
-    name: 'Corporate Membership',
     displayPriceInCents: 25_000,
     currency: 'USD',
   },

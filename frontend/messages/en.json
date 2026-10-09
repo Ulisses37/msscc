@@ -49,6 +49,17 @@
   },
 
   "MembershipPage": {
+    "optionsHeading": "Choose a membership",
+    "optionsDescription": "Select one membership option.",
+    "options": {
+      "student": "Student Membership",
+      "individual": "Individual Membership",
+      "family": "Family Membership",
+      "corporate": "Corporate Membership"
+    },
+    "summaryHeading": "Membership summary",
+    "summaryEmpty": "Select a membership option to review the total.",
+    "totalDue": "Total due",
     "informationHeading": "Membership information",
     "email": "Email",
     "firstName": "First name",
@@ -60,7 +71,9 @@
     "firstNameRequired": "Enter your first name.",
     "lastNameRequired": "Enter your last name.",
     "addressRequired": "Enter your address.",
-    "continueToPayment": "Continue to Payment"
+    "continueToPayment": "Continue to Payment",
+    "printForm": "Print Membership Form",
+    "printFormUnavailable": "Membership form not found on the server."
   },
 
   "SupportPage": {

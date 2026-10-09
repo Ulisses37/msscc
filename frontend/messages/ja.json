@@ -49,6 +49,17 @@
   },
 
   "MembershipPage": {
+    "optionsHeading": "会員種別を選択",
+    "optionsDescription": "会員種別を1つ選択してください。",
+    "options": {
+      "student": "学生会員",
+      "individual": "個人会員",
+      "family": "家族会員",
+      "corporate": "法人会員"
+    },
+    "summaryHeading": "会員登録内容",
+    "summaryEmpty": "会員種別を選択すると合計金額を確認できます。",
+    "totalDue": "お支払い合計",
     "informationHeading": "会員情報",
     "email": "メールアドレス",
     "firstName": "名",
@@ -60,7 +71,9 @@
     "firstNameRequired": "名を入力してください。",
     "lastNameRequired": "姓を入力してください。",
     "addressRequired": "住所を入力してください。",
-    "continueToPayment": "お支払いへ進む"
+    "continueToPayment": "お支払いへ進む",
+    "printForm": "会員申込書を印刷",
+    "printFormUnavailable": "会員申込書がサーバーに見つかりませんでした。"
   },
 
   "SupportPage": {

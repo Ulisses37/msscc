@@ -42,14 +42,14 @@ export function MembershipOptions({
       className="min-w-0"
     >
       <legend className="text-xl font-semibold text-slate-800">
-        Choose a membership
+        {t('optionsHeading')}
       </legend>
 
       <p
         id="membership-options-description"
         className="mt-1 text-sm text-slate-600"
       >
-        Select one membership option.
+        {t('optionsDescription')}
       </p>
 
       <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2">
@@ -81,7 +81,7 @@ export function MembershipOptions({
               />
 
               <span className="min-w-0 flex-1 break-words text-sm font-medium leading-tight text-slate-800">
-                {option.name}
+                {t(`options.${option.id}`)}
               </span>
 
               <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-700">

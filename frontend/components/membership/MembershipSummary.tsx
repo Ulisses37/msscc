@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 import {
   PaymentCostSummary,
   type PaymentCostLine,
@@ -13,13 +17,15 @@ export function MembershipSummary({
   selectedOption,
   locale,
 }: MembershipSummaryProps) {
+  const t = useTranslations('MembershipPage');
+
   // No line items tells the shared summary to render its unselected state.
   // The zero total below is therefore a safe fallback and is never displayed.
   const lines: readonly PaymentCostLine[] = selectedOption
     ? [
         {
           id: selectedOption.id,
-          label: selectedOption.name,
+          label: t(`options.${selectedOption.id}`),
           amountInCents: selectedOption.displayPriceInCents,
         },
       ]
@@ -28,10 +34,10 @@ export function MembershipSummary({
   return (
     <PaymentCostSummary
       summaryId="membership-summary"
-      heading="Membership summary"
-      emptyMessage="Select a membership option to review the total."
+      heading={t('summaryHeading')}
+      emptyMessage={t('summaryEmpty')}
       lines={lines}
-      totalLabel="Total due"
+      totalLabel={t('totalDue')}
       totalAmountInCents={selectedOption?.displayPriceInCents ?? 0}
       currency={selectedOption?.currency ?? 'USD'}
       locale={locale}

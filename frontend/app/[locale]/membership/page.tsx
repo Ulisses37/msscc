@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { FallBack } from '@/components/content/ContentFallBack';
@@ -20,6 +21,7 @@ import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
 
 export default function MembershipPage() {
+  const t = useTranslations('MembershipPage');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(
     getCachedPageContent('membership'),
   );
@@ -72,7 +74,7 @@ export default function MembershipPage() {
       );
 
       if (!formItem?.file_url) {
-        alert('Membership form not found on the server.');
+        alert(t('printFormUnavailable'));
         return;
       }
 
@@ -120,7 +122,7 @@ export default function MembershipPage() {
       {/* Printable membership form */}
       <div className="mb-6 px-4 text-center">
         <Button
-          text="Print Membership Form"
+          text={t('printForm')}
           padding="12px 24px"
           fontSize="16px"
           onClick={handleDownload}
