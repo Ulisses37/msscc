@@ -2,18 +2,138 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
+import stripe
 from django.db import DatabaseError
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
 from donations.models import Donation
 
 from .views import (
+    MembershipPaymentSessionCreateView,
     PaymentSessionCreateView,
     StripeWebhookView,
     _update_donation_payment_status,
 )
+
+
+@override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
+class MembershipPaymentSessionTests(TestCase):
+    """Membership requests must not be able to choose their Stripe price."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_membership_route_is_registered(self):
+        self.assertEqual(
+            reverse("membership-payment-session-create"),
+            "/api/payments/membership/session/",
+        )
+
+    def request(self, **overrides):
+        data = {"membership_option_id": "student", "payment_purpose": "membership"}
+        data.update(overrides)
+        return self.factory.post("/api/payments/membership/session/", data, format="json")
+
+    @patch("payments.services.stripe_service.StripeClient")
+    def test_each_option_uses_the_server_price_in_cents(self, stripe_client):
+        """Mock only the Stripe boundary so the view and conversion run for real."""
+        intent = stripe_client.return_value.v1.payment_intents.create.return_value
+        intent.id = "pi_test_membership"
+        intent.client_secret = "pi_test_secret_membership"
+
+        for option_id, cents in (
+            ("student", 2000),
+            ("individual", 3500),
+            ("family", 5000),
+            ("corporate", 25000),
+        ):
+            with self.subTest(option_id=option_id):
+                response = MembershipPaymentSessionCreateView.as_view()(
+                    self.request(membership_option_id=option_id)
+                )
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(
+                    response.data,
+                    {
+                        "session_id": "pi_test_membership",
+                        "client_secret": "pi_test_secret_membership",
+                    },
+                )
+                params = stripe_client.return_value.v1.payment_intents.create.call_args.args[0]
+                self.assertEqual(params["amount"], cents)
+                self.assertEqual(params["currency"], "usd")
+                self.assertEqual(params["metadata"]["payment_purpose"], "membership")
+                self.assertEqual(params["metadata"]["membership_option_id"], option_id)
+                self.assertNotIn("confirm", params)
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_missing_or_unknown_option_is_rejected(self, create_intent):
+        for request in (
+            self.factory.post(
+                "/api/payments/membership/session/",
+                {"payment_purpose": "membership"},
+                format="json",
+            ),
+            self.request(membership_option_id="unavailable"),
+            self.request(membership_option_id=""),
+            self.request(payment_purpose="donation"),
+            self.factory.post(
+                "/api/payments/membership/session/",
+                {"membership_option_id": "student"},
+                format="json",
+            ),
+        ):
+            with self.subTest(request=request.body):
+                response = MembershipPaymentSessionCreateView.as_view()(request)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        create_intent.assert_not_called()
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_amount_and_card_fields_cannot_enter_session_request(self, create_intent):
+        for extra in ({"amount": "0.01"}, {"card_number": "4242424242424242"}):
+            with self.subTest(extra=extra):
+                response = MembershipPaymentSessionCreateView.as_view()(self.request(**extra))
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertNotIn("4242424242424242", str(response.data))
+        create_intent.assert_not_called()
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_view_passes_only_server_price_to_service(self, create_intent):
+        create_intent.return_value = {
+            "session_id": "pi_test_membership",
+            "client_secret": "pi_test_secret_membership",
+        }
+        response = MembershipPaymentSessionCreateView.as_view()(
+            self.request(membership_option_id="family")
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        create_intent.assert_called_once_with(
+            amount=Decimal("50.00"), membership_option_id="family"
+        )
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_stripe_failure_does_not_expose_details(self, create_intent):
+        create_intent.side_effect = stripe.StripeError("stripe-secret-for-test")
+        with self.assertLogs("payments.views", level="ERROR") as captured_logs:
+            response = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data, {"detail": "Unable to create payment session."})
+        self.assertNotIn("stripe-secret-for-test", str(response.data) + str(captured_logs.output))
+
+    @patch("payments.services.stripe_service.StripeClient")
+    def test_missing_stripe_fields_produce_safe_response(self, stripe_client):
+        intent = stripe_client.return_value.v1.payment_intents.create.return_value
+        for intent_id, client_secret in (("", "pi_secret"), ("pi_test", None)):
+            with self.subTest(intent_id=intent_id, client_secret=client_secret):
+                intent.id = intent_id
+                intent.client_secret = client_secret
+                with self.assertLogs("payments.views", level="ERROR"):
+                    response = MembershipPaymentSessionCreateView.as_view()(self.request())
+                self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+                self.assertEqual(response.data, {"detail": "Unable to create payment session."})
 
 
 @override_settings(
@@ -77,9 +197,7 @@ class SecurePaymentDatabaseTests(TestCase):
         """A browser cannot lower the amount after the Donation is created."""
         self.create_donation()
 
-        response = PaymentSessionCreateView.as_view()(
-            self.session_request(amount="1.00")
-        )
+        response = PaymentSessionCreateView.as_view()(self.session_request(amount="1.00"))
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         create_session.assert_not_called()
@@ -119,9 +237,7 @@ class SecurePaymentDatabaseTests(TestCase):
 
     def test_completed_donation_cannot_be_downgraded(self):
         """A late failure event cannot undo a confirmed successful payment."""
-        donation = self.create_donation(
-            payment_status=Donation.PaymentStatus.COMPLETED
-        )
+        donation = self.create_donation(payment_status=Donation.PaymentStatus.COMPLETED)
 
         updated = _update_donation_payment_status(
             donation.reference_id,
@@ -166,11 +282,7 @@ class SecurePaymentDatabaseTests(TestCase):
         event.to_dict.return_value = {
             "id": "evt_safe_test",
             "type": "payment_intent.succeeded",
-            "data": {
-                "object": {
-                    "metadata": {"internal_reference": "DON-00000001"}
-                }
-            },
+            "data": {"object": {"metadata": {"internal_reference": "DON-00000001"}}},
         }
         construct_event.return_value = event
 

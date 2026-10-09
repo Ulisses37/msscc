@@ -1,7 +1,6 @@
-
+import logging
 
 import stripe
-import logging
 from django.conf import settings
 from django.db import DatabaseError, transaction
 from rest_framework import permissions, status
@@ -9,10 +8,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from donations.models import Donation
-
-from payments.serializers import PaymentSessionRequestSerializer
-from payments.services.stripe_service import create_payment_session
-
+from payments.serializers import (
+    MEMBERSHIP_PRICES,
+    MembershipPaymentSessionRequestSerializer,
+    PaymentSessionRequestSerializer,
+)
+from payments.services.stripe_service import (
+    create_membership_payment_intent,
+    create_payment_session,
+)
 
 # Use Django's logging configuration instead of printing errors directly.
 logger = logging.getLogger(__name__)
@@ -70,9 +74,7 @@ class PaymentSessionCreateView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
             except Donation.MultipleObjectsReturned:
-                logger.error(
-                    "Payment session request matched multiple donations."
-                )
+                logger.error("Payment session request matched multiple donations.")
                 return Response(
                     {"detail": "Unable to create payment session."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -109,8 +111,7 @@ class PaymentSessionCreateView(APIView):
         # Stripe replaces {CHECKOUT_SESSION_ID} with the actual session ID
         # when it sends the user back to the application.
         return_url = (
-            f"{settings.FRONTEND_URL.rstrip('/')}/en/support"
-            "?session_id={CHECKOUT_SESSION_ID}"
+            f"{settings.FRONTEND_URL.rstrip('/')}/en/support?session_id={{CHECKOUT_SESSION_ID}}"
         )
 
         try:
@@ -160,6 +161,35 @@ class PaymentSessionCreateView(APIView):
             payment_session,
             status=status.HTTP_201_CREATED,
         )
+
+
+class MembershipPaymentSessionCreateView(APIView):
+    """Create a PaymentIntent using only the backend's membership catalog."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = MembershipPaymentSessionRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        option_id = serializer.validated_data["membership_option_id"]
+
+        try:
+            # Never take amount or currency from request.data. The frontend's
+            # display price is not authoritative even when it happens to match.
+            payment_session = create_membership_payment_intent(
+                amount=MEMBERSHIP_PRICES[option_id],
+                membership_option_id=option_id,
+            )
+        except (stripe.StripeError, RuntimeError, ValueError):
+            # Exception text and Stripe objects may contain sensitive details.
+            logger.error("Unable to create membership payment session.")
+            return Response(
+                {"detail": "Unable to create payment session."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response(payment_session, status=status.HTTP_201_CREATED)
+
 
 # Maps Stripe events to the lowercase values stored in Donation.payment_status.
 #

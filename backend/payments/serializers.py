@@ -39,3 +39,28 @@ class PaymentSessionRequestSerializer(serializers.Serializer):
         max_length=200,
         trim_whitespace=True,
     )
+
+
+# The frontend's membership prices are display-only. Until membership options
+# have their own priced backend model, this is the authoritative USD catalog.
+MEMBERSHIP_PRICES = {
+    "student": Decimal("20.00"),
+    "individual": Decimal("35.00"),
+    "family": Decimal("50.00"),
+    "corporate": Decimal("250.00"),
+}
+
+
+class MembershipPaymentSessionRequestSerializer(serializers.Serializer):
+    """Accept only a membership selection, never browser-supplied pricing."""
+
+    membership_option_id = serializers.ChoiceField(choices=tuple(MEMBERSHIP_PRICES))
+    payment_purpose = serializers.ChoiceField(choices=["membership"])
+
+    def validate(self, attrs):
+        # DRF otherwise silently discards unknown fields. Explicit rejection
+        # prevents clients from mistakenly treating a supplied price as trusted
+        # and ensures card data cannot enter this endpoint's request contract.
+        if not isinstance(self.initial_data, dict) or set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError("Unsupported payment information.")
+        return attrs
