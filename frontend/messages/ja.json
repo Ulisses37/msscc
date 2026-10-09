@@ -25,6 +25,29 @@
     "empty": "現在、過去のイベントはありません。"
   },
 
+  "VolunteerCancellationPage": {
+    "eyebrow": "ボランティアシフト",
+    "title": "ボランティアシフトの確認",
+    "description": "キャンセルの手続きを進める前に、以下の内容をご確認ください。",
+    "name": "ボランティア",
+    "event": "イベント",
+    "shift": "シフト日時",
+    "role": "役割",
+    "reviewNotice": "ボランティアシフトはまだキャンセルされていません。",
+    "cancelAction": "ボランティアシフトをキャンセル",
+    "confirmationTitle": "このボランティアシフトをキャンセルしますか？",
+    "confirmationMessage": "ボランティア登録は完全に削除されます。この操作は元に戻せません。",
+    "confirmAction": "はい、シフトをキャンセル",
+    "dismissAction": "戻る",
+    "cancelling": "キャンセル中...",
+    "cancellationError": "ボランティアシフトをキャンセルできませんでした。もう一度お試しください。",
+    "successTitle": "ボランティアシフトをキャンセルしました",
+    "successMessage": "ボランティア登録は正常にキャンセルされました。",
+    "loading": "ボランティアシフトの詳細を読み込んでいます...",
+    "errorTitle": "キャンセルリンクを利用できません",
+    "errorMessage": "このキャンセルリンクは無効か、有効期限が切れています。サポートが必要な場合はお問い合わせください。"
+  },
+
   "SupportPage": {
     "heading": "ご支援をお願いします",
     "email": "メールアドレス",

@@ -1,5 +1,6 @@
-from django.db import models
+import uuid
 
+from django.db import models
 
 EVENT_IMAGE_ALIGNMENT_CHOICES = [
     ("left", "Left"),
@@ -112,6 +113,7 @@ class VolunteerSlot(models.Model):
 
 class VolunteerSignup(models.Model):
     volunteer_signup_id = models.AutoField(primary_key=True)
+    cancellation_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     slot = models.ForeignKey(
         VolunteerSlot,
         on_delete=models.CASCADE,

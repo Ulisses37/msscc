@@ -39,6 +39,16 @@ export interface VolunteerSignup {
   submitted_at: string;
 }
 
+export interface VolunteerCancellationDetails {
+  first_name: string;
+  last_name: string;
+  event_title_en: string;
+  event_title_ja: string;
+  slot_start_datetime: string;
+  slot_end_datetime: string;
+  role: string;
+}
+
 export async function getSignupsBySlotId(slotId: number): Promise<VolunteerSignup[]> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/?slot_id=${slotId}`,
@@ -49,4 +59,31 @@ export async function getSignupsBySlotId(slotId: number): Promise<VolunteerSignu
   }
 
   return res.json();
+}
+
+/** Fetch public confirmation details for a volunteer cancellation link. */
+export async function getVolunteerCancellationDetails(
+  token: string,
+): Promise<VolunteerCancellationDetails> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/cancel/${token}/`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to load volunteer cancellation details.');
+  }
+
+  return response.json() as Promise<VolunteerCancellationDetails>;
+}
+
+/** Cancel a volunteer signup through its unique cancellation token. */
+export async function cancelVolunteerSignup(token: string): Promise<void> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/cancel/${token}/`,
+    { method: 'DELETE' },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to cancel volunteer signup.');
+  }
 }

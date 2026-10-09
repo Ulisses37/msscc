@@ -80,4 +80,26 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
             "status",
             "submitted_at",
         ]
-        read_only_fields = ["volunteer_signup_id", "submitted_at"]
+        read_only_fields = ["volunteer_signup_id", "status", "submitted_at"]
+
+
+class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):
+    """Serialize public details shown before a volunteer confirms cancellation."""
+
+    event_title_en = serializers.CharField(source="slot.event.title_en", read_only=True)
+    event_title_ja = serializers.CharField(source="slot.event.title_ja", read_only=True)
+    slot_start_datetime = serializers.DateTimeField(source="slot.start_datetime", read_only=True)
+    slot_end_datetime = serializers.DateTimeField(source="slot.end_datetime", read_only=True)
+    role = serializers.CharField(source="slot.position_name", read_only=True)
+
+    class Meta:
+        model = VolunteerSignup
+        fields = [
+            "first_name",
+            "last_name",
+            "event_title_en",
+            "event_title_ja",
+            "slot_start_datetime",
+            "slot_end_datetime",
+            "role",
+        ]
