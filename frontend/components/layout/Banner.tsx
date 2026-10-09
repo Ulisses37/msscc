@@ -53,6 +53,7 @@ export const Banner = () =>{
           {/* Constrain the logo around the mobile action row; desktop uses its natural bounds. */}
           <Image
             src={mssccLogo}
+            priority
             alt="MSSCC Logo"
             width={400}
             height={140}
