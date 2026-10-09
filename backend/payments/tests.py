@@ -326,6 +326,8 @@ class PaymentInputValidationTests(TestCase):
         self.factory = APIRequestFactory()
 
     def membership_request(self, data):
+        # Exercise DRF validation and the view; mock only the outbound Stripe
+        # call in tests that must prove invalid input cannot start a payment.
         return MembershipPaymentSessionCreateView.as_view()(
             self.factory.post("/api/payments/membership/session/", data, format="json")
         )
@@ -348,6 +350,8 @@ class PaymentInputValidationTests(TestCase):
 
     @patch("payments.views.create_membership_payment_intent")
     def test_membership_rejects_price_currency_and_card_fields(self, create_intent):
+        # Extra fields may include card data or a client secret. Neither the
+        # response nor the Stripe call may contain their submitted values.
         for field in ("amount", "currency", "card_number", "cvc", "client_secret"):
             with self.subTest(field=field):
                 response = self.membership_request(
@@ -391,9 +395,167 @@ class PaymentInputValidationTests(TestCase):
 
     @patch("payments.views.create_payment_session")
     def test_unknown_reference_cannot_pass_browser_supplied_amount_to_stripe(self, create_session):
+        # Even a syntactically valid reference is not authority to choose a
+        # price: the referenced donation must exist before calling Stripe.
         response = self.donation_request(
             {"amount": "0.01", "currency": "usd", "payment_purpose": "Donation",
              "internal_reference": "DON-99999999"}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         create_session.assert_not_called()
+
+
+class PaymentSecurityRegressionTests(TestCase):
+    """Exercise untrusted text and payment identifiers against real ORM rows."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.donation = Donation.objects.create(
+            donor_first_name="O'Connor", donor_last_name="Anne-Marie",
+            donor_email="member@example.com", amount=Decimal("10.00"),
+            donation_date=date.today(), is_anonymous=False, message="A normal message",
+            reference_id="DON-00000001",
+        )
+        self.other = Donation.objects.create(
+            donor_first_name="Other", donor_last_name="Person",
+            donor_email="other@example.com", amount=Decimal("20.00"),
+            donation_date=date.today(), is_anonymous=False, message="Unrelated",
+            reference_id="DON-00000002",
+        )
+
+    def session(self, reference, amount="10.00"):
+        return PaymentSessionCreateView.as_view()(
+            self.factory.post(
+                "/api/payments/session/",
+                {"amount": amount, "currency": "usd", "payment_purpose": "Donation",
+                 "internal_reference": reference}, format="json",
+            )
+        )
+
+    @patch("payments.views.create_payment_session")
+    def test_sql_like_references_never_select_another_donation(self, create_session):
+        # Quotation, SQL comments, Boolean expressions, and a valid prefix
+        # followed by injected text must not broaden an exact ORM lookup.
+        for suffix in ("' OR '1'='1", '" OR 1=1 --', "; DELETE FROM donations_donation; --",
+                       " /* comment */"):
+            with self.subTest(suffix=suffix):
+                response = self.session(self.donation.reference_id + suffix)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        create_session.assert_not_called()
+        self.donation.refresh_from_db()
+        self.other.refresh_from_db()
+        self.assertEqual(self.donation.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertEqual(self.other.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertEqual(Donation.objects.count(), 2)
+
+    @patch("payments.views.create_payment_session")
+    def test_payment_text_fields_cannot_become_queries_or_stripe_metadata(self, create_session):
+        base = {"amount": "10.00", "currency": "usd", "payment_purpose": "Donation",
+                "internal_reference": self.donation.reference_id}
+        for field in ("payment_purpose", "currency", "card_number", "client_secret"):
+            with self.subTest(field=field):
+                response = PaymentSessionCreateView.as_view()(
+                    self.factory.post("/api/payments/session/",
+                                      {**base, field: "' OR 1=1 --"}, format="json")
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertNotIn("' OR 1=1 --", str(response.data))
+        create_session.assert_not_called()
+        self.assertEqual(Donation.objects.count(), 2)
+
+    @patch("payments.views.create_membership_payment_intent")
+    def test_membership_payment_text_cannot_override_catalog_or_metadata(self, create_intent):
+        base = {"membership_option_id": "student", "payment_purpose": "membership"}
+        for field in ("membership_option_id", "payment_purpose", "amount", "currency",
+                      "card_number", "security_code", "client_secret"):
+            with self.subTest(field=field):
+                response = MembershipPaymentSessionCreateView.as_view()(
+                    self.factory.post("/api/payments/membership/session/",
+                                      {**base, field: "' OR 1=1 --"}, format="json")
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertNotIn("' OR 1=1 --", str(response.data))
+        create_intent.assert_not_called()
+
+    def test_status_update_rejects_sql_like_reference_without_touching_rows(self):
+        # Even internal callers must not use a webhook reference as a lookup
+        # before checking its complete generated-ID format.
+        with self.assertRaises(ValueError):
+            _update_donation_payment_status(
+                self.donation.reference_id + "' OR 1=1 --", Donation.PaymentStatus.COMPLETED
+            )
+        self.donation.refresh_from_db()
+        self.other.refresh_from_db()
+        self.assertEqual(self.donation.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertEqual(self.other.payment_status, Donation.PaymentStatus.PENDING)
+
+    @patch("payments.views.Donation.objects.filter")
+    def test_failed_payment_update_does_not_claim_success(self, filter_donations):
+        # Simulate a write that affects no rows after the locked lookup.
+        filter_donations.return_value.update.return_value = 0
+        with self.assertRaises(DatabaseError):
+            _update_donation_payment_status(
+                self.donation.reference_id, Donation.PaymentStatus.COMPLETED
+            )
+        self.donation.refresh_from_db()
+        self.assertEqual(self.donation.payment_status, Donation.PaymentStatus.PENDING)
+
+    @patch("payments.views.stripe.Webhook.construct_event")
+    def test_bad_webhook_signature_does_not_log_payload(self, construct_event):
+        secret = "pi_private_client_secret_for_test"
+        construct_event.side_effect = stripe.SignatureVerificationError(
+            "bad signature " + secret, "sig_test"
+        )
+        request = self.factory.post(
+            "/api/payments/webhook/", secret.encode(), content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="sig_test",
+        )
+        with self.assertLogs("payments.views", level="WARNING") as captured:
+            response = StripeWebhookView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNotIn(secret, str(response.data) + str(captured.output))
+        self.assertEqual(Donation.objects.count(), 2)
+
+    @patch("payments.views.stripe.Webhook.construct_event")
+    def test_signed_event_with_sql_like_reference_cannot_update_donations(self, construct_event):
+        event = Mock()
+        event.to_dict.return_value = {
+            "id": "evt_safe_test", "type": "payment_intent.succeeded",
+            "data": {"object": {"metadata": {
+                "internal_reference": self.donation.reference_id + "' OR 1=1 --"
+            }}},
+        }
+        construct_event.return_value = event
+        request = self.factory.post(
+            "/api/payments/webhook/", b"{}", content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="sig_test",
+        )
+        with self.assertLogs("payments.views", level="WARNING"):
+            response = StripeWebhookView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.donation.refresh_from_db()
+        self.other.refresh_from_db()
+        self.assertEqual(self.donation.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertEqual(self.other.payment_status, Donation.PaymentStatus.PENDING)
+
+    @patch("payments.views.stripe.Webhook.construct_event")
+    def test_signed_event_id_with_secret_or_newline_is_not_logged(self, construct_event):
+        # Signature validation does not make arbitrary event metadata safe for
+        # log formatting. Only the expected Stripe identifier shape is logged.
+        secret = "pi_private_client_secret_for_test"
+        event = Mock()
+        event.to_dict.return_value = {
+            "id": f"evt_test\n{secret}", "type": "payment_intent.succeeded",
+            "data": {"object": {"metadata": {"internal_reference": "DON-99999999"}}},
+        }
+        construct_event.return_value = event
+        request = self.factory.post(
+            "/api/payments/webhook/", b"{}", content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="sig_test",
+        )
+        with self.assertLogs("payments.views", level="WARNING") as captured:
+            response = StripeWebhookView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(secret, str(response.data) + str(captured.output))
+        self.assertIn("event_id=unavailable", str(captured.output))
+        self.assertEqual(Donation.objects.count(), 2)
