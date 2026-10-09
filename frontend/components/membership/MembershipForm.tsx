@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 import type { MembershipOptionId } from '@/constants/membershipOptions';
@@ -10,6 +10,7 @@ interface MembershipFormProps {
   // Selection remains page-owned so this form cannot drift from the options
   // or summary by maintaining a second membership value.
   selectedOptionId: MembershipOptionId | null;
+  onValidityChange: (valid: boolean) => void;
   onContinueToPayment: () => void;
   isPreparingPayment: boolean;
   isPaymentSessionReady: boolean;
@@ -23,6 +24,7 @@ const inputClassName =
 
 export function MembershipForm({
   selectedOptionId,
+  onValidityChange,
   onContinueToPayment,
   isPreparingPayment,
   isPaymentSessionReady,
@@ -55,6 +57,12 @@ export function MembershipForm({
     firstNameIsValid &&
     lastNameIsValid &&
     addressIsValid;
+
+  // Keep Stripe's separate payment button gated by the live membership fields,
+  // including when someone edits required information after session creation.
+  useEffect(() => {
+    onValidityChange(formIsValid);
+  }, [formIsValid, onValidityChange]);
 
   const showEmailError = emailTouched && !emailIsValid;
   const showFirstNameError = firstNameTouched && !firstNameIsValid;
