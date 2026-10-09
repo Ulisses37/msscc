@@ -72,6 +72,9 @@
     "lastNameRequired": "Enter your last name.",
     "addressRequired": "Enter your address.",
     "continueToPayment": "Continue to Payment",
+    "preparingPayment": "Preparing secure payment...",
+    "paymentSessionReady": "Payment session ready",
+    "paymentSessionError": "Unable to prepare payment. Please try again.",
     "printForm": "Print Membership Form",
     "printFormUnavailable": "Membership form not found on the server."
   },

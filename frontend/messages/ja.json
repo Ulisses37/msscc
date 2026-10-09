@@ -72,6 +72,9 @@
     "lastNameRequired": "姓を入力してください。",
     "addressRequired": "住所を入力してください。",
     "continueToPayment": "お支払いへ進む",
+    "preparingPayment": "安全なお支払いを準備しています...",
+    "paymentSessionReady": "お支払いの準備ができました",
+    "paymentSessionError": "お支払いを準備できませんでした。もう一度お試しください。",
     "printForm": "会員申込書を印刷",
     "printFormUnavailable": "会員申込書がサーバーに見つかりませんでした。"
   },
