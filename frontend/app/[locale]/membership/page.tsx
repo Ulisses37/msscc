@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { NextIntlClientProvider, useMessages, useTranslations } from 'next-intl';
 
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { FallBack } from '@/components/content/ContentFallBack';
@@ -16,11 +16,34 @@ import {
   type MembershipOptionId,
 } from '@/constants/membershipOptions';
 import type { DbContentBlock } from '@/types/content';
+import enMessages from '@/messages/en.json';
+import jaMessages from '@/messages/ja.json';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
 
 export default function MembershipPage() {
+  const params = useParams();
+  const locale = String(params?.locale ?? 'en');
+  const parentMessages = useMessages();
+  // This page can be loaded after a navigation from a layout rendered before
+  // MembershipPage messages were added. Keep other namespaces from the layout,
+  // but supply this page's messages from the same bundle as its UI.
+  const membershipMessages = locale === 'ja'
+    ? jaMessages.MembershipPage
+    : enMessages.MembershipPage;
+
+  return (
+    <NextIntlClientProvider
+      locale={locale}
+      messages={{ ...parentMessages, MembershipPage: membershipMessages }}
+    >
+      <MembershipPageContent locale={locale} />
+    </NextIntlClientProvider>
+  );
+}
+
+function MembershipPageContent({ locale }: { locale: string }) {
   const t = useTranslations('MembershipPage');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(
     getCachedPageContent('membership'),
@@ -32,8 +55,6 @@ export default function MembershipPage() {
     useState<MembershipOptionId | null>(null);
 
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
-  const params = useParams();
-  const locale = String(params?.locale ?? 'en');
 
   const selectedOption =
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;

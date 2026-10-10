@@ -49,6 +49,8 @@ function messageShape(value: unknown): unknown {
 }
 
 jest.mock('next-intl', () => ({
+  useMessages: () => mockMessages,
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
   useTranslations: (namespace: string) => (key: string) =>
     getMessage(mockMessages, `${namespace}.${key}`),
 }));
