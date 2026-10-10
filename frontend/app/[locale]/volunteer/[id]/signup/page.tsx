@@ -161,7 +161,7 @@ export default function VolunteerSignupPage() {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input required placeholder="First Name" style={inputStyle} value={formData.first_name}
              onChange={e => setFormData({...formData, first_name: e.target.value})} />
             <input required placeholder="Last Name" style={inputStyle} value={formData.last_name}
@@ -194,14 +194,15 @@ export default function VolunteerSignupPage() {
 }
 
 // Re-usable styles
-const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-gray-light)', backgroundColor: 'white' };
+const inputStyle = { width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: '1px solid var(--color-gray-light)', backgroundColor: 'white' };
 const modalOverlayStyle: React.CSSProperties =
  { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)',
    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' };
 const modalContentStyle: React.CSSProperties =
-{ backgroundColor: 'white', padding: '3rem', borderRadius: '12px', maxWidth: '42rem', width: '100%',
-   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', textAlign: 'left' };
+{ backgroundColor: 'white', padding: 'clamp(1.25rem, 5vw, 3rem)', borderRadius: '12px', maxWidth: '42rem', width: '100%',
+  maxHeight: '90vh', overflowY: 'auto',
+  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', textAlign: 'left' };
 const modalHeadingStyle: React.CSSProperties =
- { color: '#d72638', marginBottom: '2rem', textAlign: 'center', fontSize: '2.5rem', fontWeight: 800 };
+ { color: '#d72638', marginBottom: '1.25rem', textAlign: 'center', fontSize: 'clamp(1.75rem, 6vw, 2.5rem)', fontWeight: 800 };
 const infoBoxStyle: React.CSSProperties =
-{ backgroundColor: '#f8f9fa', padding: '2rem', borderRadius: '8px', marginBottom: '2rem', lineHeight: '2.2', fontSize: '1.1rem' };
+{ backgroundColor: '#f8f9fa', padding: 'clamp(1rem, 4vw, 2rem)', borderRadius: '8px', marginBottom: '1.5rem', lineHeight: '1.8', fontSize: '1rem', overflowWrap: 'anywhere' };
