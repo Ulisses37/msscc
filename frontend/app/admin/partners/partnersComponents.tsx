@@ -233,9 +233,9 @@ export function CreatePartnerProp(
             {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
           </label>
           <div className="text-sm font-semibold">
+            <label className="text-sm font-semibold">Upload Image</label>
             <ImportImage
               id="create-partner-media"
-              label="Media Asset"
               onChange={handleMediaChange}
             />
             {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
@@ -491,7 +491,7 @@ export function EditPartnerProp(
 
           <div className="flex gap-3"> {/*Media asset: Upload && List*/}
             <div>
-              <label className="text-sm font-semibold flex-1">Upload New Media Asset</label>
+              <label className="text-sm font-semibold flex-1">Upload Image</label>
               <ImportImage
                 id="edit-partner-media"
                 onChange={handleMediaChange}
