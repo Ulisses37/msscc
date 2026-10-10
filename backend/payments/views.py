@@ -9,13 +9,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from donations.models import Donation
+from donations.services import create_pending_membership
 from payments.serializers import (
-    MEMBERSHIP_PRICES,
     MembershipPaymentSessionRequestSerializer,
     PaymentSessionRequestSerializer,
 )
 from payments.services.stripe_service import (
-    create_membership_payment_intent,
     create_payment_session,
 )
 
@@ -188,9 +187,18 @@ class MembershipPaymentSessionCreateView(APIView):
         try:
             # Never take amount or currency from request.data. The frontend's
             # display price is not authoritative even when it happens to match.
-            payment_session = create_membership_payment_intent(
-                amount=MEMBERSHIP_PRICES[option_id],
-                membership_option_id=option_id,
+            payment_session = create_pending_membership(
+                option_id=option_id,
+                first_name=serializer.validated_data["first_name"],
+                last_name=serializer.validated_data["last_name"],
+                email=serializer.validated_data["email"],
+                phone=serializer.validated_data.get("phone", ""),
+            )
+        except DatabaseError:
+            logger.error("Database error while creating a pending membership.")
+            return Response(
+                {"detail": "Payment processing is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         except (stripe.StripeError, RuntimeError, ValueError):
             # Exception text and Stripe objects may contain sensitive details.

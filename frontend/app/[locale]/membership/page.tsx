@@ -20,7 +20,7 @@ import { createMembershipPaymentSession } from '@/services/paymentService';
 import type { DbContentBlock } from '@/types/content';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
-import type { PaymentSession } from '@/types/payment';
+import type { MembershipIdentity, PaymentSession } from '@/types/payment';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
@@ -60,6 +60,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const [isPreparingPayment, setIsPreparingPayment] = useState(false);
   const [paymentSessionError, setPaymentSessionError] = useState(false);
   const [membershipInformationValid, setMembershipInformationValid] = useState(false);
+  const [membershipIdentity, setMembershipIdentity] = useState<MembershipIdentity | null>(null);
   const [paymentState, setPaymentState] = useState<'ready' | 'confirming' | 'submitted'>('ready');
   const sessionRequestInFlight = useRef(false);
   const sessionRequestVersion = useRef(0);
@@ -86,7 +87,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   };
 
   const handleContinueToPayment = async () => {
-    if (!selectedOptionId || sessionRequestInFlight.current || paymentSession) {
+    if (!selectedOptionId || !membershipIdentity || sessionRequestInFlight.current || paymentSession) {
       return;
     }
 
@@ -98,6 +99,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
     try {
       const session = await createMembershipPaymentSession({
         membershipOptionId: selectedOptionId,
+        ...membershipIdentity,
       });
       if (sessionRequestVersion.current === requestVersion) {
         // SCRUM-508 will mount Stripe Elements using this client secret.
@@ -216,9 +218,12 @@ function MembershipPageContent({ locale }: { locale: string }) {
           disabled={paymentState !== 'ready'}
         />
 
+        {/* Lock identity after requesting an intent so its member cannot change. */}
         <MembershipForm
           selectedOptionId={selectedOptionId}
           onValidityChange={setMembershipInformationValid}
+          onInformationChange={setMembershipIdentity}
+          isInformationLocked={isPreparingPayment || paymentSession !== null || paymentState !== 'ready'}
           onContinueToPayment={handleContinueToPayment}
           isPreparingPayment={isPreparingPayment}
           isPaymentSessionReady={paymentSession !== null}

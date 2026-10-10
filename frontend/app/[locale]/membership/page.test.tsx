@@ -158,6 +158,7 @@ describe('MembershipPage review flow', () => {
     await user.click(continueButton);
     expect(createMembershipPaymentSession).toHaveBeenCalledWith({
       membershipOptionId: 'family',
+      firstName: 'Maya', lastName: 'Chen', email: 'member@example.com', phone: '',
     });
     // Page-content fetches are separate from the mocked payment service.
     expect(global.fetch).not.toHaveBeenCalled();
@@ -167,6 +168,7 @@ describe('MembershipPage review flow', () => {
     finishSession({ sessionId: 'pi_family', clientSecret: 'pi_secret_family' });
     expect(await screen.findByTestId('membership-stripe-element')).toHaveTextContent('pi_secret_family');
     expect(screen.getByRole('button', { name: enMessages.MembershipPage.paymentSessionReady })).toBeDisabled();
+    expect(screen.getByLabelText(enMessages.MembershipPage.email)).toBeDisabled();
   });
 
   it('ignores an old session after selection changes', async () => {

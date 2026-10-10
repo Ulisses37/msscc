@@ -1,5 +1,6 @@
 const originalFetch = global.fetch;
 const safeError = 'Unable to create the payment session.';
+const identity = { firstName: 'Maya', lastName: 'Chen', email: 'maya@example.com', phone: '' };
 let createMembershipPaymentSession: typeof import('@/services/paymentService').createMembershipPaymentSession;
 
 describe('createMembershipPaymentSession', () => {
@@ -21,7 +22,7 @@ describe('createMembershipPaymentSession', () => {
     jest.clearAllMocks();
   });
 
-  it('sends only the option ID and membership purpose to the configured API', async () => {
+  it('sends identity, option and purpose but no price or billing data', async () => {
     jest.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue({
@@ -31,7 +32,7 @@ describe('createMembershipPaymentSession', () => {
     } as unknown as Response);
 
     await expect(
-      createMembershipPaymentSession({ membershipOptionId: 'family' }),
+      createMembershipPaymentSession({ membershipOptionId: 'family', ...identity }),
     ).resolves.toEqual({ sessionId: 'pi_test_membership', clientSecret: 'pi_test_secret' });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -44,6 +45,7 @@ describe('createMembershipPaymentSession', () => {
     expect(JSON.parse(options?.body as string)).toEqual({
       membership_option_id: 'family',
       payment_purpose: 'membership',
+      first_name: 'Maya', last_name: 'Chen', email: 'maya@example.com', phone: '',
     });
   });
 
@@ -64,7 +66,7 @@ describe('createMembershipPaymentSession', () => {
     } as unknown as Response);
 
     await expect(
-      createMembershipPaymentSession({ membershipOptionId: 'student' }),
+      createMembershipPaymentSession({ membershipOptionId: 'student', ...identity }),
     ).rejects.toThrow(safeError);
   });
 
@@ -80,7 +82,7 @@ describe('createMembershipPaymentSession', () => {
       } as unknown as Response);
     }
     await expect(
-      createMembershipPaymentSession({ membershipOptionId: 'individual' }),
+      createMembershipPaymentSession({ membershipOptionId: 'individual', ...identity }),
     ).rejects.toThrow(safeError);
   });
 });
