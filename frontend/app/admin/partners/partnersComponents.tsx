@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ImportImage } from '@/components/ui/ImportImage'
+import PostImage from '@/components/ui/PostImage';
 
 export interface PartnerProp{
   DisplayOrder: number;
@@ -91,12 +93,54 @@ export function CreatePartnerProp(
   MediaAsset: null,
   });
   const [orderError, setOrderError] = useState<string>("");
+  const [mediaAsset, setMedia] = useState<number | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [contributionError, setContributionError] = useState<string>("");
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
 
+  const handleMediaChange = async (file: File | null) => {
+    if (!file) {
+      setMedia(null);
+      setInfo(prev => ({ ...prev, MediaAsset: null }));
+      setMediaError(null);
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setMediaError(null);
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Upload failed');
+    }
+
+      const mediaData: { media_asset_id: number } = await response.json();
+      setMedia(mediaData.media_asset_id);
+      setInfo(prev => ({ ...prev, MediaAsset: mediaData.media_asset_id }));
+    } catch (error) {
+      setMedia(null);
+      setInfo(prev => ({ ...prev, MediaAsset: null }));
+      setMediaError(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
 
   useEffect(() =>{
     function handleKeyDown(e: KeyboardEvent){
@@ -163,6 +207,24 @@ export function CreatePartnerProp(
             />
             {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
           </label>
+          <div className="text-sm font-semibold">
+            <ImportImage
+              id="create-partner-media"
+              label="Media Asset"
+              onChange={handleMediaChange}
+            />
+            {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
+            {mediaAsset !== null && (
+              <div className="relative mt-2 h-40 w-full">
+                <PostImage
+                  mediaID={mediaAsset}
+                  configVariant="banner"
+                  className="object-contain"
+                />
+              </div>
+            )}
+            {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
+          </div>
           <label className="text-sm font-semibold">Contribution Amount
               <input
                 type="number"
@@ -197,7 +259,7 @@ export function CreatePartnerProp(
               type: "create"
             }
           )}
-          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+          disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
           Save
