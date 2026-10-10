@@ -109,9 +109,16 @@ MEMBERSHIP_PRICES = {
 
 
 class MembershipPaymentSessionRequestSerializer(StrictPaymentSerializer):
-    """Accept only a membership selection, never browser-supplied pricing."""
+    """Accept membership identity and selection, never browser-supplied pricing."""
 
     # The key is a catalog ID (not a database ID or a price); DRF's default
     # numeric-to-string coercion would hide a mistyped client payload.
     membership_option_id = StrictChoiceField(choices=tuple(MEMBERSHIP_PRICES))
     payment_purpose = StrictChoiceField(choices=["membership"])
+    first_name = StrictCharField(max_length=255, trim_whitespace=True)
+    last_name = StrictCharField(max_length=255, trim_whitespace=True)
+    email = serializers.EmailField(max_length=254)
+    phone = StrictCharField(max_length=50, required=False, allow_blank=True, trim_whitespace=True)
+
+    def validate_email(self, value):
+        return value.strip().lower()

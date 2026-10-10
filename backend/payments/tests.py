@@ -3,13 +3,13 @@ from decimal import Decimal
 from unittest.mock import Mock, patch
 
 import stripe
-from django.db import DatabaseError
+from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
-from donations.models import Donation
+from donations.models import Donation, Membership
 
 from .views import (
     MembershipPaymentSessionCreateView,
@@ -33,7 +33,11 @@ class MembershipPaymentSessionTests(TestCase):
         )
 
     def request(self, **overrides):
-        data = {"membership_option_id": "student", "payment_purpose": "membership"}
+        data = {
+            "membership_option_id": "student", "payment_purpose": "membership",
+            "first_name": "Maya", "last_name": "Chen", "email": "maya@example.com",
+            "phone": "555-0100",
+        }
         data.update(overrides)
         return self.factory.post("/api/payments/membership/session/", data, format="json")
 
@@ -41,7 +45,6 @@ class MembershipPaymentSessionTests(TestCase):
     def test_each_option_uses_the_server_price_in_cents(self, stripe_client):
         """Mock only the Stripe boundary so the view and conversion run for real."""
         intent = stripe_client.return_value.v1.payment_intents.create.return_value
-        intent.id = "pi_test_membership"
         intent.client_secret = "pi_test_secret_membership"
 
         for option_id, cents in (
@@ -51,6 +54,7 @@ class MembershipPaymentSessionTests(TestCase):
             ("corporate", 25000),
         ):
             with self.subTest(option_id=option_id):
+                intent.id = f"pi_test_{option_id}"
                 response = MembershipPaymentSessionCreateView.as_view()(
                     self.request(membership_option_id=option_id)
                 )
@@ -58,7 +62,7 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertEqual(
                     response.data,
                     {
-                        "session_id": "pi_test_membership",
+                        "session_id": f"pi_test_{option_id}",
                         "client_secret": "pi_test_secret_membership",
                     },
                 )
@@ -67,9 +71,32 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertEqual(params["currency"], "usd")
                 self.assertEqual(params["metadata"]["payment_purpose"], "membership")
                 self.assertEqual(params["metadata"]["membership_option_id"], option_id)
+                membership = Membership.objects.get(stripe_payment_intent_id=intent.id)
+                self.assertEqual(
+                    params["metadata"]["internal_reference"], membership.checkout_reference
+                )
+                self.assertEqual(membership.payment_status, Membership.PaymentStatus.PENDING)
+                self.assertEqual(membership.status, "pending")
+                self.assertEqual(membership.amount_paid, 0)
+                self.assertEqual(membership.expected_amount, Decimal(cents) / 100)
+                self.assertEqual(membership.currency, "usd")
+                self.assertEqual(membership.email, "maya@example.com")
+                self.assertEqual(membership.first_name, "Maya")
+                self.assertEqual(membership.last_name, "Chen")
+                self.assertEqual(membership.phone, "555-0100")
+                self.assertEqual(membership.reference_id, membership.checkout_reference)
+                self.assertIsNotNone(membership.created_at)
+                self.assertIsNotNone(membership.updated_at)
+                self.assertNotIn("email", params["metadata"])
+                for sensitive in ("Maya", "Chen", "maya@example.com", "555-0100"):
+                    self.assertNotIn(sensitive, str(params["metadata"]))
                 self.assertNotIn("confirm", params)
+        self.assertEqual(Membership.objects.count(), 4)
+        self.assertEqual(
+            Membership.objects.values("checkout_reference").distinct().count(), 4
+        )
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_missing_or_unknown_option_is_rejected(self, create_intent):
         for request in (
             self.factory.post(
@@ -90,8 +117,30 @@ class MembershipPaymentSessionTests(TestCase):
                 response = MembershipPaymentSessionCreateView.as_view()(request)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         create_intent.assert_not_called()
+        self.assertEqual(Membership.objects.count(), 0)
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
+    def test_missing_identity_and_billing_fields_are_rejected(self, create_intent):
+        for field in ("first_name", "last_name", "email"):
+            with self.subTest(field=field):
+                # Rebuild the JSON body without the required field.
+                data = {
+                    "membership_option_id": "student", "payment_purpose": "membership",
+                    "first_name": "Maya", "last_name": "Chen", "email": "maya@example.com",
+                }
+                data.pop(field)
+                request = self.factory.post(
+                    "/api/payments/membership/session/", data, format="json"
+                )
+                response = MembershipPaymentSessionCreateView.as_view()(request)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        for extra in ({"address": "123 Main St"}, {"client_secret": "pi_private"}):
+            response = MembershipPaymentSessionCreateView.as_view()(self.request(**extra))
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        create_intent.assert_not_called()
+        self.assertFalse(Membership.objects.exists())
+
+    @patch("donations.services.create_membership_payment_intent")
     def test_amount_and_card_fields_cannot_enter_session_request(self, create_intent):
         for extra in ({"amount": "0.01"}, {"card_number": "4242424242424242"}):
             with self.subTest(extra=extra):
@@ -100,7 +149,7 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertNotIn("4242424242424242", str(response.data))
         create_intent.assert_not_called()
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_view_passes_only_server_price_to_service(self, create_intent):
         create_intent.return_value = {
             "session_id": "pi_test_membership",
@@ -111,10 +160,11 @@ class MembershipPaymentSessionTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         create_intent.assert_called_once_with(
-            amount=Decimal("50.00"), membership_option_id="family"
+            amount=Decimal("50.00"), membership_option_id="family",
+            internal_reference=Membership.objects.get().checkout_reference,
         )
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_stripe_failure_does_not_expose_details(self, create_intent):
         create_intent.side_effect = stripe.StripeError("stripe-secret-for-test")
         with self.assertLogs("payments.views", level="ERROR") as captured_logs:
@@ -122,8 +172,9 @@ class MembershipPaymentSessionTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
         self.assertEqual(response.data, {"detail": "Unable to create payment session."})
         self.assertNotIn("stripe-secret-for-test", str(response.data) + str(captured_logs.output))
+        self.assertFalse(Membership.objects.exists())
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_session_creation_runtime_failure_does_not_expose_details(self, create_intent):
         """A missing Stripe client secret must not leak an upstream exception."""
         create_intent.side_effect = RuntimeError("private-client-secret-detail")
@@ -134,6 +185,76 @@ class MembershipPaymentSessionTests(TestCase):
         self.assertNotIn(
             "private-client-secret-detail", str(response.data) + str(captured_logs.output)
         )
+        self.assertFalse(Membership.objects.exists())
+
+    @patch("donations.services.cancel_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
+    def test_link_failure_rolls_back_and_cancels_intent(self, create_intent, cancel):
+        # Stripe is outside the SQL transaction; if linking fails, the secret
+        # never reaches the client and we attempt to cancel the orphaned intent.
+        create_intent.return_value = {"session_id": "pi_orphan", "client_secret": "private"}
+        original_save = Membership.save
+
+        def fail_only_link(member, *args, **kwargs):
+            if kwargs.get("update_fields"):
+                raise DatabaseError("private-db-error")
+            return original_save(member, *args, **kwargs)
+
+        with patch.object(Membership, "save", fail_only_link):
+            with self.assertLogs("payments.views", level="ERROR") as captured:
+                response = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertNotIn("private-db-error", str(response.data) + str(captured.output))
+        cancel.assert_called_once_with("pi_orphan")
+        self.assertFalse(Membership.objects.exists())
+
+    @patch("donations.services.create_membership_payment_intent")
+    def test_duplicate_stripe_identifier_cannot_link_two_memberships(self, create_intent):
+        create_intent.return_value = {"session_id": "pi_shared", "client_secret": "pi_secret"}
+        first = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        with patch("donations.services.cancel_membership_payment_intent"):
+            second = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(second.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(Membership.objects.count(), 1)
+
+    def test_stripe_intent_identifier_has_database_uniqueness(self):
+        # Manual records have no Stripe ID; multiple NULLs must remain valid.
+        base = dict(first_name="Maya", last_name="Chen", email="maya@example.com",
+                    phone="", membership_type="student", amount_paid=0,
+                    start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
+                    reference_id="manual", status="pending", notes="")
+        Membership.objects.create(**base, stripe_payment_intent_id="pi_unique")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Membership.objects.create(**base, stripe_payment_intent_id="pi_unique")
+        Membership.objects.create(**base)
+        Membership.objects.create(**base)
+        self.assertEqual(Membership.objects.count(), 3)
+
+    def test_checkout_reference_has_database_uniqueness(self):
+        # Admin-entered reference_id remains non-unique for historical rows;
+        # checkout_reference is the strict key used to find a paid member.
+        base = dict(first_name="Maya", last_name="Chen", email="maya@example.com",
+                    phone="", membership_type="student", amount_paid=0,
+                    start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
+                    reference_id="manual", status="pending", notes="")
+        Membership.objects.create(**base, checkout_reference="MEM-unique")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Membership.objects.create(**base, checkout_reference="MEM-unique")
+        self.assertEqual(Membership.objects.count(), 1)
+
+    @patch("donations.services.create_membership_payment_intent")
+    @patch("donations.services.Membership.objects.create")
+    def test_record_failure_does_not_call_stripe(self, create_member, create_intent):
+        create_member.side_effect = DatabaseError("private-db-error")
+        with self.assertLogs("payments.views", level="ERROR") as captured:
+            response = MembershipPaymentSessionCreateView.as_view()(self.request())
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertNotIn("private-db-error", str(response.data) + str(captured.output))
+        create_intent.assert_not_called()
+        self.assertFalse(Membership.objects.exists())
 
     @patch("payments.services.stripe_service.StripeClient")
     def test_missing_stripe_fields_produce_safe_response(self, stripe_client):
@@ -337,7 +458,7 @@ class PaymentInputValidationTests(TestCase):
             self.factory.post("/api/payments/session/", data, format="json")
         )
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_membership_id_rejects_non_strings_and_unavailable_options(self, create_intent):
         for option in (1, True, ["student"], {"id": "student"}, "unknown"):
             with self.subTest(option=option):
@@ -348,7 +469,7 @@ class PaymentInputValidationTests(TestCase):
                 self.assertIn("membership_option_id", response.data)
         create_intent.assert_not_called()
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_membership_rejects_price_currency_and_card_fields(self, create_intent):
         # Extra fields may include card data or a client secret. Neither the
         # response nor the Stripe call may contain their submitted values.
@@ -463,7 +584,7 @@ class PaymentSecurityRegressionTests(TestCase):
         create_session.assert_not_called()
         self.assertEqual(Donation.objects.count(), 2)
 
-    @patch("payments.views.create_membership_payment_intent")
+    @patch("donations.services.create_membership_payment_intent")
     def test_membership_payment_text_cannot_override_catalog_or_metadata(self, create_intent):
         base = {"membership_option_id": "student", "payment_purpose": "membership"}
         for field in ("membership_option_id", "payment_purpose", "amount", "currency",

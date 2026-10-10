@@ -135,7 +135,7 @@ def create_payment_session(
 
 
 def create_membership_payment_intent(
-    *, amount: Decimal, membership_option_id: str
+    *, amount: Decimal, membership_option_id: str, internal_reference: str
 ) -> PaymentSession:
     """Create an unconfirmed USD PaymentIntent for the membership Payment Element."""
     # The view supplies only a server-catalog price; the browser never supplies
@@ -150,6 +150,8 @@ def create_membership_payment_intent(
             "metadata": {
                 "payment_purpose": "membership",
                 "membership_option_id": membership_option_id,
+                # This opaque reference is the only lookup key shared with Stripe.
+                "internal_reference": internal_reference,
             },
         }
     )
@@ -160,7 +162,17 @@ def create_membership_payment_intent(
     if not isinstance(intent_id, str) or not intent_id.strip():
         raise RuntimeError("Stripe did not return a membership PaymentIntent ID.")
     if not isinstance(client_secret, str) or not client_secret.strip():
+        # No secret can reach the visitor; try to dispose of the unusable intent.
+        try:
+            stripe_client.v1.payment_intents.cancel(intent_id)
+        except Exception:  # noqa: BLE001 - cleanup must not mask the upstream failure
+            pass
         raise RuntimeError("Stripe did not return a membership client secret.")
 
     # Keep the existing session response shape for the frontend payment service.
     return {"session_id": intent_id, "client_secret": client_secret}
+
+
+def cancel_membership_payment_intent(intent_id: str) -> None:
+    """Best-effort cleanup when a created intent cannot be linked to a record."""
+    StripeClient(settings.STRIPE_SECRET_KEY).v1.payment_intents.cancel(intent_id)

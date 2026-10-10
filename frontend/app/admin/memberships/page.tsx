@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
+import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { downloadCsv, type CsvColumn } from "@/utils/exportCsv";
@@ -171,8 +172,8 @@ export default function AdminMembershipsPage() {
       header: "Status",
       width: 190,
       render: (_value, membership) => {
-        const expired = new Date(`${membership.end_date}T23:59:59`).getTime() < Date.now();
-        return <span className={`inline-flex rounded-md px-4 py-1 text-sm font-bold ${expired ? "bg-red-200 text-red-900" : "bg-green-200 text-green-900"}`}>{expired ? "Expired" : "Active"}</span>;
+        const displayStatus = membershipDisplayStatus(membership);
+        return <span className={`inline-flex rounded-md px-4 py-1 text-sm font-bold ${displayStatus === "Active" ? "bg-green-200 text-green-900" : "bg-red-200 text-red-900"}`}>{displayStatus}</span>;
       },
     },
   ];
