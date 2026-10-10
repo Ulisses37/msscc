@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import type { MembershipOptionId } from '@/constants/membershipOptions';
 import { isValidEmail } from '@/utils/emailValidation';
+import type { MembershipIdentity } from '@/types/payment';
 
 interface MembershipFormProps {
   // Selection remains page-owned so this form cannot drift from the options
@@ -12,6 +13,8 @@ interface MembershipFormProps {
   selectedOptionId: MembershipOptionId | null;
   onValidityChange: (valid: boolean) => void;
   onContinueToPayment: () => void;
+  onInformationChange: (information: MembershipIdentity | null) => void;
+  isInformationLocked: boolean;
   isPreparingPayment: boolean;
   isPaymentSessionReady: boolean;
   // The page supplies the live review summary so it appears immediately before
@@ -26,6 +29,8 @@ export function MembershipForm({
   selectedOptionId,
   onValidityChange,
   onContinueToPayment,
+  onInformationChange,
+  isInformationLocked,
   isPreparingPayment,
   isPaymentSessionReady,
   children,
@@ -64,6 +69,14 @@ export function MembershipForm({
     onValidityChange(formIsValid);
   }, [formIsValid, onValidityChange]);
 
+  useEffect(() => {
+    // Pass only identity, not address, pricing, or Stripe fields, to checkout.
+    onInformationChange(formIsValid ? {
+      firstName: firstName.trim(), lastName: lastName.trim(),
+      email: email.trim(), phone: phone.trim(),
+    } : null);
+  }, [formIsValid, firstName, lastName, email, phone, onInformationChange]);
+
   const showEmailError = emailTouched && !emailIsValid;
   const showFirstNameError = firstNameTouched && !firstNameIsValid;
   const showLastNameError = lastNameTouched && !lastNameIsValid;
@@ -90,6 +103,7 @@ export function MembershipForm({
             autoComplete="email"
             maxLength={254}
             value={email}
+            disabled={isInformationLocked}
             onChange={(event) => setEmail(event.target.value)}
             onBlur={() => setEmailTouched(true)}
             required
@@ -120,6 +134,7 @@ export function MembershipForm({
               autoComplete="given-name"
               maxLength={255}
               value={firstName}
+              disabled={isInformationLocked}
               onChange={(event) => setFirstName(event.target.value)}
               onBlur={() => setFirstNameTouched(true)}
               required
@@ -149,6 +164,7 @@ export function MembershipForm({
               autoComplete="family-name"
               maxLength={255}
               value={lastName}
+              disabled={isInformationLocked}
               onChange={(event) => setLastName(event.target.value)}
               onBlur={() => setLastNameTouched(true)}
               required
@@ -179,6 +195,7 @@ export function MembershipForm({
             autoComplete="street-address"
             maxLength={500}
             value={address}
+            disabled={isInformationLocked}
             onChange={(event) => setAddress(event.target.value)}
             onBlur={() => setAddressTouched(true)}
             required
@@ -208,6 +225,7 @@ export function MembershipForm({
             autoComplete="tel"
             maxLength={50}
             value={phone}
+            disabled={isInformationLocked}
             onChange={(event) => setPhone(event.target.value)}
             className={inputClassName}
           />

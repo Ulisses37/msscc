@@ -65,6 +65,10 @@ export async function createPaymentSession({
 /** Request a membership PaymentIntent without sending a price or card data. */
 export async function createMembershipPaymentSession({
   membershipOptionId,
+  firstName,
+  lastName,
+  email,
+  phone,
 }: CreateMembershipPaymentSessionRequest): Promise<PaymentSession> {
   // Keep the failure generic even when the network, backend, or Stripe response
   // contains details; the calling page shows its own translated message.
@@ -80,6 +84,10 @@ export async function createMembershipPaymentSession({
       body: JSON.stringify({
         membership_option_id: membershipOptionId,
         payment_purpose: 'membership',
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
       }),
     });
     if (!response.ok) {
