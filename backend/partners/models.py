@@ -12,6 +12,7 @@ class Partner(models.Model):
     website_url = models.URLField(blank=True, null=True)
     contribution_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_visible = models.BooleanField(default=True)
+    media_is_visible = models.BooleanField(default=True)
     display_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

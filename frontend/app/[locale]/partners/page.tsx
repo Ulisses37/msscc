@@ -91,6 +91,7 @@ export default function PartnersPage() {
           is_visible: boolean;
           display_order: number;
           media_asset: number | null;
+          media_is_visible: boolean;
         }[])
           .filter(partner => partner.is_visible)
           .sort((a, b) => a.display_order - b.display_order)
@@ -100,7 +101,7 @@ export default function PartnersPage() {
             categoryEn: partner.category_en,
             category: isJapanese && partner.category_ja ? partner.category_ja : partner.category_en,
             websiteUrl: partner.website_url ?? undefined,
-            imageUrl: partner.media_asset
+            imageUrl: partner.media_asset && partner.media_is_visible
               ? mediaById.get(partner.media_asset)?.file_url ?? undefined
               : undefined,
           }));
