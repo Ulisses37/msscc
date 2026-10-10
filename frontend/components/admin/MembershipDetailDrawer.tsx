@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { membershipDisplayStatus } from "./membershipDisplayStatus";
 
 export type MembershipEntry = {
   membership_id: number;
@@ -103,8 +104,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 export function MembershipDetailDrawer({ membership, onClose }: MembershipDetailDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  const expired = new Date(`${membership.end_date}T23:59:59`).getTime() < Date.now();
-  const membershipStatus = expired ? "Expired" : "Active";
+  const membershipStatus = membershipDisplayStatus(membership);
   const hasEmail = Boolean(membership.email?.trim());
 
   useEffect(() => {
