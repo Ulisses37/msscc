@@ -9,6 +9,7 @@ export function decodeTokenPayload(accessToken: string): UserPayload {
     userId: decoded.user_id,
     email: decoded.email,
     firstName: decoded.first_name,
+    lastName: decoded.last_name,
 
     permissionData: decoded.permissions_data,
     isExecutive: decoded.is_executive,
