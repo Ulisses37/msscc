@@ -12,6 +12,7 @@ export interface PartnerProp{
   Category: string;
   CategoryJP: string;
   MediaAsset: number | null;
+  MediaVisible: boolean;
   ContributionAmount: number;
   Website: string | null;
   isVisible: boolean;
@@ -104,6 +105,7 @@ export function CreatePartnerProp(
   DisplayOrder: InitialDisplayOrder,
   isVisible: true,
   MediaAsset: null,
+  MediaVisible: true,
   });
   const [orderError, setOrderError] = useState<string>("");
   const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
@@ -111,6 +113,7 @@ export function CreatePartnerProp(
   const previewUrlRef = useRef<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [mediaVisible, setMediaVisible] = useState(true);
   const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [contributionError, setContributionError] = useState<string>("");
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
@@ -162,6 +165,7 @@ export function CreatePartnerProp(
       await validateAndSubmit({
         partnerInfo,
         mediaFile: selectedMediaFile,
+        mediaVisible,
         setWebsiteError,
         type: "create",
       });
@@ -244,6 +248,15 @@ export function CreatePartnerProp(
                 />
               </div>
             )}
+            <label className="mt-2 flex items-center gap-2 text-sm font-normal">
+              <input
+                type="checkbox"
+                checked={mediaVisible}
+                onChange={(e) => setMediaVisible(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Image visible on the public site
+            </label>
             {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
           </div>
           <label className="text-sm font-semibold">Contribution Amount
@@ -313,6 +326,7 @@ export function EditPartnerProp(
   const previewUrlRef = useRef<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [mediaVisible, setMediaVisible] = useState(partnerInfo.MediaVisible);
 
   const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
 
@@ -362,6 +376,7 @@ export function EditPartnerProp(
       await validateAndSubmit({
         partnerInfo,
         mediaFile: selectedMediaFile,
+        mediaVisible,
         setWebsiteError,
         type: "update",
       });
@@ -512,6 +527,15 @@ export function EditPartnerProp(
                   />
                 </div>
               )}
+              <label className="mt-2 flex items-center gap-2 text-sm font-normal">
+                <input
+                  type="checkbox"
+                  checked={mediaVisible}
+                  onChange={(e) => setMediaVisible(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Image visible on the public site
+              </label>
             </div>
           <div/>
 
@@ -572,10 +596,12 @@ async function updatePartnerTable(
     partner,
     submissionType,
     mediaFile,
+    mediaVisible,
   }: {
     partner : PartnerProp,
     submissionType : string,
     mediaFile?: File | null,
+    mediaVisible: boolean,
   }){
     let mediaAsset = partner.MediaAsset;
 
@@ -596,6 +622,7 @@ async function updatePartnerTable(
         website_url: partner.Website,
         contribution_amount: partner.ContributionAmount,
         is_visible: partner.isVisible,
+        media_is_visible: mediaVisible,
         display_order: partner.DisplayOrder,
         media_asset: mediaAsset,
         category_ja: partner.CategoryJP,
@@ -673,11 +700,13 @@ async function validateAndSubmit(
   {
     partnerInfo,
     mediaFile,
+    mediaVisible,
     setWebsiteError,
     type,
   } : {
     partnerInfo : PartnerProp;
     mediaFile?: File | null;
+    mediaVisible?: boolean;
     setWebsiteError: (value: string) => void;
     type: string;
   }){
@@ -716,7 +745,12 @@ async function validateAndSubmit(
   if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
     websiteURL = partnerInfo.Website
    } else if (partnerInfo.Category != "partner"){
-    await updatePartnerTable({partner: partnerInfo, submissionType: type, mediaFile})
+    await updatePartnerTable({
+      partner: partnerInfo,
+      submissionType: type,
+      mediaFile,
+      mediaVisible: mediaVisible ?? true,
+    })
     return;
   }else {
     setWebsiteError("Please enter a valid URL");
@@ -727,7 +761,12 @@ async function validateAndSubmit(
     partnerInfo.Website = `https://${websiteURL}`;
   }
 
-  await updatePartnerTable({partner: partnerInfo, submissionType: type, mediaFile})
+  await updatePartnerTable({
+    partner: partnerInfo,
+    submissionType: type,
+    mediaFile,
+    mediaVisible: mediaVisible ?? true,
+  })
 }
 
 function validateContribution(

@@ -23,6 +23,7 @@ useEffect(() => {
         website_url: string | null;
         display_order: number;
         media_asset: number | null;
+        media_is_visible: boolean;
         contribution_amount: number;
         is_visible: boolean;
     }[]) => {
@@ -36,6 +37,7 @@ useEffect(() => {
           CategoryJP: partner.category_jp,
           Website: partner.website_url ?? null,
           MediaAsset: partner.media_asset ?? null,
+          MediaVisible: partner.media_is_visible,
           ContributionAmount: partner.contribution_amount ?? 0,
           DisplayOrder: partner.display_order,
           isVisible: partner.is_visible
