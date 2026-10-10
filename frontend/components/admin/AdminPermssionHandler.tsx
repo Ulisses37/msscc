@@ -85,3 +85,8 @@ export function fetchLocalStorageAdmin(){
 export function getToolTip(category: string): string | undefined {
   return permissionCategories[category]?.tooltip;
 }
+
+// get list of pages from category
+export function getPageList(category:string): string[] | undefined{
+  return permissionCategories[category]?.pages;
+}
