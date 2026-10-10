@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ImportImage } from '@/components/ui/ImportImage'
-import PostImage from '@/components/ui/PostImage';
+import PostImage from '@/components/ui/PostImage'
 
 export interface PartnerProp{
   DisplayOrder: number;
@@ -52,13 +52,26 @@ function DisplayRow({
 }){
   return (
       <div
-      className={`${partnerInfo.Category == "partner" ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"}
+      className={`${partnerInfo.Category == "partner" ? "grid grid-cols-[60px_300px_120px_200px_1fr]" : "grid grid-cols-[60px_300px_120px_200px]"}
        border-b border-gray-200 last:border-b-0 cursor-pointer
        bg-white hover:bg-yellow-100`}
        onClick={()=>setEditPopUp(partnerInfo)}
       >
       <div className="px-3 py-2 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
       <div className="px-3 py-2 text-sm font-semibold pl-4">{partnerInfo.Name}</div>
+      <div className="flex items-center justify-center px-3 py-2">
+        {partnerInfo.MediaAsset !== null ? (
+          <div className="relative h-16 w-16 overflow-hidden rounded border bg-gray-50">
+            <PostImage
+              mediaID={partnerInfo.MediaAsset}
+              configVariant="thumbnail"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <span className="text-xs text-gray-400">No image</span>
+        )}
+      </div>
       <div className="px-3 py-2 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
       {partnerInfo.Category == "partner" && (
         <div className="px-3 py-2 text-sm font-semibold pl-8">{partnerInfo.Website}</div>
@@ -93,7 +106,9 @@ export function CreatePartnerProp(
   MediaAsset: null,
   });
   const [orderError, setOrderError] = useState<string>("");
-  const [mediaAsset, setMedia] = useState<number | null>(null);
+  const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [websiteError, setWebsiteError] = useState<string | null>(null);
@@ -102,44 +117,25 @@ export function CreatePartnerProp(
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
 
-  const handleMediaChange = async (file: File | null) => {
+  const handleMediaChange = (file: File | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+
     if (!file) {
-      setMedia(null);
-      setInfo(prev => ({ ...prev, MediaAsset: null }));
+      setSelectedMediaFile(null);
+      setPreviewUrl(null);
       setMediaError(null);
       return;
     }
 
-    setIsUploadingMedia(true);
     setMediaError(null);
+    setSelectedMediaFile(file);
 
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error || 'Upload failed');
-    }
-
-      const mediaData: { media_asset_id: number } = await response.json();
-      setMedia(mediaData.media_asset_id);
-      setInfo(prev => ({ ...prev, MediaAsset: mediaData.media_asset_id }));
-    } catch (error) {
-      setMedia(null);
-      setInfo(prev => ({ ...prev, MediaAsset: null }));
-      setMediaError(error instanceof Error ? error.message : 'Upload failed');
-    } finally {
-      setIsUploadingMedia(false);
-    }
+    const nextPreviewUrl = URL.createObjectURL(file);
+    previewUrlRef.current = nextPreviewUrl;
+    setPreviewUrl(nextPreviewUrl);
   };
 
   useEffect(() =>{
@@ -149,7 +145,32 @@ export function CreatePartnerProp(
       }
     }
     document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onChange])
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+  }, [])
+
+  const handleCreateSubmit = async () => {
+    setMediaError(null);
+    setIsUploadingMedia(true);
+
+    try {
+      await validateAndSubmit({
+        partnerInfo,
+        mediaFile: selectedMediaFile,
+        setWebsiteError,
+        type: "create",
+      });
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : 'Failed to save partner.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
   return(
     <div
     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -214,12 +235,12 @@ export function CreatePartnerProp(
               onChange={handleMediaChange}
             />
             {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
-            {mediaAsset !== null && (
-              <div className="relative mt-2 h-40 w-full">
-                <PostImage
-                  mediaID={mediaAsset}
-                  configVariant="banner"
-                  className="object-contain"
+            {previewUrl && (
+              <div className="mt-2 h-40 w-full overflow-hidden rounded border bg-gray-50">
+                <img
+                  src={previewUrl}
+                  alt="Selected partner image preview"
+                  className="h-full w-full object-contain"
                 />
               </div>
             )}
@@ -252,13 +273,7 @@ export function CreatePartnerProp(
         </div>
         <div className="flex">
         <button
-          onClick={async() => await validateAndSubmit(
-            {
-              partnerInfo: partnerInfo,
-              setWebsiteError: setWebsiteError,
-              type: "create"
-            }
-          )}
+          onClick={handleCreateSubmit}
           disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
           className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
         >
@@ -293,6 +308,11 @@ export function EditPartnerProp(
   const [contributionError, setContributionError] = useState<string>("");
   const [currentDisplayOrder, setCurrentDisplayOrder] = useState<number | string>(partnerInfo.DisplayOrder);
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
+  const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
 
@@ -308,6 +328,49 @@ export function EditPartnerProp(
     if (!selected) return;
     setInfo(prev => prev ? { ...prev, Category: selected.en, CategoryJP: selected.jp } : prev);
   }
+
+  const handleMediaChange = (file: File | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+
+    setMediaError(null);
+    setSelectedMediaFile(file);
+
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    previewUrlRef.current = nextPreviewUrl;
+    setPreviewUrl(nextPreviewUrl);
+  };
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+  }, []);
+
+  const handleUpdateSubmit = async () => {
+    setMediaError(null);
+    setIsUploadingMedia(true);
+
+    try {
+      await validateAndSubmit({
+        partnerInfo,
+        mediaFile: selectedMediaFile,
+        setWebsiteError,
+        type: "update",
+      });
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : 'Failed to update partner.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
 
   return(
     <div
@@ -409,15 +472,49 @@ export function EditPartnerProp(
               />
             {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
             </label>
-              <label className="text-sm font-semibold flex-1"> Media Asset
-              <input
-                type="number"
-                value={partnerInfo?.MediaAsset?? ""}
-                onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAsset: Number(e.target.value) } : prev)}
-                className="w-full border rounded px-2 py-1 mt-1 font-normal"
-              />
-            </label>
           </div>
+
+          <div className="flex gap-3"> {/*Media asset: Upload && List*/}
+            <div>
+              <label className="text-sm font-semibold flex-1">Upload New Media Asset</label>
+              <ImportImage
+                id="edit-partner-media"
+                onChange={handleMediaChange}
+              />
+              {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
+              {previewUrl && (
+                <div className="mt-2 h-40 w-full overflow-hidden rounded border bg-gray-50">
+                  <img
+                    src={previewUrl}
+                    alt="New partner image preview"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              )}
+              {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-semibold flex-1"> Existing Media Asset ID
+                <input
+                  type="number"
+                  value={partnerInfo?.MediaAsset?? ""}
+                  onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAsset: Number(e.target.value) } : prev)}
+                  className="w-full border rounded px-2 py-1 mt-1 font-normal"
+                />
+              </label>
+              {!previewUrl && partnerInfo.MediaAsset !== null && (
+                <div className="relative mt-2 h-40 overflow-hidden rounded border bg-gray-50">
+                  <PostImage
+                    mediaID={partnerInfo.MediaAsset}
+                    configVariant="banner"
+                    className="object-contain"
+                  />
+                </div>
+              )}
+            </div>
+          <div/>
+
           <div> {/*Website URL & Visible*/}
             <label className="text-sm font-semibold flex-1">Website URL
               <input
@@ -440,14 +537,8 @@ export function EditPartnerProp(
         </div>
         <div className="flex">
           <button
-            onClick={async() => await validateAndSubmit(
-              {
-                partnerInfo: partnerInfo,
-                setWebsiteError: setWebsiteError,
-                type: "update",
-              }
-            )}
-            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            onClick={handleUpdateSubmit}
+            disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
             className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
           >
             Save
@@ -480,64 +571,65 @@ async function updatePartnerTable(
   {
     partner,
     submissionType,
+    mediaFile,
   }: {
     partner : PartnerProp,
     submissionType : string,
+    mediaFile?: File | null,
   }){
-    if (submissionType === "create"){
-      fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/partners/create/`,
-        {
-          method: "POST",
-          headers: { "Content-Type" : "application/json" },
-          body: JSON.stringify({
-            display_name_en: partner.Name,
-            category_en: partner.Category,
-            website_url: partner.Website,
-            contribution_amount: partner.ContributionAmount,
-            is_visible: partner.isVisible,
-            display_order: partner.DisplayOrder,
-            media_asset: partner.MediaAsset,
-            category_ja: partner.CategoryJP,
-            display_name_ja: partner.NameJP,
-          }),
-        }
-      ).then(res => {
-        if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
-        window.location.reload();
-      })
-      .catch(err => {
-        alert("Network error, please try again.");
-        console.error(err);
-      });
+    let mediaAsset = partner.MediaAsset;
+
+    if ((submissionType === "create" || submissionType === "update") && mediaFile) {
+      mediaAsset = await uploadMediaAsset(mediaFile);
     }
-  if (submissionType === "update") {
-    fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/partners/${partner.PartnerID}/`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name_en: partner.Name,
-          category_en: partner.Category,
-          website_url: partner.Website,
-          contribution_amount: partner.ContributionAmount,
-          is_visible: partner.isVisible,
-          display_order: partner.DisplayOrder,
-          media_asset: partner.MediaAsset,
-          category_ja: partner.CategoryJP,
-          display_name_ja: partner.NameJP,
-        }),
-      }
-    ).then(res => {
-      if (!res.ok) return res.json().then(err => { alert(`Failed to save: ${JSON.stringify(err)}`); });
-      window.location.reload();
-    })
-    .catch(err => {
-      alert("Network error, please try again.");
-      console.error(err);
+
+    const endpoint = submissionType === "create"
+      ? `${process.env.NEXT_PUBLIC_API_URL}/api/partners/create/`
+      : `${process.env.NEXT_PUBLIC_API_URL}/api/partners/${partner.PartnerID}/`;
+
+    const response = await fetch(endpoint, {
+      method: submissionType === "create" ? "POST" : "PATCH",
+      headers: { "Content-Type" : "application/json" },
+      body: JSON.stringify({
+        display_name_en: partner.Name,
+        category_en: partner.Category,
+        website_url: partner.Website,
+        contribution_amount: partner.ContributionAmount,
+        is_visible: partner.isVisible,
+        display_order: partner.DisplayOrder,
+        media_asset: mediaAsset,
+        category_ja: partner.CategoryJP,
+        display_name_ja: partner.NameJP,
+      }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData ? JSON.stringify(errorData) : "Failed to save partner.");
+    }
+
+    window.location.reload();
+}
+
+async function uploadMediaAsset(file: File): Promise<number> {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/media/upload/`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.error || 'Image upload failed.');
   }
+
+  const data: { media_asset_id: number } = await response.json();
+  return data.media_asset_id;
 }
 
 function handleOrderChange(
@@ -577,13 +669,15 @@ function handleOrderChange(
     setInfo(prev => ({ ...prev, DisplayOrder: Number(value) }));
   }
 
-function validateAndSubmit(
+async function validateAndSubmit(
   {
     partnerInfo,
+    mediaFile,
     setWebsiteError,
     type,
   } : {
     partnerInfo : PartnerProp;
+    mediaFile?: File | null;
     setWebsiteError: (value: string) => void;
     type: string;
   }){
@@ -610,6 +704,7 @@ function validateAndSubmit(
       alert("Network error, please try again.");
       console.error(err);
     });
+    return;
   };
 
   if (partnerInfo.ContributionAmount < 0){
@@ -621,7 +716,7 @@ function validateAndSubmit(
   if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
     websiteURL = partnerInfo.Website
    } else if (partnerInfo.Category != "partner"){
-    updatePartnerTable({partner: partnerInfo, submissionType: type})
+    await updatePartnerTable({partner: partnerInfo, submissionType: type, mediaFile})
     return;
   }else {
     setWebsiteError("Please enter a valid URL");
@@ -632,7 +727,7 @@ function validateAndSubmit(
     partnerInfo.Website = `https://${websiteURL}`;
   }
 
-  updatePartnerTable({partner: partnerInfo, submissionType: type})
+  await updatePartnerTable({partner: partnerInfo, submissionType: type, mediaFile})
 }
 
 function validateContribution(
