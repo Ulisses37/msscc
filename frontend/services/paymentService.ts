@@ -10,6 +10,62 @@ export type MembershipPaymentStatus = 'pending' | 'complete' | 'failed' | 'cance
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+export type PaymentReceipt = {
+  paymentPurpose: 'donation' | 'membership';
+  amount: string;
+  currency: string;
+  completedAt: string;
+  confirmationReference: string;
+  membershipOption?: 'student' | 'individual' | 'family' | 'corporate';
+  donationPurpose?: string;
+};
+
+/** Accept only a completed payment's public receipt, never pass raw API objects to UI. */
+export async function getPaymentReceipt(reference: string): Promise<PaymentReceipt> {
+  const unavailable = () => new Error('Unable to retrieve receipt.');
+  if (!API_BASE_URL || !/^(DON-[0-9]{8,}|MEM-[0-9a-f]{32})$/.test(reference)) {
+    throw unavailable();
+  }
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/payments/receipt/?confirmation_reference=${encodeURIComponent(reference)}`,
+      { method: 'GET', cache: 'no-store' },
+    );
+    if (!response.ok) throw unavailable();
+    const data: unknown = await response.json();
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw unavailable();
+    const fields = data as Record<string, unknown>;
+    const purpose = fields.payment_purpose;
+    const option = fields.membership_option;
+    const donationPurpose = fields.donation_purpose;
+    if (
+      (purpose !== 'donation' && purpose !== 'membership') ||
+      (purpose === 'donation' && !reference.startsWith('DON-')) ||
+      (purpose === 'membership' && !reference.startsWith('MEM-')) ||
+      fields.confirmation_reference !== reference ||
+      typeof fields.amount !== 'string' || !/^\d{1,8}\.\d{2}$/.test(fields.amount) ||
+      typeof fields.currency !== 'string' || !/^[a-z]{3}$/.test(fields.currency) ||
+      typeof fields.completed_at !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T/.test(fields.completed_at) ||
+      !Number.isFinite(Date.parse(fields.completed_at)) ||
+      (purpose === 'membership' && !['student', 'individual', 'family', 'corporate'].includes(option as string)) ||
+      (donationPurpose !== undefined && (purpose !== 'donation' || typeof donationPurpose !== 'string' || donationPurpose.length > 200))
+    ) throw unavailable();
+    // Map explicitly: never retain IDs, Stripe values or future backend fields.
+    return {
+      paymentPurpose: purpose,
+      amount: fields.amount,
+      currency: fields.currency,
+      completedAt: fields.completed_at,
+      confirmationReference: reference,
+      ...(purpose === 'membership' ? { membershipOption: option as PaymentReceipt['membershipOption'] } : {}),
+      ...(donationPurpose ? { donationPurpose } : {}),
+    };
+  } catch {
+    throw unavailable();
+  }
+}
+
 /**
  * Information required by the backend to create a Stripe Checkout Session.
  */

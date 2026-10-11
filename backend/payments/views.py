@@ -529,10 +529,12 @@ class PaymentStatusView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(
-            {"payment_status": donation.payment_status},
-            status=status.HTTP_200_OK,
-        )
+        result = {"payment_status": donation.payment_status}
+        # Only a completed, database-confirmed donation needs its internal
+        # reference on the Stripe return page to request a separate receipt.
+        if donation.payment_status == Donation.PaymentStatus.COMPLETED:
+            result["confirmation_reference"] = reference_id
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class StripeWebhookView(APIView):

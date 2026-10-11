@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { PaymentReceipt } from '@/components/payments/PaymentReceipt';
 
 import {
   getMembershipPaymentStatus,
@@ -161,7 +162,12 @@ export function MembershipPaymentResult({
             )}
           </div>
         )}
-        {!error && paymentStatus === 'complete' && <p role="status">{t('complete')}</p>}
+        {!error && paymentStatus === 'complete' && (
+          <div className="rounded-md border border-green-200 bg-green-50 p-4 text-green-800" role="status">
+            <p>{t('complete')}</p>
+            <PaymentReceipt locale={locale} reference={confirmationReference} />
+          </div>
+        )}
         {!error && (paymentStatus === 'failed' || paymentStatus === 'canceled') && (
           <div role="status">
             <p>{t(paymentStatus)}</p>

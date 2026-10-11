@@ -26,6 +26,9 @@ jest.mock('@/services/paymentService', () => ({
   getMembershipPaymentStatus: jest.fn(),
   createMembershipPaymentSession: jest.fn(),
 }));
+jest.mock('@/components/payments/PaymentReceipt', () => ({
+  PaymentReceipt: ({ reference }: { reference: string }) => <div data-testid="receipt">{reference}</div>,
+}));
 
 describe('MembershipPaymentResult states and browser recovery', () => {
   beforeEach(() => {
@@ -50,6 +53,10 @@ describe('MembershipPaymentResult states and browser recovery', () => {
     expect(screen.getByText(enMessages.MembershipPaymentResult.loading)).toBeInTheDocument();
     finish('complete');
     expect(await screen.findByText(enMessages.MembershipPaymentResult.complete)).toBeInTheDocument();
+    expect(screen.getByText(enMessages.MembershipPaymentResult.complete).parentElement).toHaveClass(
+      'border-green-200', 'bg-green-50',
+    );
+    expect(screen.getByTestId('receipt')).toHaveTextContent(reference);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(getMembershipPaymentStatus).toHaveBeenCalledTimes(1);
   });
@@ -58,6 +65,7 @@ describe('MembershipPaymentResult states and browser recovery', () => {
     jest.mocked(getMembershipPaymentStatus).mockResolvedValue(status);
     render(<MembershipPaymentResult locale="en" confirmationReference={reference} />);
     expect(await screen.findByText(enMessages.MembershipPaymentResult[status])).toBeInTheDocument();
+    expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: enMessages.MembershipPaymentResult.returnToPayment })).toHaveAttribute('href', '/en/membership');
   });
 

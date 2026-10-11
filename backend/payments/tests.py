@@ -16,6 +16,7 @@ from .views import (
     MembershipPaymentStatusView,
     PaymentReceiptView,
     PaymentSessionCreateView,
+    PaymentStatusView,
     StripeWebhookView,
     _update_donation_payment_status,
 )
@@ -122,6 +123,23 @@ class PaymentReceiptTests(TestCase):
         self.donation.refresh_from_db()
         self.assertEqual(self.donation.completed_at, self.completed_at)
         self.assertEqual(self.receipt(self.donation_reference).status_code, 200)
+
+    @patch("payments.views.stripe.checkout.Session.retrieve")
+    def test_donation_return_status_only_provides_reference_after_completion(self, retrieve):
+        retrieve.return_value.to_dict.return_value = {
+            "client_reference_id": self.donation_reference,
+        }
+        request = self.factory.get(reverse("payment-status"), {"session_id": "cs_test_safe"})
+        for state in ("pending", "failed", "canceled", "completed"):
+            with self.subTest(state=state):
+                self.donation.payment_status = state
+                self.donation.save(update_fields=["payment_status"])
+                response = PaymentStatusView.as_view()(request)
+                self.assertEqual(response.status_code, 200)
+                expected = {"payment_status": state}
+                if state == "completed":
+                    expected["confirmation_reference"] = self.donation_reference
+                self.assertEqual(response.data, expected)
 
 
 class MembershipPaymentStatusSmokeTests(TestCase):
