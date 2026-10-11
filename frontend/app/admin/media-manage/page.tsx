@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ImportImage } from "@/components/ui/ImportImage";
 import { ImageDeletionManager } from "@/components/ui/ImageDeletionManager";
+import { GalleryVisibilityManager } from "@/components/ui/GalleryVisibilityManager";
 import ReplaceImage from "@/components/admin/ReplaceImage";
 
 
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [showDeleteManager, setShowDeleteManager] = useState(false);
+  const [showGalleryManager, setShowGalleryManager] = useState(false);
 
   {/** Expect an image for transfer to storage */}
   const uploadImage = async (file: File) => {
@@ -120,6 +122,26 @@ export default function Dashboard() {
           {showDeleteManager ? 'In Progress' : 'Click to Start'}
         </button>
       </section>
+
+      <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-4">
+          <h2 className="font-heading text-xl font-medium text-msscc-teal">Gallery Slideshow</h2>
+          <p className="mt-2 text-sm text-msscc-gray-mid">
+            Choose which stored images will be available to the public gallery slideshow.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowGalleryManager(true)}
+          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark focus:outline-none focus:ring-2 focus:ring-msscc-pink-light sm:w-auto"
+        >
+          Manage Gallery Slideshow
+        </button>
+      </section>
+
+      {showGalleryManager && (
+        <GalleryVisibilityManager onClose={() => setShowGalleryManager(false)} />
+      )}
 
       {/** Reduce information for Cleaner UI */}
       {showDeleteManager && (
