@@ -264,7 +264,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                 </div>
                 {isProtected && (
                   <span
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white"
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white"
                     title={protectionTitle}
                     aria-label={protectionTitle}
                   >
@@ -320,7 +320,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                           aria-label={isProtected ? `${item.file_name} is protected by a static image` : `Select ${item.file_name}`}
                         />
                         {isProtected ? (
-                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white" title={protectionTitle} aria-label={protectionTitle}>!</span>
+                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white" title={protectionTitle} aria-label={protectionTitle}>!</span>
                         ) : isSelected && isInUse && (
                           <span className="inline-flex h-4 w-3 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white" title="Selected image is currently in use" aria-label="Warning: selected image is currently in use">!</span>
                         )}
