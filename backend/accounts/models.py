@@ -30,7 +30,7 @@ def default_permissions():
         "Board_Members": False,
         "Events": False,
         "Media_Management": False,
-        "Executive": False,
+        "Permissions": False,
     }
 
 
