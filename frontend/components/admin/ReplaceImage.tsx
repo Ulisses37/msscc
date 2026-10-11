@@ -214,7 +214,7 @@ export default function ReplaceImage() {
                 }}
                 className="mt-3 rounded-sm border border-msscc-teal px-3 py-2 text-sm text-msscc-teal transition-colors hover:bg-msscc-gray-faint"
               >
-                Change Image
+                Reselect Image to be replaced
               </button>
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function ReplaceImage() {
                   onClick={() => setSelectedReplacementId(null)}
                   className="mt-3 rounded-sm border border-msscc-teal px-3 py-2 text-sm text-msscc-teal transition-colors hover:bg-msscc-gray-faint"
                 >
-                  Change Replacement
+                  Reselect Replacement Image
                 </button>
               </div>
             </div>
