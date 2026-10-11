@@ -8,21 +8,19 @@ interface PartnerCardProps {
 export function PartnerCard({ name, imageUrl, description, websiteUrl }: PartnerCardProps) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 rounded-md border border-msscc-gray-light bg-msscc-white p-4">
-
-      {/* Dynamic media hosts can vary by deployment, so native images avoid rejecting valid partner logos. */}
-      {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl}
-          alt={name}
-          className="h-20 w-full max-w-full object-contain"
-        />
-      )}
-
-      {/* Name */}
-      <p className="break-words font-body text-body-sm font-bold text-msscc-gray-dark">
-        {name}
-      </p>
+      <div className="inline-flex min-w-0 max-w-full items-center gap-1">
+        <p className="min-w-0 break-words font-body text-body-sm font-bold text-msscc-gray-dark">
+          {name}
+        </p>
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="size-8 shrink-0 rounded-sm object-contain"
+          />
+        )}
+      </div>
 
       {/* Optional description */}
       {description && (

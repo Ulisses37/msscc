@@ -13,6 +13,27 @@
     "partners": "パートナー"
   },
 
+  "Footer": {
+    "organizationName": "MSSCC Communications",
+    "description": "松山・サクラメントおよびサクラメント全域において、奉仕活動と共有の機会を通じて地域社会をつなぐ。",
+    "navigation": "お問い合わせ",
+    "contact": "お問い合わせ",
+    "fullName": "松山・サクラメント姉妹都市協会",
+    "address": "PO BOX 162785, Sacramento, CA 95816",
+    "email": "matsacsistercitycorp.1@gmail.com",
+    "emailLabel": "メールアドレス: ",
+    "phone": "+1 (000) 000-0000",
+    "TAX_ID": "Nonprofit 501(c)(3) 納税者番号(Tax ID): 94-2831119",
+    "facebook": "Facebookでフォローする",
+    "rightsReserved": "",
+    "home": "ホーム",
+    "events": "プログラム|イベント",
+    "support": "支援・寄付",
+    "membership": "会員登録",
+    "about": "当団体について|理事会",
+    "partners": "パートナー"
+  },
+
   "EventsPage": {
     "historyLink": "過去のイベントはこちらからご覧ください！"
   },
