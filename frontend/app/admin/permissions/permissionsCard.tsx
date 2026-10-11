@@ -341,16 +341,10 @@ export async function confirmAndDelete({
   if (!selectedAdmin) return;
   const token = localStorage.getItem("msscc_access_token");
 
-  const confirmationOne = window.confirm("Are you sure you want to delete:\n"
-     + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
 
-  if (!confirmationOne){
-    return;
-  }
+  const confirmationOne = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
 
-  const confirmationTwo = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
-
-  if(!confirmationTwo){
+  if(!confirmationOne){
     return;
   }
 
@@ -399,13 +393,6 @@ export async function confirmAndPromote(
   const devEmail = fetchLocalStorageAdmin()?.email;
 
   if(devEmail != "msscc.scrumlords.dev@gmail.com") return; // not approved dev email
-
-  const confirmationOne = window.confirm(`Are you sure you want to ${moteType}:\n`
-     + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
-
-  if (!confirmationOne){ // canceled
-    return;
-  }
 
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/promote-executive/${selectedAdmin.id}`,
