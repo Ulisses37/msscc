@@ -9,6 +9,7 @@ export interface UserPayload {
   userId: number;
   email: string;
   firstName: string;
+  lastName: string;
 
   permissionData: Record<string, boolean>;
   isExecutive: boolean;
