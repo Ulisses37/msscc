@@ -30,7 +30,7 @@ export default async function LocaleLayout({
             <PublicNavbar />
 
             {/* Main content area */}
-            <main className="flex-grow">
+            <main className="flex-grow pb-10">
               {children}
             </main>
 

@@ -1,30 +1,12 @@
-'use client';
-
-// React Next.js
-import React, { useEffect, useState } from 'react';
-
-// Third-Party
 import { useTranslations } from 'next-intl';
 
-// Project utilities/hooks
-import { Link, usePathname } from '@/i18n/routing';
+import { Link } from '@/i18n/routing';
 
-/**
- * This exports the general view's public footer to display navigation links and other information.
- *
- */
-
+/** Public-site footer with navigation and general placeholder contact details. */
 export const PublicFooter = () => {
   const t = useTranslations('Footer');
-  const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
 
-  // Collapse the mobile menu after a navigation so page content is visible again.
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
-
-  // Define our navigation links
   const navLinks = [
     { name: t('home'), href: '/' },
     { name: t('events'), href: '/events' },
@@ -34,71 +16,53 @@ export const PublicFooter = () => {
     { name: t('partners'), href: '/partners' },
   ] as const;
 
-  const isLinkActive = (href: string) =>
-    href === '/' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-msscc-teal shadow-sm" aria-label={t('menu')}>
-      {/* Match the admin navigation with a compact, single-column menu below `lg`. */}
-      <div className="lg:hidden">
-        <button
-          type="button"
-          aria-expanded={isMenuOpen}
-          aria-controls="public-mobile-menu"
-          onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
-          className="flex w-full items-center justify-between px-4 py-3 text-left text-btn tracking-btn text-white transition-colors hover:bg-msscc-teal-dark"
-        >
-          <span>{t('menu')}</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-            {isMenuOpen ? <path d="m6 6 12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
+    <footer className="w-full bg-msscc-teal text-white">
+      <div className="my-3 mx-auto grid w-full gap-7 px-4 py-8 pb-6 sm:px-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-10 lg:px-8">
+        <section aria-labelledby="footer-about-heading">
+          <h2 id="footer-about-heading" className="font-heading text-heading-3 text-white">
+            {t('organizationName')}
+          </h2>
+          <p className="mt-3 max-w-md text-caption leading-relaxed text-white">
+            {t('description')}
+          </p>
+          <a href="https://www.facebook.com/MSSCC1/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex text-caption !text-white underline-offset-4 transition-colors hover:!text-msscc-teal-sky hover:underline">
+            {t('facebook')}
+          </a>
+        </section>
 
-        {isMenuOpen && (
-          <div id="public-mobile-menu" className="max-h-[70vh] overflow-y-auto border-t border-white/20">
-            {navLinks.map((link) => {
-              const isActive = isLinkActive(link.href);
-
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`block border-b border-white/15 px-4 py-3 text-nav !text-white transition-colors last:border-b-0 hover:bg-msscc-teal-dark ${
-                    isActive ? 'bg-msscc-teal-dark font-bold' : 'opacity-80'
-                  }`}
-                >
+        <nav aria-labelledby="footer-navigation-heading">
+          <h2 id="footer-navigation-heading" className="font-heading text-heading-3 text-white">
+            {t('navigation')}
+          </h2>
+          <ul className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-caption">
+            {navLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline hover:underline-offset-4">
                   {link.name}
                 </Link>
-              );
-            })}
-          </div>
-        )}
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <section aria-labelledby="footer-contact-heading">
+          <h2 id="footer-contact-heading" className="font-heading text-heading-3 text-white">
+            {t('contact')}
+          </h2>
+          <address className="mt-3 space-y-1.5 text-label not-italic text-white/85">
+            <p className="text-white/85">{t('fullName')}</p>
+            <p className="text-white/85">{t('address')}</p>
+            <p><a className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline" href={`mailto:${t('email')}`}>{t('email')}</a></p>
+            <p><a className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline" href={`tel:${t('phone')}`}>{t('phone')}</a></p>
+            <p className="text-white/85">{t('TAX_ID')}</p>
+          </address>
+        </section>
       </div>
 
-      {/* Larger screens retain the original horizontal public navigation. */}
-      <div className="container mx-auto hidden flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 py-3 lg:flex">
-        {navLinks.map((link) => {
-          // Check if the current path matches the link to highlight it
-          const isActive = isLinkActive(link.href);
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={isActive ? 'page' : undefined}
-              // Highlight code
-              className={`text-sm font-medium transition-colors ${
-                isActive
-                  ? '!text-white border-b-2 border-white pb-1'
-                  : '!text-white/70 hover:text-white'
-              }`}
-            >
-              {link.name}
-            </Link>
-          );
-        })}
+      <div className="border-t border-white/15 px-4 py-3 text-center text-caption text-white/60 sm:px-6">
+        © {currentYear} {t('organizationName')}. {t('rightsReserved')}
       </div>
-    </nav>
+    </footer>
   );
 };
