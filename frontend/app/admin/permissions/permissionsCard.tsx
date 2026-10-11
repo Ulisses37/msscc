@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
 import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
 
+// text-base keeps iOS Safari from zooming in when an input is focused
+const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+
 function formatPermissionKey(key: string): string {
     return key
         .split("_")
@@ -31,7 +34,7 @@ export function PermissionCard(
   const canEdit = logInType !== "Admin";
   return(
   <div
-    className={`bg-white mx-2 my-2 flex flex-1 border-2 border-msscc-gray-light ${
+    className={`bg-white mx-2 my-2 flex flex-1 flex-col sm:flex-row border-2 border-msscc-gray-light ${
       canEdit ? "cursor-pointer hover:bg-msscc-pink-faint" : ""
     }`}
     onClick={
@@ -43,64 +46,66 @@ export function PermissionCard(
       : undefined
     }
   >
-      <div className="px-2 my-2 border-r-2 border-msscc-gray-light w-64">
-        <div className="text-xl">
+      {/* Name / email / rank: on top on phones, left column from sm up */}
+      <div className="flex flex-col px-2 pt-2 pb-0 sm:py-0 sm:my-2 w-full sm:w-64 sm:shrink-0 sm:border-r-2 border-msscc-gray-light">
+        <div className="text-xl break-words">
           {adminInformation.first_name + " " + adminInformation.last_name}
         </div>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 break-all">
           {adminInformation.email}
         </div>
-        <div className="text-right pt-2">
+        <div className="text-right pt-1 sm:mt-auto">
           {adminInformation.is_executive ? (
-      <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        confirmAndPromote({
-          selectedAdmin: adminInformation,
-          moteType: "demote",
-        });
-      }}
-      className="group min-w-28 rounded px-2 py-1 text-xs font-bold text-msscc-pink-dark hover:bg-red-500 hover:text-white"
-    >
-      <span className="group-hover:hidden">Executive Admin</span>
-      <span className="hidden group-hover:inline">Demote Admin</span>
-      </button>
-      ) : (
-      logInType === "Developer Admin" && (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          confirmAndPromote({
-            selectedAdmin: adminInformation,
-            moteType: "promote",
-          });
-        }}
-        className="min-w-28 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white hover:bg-green-600"
-      >
-        Promote Admin
-      </button>
-      )
-    )}
-  </div>
-
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                confirmAndPromote({
+                  selectedAdmin: adminInformation,
+                  moteType: "demote",
+                });
+              }}
+              className="group min-w-28 rounded px-2 py-1 text-xs font-bold text-msscc-pink-dark hover:bg-red-500 hover:text-white"
+            >
+              <span className="group-hover:hidden">Executive Admin</span>
+              <span className="hidden group-hover:inline">Demote Admin</span>
+            </button>
+          ) : (
+            logInType === "Developer Admin" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmAndPromote({
+                    selectedAdmin: adminInformation,
+                    moteType: "promote",
+                  });
+                }}
+                className="min-w-28 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white hover:bg-green-600"
+              >
+                Promote Admin
+              </button>
+            )
+          )}
+        </div>
       </div>
-      <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 p-2">
+
+      <div className="mx-4 border-t-2 border-msscc-gray-light sm:hidden" />
+
+      {/* Permission icons: 2 columns on phones, 3 from sm up */}
+      <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">
         {visiblePermissions.map(([permissionName, hasPermission]) => (
-          <p key={permissionName} onClick={(e) => e.stopPropagation()}>
-            {PermissionIcon({
-              currentPermission: { permissionName, hasPermission },
-              onToggle: () => onPermissionToggle(adminInformation.id, permissionName),
-            })}
-          </p>
+          <div key={permissionName} className="min-w-0" onClick={(e) => e.stopPropagation()}>
+            <PermissionIcon
+              currentPermission={{ permissionName, hasPermission }}
+              onToggle={() => onPermissionToggle(adminInformation.id, permissionName)}
+            />
+          </div>
         ))}
       </div>
     </div>
   );
 }
-
-
 
 function PermissionIcon({ currentPermission, onToggle }: {
     currentPermission: PermissionRecord,
@@ -110,7 +115,8 @@ function PermissionIcon({ currentPermission, onToggle }: {
       <div
       className={`
         ${currentPermission.hasPermission ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-600"}
-        cursor-pointer text-white text-[clamp(0.25rem, 1.2vw, 0.75rem)] rounded-sm py-1 w-full text-center
+        flex h-10 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm px-1
+        text-center text-sm leading-tight text-white break-words
         `}
       onClick={onToggle}
       title={getToolTip(currentPermission.permissionName)}
@@ -152,16 +158,16 @@ export function AdminPopup({
 }, [submissionError]);
   return(
     <div
-    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
     onClick={() => setPType("")}
     >
       <div
-      className="bg-white rounded p-6 w-96"
+      className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
       >
           {
           pType =="update" ?
-           <h2 className="text-xl font-bold mb-4">Update {email} </h2>
+           <h2 className="text-xl font-bold mb-4 break-all">Update {email} </h2>
             : <h2 className="text-xl font-bold mb-4"> Create New Admin </h2>
           }
         {/* Editable fields */}
@@ -173,7 +179,7 @@ export function AdminPopup({
               value={firstName || ""}
               onChange={(e) => setFirstName(e.target.value)}
               onBlur={(e)=>setFirstName(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {firstName == "" &&
@@ -187,7 +193,7 @@ export function AdminPopup({
               value={lastName || ""}
               onChange={(e) => setLastName(e.target.value)}
               onBlur={(e)=>setLastName(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {lastName == "" &&
@@ -201,7 +207,7 @@ export function AdminPopup({
               value={email|| ""}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={(e)=>setEmail(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {email == "" &&
@@ -213,8 +219,8 @@ export function AdminPopup({
           </div>
         </div>
 
-        {/* Validation and Submission */ }
-        <div className="flex flex-row gap-4">
+        {/* Validation and Submission: stacked on phones, a row from sm up */}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
         <button
           onClick={async() => await validateAndSubmit(
             {
@@ -228,19 +234,19 @@ export function AdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="mt-4 w-full bg-blue-500  font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-200 disabled:cursor-not-allowed"
+          className="w-full bg-blue-500 font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-200 disabled:cursor-not-allowed"
         >
           {pType =="update" ? <p className="text-white"> Save </p> : <p className="text-white">Create</p>}
         </button>
         <button
           onClick={() => setPType("")}
-          className="mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          className="w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
         </button>
         <button
           onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
-          className="mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+          className="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
         >
           Delete
         </button>
@@ -432,4 +438,3 @@ export async function confirmAndPromote(
     window.alert("Network Error. Please reload the page and try again.");
   }
 }
-

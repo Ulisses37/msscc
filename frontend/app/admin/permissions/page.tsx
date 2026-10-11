@@ -14,21 +14,22 @@ export default function AdminPermissionPage(){
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null);
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
 
-  console.log(adminList);
   useEffect(() => {
     filterAdmins().then(setAdminList);
-    console.log(adminList);
   }, []);
+
   return(
-    <div className="flex flex-col w-full items-center">
+    <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 w-full">
         <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
       </header>
-      <div className="items-start w-full flex-row flex">
+
+      {/* Stacked on phones and tablets, side by side from lg up */}
+      <div className="flex w-full flex-col lg:flex-row lg:items-start">
         {/*Div for asides*/}
-        <div className="flex-col flex gap-2 items-center">
+        <div className="flex w-full flex-col items-center gap-2 lg:w-auto lg:shrink-0">
           {/*Current Logged in Admin Info*/}
-          <aside className="w-full lg:w-64 border-msscc-gray-light bg-msscc-pink mr-4 rounded-sm">
+          <aside className="mb-4 w-full rounded-sm border-msscc-gray-light bg-msscc-pink lg:mb-0 lg:mr-4 lg:w-64">
             <div className="text-xl text-white pl-1 pt-2 border-b-2 border-msscc-gray-light mx-2 font-bold">
               {logInType}
             </div>
@@ -36,7 +37,7 @@ export default function AdminPermissionPage(){
                 Name:
               </div>
             <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
-              <div className="texl-xl text-white">
+              <div className="text-xl text-white break-words">
                 {logInAdmin?.firstName + " " + logInAdmin?.lastName}
               </div>
             </div>
@@ -45,37 +46,41 @@ export default function AdminPermissionPage(){
             </div>
             <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
                 <div
-                  className="text-md text-white mb-3 truncate"
+                  className="text-base text-white mb-3 truncate"
                   title={logInAdmin?.email}>
                 {logInAdmin?.email}
               </div>
             </div>
           </aside>
         </div>
-        <div className="bg-msscc-gray-faint w-full flex flex-col rounded-md">
-          <div className="flex flex-1 mt-2 mx-2 items-center">
-            <div className="text-2xl text-msscc-teal-dark">
-              Admin List
-            </div>
-            {/*Update and New Admin*/}
 
-            <div className="justify-end flex flex-1 gap-4">
-              {logInType === "Developer Admin" &&
-              <div
-                className="w-24 rounded-md text-white py-2 text-center bg-green-500 hover:bg-green-600 cursor-pointer disabled"
-                onClick={()=>{setSelectedAdmin(null); setAdminPopUpType("create")}}
-              >
-                Add
-              </div>
-              }
-              <div
-                className="w-24 rounded-md text-white py-2 text-center bg-blue-400 hover:bg-blue-600 cursor-pointer disabled"
-                onClick={()=> updateDatabase()}
-              >
-                Update
-              </div>
-            </div>
-          </div>
+        <div className="bg-msscc-gray-faint w-full min-w-0 flex flex-col rounded-md">
+          {/* Toolbar: sticks to the top on phones/tablets, normal from lg up.
+              If you have a fixed site header, change top-0 to its height (e.g. top-16). */}
+          <div className="sticky top-0 z-20 flex items-center gap-2 rounded-t-md bg-msscc-gray-faint px-2 py-2 shadow-sm lg:static lg:shadow-none">
+  <div className="whitespace-nowrap text-lg text-msscc-teal-dark sm:text-2xl">
+    Admin List
+  </div>
+  <div className="flex flex-1 justify-end gap-2 sm:gap-4">
+    {logInType === "Developer Admin" && (
+      <button
+        type="button"
+        className="w-16 rounded-md bg-green-500 py-1 text-center text-sm text-white hover:bg-green-600 sm:w-24 sm:py-2 sm:text-base"
+        onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
+      >
+        Add
+      </button>
+    )}
+    <button
+      type="button"
+      className="w-16 rounded-md bg-blue-400 py-1 text-center text-sm text-white hover:bg-blue-600 sm:w-24 sm:py-2 sm:text-base"
+      onClick={() => updateDatabase()}
+    >
+      Update
+    </button>
+  </div>
+</div>
+
           {adminList.map((record) => (
             <PermissionCard
             key={record.id}
@@ -87,12 +92,13 @@ export default function AdminPermissionPage(){
             />
           ))}
         </div>
-          {adminPopupType != "" && <AdminPopup
-            currentAdminList = {adminList}
-            setPType = {setAdminPopUpType}
-            pType = {adminPopupType}
-            selectedAdmin = {selectedAdmin}
-          />
+
+        {adminPopupType != "" && <AdminPopup
+          currentAdminList = {adminList}
+          setPType = {setAdminPopUpType}
+          pType = {adminPopupType}
+          selectedAdmin = {selectedAdmin}
+        />
         }
       </div>
     </div>
@@ -140,10 +146,8 @@ export default function AdminPermissionPage(){
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      console.log(res);
 
       const allAdminList: AdminRecord[] = await res.json();
-      console.log(allAdminList);
 
       return allAdminList.filter(a => {
         const isDeveloper = a.email === "msscc.scrumlords.dev@gmail.com";
@@ -168,4 +172,3 @@ export default function AdminPermissionPage(){
     }
   }
 }
-
