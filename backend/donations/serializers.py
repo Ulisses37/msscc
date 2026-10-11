@@ -103,4 +103,16 @@ class MembershipSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        # This serializer is for authorized manual records; public checkout
+        # must use the separate membership payment-session endpoint.
         read_only_fields = ["membership_id", "created_at", "updated_at"]
+        # notes is a TextField without a model limit; bound API input even
+        # though historical/admin-entered rows may contain longer notes.
+        extra_kwargs = {"notes": {"max_length": 500}}
+
+    def validate_first_name(self, value):
+        """Names are free text: keep apostrophes, hyphens and Unicode intact."""
+        return value.strip()
+
+    def validate_last_name(self, value):
+        return value.strip()
