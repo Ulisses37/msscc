@@ -22,6 +22,7 @@ import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 interface PartnerLinkProps {
   name: string;
   href: string;
+  imageUrl?: string;
 }
 
 interface PartnerRecord {
@@ -33,15 +34,23 @@ interface PartnerRecord {
   websiteUrl?: string;
 }
 
-function PartnerLink({ name, href }: PartnerLinkProps) {
+function PartnerLink({ name, href, imageUrl }: PartnerLinkProps) {
   return (
     <Link
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="break-words font-body text-msscc-gray-dark underline underline-offset-[3px] transition-colors hover:text-msscc-teal"
+      className="inline-flex max-w-full items-center gap-2 break-words font-body text-msscc-gray-dark underline underline-offset-[3px] transition-colors hover:text-msscc-teal"
     >
-      {name}
+      <span className="min-w-0 break-words">{name}</span>
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt=""
+          aria-hidden="true"
+          className="size-8 shrink-0 rounded-sm object-contain no-underline"
+        />
+      )}
     </Link>
   );
 }
@@ -54,7 +63,6 @@ export default function PartnersPage() {
   const locale = params?.locale;
   const isJapanese = locale === 'ja';
 
-  // Fetch text content from the database to display on page
   useEffect(() => {
     const loadPageContent = async () => {
       try {
@@ -69,46 +77,72 @@ export default function PartnersPage() {
     loadPageContent();
   }, []);
 
-  // fetch partners and images from database instead of relying on sampleData
   useEffect(() => {
-    Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`).then(res => res.json()),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
-    ])
-      .then(([partnerRecords, mediaAssets]: [unknown[], unknown[]]) => {
-        const mediaById = new Map(
-          (mediaAssets as {media_asset_id: number; file_url: string | null}[])
-            .map(m => [m.media_asset_id, m])
-        );
+    const loadPartners = async () => {
+      const partnersResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`);
+      if (!partnersResponse.ok) {
+        throw new Error('Failed to load partners.');
+      }
 
-        const mappedPartners: PartnerRecord[] = (partnerRecords as {
-          partner_id: number;
-          display_name_en: string;
-          display_name_ja: string;
-          category_en: string;
-          category_ja: string;
-          website_url: string | null;
-          is_visible: boolean;
-          display_order: number;
-          media_asset: number | null;
-          media_is_visible: boolean;
-        }[])
-          .filter(partner => partner.is_visible)
-          .sort((a, b) => a.display_order - b.display_order)
-          .map(partner => ({
+      const partnerRecords = await partnersResponse.json() as {
+        partner_id: number;
+        display_name_en: string;
+        display_name_ja: string;
+        category_en: string;
+        category_ja: string;
+        website_url: string | null;
+        is_visible: boolean;
+        display_order: number;
+        media_asset: number | null;
+        media_is_visible: boolean;
+      }[];
+
+      const visiblePartnerRecords = partnerRecords
+        .filter(partner => partner.is_visible)
+        .sort((a, b) => a.display_order - b.display_order);
+
+      const mediaIds = Array.from(
+        new Set(
+          visiblePartnerRecords
+            .filter(partner => partner.media_asset && partner.media_is_visible)
+            .map(partner => partner.media_asset as number)
+        )
+      );
+
+      const mediaEntries = await Promise.all(
+        mediaIds.map(async (mediaId) => {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${mediaId}/`);
+          if (!response.ok) {
+            throw new Error(`Failed to load media asset ${mediaId}.`);
+          }
+
+          const media = await response.json() as {
+            media_asset_id: number;
+            file_url: string | null;
+          };
+
+          return [media.media_asset_id, media.file_url] as const;
+        })
+      );
+
+      const mediaById = new Map(mediaEntries);
+
+      const mappedPartners: PartnerRecord[] = visiblePartnerRecords
+        .map(partner => ({
             id: partner.partner_id,
             name: isJapanese && partner.display_name_ja ? partner.display_name_ja : partner.display_name_en,
             categoryEn: partner.category_en,
             category: isJapanese && partner.category_ja ? partner.category_ja : partner.category_en,
             websiteUrl: partner.website_url ?? undefined,
             imageUrl: partner.media_asset && partner.media_is_visible
-              ? mediaById.get(partner.media_asset)?.file_url ?? undefined
+              ? mediaById.get(partner.media_asset) ?? undefined
               : undefined,
           }));
 
-        setPartners(mappedPartners);
-      })
-      .catch(error => console.error('Error fetching partners:', error));
+      setPartners(mappedPartners);
+    };
+
+    loadPartners().catch(error => console.error('Error fetching partners:', error));
   // refetch data every time the locale changes
   }, [isJapanese]);
 
@@ -152,7 +186,11 @@ export default function PartnersPage() {
         <ul className="list-disc space-y-2 break-words pl-6 leading-loose sm:pl-10">
           {partnerLinks.map((partner) => (
             <li key={partner.id}>
-              <PartnerLink name={partner.name} href={partner.websiteUrl} />
+              <PartnerLink
+                name={partner.name}
+                href={partner.websiteUrl}
+                imageUrl={partner.imageUrl}
+              />
             </li>
           ))}
         </ul>
