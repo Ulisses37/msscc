@@ -131,3 +131,15 @@ class MembershipPaymentStatusSerializer(serializers.Serializer):
     payment_status = serializers.ChoiceField(
         choices=["pending", "complete", "failed", "canceled"]
     )
+
+
+class PaymentReceiptSerializer(serializers.Serializer):
+    """Allowlist of public receipt fields, independent of the payment models."""
+
+    payment_purpose = serializers.ChoiceField(choices=["donation", "membership"])
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    currency = serializers.CharField(max_length=3)
+    completed_at = serializers.DateTimeField()
+    confirmation_reference = serializers.CharField()
+    membership_option = serializers.CharField(required=False)
+    donation_purpose = serializers.CharField(required=False)

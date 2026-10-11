@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -14,10 +14,114 @@ from donations.models import Donation, Membership
 from .views import (
     MembershipPaymentSessionCreateView,
     MembershipPaymentStatusView,
+    PaymentReceiptView,
     PaymentSessionCreateView,
     StripeWebhookView,
     _update_donation_payment_status,
 )
+
+
+class PaymentReceiptTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.donation_reference = "DON-00000042"
+        self.membership_reference = "MEM-" + "a" * 32
+        self.completed_at = datetime(2026, 10, 10, 15, 30, tzinfo=UTC)
+        self.donation = Donation.objects.create(
+            donor_first_name="Maya", donor_last_name="Chen",
+            donor_email="private@example.com", amount=Decimal("12.50"),
+            donation_date=date(2026, 10, 1), is_anonymous=False,
+            message="private donor message is not a purpose",
+            reference_id=self.donation_reference,
+            payment_status=Donation.PaymentStatus.COMPLETED,
+            completed_at=self.completed_at,
+        )
+        self.membership = Membership.objects.create(
+            first_name="Maya", last_name="Chen", email="member@example.com",
+            phone="private phone", membership_type="student",
+            membership_option_id="student", amount_paid=Decimal("20.00"),
+            currency="usd", expected_amount=Decimal("20.00"),
+            start_date=date(2026, 10, 10), end_date=date(2027, 10, 9),
+            renewal_date=date(2027, 10, 10),
+            payment_status=Membership.PaymentStatus.COMPLETED,
+            completed_at=self.completed_at, status="active", notes="private note",
+            reference_id=self.membership_reference,
+            checkout_reference=self.membership_reference,
+            stripe_payment_intent_id="pi_private_test",
+        )
+
+    def receipt(self, reference, **extra):
+        return PaymentReceiptView.as_view()(
+            self.factory.get(reverse("payment-receipt"), {
+                "confirmation_reference": reference, **extra,
+            })
+        )
+
+    def test_donation_receipt_contains_only_stored_safe_values(self):
+        response = self.receipt(self.donation_reference, amount="999", donation_purpose="forged")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {
+            "payment_purpose": "donation", "amount": "12.50",
+            "currency": "usd", "completed_at": "2026-10-10T15:30:00Z",
+            "confirmation_reference": self.donation_reference,
+        })
+        self.assertNotIn("private", str(response.data))
+        self.assertNotIn("donation_id", response.data)
+        self.assertNotIn("donation_purpose", response.data)
+
+    def test_membership_receipt_excludes_profile_and_stripe_fields(self):
+        response = self.receipt(self.membership_reference, amount="999")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {
+            "payment_purpose": "membership", "amount": "20.00",
+            "currency": "usd", "completed_at": "2026-10-10T15:30:00Z",
+            "confirmation_reference": self.membership_reference,
+            "membership_option": "student",
+        })
+        for sensitive in ("pi_private_test", "member@example.com", "private phone",
+                          "membership_id", "expected_amount", "client_secret"):
+            self.assertNotIn(sensitive, str(response.data))
+
+    def test_pending_failed_canceled_and_missing_completion_date_are_unavailable(self):
+        for model, reference in ((self.donation, self.donation_reference),
+                                 (self.membership, self.membership_reference)):
+            for state in ("pending", "failed", "canceled"):
+                with self.subTest(reference=reference, state=state):
+                    model.payment_status = state
+                    model.save(update_fields=["payment_status"])
+                    self.assertEqual(self.receipt(reference).status_code, 404)
+            model.payment_status = "completed"
+            model.completed_at = None
+            model.save(update_fields=["payment_status", "completed_at"])
+            self.assertEqual(self.receipt(reference).status_code, 404)
+
+    def test_unknown_malformed_and_unlinked_references_share_safe_response(self):
+        unknown = self.receipt("MEM-" + "b" * 32)
+        for reference in ("pi_secret", "DON-00000099", "MEM-INVALID", ""):
+            with self.subTest(reference=reference):
+                response = self.receipt(reference)
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.data, unknown.data)
+        self.membership.stripe_payment_intent_id = None
+        self.membership.save(update_fields=["stripe_payment_intent_id"])
+        self.assertEqual(self.receipt(self.membership_reference).data, unknown.data)
+
+    def test_webhook_completion_records_timestamp_once(self):
+        self.donation.payment_status = Donation.PaymentStatus.PENDING
+        self.donation.completed_at = None
+        self.donation.save(update_fields=["payment_status", "completed_at"])
+        with patch("payments.views.timezone.now", return_value=self.completed_at):
+            self.assertTrue(_update_donation_payment_status(
+                self.donation_reference, Donation.PaymentStatus.COMPLETED
+            ))
+        self.donation.refresh_from_db()
+        self.assertEqual(self.donation.completed_at, self.completed_at)
+        self.assertFalse(_update_donation_payment_status(
+            self.donation_reference, Donation.PaymentStatus.COMPLETED
+        ))
+        self.donation.refresh_from_db()
+        self.assertEqual(self.donation.completed_at, self.completed_at)
+        self.assertEqual(self.receipt(self.donation_reference).status_code, 200)
 
 
 class MembershipPaymentStatusSmokeTests(TestCase):
