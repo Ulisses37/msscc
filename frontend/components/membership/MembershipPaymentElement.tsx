@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import {
   Elements,
   PaymentElement,
@@ -12,6 +13,7 @@ import { loadStripe } from '@stripe/stripe-js';
 
 interface MembershipPaymentElementProps {
   clientSecret: string;
+  confirmationReference: string;
   locale: string;
   membershipInformationValid: boolean;
   onPaymentStateChange: (state: 'ready' | 'confirming' | 'submitted') => void;
@@ -23,14 +25,17 @@ const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 function MembershipPaymentForm({
   locale,
+  confirmationReference,
   membershipInformationValid,
   onPaymentStateChange,
 }: {
   locale: string;
+  confirmationReference: string;
   membershipInformationValid: boolean;
   onPaymentStateChange: MembershipPaymentElementProps['onPaymentStateChange'];
 }) {
   const t = useTranslations('MembershipPage');
+  const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
   const [elementReady, setElementReady] = useState(false);
@@ -81,12 +86,14 @@ function MembershipPaymentForm({
         return;
       }
 
+      // Only an opaque application reference goes into the return URL. Stripe
+      // may add its own parameters; the result page ignores them and reads our DB.
+      const resultUrl = new URL(`/${locale}/membership/payment-result`, window.location.origin);
+      resultUrl.searchParams.set('confirmation_reference', confirmationReference);
       const { error: confirmationError } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          // The existing membership page is a neutral return destination, not
-          // proof that a payment succeeded or that membership was activated.
-          return_url: `${window.location.origin}/${locale}/membership`,
+          return_url: resultUrl.toString(),
         },
         redirect: 'if_required',
       });
@@ -96,10 +103,11 @@ function MembershipPaymentForm({
         return;
       }
 
-      // Card confirmations may return without a redirect. Do not call this a
-      // completed membership; the payment-result story will handle status.
+      // No redirect is not proof of success. Lock this form before navigating;
+      // the result page alone reads the webhook-confirmed payment status.
       setSubmitted(true);
       onPaymentStateChange('submitted');
+      router.push(`${resultUrl.pathname}${resultUrl.search}`);
     } catch {
       // Neither Stripe error details nor client secrets belong in the UI/logs.
       setError(true);
@@ -167,6 +175,7 @@ function MembershipPaymentForm({
 
 export function MembershipPaymentElement({
   clientSecret,
+  confirmationReference,
   locale,
   membershipInformationValid,
   onPaymentStateChange,
@@ -195,6 +204,7 @@ export function MembershipPaymentElement({
       >
         <MembershipPaymentForm
           locale={locale}
+          confirmationReference={confirmationReference}
           membershipInformationValid={membershipInformationValid}
           onPaymentStateChange={onPaymentStateChange}
         />
