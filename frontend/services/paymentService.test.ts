@@ -117,8 +117,23 @@ describe('getMembershipPaymentStatus', () => {
     { payment_purpose: 'donation', payment_status: 'complete' },
     { payment_purpose: 'membership', payment_status: 'completed' },
     { payment_purpose: 'membership', payment_status: 1 },
+    null,
+    [],
   ])('rejects an unexpected result without exposing it: %p', async (data) => {
     jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: jest.fn().mockResolvedValue(data) } as unknown as Response);
     await expect(getMembershipPaymentStatus(confirmationReference)).rejects.toThrow('Unable to retrieve payment status.');
+  });
+
+  it.each(['HTTP error', 'network error', 'invalid JSON'])('hides %s details so the page can retry safely', async (kind) => {
+    if (kind === 'network error') {
+      jest.mocked(global.fetch).mockRejectedValue(new Error('private-network-detail'));
+    } else {
+      jest.mocked(global.fetch).mockResolvedValue({
+        ok: kind !== 'HTTP error',
+        json: jest.fn().mockRejectedValue(new Error('private-response-detail')),
+      } as unknown as Response);
+    }
+    await expect(getMembershipPaymentStatus(confirmationReference)).rejects.toThrow('Unable to retrieve payment status.');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
