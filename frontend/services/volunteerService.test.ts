@@ -28,7 +28,7 @@ describe('getVolunteerCancellationDetails', () => {
     jest.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue(cancellationDetails),
-    } as unknown as Response);
+    } as Response);
 
     await expect(getVolunteerCancellationDetails(token)).resolves.toEqual(cancellationDetails);
     expect(global.fetch).toHaveBeenCalledWith(
