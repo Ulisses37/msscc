@@ -26,8 +26,8 @@ const disabledInputClass = "w-full border rounded px-2 py-1 mt-1 font-normal tex
 // Class names must be written out in full so Tailwind can find them.
 export function getGridCols(showWebsite: boolean) {
   return showWebsite
-    ? 'grid grid-cols-[56px_minmax(0,1fr)_56px_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px] md:grid-cols-[60px_minmax(0,1fr)_120px_200px_minmax(0,1fr)]'
-    : 'grid grid-cols-[56px_minmax(0,1fr)_56px_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px]';
+    ? 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px] md:grid-cols-[60px_minmax(0,1fr)_120px_200px_minmax(0,1fr)]'
+    : 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px]';
 }
 
 export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: boolean }) {
@@ -35,7 +35,7 @@ export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: bool
     <div className={getGridCols(showWebsite)}>
       <div className="px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Order</div>
       <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid">Name</div>
-      <div className="px-1 sm:px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Image</div>
+      <div className="hidden sm:block px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Image</div>
       <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid text-right">
         <span className="hidden sm:inline">Contribution </span>Amount
       </div>
@@ -92,22 +92,19 @@ function DisplayRow({
     >
       <div className="px-2 py-3 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
       <div className="px-3 py-3 text-sm font-semibold truncate">{partnerInfo.Name}</div>
-      <div className="flex items-center justify-center px-2 sm:px-3 py-2">
-        {partnerInfo.MediaAsset !== null ? (
-          <div className="relative h-10 w-10 sm:h-16 sm:w-16 overflow-hidden rounded border bg-gray-50">
-            <PostImage
-              mediaID={partnerInfo.MediaAsset}
-              configVariant="thumbnail"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        ) : (
-          <>
-            <span className="hidden sm:inline text-xs text-gray-400">No image</span>
-            <span className="sm:hidden text-xs text-gray-400">—</span>
-          </>
-        )}
-      </div>
+<div className="hidden sm:flex items-center justify-center px-3 py-2">
+  {partnerInfo.MediaAsset !== null ? (
+    <div className="relative h-16 w-16 overflow-hidden rounded border bg-gray-50">
+      <PostImage
+        mediaID={partnerInfo.MediaAsset}
+        configVariant="thumbnail"
+        className="h-full w-full object-cover"
+      />
+    </div>
+  ) : (
+    <span className="text-xs text-gray-400">No image</span>
+  )}
+</div>
       <div className="px-3 py-3 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
       {isPartner && (
         <div className="hidden md:block px-3 py-3 pl-8 text-sm font-semibold truncate">
