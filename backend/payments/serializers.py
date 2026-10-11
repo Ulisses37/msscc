@@ -122,3 +122,12 @@ class MembershipPaymentSessionRequestSerializer(StrictPaymentSerializer):
 
     def validate_email(self, value):
         return value.strip().lower()
+
+
+class MembershipPaymentStatusSerializer(serializers.Serializer):
+    """Explicit public result fields; never serialize the membership model."""
+
+    payment_purpose = serializers.ChoiceField(choices=["membership"])
+    payment_status = serializers.ChoiceField(
+        choices=["pending", "complete", "failed", "canceled"]
+    )

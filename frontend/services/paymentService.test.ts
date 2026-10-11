@@ -1,5 +1,6 @@
 const originalFetch = global.fetch;
 const safeError = 'Unable to create the payment session.';
+const confirmationReference = `MEM-${'a'.repeat(32)}`;
 const identity = { firstName: 'Maya', lastName: 'Chen', email: 'maya@example.com', phone: '' };
 let createMembershipPaymentSession: typeof import('@/services/paymentService').createMembershipPaymentSession;
 
@@ -28,12 +29,13 @@ describe('createMembershipPaymentSession', () => {
       json: jest.fn().mockResolvedValue({
         session_id: 'pi_test_membership',
         client_secret: 'pi_test_secret',
+        confirmation_reference: confirmationReference,
       }),
     } as unknown as Response);
 
     await expect(
       createMembershipPaymentSession({ membershipOptionId: 'family', ...identity }),
-    ).resolves.toEqual({ sessionId: 'pi_test_membership', clientSecret: 'pi_test_secret' });
+    ).resolves.toEqual({ sessionId: 'pi_test_membership', clientSecret: 'pi_test_secret', confirmationReference });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [url, options] = jest.mocked(global.fetch).mock.calls[0];
@@ -59,6 +61,7 @@ describe('createMembershipPaymentSession', () => {
     { session_id: 123, client_secret: 'pi_secret' },
     { session_id: 'pi_valid', client_secret: null },
     { session_id: 'pi_valid', client_secret: ' ' },
+    { session_id: 'pi_valid', client_secret: 'pi_secret', confirmation_reference: 'MEM-invalid' },
   ])('rejects malformed session data safely: %p', async (data) => {
     jest.mocked(global.fetch).mockResolvedValue({
       ok: true,
