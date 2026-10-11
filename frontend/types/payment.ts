@@ -18,3 +18,8 @@ export interface PaymentSession {
   sessionId: string;
   clientSecret: string;
 }
+
+export interface MembershipPaymentSession extends PaymentSession {
+  /** Opaque database checkout reference, never the Stripe PaymentIntent secret. */
+  confirmationReference: string;
+}

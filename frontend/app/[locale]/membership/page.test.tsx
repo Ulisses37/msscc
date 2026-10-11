@@ -149,7 +149,7 @@ describe('MembershipPage review flow', () => {
     expect(continueButton).toBeEnabled();
     // Hold the session request open to check the loading state independently
     // of Stripe mounting after the response arrives.
-    let finishSession!: (value: { sessionId: string; clientSecret: string }) => void;
+    let finishSession!: (value: { sessionId: string; clientSecret: string; confirmationReference: string }) => void;
     jest.mocked(createMembershipPaymentSession).mockReturnValue(
       new Promise((resolve) => {
         finishSession = resolve;
@@ -165,7 +165,7 @@ describe('MembershipPage review flow', () => {
     expect(screen.getByRole('button', { name: enMessages.MembershipPage.preparingPayment })).toBeDisabled();
     expect(screen.queryByTestId('membership-stripe-element')).not.toBeInTheDocument();
 
-    finishSession({ sessionId: 'pi_family', clientSecret: 'pi_secret_family' });
+    finishSession({ sessionId: 'pi_family', clientSecret: 'pi_secret_family', confirmationReference: `MEM-${'a'.repeat(32)}` });
     expect(await screen.findByTestId('membership-stripe-element')).toHaveTextContent('pi_secret_family');
     expect(screen.getByRole('button', { name: enMessages.MembershipPage.paymentSessionReady })).toBeDisabled();
     expect(screen.getByLabelText(enMessages.MembershipPage.email)).toBeDisabled();
@@ -175,7 +175,7 @@ describe('MembershipPage review flow', () => {
     const user = userEvent.setup();
     // A late response for the old selection must never mount Elements with
     // a client secret for a different membership price.
-    let finishSession!: (value: { sessionId: string; clientSecret: string }) => void;
+    let finishSession!: (value: { sessionId: string; clientSecret: string; confirmationReference: string }) => void;
     jest.mocked(createMembershipPaymentSession).mockReturnValue(
       new Promise((resolve) => {
         finishSession = resolve;
@@ -190,7 +190,7 @@ describe('MembershipPage review flow', () => {
     await user.click(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment }));
     await user.click(screen.getByRole('radio', { name: new RegExp(`^${enMessages.MembershipPage.options.family}`) }));
 
-    finishSession({ sessionId: 'pi_old_student', clientSecret: 'pi_secret_old' });
+    finishSession({ sessionId: 'pi_old_student', clientSecret: 'pi_secret_old', confirmationReference: `MEM-${'a'.repeat(32)}` });
     await waitFor(() => expect(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment })).toBeEnabled());
     expect(screen.queryByTestId('membership-stripe-element')).not.toBeInTheDocument();
   });

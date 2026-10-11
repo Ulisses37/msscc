@@ -1,5 +1,6 @@
 import type {
   CreateMembershipPaymentSessionRequest,
+  MembershipPaymentSession,
   PaymentSession,
 } from '@/types/payment';
 
@@ -69,7 +70,7 @@ export async function createMembershipPaymentSession({
   lastName,
   email,
   phone,
-}: CreateMembershipPaymentSessionRequest): Promise<PaymentSession> {
+}: CreateMembershipPaymentSessionRequest): Promise<MembershipPaymentSession> {
   // Keep the failure generic even when the network, backend, or Stripe response
   // contains details; the calling page shows its own translated message.
   const unavailable = () => new Error('Unable to create the payment session.');
@@ -100,7 +101,11 @@ export async function createMembershipPaymentSession({
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw unavailable();
     }
-    const { session_id: sessionId, client_secret: clientSecret } = data as Record<
+    const {
+      session_id: sessionId,
+      client_secret: clientSecret,
+      confirmation_reference: confirmationReference,
+    } = data as Record<
       string,
       unknown
     >;
@@ -108,12 +113,14 @@ export async function createMembershipPaymentSession({
       typeof sessionId !== 'string' ||
       !sessionId.trim() ||
       typeof clientSecret !== 'string' ||
-      !clientSecret.trim()
+      !clientSecret.trim() ||
+      typeof confirmationReference !== 'string' ||
+      !/^MEM-[0-9a-f]{32}$/.test(confirmationReference)
     ) {
       throw unavailable();
     }
 
-    return { sessionId, clientSecret };
+    return { sessionId, clientSecret, confirmationReference };
   } catch {
     throw unavailable();
   }

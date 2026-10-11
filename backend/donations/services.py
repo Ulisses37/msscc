@@ -119,7 +119,9 @@ def create_pending_membership(*, option_id, first_name, last_name, email, phone=
             # The unique database index prevents linking an intent to two rows.
             membership.stripe_payment_intent_id = intent_id
             membership.save(update_fields=["stripe_payment_intent_id", "updated_at"])
-        return session
+        # Only the opaque checkout reference is needed to read the eventual
+        # result. Never use a Stripe secret or the database ID as the lookup key.
+        return {**session, "confirmation_reference": reference}
     except (DatabaseError, stripe.StripeError, RuntimeError, ValueError) as exc:
         # Stripe cannot join a database transaction. If persistence fails after
         # intent creation, do not return its secret; attempt to cancel it.
