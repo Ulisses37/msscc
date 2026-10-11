@@ -11,84 +11,96 @@ function formatPermissionKey(key: string): string {
         .join(" ");
 }
 
-export function PermissionCard (
+export function PermissionCard(
   {
     adminInformation,
+    logInType,
     onPermissionToggle,
-    setSelectedAdmin,
     setAdminPopUpType,
-    currentLogInEmail,
-  }:{
+    setSelectedAdmin,
+  } : {
     adminInformation:AdminRecord,
+    logInType: string;
     onPermissionToggle: (id: number, permissionName: string) => void
     setSelectedAdmin: (selectedAdmin: AdminRecord) => void
     setAdminPopUpType: (pType: string) => void
-    currentLogInEmail: string | undefined;
-  } ){
+  }){
+  const visiblePermissions = Object.entries(adminInformation.permissions).filter(
+    ([permissionName]) => !(logInType === "Admin" && permissionName === "Permissions")
+  );
+  const canEdit = logInType !== "Admin";
+  return(
+  <div
+    className={`bg-white mx-2 my-2 flex flex-1 border-2 border-msscc-gray-light ${
+      canEdit ? "cursor-pointer hover:bg-msscc-pink-faint" : ""
+    }`}
+    onClick={
+      canEdit
+       ? () => {
+          setSelectedAdmin(adminInformation);
+          setAdminPopUpType("update");
+        }
+      : undefined
+    }
+  >
+      <div className="px-2 my-2 border-r-2 border-msscc-gray-light w-64">
+        <div className="text-xl">
+          {adminInformation.first_name + " " + adminInformation.last_name}
+        </div>
+        <div className="text-sm text-gray-500">
+          {adminInformation.email}
+        </div>
+        <div className="text-right pt-2">
+          {adminInformation.is_executive ? (
+      <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        confirmAndPromote({
+          selectedAdmin: adminInformation,
+          moteType: "demote",
+        });
+      }}
+      className="group min-w-28 rounded px-2 py-1 text-xs font-bold text-msscc-pink-dark hover:bg-red-500 hover:text-white"
+    >
+      <span className="group-hover:hidden">Executive Admin</span>
+      <span className="hidden group-hover:inline">Demote Admin</span>
+      </button>
+      ) : (
+      logInType === "Developer Admin" && (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          confirmAndPromote({
+            selectedAdmin: adminInformation,
+            moteType: "promote",
+          });
+        }}
+        className="min-w-28 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white hover:bg-green-600"
+      >
+        Promote Admin
+      </button>
+      )
+    )}
+  </div>
 
-  return (
-    <div className={`border rounded-md p-6 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x min-h-32 items-center bg-gray-50`}>
-      <div className = "basis-2/12 w-full md:w-auto">
-        <h1 className = "text-black text-[clamp(0.75rem,2vw,1.25rem)]">{adminInformation.first_name} {adminInformation.last_name}</h1>
-          {currentLogInEmail == "msscc.scrumlords.dev@gmail.com" ? (
-            adminInformation.is_executive ? (
-              <p
-                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-red-400 hover:bg-red-600 text-center mx-8 cursor-pointer"
-                onClick={() => confirmAndPromote
-                  ({
-                    selectedAdmin:adminInformation,
-                    moteType: "demote",
-                })}
-              >
-                Demote
-              </p>
-            ) : (
-                <p
-                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-green-400 hover:bg-green-600 text-center mx-8 cursor-pointer"
-                onClick={() => confirmAndPromote
-                  ({
-                    selectedAdmin:adminInformation,
-                    moteType: "promote",
-                })}
-              >
-                Promote
-              </p>
-              )
-          )  : (
-            adminInformation.is_executive && (
-            <p className="text-gray-500 text-[clamp(0.5rem,1vw,1rem)]">Executive</p>
-          )
-        )}
       </div>
-      <p className = "basis-3/12 w-full md:w-auto flex items-center justify-center text-black text-[clamp(0.5rem,1.5vw,1.0rem)]">{adminInformation.email}</p>
-
-      {/* Permissions Grid*/}
-      <div className = "basis-6/12 w-full md:w-auto gap-2 md:gap-4 px-4 grid grid-cols-2 md:grid-cols-3">
-      {Object.entries(adminInformation.permissions).slice()
-      .map(([permissionName, hasPermission]) => (
-      <p key={permissionName}>
-        {PermissionIcon({
-            currentPermission: { permissionName, hasPermission },
-            onToggle: () => onPermissionToggle(adminInformation.id, permissionName)
-        })}
-      </p>
-      ))}
+      <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 p-2">
+        {visiblePermissions.map(([permissionName, hasPermission]) => (
+          <p key={permissionName} onClick={(e) => e.stopPropagation()}>
+            {PermissionIcon({
+              currentPermission: { permissionName, hasPermission },
+              onToggle: () => onPermissionToggle(adminInformation.id, permissionName),
+            })}
+          </p>
+        ))}
       </div>
-      {/*Create and Delete*/}
-      <div className="flex-col basis-1/12 pl-4 gap-2">
-        <div
-        className="bg-gray-500 hover:bg-gray-600 text-white text-center py-2 px-4 cursor-pointer mb-1"
-        onClick={() => {setSelectedAdmin(adminInformation); setAdminPopUpType("update")}}
-        >Edit</div>
-        <div
-        className="bg-red-500 hover:bg-red-600 text-white text-center py-2 px-4 cursor-pointer mt-1"
-        onClick={() => confirmAndDelete({selectedAdmin: adminInformation})}
-        >Delete</div>
-      </div>
-
     </div>
   );
 }
+
+
 
 function PermissionIcon({ currentPermission, onToggle }: {
     currentPermission: PermissionRecord,
@@ -202,7 +214,7 @@ export function AdminPopup({
         </div>
 
         {/* Validation and Submission */ }
-        <div className="flex">
+        <div className="flex flex-row gap-4">
         <button
           onClick={async() => await validateAndSubmit(
             {
@@ -216,15 +228,21 @@ export function AdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-100 disabled:cursor-not-allowed"
+          className="mt-4 w-full bg-blue-500  font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-200 disabled:cursor-not-allowed"
         >
-          {pType =="update" ? <p>Update</p> : <p>Create</p>}
+          {pType =="update" ? <p className="text-white"> Save </p> : <p className="text-white">Create</p>}
         </button>
         <button
           onClick={() => setPType("")}
-          className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          className="mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
+        </button>
+        <button
+          onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
+          className="mt-4 w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+        >
+          Delete
         </button>
         </div>
       </div>
@@ -232,7 +250,7 @@ export function AdminPopup({
   )
 }
 
-async function validateAndSubmit({
+export async function validateAndSubmit({
   firstName,
   lastName,
   email,
@@ -315,11 +333,12 @@ async function validateAndSubmit({
   }
 }
 
-async function confirmAndDelete({
+export async function confirmAndDelete({
   selectedAdmin,
 } : {
-  selectedAdmin : AdminRecord;
+  selectedAdmin : AdminRecord | null;
 }){
+  if (!selectedAdmin) return;
   const token = localStorage.getItem("msscc_access_token");
 
   const confirmationOne = window.confirm("Are you sure you want to delete:\n"
@@ -368,7 +387,7 @@ async function confirmAndDelete({
   }
 }
 
-async function confirmAndPromote(
+export async function confirmAndPromote(
   {
     selectedAdmin,
     moteType,

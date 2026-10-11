@@ -74,6 +74,7 @@ export function fetchLocalStorageAdmin(){
     userId: string;
     email: string;
     firstName: string;
+    lastName:string;
     permissionData: Record<string, boolean>;
     isExecutive: boolean;
   } = JSON.parse(current_admin);
