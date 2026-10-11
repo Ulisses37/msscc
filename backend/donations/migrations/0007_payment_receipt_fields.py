@@ -2,6 +2,8 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+    # No invented completion dates for old rows. Donation checkout has only
+    # supported USD, so the currency default also covers existing donations.
     dependencies = [
         ("donations", "0006_membership_payment_fields"),
     ]

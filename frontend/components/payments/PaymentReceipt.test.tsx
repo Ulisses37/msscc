@@ -8,6 +8,8 @@ import ja from '@/messages/ja.json';
 import { getPaymentReceipt, type PaymentReceipt as Receipt } from '@/services/paymentService';
 
 jest.mock('@/services/paymentService', () => ({ getPaymentReceipt: jest.fn() }));
+// Exercise the real translation keys for both languages without a provider;
+// only the HTTP boundary is mocked in these component-level tests.
 jest.mock('next-intl', () => ({
   useTranslations: (namespace: 'PaymentReceipt' | 'MembershipPage.options') =>
     (key: string) => {
@@ -67,6 +69,7 @@ it('shows a safe message when receipt data is unavailable', async () => {
 });
 
 it('ignores a late response after the reference changes', async () => {
+  // The first request completes last; it must not overwrite the new receipt.
   let finish!: (receipt: Receipt) => void;
   jest.mocked(getPaymentReceipt)
     .mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }))

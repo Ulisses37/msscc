@@ -12,6 +12,8 @@ jest.mock('next-intl', () => ({
 jest.mock('@/components/support/DonationSummary', () => ({ DonationSummary: () => null }));
 jest.mock('@/components/support/StripePaymentElement', () => ({ StripePaymentElement: () => null }));
 jest.mock('@/components/payments/PaymentReceipt', () => ({
+  // Spy on when the receipt mounts; a unit test must not contact the receipt
+  // endpoint while it verifies the redirected page's status gating.
   PaymentReceipt: ({ reference }: { reference: string }) =>
     <div data-testid="receipt">{reference}</div>,
 }));

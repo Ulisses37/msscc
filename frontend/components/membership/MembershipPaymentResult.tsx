@@ -162,6 +162,7 @@ export function MembershipPaymentResult({
             )}
           </div>
         )}
+        {/* Match the donation success frame without changing other states. */}
         {!error && paymentStatus === 'complete' && (
           <div className="rounded-md border border-green-200 bg-green-50 p-4 text-green-800" role="status">
             <p>{t('complete')}</p>

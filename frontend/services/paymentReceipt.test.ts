@@ -3,6 +3,8 @@ const reference = 'DON-00000042';
 let getPaymentReceipt: typeof import('@/services/paymentService').getPaymentReceipt;
 
 beforeAll(async () => {
+  // The service captures its API base URL at import time; isolate these tests
+  // from a developer's .env and from earlier module imports.
   process.env.NEXT_PUBLIC_API_URL = 'https://api.example.test';
   jest.resetModules();
   ({ getPaymentReceipt } = await import('@/services/paymentService'));
@@ -16,6 +18,8 @@ const valid = {
 };
 
 it('reads only safe receipt fields from a no-cache request', async () => {
+  // Simulate an API that accidentally adds private fields: the service must
+  // return its allowlist rather than forwarding the whole response to React.
   jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
     ...valid, client_secret: 'private', donor_email: 'private@example.com',
   }) } as Response);

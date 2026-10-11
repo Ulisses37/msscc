@@ -11,6 +11,8 @@ export type MembershipPaymentStatus = 'pending' | 'complete' | 'failed' | 'cance
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export type PaymentReceipt = {
+  // Only the public allowlist survives the API boundary; this is not a model
+  // or a raw Stripe response.
   paymentPurpose: 'donation' | 'membership';
   amount: string;
   currency: string;
@@ -23,6 +25,7 @@ export type PaymentReceipt = {
 /** Accept only a completed payment's public receipt, never pass raw API objects to UI. */
 export async function getPaymentReceipt(reference: string): Promise<PaymentReceipt> {
   const unavailable = () => new Error('Unable to retrieve receipt.');
+  // Reject other namespaces before requesting a public receipt endpoint.
   if (!API_BASE_URL || !/^(DON-[0-9]{8,}|MEM-[0-9a-f]{32})$/.test(reference)) {
     throw unavailable();
   }
@@ -35,6 +38,8 @@ export async function getPaymentReceipt(reference: string): Promise<PaymentRecei
     const data: unknown = await response.json();
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw unavailable();
     const fields = data as Record<string, unknown>;
+    // A successful HTTP response does not establish the payment type or the
+    // reference; validate both against the requested internal reference.
     const purpose = fields.payment_purpose;
     const option = fields.membership_option;
     const donationPurpose = fields.donation_purpose;

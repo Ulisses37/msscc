@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { getPaymentReceipt, type PaymentReceipt as Receipt } from '@/services/paymentService';
 
+/** View-only details loaded after a result page confirms a completed payment. */
 export function PaymentReceipt({ reference, locale }: { reference: string; locale: string }) {
   const t = useTranslations('PaymentReceipt');
   const options = useTranslations('MembershipPage.options');
@@ -12,6 +13,8 @@ export function PaymentReceipt({ reference, locale }: { reference: string; local
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // A reference change or unmount makes the earlier request stale; never
+    // display its receipt for a different payment or after navigation.
     let active = true;
     setReceipt(null);
     setError(false);
@@ -22,6 +25,8 @@ export function PaymentReceipt({ reference, locale }: { reference: string; local
     return () => { active = false; };
   }, [reference]);
 
+  // Receipt failures are separate from payment status. The parent continues
+  // showing its backend-confirmed success even when this read fails.
   if (error) return <p role="alert" className="mt-4 text-slate-700">{t('unavailable')}</p>;
   if (!receipt) return <p role="status" className="mt-4">{t('loading')}</p>;
 
@@ -51,6 +56,8 @@ export function PaymentReceipt({ reference, locale }: { reference: string; local
         <dd>{date}</dd>
         <dt className="font-medium">{t('reference')}</dt>
         <dd className="break-all">{receipt.confirmationReference}</dd>
+        {/* Catalog option IDs are translated; never show backend IDs or a
+            legacy free-text membership type as a receipt option. */}
         {receipt.paymentPurpose === 'membership' && receipt.membershipOption && (
           <>
             <dt className="font-medium">{t('membershipOption')}</dt>
