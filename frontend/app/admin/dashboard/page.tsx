@@ -36,7 +36,7 @@ export default function Dashboard() {
       </div>
     </aside>
     <div className ="w-full mx-4">
-      <div className="text-msscc-teal text-3xl font-bold border-b-4 border-msscc-pink-light">
+      <div className="text-msscc-pink-dark text-3xl font-bold border-b-4 border-msscc-pink-light">
         Your Pages
       </div>
       {localAdmin &&
