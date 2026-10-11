@@ -56,6 +56,27 @@ class MembershipPaymentStatusSmokeTests(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
 
+    def test_each_stored_payment_state_is_read_only_and_normalized(self):
+        for stored, public in (
+            (Membership.PaymentStatus.PENDING, "pending"),
+            (Membership.PaymentStatus.COMPLETED, "complete"),
+            (Membership.PaymentStatus.FAILED, "failed"),
+            (Membership.PaymentStatus.CANCELED, "canceled"),
+        ):
+            with self.subTest(stored=stored):
+                self.member.payment_status = stored
+                self.member.save(update_fields=["payment_status"])
+                # status_for deliberately sends a forged 'complete' query value;
+                # even repeated reads must return only the database state.
+                for _ in range(2):
+                    response = self.status_for(self.reference)
+                    self.assertEqual(response.status_code, status.HTTP_200_OK)
+                    self.assertEqual(response.data, {
+                        "payment_purpose": "membership", "payment_status": public,
+                    })
+                self.member.refresh_from_db()
+                self.assertEqual(self.member.payment_status, stored)
+
     def test_unknown_and_malformed_references_share_a_safe_404(self):
         expected = {"detail": "Payment status was not found."}
         for reference in ("MEM-invalid", "MEM-" + "b" * 32):
