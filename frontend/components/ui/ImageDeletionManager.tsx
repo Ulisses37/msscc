@@ -24,6 +24,11 @@ type MediaReferenceRecord = {
   is_visible?: boolean;
 };
 
+type StaticImageRecord = MediaReferenceRecord & {
+  static_image_id: number;
+  display_name: string;
+};
+
 {/** Allows for Exiting UI*/}
 type ImageDeletionManagerProps = {
   onClose: () => void;
@@ -37,6 +42,7 @@ type ImageDeletionManagerProps = {
 export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDeletionManagerProps) {
   const [imageItems, setImageItems] = useState<ImageItem[]>([]);
   const [inUseMediaAssetIds, setInUseMediaAssetIds] = useState<number[]>([]);
+  const [staticImages, setStaticImages] = useState<StaticImageRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -85,13 +91,16 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
         return response.json() as Promise<T>;
       };
 
-      const [pages, boardMembers, events, staticImages, partners] = await Promise.all([
+      const [pages, boardMembers, events, eventImages, staticImages, partners] = await Promise.all([
         fetchJson<PageRecord[]>('/api/page/get-all/'),
         fetchJson<MediaReferenceRecord[]>('/api/board-members/'),
         fetchJson<(MediaReferenceRecord & { is_published?: boolean })[]>('/api/events/'),
-        fetchJson<MediaReferenceRecord[]>('/api/media/static-images/'),
+        fetchJson<MediaReferenceRecord[]>('/api/events/images/'),
+        fetchJson<StaticImageRecord[]>('/api/media/static-images/'),
         fetchJson<(MediaReferenceRecord & { is_visible?: boolean })[]>('/api/partners/'),
       ]);
+
+      setStaticImages(staticImages);
 
       const contentByPage = await Promise.all(
         pages.map((page) =>
@@ -103,6 +112,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
         ...contentByPage.flat(),
         ...boardMembers,
         ...events.filter((event) => event.is_published !== false),
+        ...eventImages,
         ...staticImages,
         ...partners.filter((partner) => partner.is_visible !== false),
       ]
@@ -122,6 +132,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
 
   {/*Flexibility for selecting images*/}
   const toggleSelection = (id: number) => {
+    if (staticImages.some((staticImage) => staticImage.media_asset === id)) return;
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
     );
@@ -133,12 +144,23 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
       return;
     }
 
-    const filteredIdsInUse = selectedIds.filter((id) => inUseMediaAssetIds.includes(id));
+    const protectedIds = new Set(
+      staticImages
+        .map((staticImage) => staticImage.media_asset)
+        .filter((id): id is number => typeof id === 'number'),
+    );
+    const deletableIds = selectedIds.filter((id) => !protectedIds.has(id));
+    if (deletableIds.length === 0) {
+      setError('Selected media assets are linked to static images and cannot be deleted.');
+      return;
+    }
+
+    const filteredIdsInUse = deletableIds.filter((id) => inUseMediaAssetIds.includes(id));
     const usageWarning = filteredIdsInUse.length > 0
       ? `\n\nWarning: ${filteredIdsInUse.length} selected image item(s) are currently in use.`
       : '';
     const confirmed = window.confirm(
-      `Delete ${selectedIds.length} selected image item(s)? This cannot be undone.${usageWarning}`
+      `Delete ${deletableIds.length} selected image item(s)? This cannot be undone.${usageWarning}`
     );
     if (!confirmed) {
       return;
@@ -149,7 +171,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
     setMessage(null);
 
     try {
-      for (const id of selectedIds) {
+      for (const id of deletableIds) {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/${id}/`, {
           method: 'DELETE',
         });
@@ -160,7 +182,7 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
         }
       }
 
-      setMessage(`Deleted ${selectedIds.length} image item(s).`);
+      setMessage(`Deleted ${deletableIds.length} image item(s).`);
       setSelectedIds([]);
       await fetchImage(false);
       await fetchInUseMediaAssetIds();
@@ -172,6 +194,11 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
   };
 
   const useMobileLayout = mobileLayout || isMobileViewport;
+
+  const getStaticImageIdsForMedia = (mediaAssetId: number) =>
+    staticImages
+      .filter((staticImage) => staticImage.media_asset === mediaAssetId)
+      .map((staticImage) => staticImage.static_image_id);
 
   const renderEmptyState = (className: string) => (
     <div className={className}>
@@ -186,20 +213,24 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
         : imageItems.map((item) => {
             const isInUse = inUseMediaAssetIds.includes(item.media_asset_id);
             const isSelected = selectedIds.includes(item.media_asset_id);
+            const staticImageIds = getStaticImageIdsForMedia(item.media_asset_id);
+            const isProtected = staticImageIds.length > 0;
+            const protectionTitle = `Protected by StaticImage ${staticImageIds.join(', ')}`;
 
             return (
               <div
                 key={item.media_asset_id}
                 className={`flex min-w-0 items-center gap-3 border-t border-msscc-gray-light p-3 first:border-t-0 ${
-                  isInUse ? 'bg-msscc-pink-faint' : 'bg-white'
+                  isProtected ? 'bg-red-50' : isInUse ? 'bg-msscc-pink-faint' : 'bg-white'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
+                  disabled={isProtected}
                   onChange={() => toggleSelection(item.media_asset_id)}
                   className="h-5 w-5 shrink-0 rounded border-slate-300 text-slate-900"
-                  aria-label={`Select ${item.file_name}`}
+                  aria-label={isProtected ? `${item.file_name} is protected by a static image` : `Select ${item.file_name}`}
                 />
                 {item.file_url ? (
                   <img
@@ -219,7 +250,11 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                   <p className="mt-1 text-xs text-slate-500">
                     {new Date(item.created_at).toLocaleDateString()}
                   </p>
-                  {isInUse ? (
+                  {isProtected ? (
+                    <span className="mt-1 inline-flex rounded-full bg-msscc-danger-faint px-2 py-0.5 text-[11px] font-semibold text-msscc-danger" title={protectionTitle}>
+                      Protected Image
+                    </span>
+                  ) : isInUse ? (
                     <span className="mt-1 inline-flex rounded-full bg-msscc-pink-faint px-2 py-0.5 text-[11px] font-semibold text-msscc-danger">
                       In use
                     </span>
@@ -227,7 +262,16 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                     <span className="mt-1 inline-flex text-[11px] text-slate-500">Unused</span>
                   )}
                 </div>
-                {isSelected && isInUse && (
+                {isProtected && (
+                  <span
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white"
+                    title={protectionTitle}
+                    aria-label={protectionTitle}
+                  >
+                    !
+                  </span>
+                )}
+                {isSelected && isInUse && !isProtected && (
                   <span
                     className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white"
                     title="Selected image is currently in use"
@@ -259,19 +303,25 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
             : imageItems.map((item) => {
                 const isInUse = inUseMediaAssetIds.includes(item.media_asset_id);
                 const isSelected = selectedIds.includes(item.media_asset_id);
+                const staticImageIds = getStaticImageIdsForMedia(item.media_asset_id);
+                const isProtected = staticImageIds.length > 0;
+                const protectionTitle = `Protected by StaticImage ${staticImageIds.join(', ')}`;
 
                 return (
-                  <tr key={item.media_asset_id} className={`border-t border-msscc-gray-light ${isInUse ? 'bg-msscc-pink-faint' : ''}`}>
+                  <tr key={item.media_asset_id} className={`border-t border-msscc-gray-light ${isProtected ? 'bg-msscc-danger-faint' : isInUse ? 'bg-msscc-pink-faint' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={isSelected}
+                          disabled={isProtected}
                           onChange={() => toggleSelection(item.media_asset_id)}
                           className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                          aria-label={`Select ${item.file_name}`}
+                          aria-label={isProtected ? `${item.file_name} is protected by a static image` : `Select ${item.file_name}`}
                         />
-                        {isSelected && isInUse && (
+                        {isProtected ? (
+                          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-white" title={protectionTitle} aria-label={protectionTitle}>!</span>
+                        ) : isSelected && isInUse && (
                           <span className="inline-flex h-4 w-3 items-center justify-center rounded-full bg-msscc-danger text-xs font-bold text-white" title="Selected image is currently in use" aria-label="Warning: selected image is currently in use">!</span>
                         )}
                       </div>
@@ -293,8 +343,8 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-600">{new Date(item.created_at).toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      {isInUse ? <span className="rounded-full bg-msscc-pink-faint px-2 py-1 text-xs font-semibold text-msscc-danger">In use</span> : <span className="text-xs text-slate-500">Unused</span>}
+                    <td className="px-4 py-3 text-center">
+                      {isProtected ? <span className="rounded-full bg-msscc-danger-faint px-2 py-1 text-xs font-semibold text-msscc-danger" title={protectionTitle}>Protected Image</span> : isInUse ? <span className="rounded-full bg-msscc-pink-faint px-2 py-1 text-xs font-semibold text-msscc-danger">In use</span> : <span className="text-xs text-slate-500">Unused</span>}
                     </td>
                   </tr>
                 );
