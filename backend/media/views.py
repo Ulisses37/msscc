@@ -1,15 +1,17 @@
 # backend/media/views.py
+from django.db import transaction
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from .models import MediaAsset, StaticImage
 from .serializers import MediaFileSerializer, StaticImageSerializer
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 
 
-# Must Upload via parsing multipart/form-data, not JSON. The file goes to MinIO automatically via django-storages + boto3.
+#The file goes to MinIO automatically via django-storages + boto3.
 @method_decorator(csrf_exempt, name='dispatch')
 class MediaUploadView(APIView):
     parser_classes = [MultiPartParser]
@@ -27,8 +29,8 @@ class MediaUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        import re
         import os
+        import re
 
         name, ext = os.path.splitext(file.name)
         safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
@@ -47,7 +49,8 @@ class MediaUploadView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# The list and detail views return the file's metadata plus a signed URL. The frontend uses this URL in <img> tags — the browser fetches the image directly
+# The list and detail views return the file's metadata plus a signed URL.
+# The frontend uses this URL in <img> tags — the browser fetches the image directly
 # Basically Grabs URL references to the files in MinIO for security.
 class MediaListView(APIView):
     def get(self, request):
@@ -79,19 +82,49 @@ class MediaDetailView(APIView):
         except MediaAsset.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            file_key = media.file.name
-            storage = media.file.storage
-            storage.delete(file_key)
+        if StaticImage.objects.filter(media_asset_id=media.pk).exists():
+            return Response(
+                {"error": "This media asset is linked to a static image and cannot be deleted."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
+        placeholder = StaticImage.objects.filter(static_image_id=0).first()
+        replacement_id = placeholder.media_asset_id if placeholder else None
+        if replacement_id == media.pk:
+            replacement_id = None
+
+        from board_members.models import BoardMember
+        from content.models import Content
+        from events.models import Event, EventImage
+        from partners.models import Partner
+
+        try:
+            with transaction.atomic():
+                replacement_count = 0
+                for model in (Partner, BoardMember, Event, EventImage, Content):
+                    updated = model.objects.filter(media_asset_id=media.pk).update(
+                        media_asset_id=replacement_id,
+                    )
+                    replacement_count += updated
+
+                file_key = media.file.name
+                storage = media.file.storage
+                storage.delete(file_key)
+                media.delete()
         except Exception as e:
             return Response(
-                {"error": f"Failed to delete file from storage: {str(e)}"},
+                {"error": f"Failed to delete file or update references: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        media.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {
+                "deleted_media_asset_id": media.pk,
+                "replacement_media_asset_id": replacement_id,
+                "updated_reference_count": replacement_count,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class StaticImageListView(generics.ListAPIView):

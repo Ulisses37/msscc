@@ -23,6 +23,7 @@ useEffect(() => {
         website_url: string | null;
         display_order: number;
         media_asset: number | null;
+        media_is_visible: boolean;
         contribution_amount: number;
         is_visible: boolean;
     }[]) => {
@@ -36,6 +37,7 @@ useEffect(() => {
           CategoryJP: partner.category_jp,
           Website: partner.website_url ?? null,
           MediaAsset: partner.media_asset ?? null,
+          MediaVisible: partner.media_is_visible,
           ContributionAmount: partner.contribution_amount ?? 0,
           DisplayOrder: partner.display_order,
           isVisible: partner.is_visible
@@ -59,9 +61,10 @@ return(
           +
         </div>
       </div>
-      <div className="grid grid-cols-[60px_300px_200px_1fr]">
+      <div className="grid grid-cols-[60px_300px_120px_200px_1fr]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold text-center">Image</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
         <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
       </div>
@@ -93,9 +96,10 @@ return(
         </div>
       </div>
 
-      <div className="grid grid-cols-[60px_300px_200px]">
+      <div className="grid grid-cols-[60px_300px_120px_200px]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold text-center">Image</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
       <PartnerTable
@@ -114,9 +118,10 @@ return(
           +
         </div>
       </div>
-      <div className="grid grid-cols-[60px_300px_200px]">
+      <div className="grid grid-cols-[60px_300px_120px_200px]">
         <div className="px-2 py-2 text-sm font-semibold">Order</div>
         <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
+        <div className="px-3 py-2 text-sm font-semibold text-center">Image</div>
         <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
       </div>
       <PartnerTable

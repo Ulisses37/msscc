@@ -174,10 +174,8 @@ export default function VolunteerShiftsPage() {
         {shifts.map((shift) => (
           <div
             key={shift.volunteer_slot_id}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
               border: '0.5px solid var(--color-gray-light)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-4) var(--space-6)',
@@ -185,7 +183,7 @@ export default function VolunteerShiftsPage() {
             }}
           >
             {/* Shift date and time */}
-            <div style={{ flex: '0 0 35%' }}>
+            <div className="sm:flex-[0_0_35%]">
               <p style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 'var(--fs-body-sm)',
@@ -206,7 +204,7 @@ export default function VolunteerShiftsPage() {
             </div>
 
             {/* Position name and filled count */}
-            <div style={{ flex: '0 0 40%' }}>
+            <div className="sm:flex-[0_0_40%]">
               <p style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 'var(--fs-body-sm)',
@@ -227,7 +225,7 @@ export default function VolunteerShiftsPage() {
             </div>
 
             {/* Volunteer button or Full indicator */}
-            <div style={{ flex: '0 0 20%', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="flex sm:flex-[0_0_20%] sm:justify-end">
               {shift.filled_count >= shift.capacity ? (
                 <p style={{
                   fontFamily: 'var(--font-body)',
