@@ -13,6 +13,27 @@
     "partners": "Partners"
   },
 
+  "Footer": {
+    "organizationName": "MSSCC Communications",
+    "description": "Connecting our community through service and shared opportunity throughout MatsuyamaSacramento and Sacramento.",
+    "navigation": "Our Site",
+    "contact": "Contact Us",
+    "fullName": "Matsuyama-Sacramento Sister City Corporation",
+    "address": "PO BOX 162785, Sacramento, CA 95816",
+    "emailLabel": "Email: ",
+    "email": "matsacsistercitycorp.1@gmail.com",
+    "phone": "+1 (000) 000-0000",
+    "TAX_ID": "Nonprofit 501(c)(3) Tax ID: 94-2831119",
+    "facebook": "Follow us on Facebook",
+    "rightsReserved": "",
+    "home": "Home",
+    "events": "Program|Events",
+    "support": "Support",
+    "membership": "Membership",
+    "about": "About|Board",
+    "partners": "Partners"
+  },
+
   "EventsPage": {
     "historyLink": "Click here to see past events!"
   },
@@ -72,6 +93,17 @@
     "lastNameRequired": "Enter your last name.",
     "addressRequired": "Enter your address.",
     "continueToPayment": "Continue to Payment",
+    "preparingPayment": "Preparing secure payment...",
+    "paymentSessionReady": "Payment session ready",
+    "paymentSessionError": "Unable to prepare payment. Please try again.",
+    "secureStripePayment": "Secure membership payment",
+    "loadingPaymentForm": "Loading secure payment form...",
+    "paymentUnavailable": "Payment is temporarily unavailable. Please try again later.",
+    "confirmPayment": "Submit payment",
+    "confirmingPayment": "Submitting payment...",
+    "paymentConfirmationError": "We could not submit your payment. Please check your details and try again.",
+    "paymentSubmitted": "Payment submitted. Membership status will be confirmed separately.",
+    "paymentTakingLonger": "Your payment is still being processed. Please wait; do not submit it again.",
     "printForm": "Print Membership Form",
     "printFormUnavailable": "Membership form not found on the server."
   },

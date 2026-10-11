@@ -8,6 +8,7 @@ import { getMessages } from 'next-intl/server';
 // Components
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { Banner } from '@/components/layout/Banner';
+import { PublicFooter } from '@/components/layout/PublicFooter';
 
 export default async function LocaleLayout({
   children,
@@ -29,12 +30,13 @@ export default async function LocaleLayout({
             <PublicNavbar />
 
             {/* Main content area */}
-            <main className="flex-grow">
+            <main className="flex-grow pb-10">
               {children}
             </main>
 
             {/* <Footer /> */}
-          </div>
+            <PublicFooter />
+      </div>
     </NextIntlClientProvider>
   );
 }
