@@ -11,35 +11,37 @@ export default function Partners(){
   const [editPopUp, setEditPopUp] = useState<PartnerProp | null>(null);
 
   // fetch partners from database
-useEffect(() => {
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`)
-    .then(res => res.json())
-    .then((partnerRecords: {
-        partner_id: number;
-        display_name_en: string;
-        display_name_ja: string;
-        category_en: string;
-        category_jp: string;
-        website_url: string | null;
-        display_order: number;
-        media_asset: number | null;
-        contribution_amount: number;
-        is_visible: boolean;
-    }[]) => {
-      const mappedPartners: PartnerProp[] = partnerRecords
-        .sort((a, b) => a.display_order - b.display_order)
-        .map(partner => ({
-          PartnerID: partner.partner_id,
-          Name: partner.display_name_en,
-          NameJP:partner.display_name_ja,
-          Category: partner.category_en,
-          CategoryJP: partner.category_jp,
-          Website: partner.website_url ?? null,
-          MediaAsset: partner.media_asset ?? null,
-          ContributionAmount: partner.contribution_amount ?? 0,
-          DisplayOrder: partner.display_order,
-          isVisible: partner.is_visible
-        }));
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`)
+      .then(res => res.json())
+      .then((partnerRecords: {
+          partner_id: number;
+          display_name_en: string;
+          display_name_ja: string;
+          category_en: string;
+          category_jp: string;
+          website_url: string | null;
+          display_order: number;
+          media_asset: number | null;
+          media_is_visible: boolean;
+          contribution_amount: number;
+          is_visible: boolean;
+      }[]) => {
+        const mappedPartners: PartnerProp[] = partnerRecords
+          .sort((a, b) => a.display_order - b.display_order)
+          .map(partner => ({
+            PartnerID: partner.partner_id,
+            Name: partner.display_name_en,
+            NameJP: partner.display_name_ja,
+            Category: partner.category_en,
+            CategoryJP: partner.category_jp,
+            Website: partner.website_url ?? null,
+            MediaAsset: partner.media_asset ?? null,
+            MediaVisible: partner.media_is_visible ?? true,
+            ContributionAmount: partner.contribution_amount ?? 0,
+            DisplayOrder: partner.display_order,
+            isVisible: partner.is_visible
+          }));
 
         setPartners(mappedPartners);
       })
@@ -58,29 +60,12 @@ useEffect(() => {
           <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Partners</div>
           <AddButton label="Add partner" onClick={() => setPopUp("partner")} />
         </div>
+        <PartnerTableHeader showWebsite />
+        <PartnerTable
+          rowData={partners.filter(p => p.Category === "partner")}
+          setEditPop={setEditPopUp}
+        />
       </div>
-      <div className="grid grid-cols-[60px_300px_200px_1fr]">
-        <div className="px-2 py-2 text-sm font-semibold">Order</div>
-        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
-        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
-        <div className="px-3 py-2 text-sm font-semibold pl-8">Website</div>
-      </div>
-      <PartnerTable
-       rowData={partners.filter(p => p.Category === "partner")}
-      setEditPop={setEditPopUp}
-      />
-      {popUp !== null && <CreatePartnerProp
-       PType = {popUp}
-        onChange = {setPopUp}
-        InitialDisplayOrder={getNextDisplayOrder({category: popUp, partnersArray: partners})}
-        UsedDisplayOrders= {partners.filter(p => p.Category === popUp).map(p => p.DisplayOrder)}/>}
-
-      {editPopUp !== null && <EditPartnerProp
-      partner = {editPopUp}
-      onChange={setEditPopUp}
-      UsedDisplayOrders={partners.filter(p => p.Category === editPopUp.Category).map(p => p.DisplayOrder)}
-      />}
-    </div>
 
       {/* Donors */}
       <div className="w-full rounded border border-gray-300 bg-msscc-gray-faint p-2 my-2">
@@ -88,18 +73,12 @@ useEffect(() => {
           <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Donors</div>
           <AddButton label="Add donor" onClick={() => setPopUp("donor")} />
         </div>
+        <PartnerTableHeader />
+        <PartnerTable
+          rowData={partners.filter(p => p.Category === "donor")}
+          setEditPop={setEditPopUp}
+        />
       </div>
-
-      <div className="grid grid-cols-[60px_300px_200px]">
-        <div className="px-2 py-2 text-sm font-semibold">Order</div>
-        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
-        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
-      </div>
-      <PartnerTable
-       rowData={partners.filter(p => p.Category === "donor")}
-        setEditPop={setEditPopUp}
-      />
-    </div>
 
       {/* Sponsors */}
       <div className="w-full rounded border border-gray-300 bg-msscc-gray-faint p-2 my-2">
@@ -107,19 +86,32 @@ useEffect(() => {
           <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Sponsors</div>
           <AddButton label="Add sponsor" onClick={() => setPopUp("sponsor")} />
         </div>
+        <PartnerTableHeader />
+        <PartnerTable
+          rowData={partners.filter(p => p.Category === "sponsor")}
+          setEditPop={setEditPopUp}
+        />
       </div>
-      <div className="grid grid-cols-[60px_300px_200px]">
-        <div className="px-2 py-2 text-sm font-semibold">Order</div>
-        <div className="px-3 py-2 text-sm font-semibold pl-4">Name</div>
-        <div className="px-3 py-2 text-sm font-semibold">Contribution Amount</div>
-      </div>
-      <PartnerTable
-       rowData={partners.filter(p => p.Category === "sponsor")}
-        setEditPop={setEditPopUp}
-      />
+
+      {/* Pop-ups */}
+      {popUp !== null && (
+        <CreatePartnerProp
+          PType={popUp}
+          onChange={setPopUp}
+          InitialDisplayOrder={getNextDisplayOrder({ category: popUp, partnersArray: partners })}
+          UsedDisplayOrders={partners.filter(p => p.Category === popUp).map(p => p.DisplayOrder)}
+        />
+      )}
+
+      {editPopUp !== null && (
+        <EditPartnerProp
+          partner={editPopUp}
+          onChange={setEditPopUp}
+          UsedDisplayOrders={partners.filter(p => p.Category === editPopUp.Category).map(p => p.DisplayOrder)}
+        />
+      )}
     </div>
-  </div>
-)
+  )
 }
 
 function AddButton({ label, onClick }: { label: string; onClick: () => void }) {

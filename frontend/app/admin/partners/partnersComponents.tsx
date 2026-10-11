@@ -18,13 +18,16 @@ export interface PartnerProp{
   isVisible: boolean;
 }
 
+// text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
 const disabledInputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base bg-gray-100 text-gray-500 cursor-not-allowed";
 
+// Columns: Order | Name | Image | Contribution | (Website, partners only, md+)
+// Class names must be written out in full so Tailwind can find them.
 export function getGridCols(showWebsite: boolean) {
   return showWebsite
-    ? 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_200px] md:grid-cols-[60px_minmax(0,1fr)_200px_minmax(0,1fr)]'
-    : 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_200px]';
+    ? 'grid grid-cols-[56px_minmax(0,1fr)_56px_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px] md:grid-cols-[60px_minmax(0,1fr)_120px_200px_minmax(0,1fr)]'
+    : 'grid grid-cols-[56px_minmax(0,1fr)_56px_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px]';
 }
 
 export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: boolean }) {
@@ -32,6 +35,7 @@ export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: bool
     <div className={getGridCols(showWebsite)}>
       <div className="px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Order</div>
       <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid">Name</div>
+      <div className="px-1 sm:px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Image</div>
       <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid text-right">
         <span className="hidden sm:inline">Contribution </span>Amount
       </div>
@@ -43,6 +47,7 @@ export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: bool
     </div>
   );
 }
+
 
 export function PartnerTable(
   {
@@ -79,17 +84,35 @@ function DisplayRow({
   const isPartner = partnerInfo.Category === "partner";
 
   return (
-      <div
-      className={`${partnerInfo.Category == "partner" ? "grid grid-cols-[60px_300px_200px_1fr]" : "grid grid-cols-[60px_300px_200px]"}
+    <div
+      className={`${getGridCols(isPartner)}
        border-b border-gray-200 last:border-b-0 cursor-pointer
-       bg-white hover:bg-yellow-100`}
-       onClick={()=>setEditPopUp(partnerInfo)}
-      >
-      <div className="px-3 py-2 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
-      <div className="px-3 py-2 text-sm font-semibold pl-4">{partnerInfo.Name}</div>
-      <div className="px-3 py-2 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
-      {partnerInfo.Category == "partner" && (
-        <div className="px-3 py-2 text-sm font-semibold pl-8">{partnerInfo.Website}</div>
+       bg-white hover:bg-msscc-pink-faint`}
+      onClick={() => setEditPopUp(partnerInfo)}
+    >
+      <div className="px-2 py-3 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
+      <div className="px-3 py-3 text-sm font-semibold truncate">{partnerInfo.Name}</div>
+      <div className="flex items-center justify-center px-2 sm:px-3 py-2">
+        {partnerInfo.MediaAsset !== null ? (
+          <div className="relative h-10 w-10 sm:h-16 sm:w-16 overflow-hidden rounded border bg-gray-50">
+            <PostImage
+              mediaID={partnerInfo.MediaAsset}
+              configVariant="thumbnail"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <>
+            <span className="hidden sm:inline text-xs text-gray-400">No image</span>
+            <span className="sm:hidden text-xs text-gray-400">—</span>
+          </>
+        )}
+      </div>
+      <div className="px-3 py-3 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
+      {isPartner && (
+        <div className="hidden md:block px-3 py-3 pl-8 text-sm font-semibold truncate">
+          {partnerInfo.Website}
+        </div>
       )}
     </div>
   );
@@ -164,6 +187,32 @@ export function CreatePartnerProp(
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onChange])
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+    }
+  }, [])
+
+  const handleCreateSubmit = async () => {
+    setMediaError(null);
+    setIsUploadingMedia(true);
+
+    try {
+      await validateAndSubmit({
+        partnerInfo,
+        mediaFile: selectedMediaFile,
+        mediaVisible,
+        setWebsiteError,
+        type: "create",
+      });
+    } catch (error) {
+      setMediaError(error instanceof Error ? error.message : 'Failed to save partner.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
   return(
     <div
     className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
@@ -273,26 +322,20 @@ export function CreatePartnerProp(
               Visible
             </label>
         </div>
-        <div className="flex">
-        <button
-          onClick={async() => await validateAndSubmit(
-            {
-              partnerInfo: partnerInfo,
-              setWebsiteError: setWebsiteError,
-              type: "create"
-            }
-          )}
-          disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
-          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
-        >
-          Save
-        </button>
-        <button
-          onClick={() => onChange(null)}
-          className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
-        >
-          Cancel
-        </button>
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={handleCreateSubmit}
+            disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            className="flex-1 bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+          >
+            Save
+          </button>
+          <button
+            onClick={() => onChange(null)}
+            className="flex-1 bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Cancel
+          </button>
         </div>
 
       </div>
@@ -466,7 +509,7 @@ export function EditPartnerProp(
               />
             </label>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Contribution & Media*/}
+          <div className="flex flex-col sm:flex-row gap-3"> {/*Contribution*/}
             <label className="text-sm font-semibold sm:flex-1"> Contribution Amount
               <input
                 type="number"
@@ -482,15 +525,57 @@ export function EditPartnerProp(
               />
             {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
             </label>
-              <label className="text-sm font-semibold flex-1"> Media Asset
-              <input
-                type="number"
-                value={partnerInfo?.MediaAsset?? ""}
-                onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAsset: Number(e.target.value) } : prev)}
-                className="w-full border rounded px-2 py-1 mt-1 font-normal"
-              />
-            </label>
           </div>
+
+          <div className="flex flex-col sm:flex-row gap-3"> {/*Media asset: Upload & Existing*/}
+            <div className="sm:flex-1">
+              <label className="text-sm font-semibold">Upload Image</label>
+              <ImportImage
+                id="edit-partner-media"
+                onChange={handleMediaChange}
+              />
+              {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
+              {previewUrl && (
+                <div className="mt-2 h-40 w-full overflow-hidden rounded border bg-gray-50">
+                  <img
+                    src={previewUrl}
+                    alt="New partner image preview"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              )}
+              {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
+            </div>
+            <div className="sm:flex-1">
+              <label className="text-sm font-semibold"> Existing Media Asset ID
+                <input
+                  type="number"
+                  value={partnerInfo?.MediaAsset ?? ""}
+                  onChange={(e) => setInfo(prev => prev ? { ...prev, MediaAsset: e.target.value === "" ? null : Number(e.target.value) } : prev)}
+                  className={inputClass}
+                />
+              </label>
+              {!previewUrl && partnerInfo.MediaAsset !== null && (
+                <div className="relative mt-2 h-40 overflow-hidden rounded border bg-gray-50">
+                  <PostImage
+                    mediaID={partnerInfo.MediaAsset}
+                    configVariant="banner"
+                    className="object-contain"
+                  />
+                </div>
+              )}
+              <label className="mt-2 flex items-center gap-2 text-sm font-normal">
+                <input
+                  type="checkbox"
+                  checked={mediaVisible}
+                  onChange={(e) => setMediaVisible(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Image visible on the public site
+              </label>
+            </div>
+          </div>
+
           <div> {/*Website URL & Visible*/}
             <label className="text-sm font-semibold">Website URL
               <input
@@ -514,17 +599,15 @@ export function EditPartnerProp(
         {/* On phones: Save on top, Delete at the bottom */}
         <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4">
           <button
-            onClick={async() => await validateAndSubmit(
+              onClick={async() => await validateAndSubmit(
               {
                 partnerInfo: partnerInfo,
                 setWebsiteError: setWebsiteError,
-                type: "update",
-              }
-            )}
-            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
-            className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
-          >
-            Save
+                type: "delete",
+              })}
+               className="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+            >
+            Delete
           </button>
           <button
             onClick={() => onChange(null)}
@@ -533,14 +616,8 @@ export function EditPartnerProp(
             Cancel
           </button>
           <button
-            onClick={async() => await validateAndSubmit(
-              {
-                partnerInfo: partnerInfo,
-                setWebsiteError: setWebsiteError,
-                type: "update",
-              }
-            )}
-            disabled={!!(orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            onClick={handleUpdateSubmit}
+            disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
             className="w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
           >
             Save
@@ -694,6 +771,7 @@ async function validateAndSubmit(
       alert("Network error, please try again.");
       console.error(err);
     });
+    return;
   };
 
   if (partnerInfo.ContributionAmount < 0){
