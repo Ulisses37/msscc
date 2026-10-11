@@ -55,6 +55,12 @@ class Donation(models.Model):
 class Membership(models.Model):
     """Membership record to store membership information."""
 
+    class PaymentStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELED = "canceled", "Canceled"
+
     membership_id = models.AutoField(primary_key=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -65,8 +71,15 @@ class Membership(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     renewal_date = models.DateField()
-    payment_status = models.CharField(max_length=255)
+    # Manual admin records predate checkout; retain their free-text statuses.
+    payment_status = models.CharField(max_length=255, default=PaymentStatus.PENDING)
     reference_id = models.CharField(max_length=255)
+    # Only checkout-issued references are unique; legacy admin references are editable.
+    checkout_reference = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    membership_option_id = models.CharField(max_length=32, null=True, blank=True)
+    expected_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, null=True, blank=True)
     status = models.CharField(max_length=255)
     notes = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

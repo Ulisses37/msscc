@@ -8,14 +8,13 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from donations.models import Donation
+from donations.models import Donation, Membership
+from donations.services import create_pending_membership, update_membership_from_payment_intent
 from payments.serializers import (
-    MEMBERSHIP_PRICES,
     MembershipPaymentSessionRequestSerializer,
     PaymentSessionRequestSerializer,
 )
 from payments.services.stripe_service import (
-    create_membership_payment_intent,
     create_payment_session,
 )
 
@@ -25,6 +24,8 @@ logger = logging.getLogger(__name__)
 # Donation references are generated from database IDs. Webhook metadata and
 # Stripe object fields are still external input, even after signature checking.
 DONATION_REFERENCE_PATTERN = re.compile(r"DON-[0-9]{8,}\Z")
+MEMBERSHIP_REFERENCE_PATTERN = re.compile(r"MEM-[0-9a-f]{32}\Z")
+PAYMENT_INTENT_ID_PATTERN = re.compile(r"pi_[A-Za-z0-9_]{1,252}\Z")
 STRIPE_EVENT_ID_PATTERN = re.compile(r"evt_[A-Za-z0-9]{1,251}\Z")
 STRIPE_REQUEST_ID_PATTERN = re.compile(r"req_[A-Za-z0-9]{1,251}\Z")
 
@@ -188,9 +189,18 @@ class MembershipPaymentSessionCreateView(APIView):
         try:
             # Never take amount or currency from request.data. The frontend's
             # display price is not authoritative even when it happens to match.
-            payment_session = create_membership_payment_intent(
-                amount=MEMBERSHIP_PRICES[option_id],
-                membership_option_id=option_id,
+            payment_session = create_pending_membership(
+                option_id=option_id,
+                first_name=serializer.validated_data["first_name"],
+                last_name=serializer.validated_data["last_name"],
+                email=serializer.validated_data["email"],
+                phone=serializer.validated_data.get("phone", ""),
+            )
+        except DatabaseError:
+            logger.error("Database error while creating a pending membership.")
+            return Response(
+                {"detail": "Payment processing is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         except (stripe.StripeError, RuntimeError, ValueError):
             # Exception text and Stripe objects may contain sensitive details.
@@ -398,7 +408,7 @@ class PaymentStatusView(APIView):
 
 class StripeWebhookView(APIView):
     """
-    Receive verified Stripe events and update donation payment statuses.
+    Receive verified Stripe events and update donation or membership payments.
 
     This endpoint does not use login authentication because Stripe calls it
     directly. Instead, every request must have a valid Stripe signature.
@@ -408,7 +418,7 @@ class StripeWebhookView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        """Verify the Stripe event before updating a donation."""
+        """Verify the Stripe event before updating any payment record."""
 
         webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
@@ -467,7 +477,43 @@ class StripeWebhookView(APIView):
             )
         event_id = _safe_event_id(event_data.get("id"))
 
-        # Continue with the existing webhook-processing code below.
+        reference_id = _get_internal_reference(stripe_object)
+        # Membership checkout creates PaymentIntents, not Checkout Sessions.
+        # Route only its own event namespace after signature verification;
+        # donation event behavior remains unchanged below.
+        if isinstance(reference_id, str) and reference_id.startswith("MEM-"):
+            if event_type not in (
+                "payment_intent.succeeded", "payment_intent.payment_failed",
+                "payment_intent.canceled",
+            ):
+                return Response({"received": True}, status=status.HTTP_200_OK)
+            intent_id = stripe_object.get("id")
+            if (
+                MEMBERSHIP_REFERENCE_PATTERN.fullmatch(reference_id) is None
+                or not isinstance(intent_id, str)
+                or PAYMENT_INTENT_ID_PATTERN.fullmatch(intent_id) is None
+                or not isinstance(stripe_object.get("metadata"), dict)
+                or stripe_object["metadata"].get("payment_purpose") != "membership"
+            ):
+                logger.warning("Stripe membership event has invalid linkage. event_id=%s", event_id)
+                return Response({"received": True}, status=status.HTTP_200_OK)
+            try:
+                update_membership_from_payment_intent(
+                    reference=reference_id, intent_id=intent_id,
+                    event_type=event_type, intent=stripe_object,
+                    event_created=event_data.get("created"),
+                )
+            except Membership.DoesNotExist:
+                logger.warning("Stripe event did not match a membership. event_id=%s", event_id)
+            except DatabaseError:
+                logger.error(
+                    "Database error while processing a membership event. event_id=%s", event_id
+                )
+                return Response(
+                    {"detail": "Webhook processing is temporarily unavailable."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response({"received": True}, status=status.HTTP_200_OK)
 
         new_status = _get_payment_status(event_type, stripe_object)
 
@@ -478,8 +524,6 @@ class StripeWebhookView(APIView):
                 {"received": True},
                 status=status.HTTP_200_OK,
             )
-
-        reference_id = _get_internal_reference(stripe_object)
 
         # Only donation references belong in the Donation table. This prevents
         # future membership events from updating donation records.
