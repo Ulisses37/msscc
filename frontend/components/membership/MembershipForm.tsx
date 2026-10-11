@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 import type { MembershipOptionId } from '@/constants/membershipOptions';
@@ -10,6 +10,10 @@ interface MembershipFormProps {
   // Selection remains page-owned so this form cannot drift from the options
   // or summary by maintaining a second membership value.
   selectedOptionId: MembershipOptionId | null;
+  onValidityChange: (valid: boolean) => void;
+  onContinueToPayment: () => void;
+  isPreparingPayment: boolean;
+  isPaymentSessionReady: boolean;
   // The page supplies the live review summary so it appears immediately before
   // the readiness control without moving price data into this form.
   children: ReactNode;
@@ -20,6 +24,10 @@ const inputClassName =
 
 export function MembershipForm({
   selectedOptionId,
+  onValidityChange,
+  onContinueToPayment,
+  isPreparingPayment,
+  isPaymentSessionReady,
   children,
 }: MembershipFormProps) {
   const t = useTranslations('MembershipPage');
@@ -49,6 +57,12 @@ export function MembershipForm({
     firstNameIsValid &&
     lastNameIsValid &&
     addressIsValid;
+
+  // Keep Stripe's separate payment button gated by the live membership fields,
+  // including when someone edits required information after session creation.
+  useEffect(() => {
+    onValidityChange(formIsValid);
+  }, [formIsValid, onValidityChange]);
 
   const showEmailError = emailTouched && !emailIsValid;
   const showFirstNameError = firstNameTouched && !firstNameIsValid;
@@ -201,15 +215,23 @@ export function MembershipForm({
 
         <div className="pt-2">{children}</div>
 
-        {/* This type="button" intentionally has no action. It only reports
-            readiness; backend validation, persistence, and Stripe setup remain
-            later work. */}
+        {/* Keep the existing form validation as the gate for session creation;
+            a prepared session must not trigger another PaymentIntent. */}
         <button
           type="button"
-          disabled={!formIsValid}
+          onClick={() => {
+            if (formIsValid && !isPreparingPayment && !isPaymentSessionReady) {
+              onContinueToPayment();
+            }
+          }}
+          disabled={!formIsValid || isPreparingPayment || isPaymentSessionReady}
           className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
         >
-          {t('continueToPayment')}
+          {isPreparingPayment
+            ? t('preparingPayment')
+            : isPaymentSessionReady
+              ? t('paymentSessionReady')
+              : t('continueToPayment')}
         </button>
       </div>
     </section>

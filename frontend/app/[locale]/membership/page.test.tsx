@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import MembershipPage from '@/app/[locale]/membership/page';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
+import { createMembershipPaymentSession } from '@/services/paymentService';
 
 type MembershipMessages = typeof enMessages;
 
@@ -78,11 +79,24 @@ jest.mock('@/components/content/ContentFallBack', () => ({
   FallBack: () => null,
 }));
 
+jest.mock('@/services/paymentService', () => ({
+  createMembershipPaymentSession: jest.fn(),
+}));
+
+// Stripe itself is exercised by the component tests. This stub exposes only
+// the page's session handoff and never receives or simulates card information.
+jest.mock('@/components/membership/MembershipPaymentElement', () => ({
+  MembershipPaymentElement: ({ clientSecret }: { clientSecret: string }) => (
+    <div data-testid="membership-stripe-element">{clientSecret}</div>
+  ),
+}));
+
 describe('MembershipPage review flow', () => {
   beforeEach(() => {
     mockLocale = 'en';
     mockMessages = enMessages;
     mockFetchPageContent.mockClear();
+    jest.mocked(createMembershipPaymentSession).mockReset();
     global.fetch = jest.fn();
   });
 
@@ -133,8 +147,68 @@ describe('MembershipPage review flow', () => {
       screen.getByLabelText(enMessages.MembershipPage.phoneOptional),
     ).toHaveValue('');
     expect(continueButton).toBeEnabled();
+    // Hold the session request open to check the loading state independently
+    // of Stripe mounting after the response arrives.
+    let finishSession!: (value: { sessionId: string; clientSecret: string }) => void;
+    jest.mocked(createMembershipPaymentSession).mockReturnValue(
+      new Promise((resolve) => {
+        finishSession = resolve;
+      }),
+    );
     await user.click(continueButton);
+    expect(createMembershipPaymentSession).toHaveBeenCalledWith({
+      membershipOptionId: 'family',
+    });
+    // Page-content fetches are separate from the mocked payment service.
     expect(global.fetch).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: enMessages.MembershipPage.preparingPayment })).toBeDisabled();
+    expect(screen.queryByTestId('membership-stripe-element')).not.toBeInTheDocument();
+
+    finishSession({ sessionId: 'pi_family', clientSecret: 'pi_secret_family' });
+    expect(await screen.findByTestId('membership-stripe-element')).toHaveTextContent('pi_secret_family');
+    expect(screen.getByRole('button', { name: enMessages.MembershipPage.paymentSessionReady })).toBeDisabled();
+  });
+
+  it('ignores an old session after selection changes', async () => {
+    const user = userEvent.setup();
+    // A late response for the old selection must never mount Elements with
+    // a client secret for a different membership price.
+    let finishSession!: (value: { sessionId: string; clientSecret: string }) => void;
+    jest.mocked(createMembershipPaymentSession).mockReturnValue(
+      new Promise((resolve) => {
+        finishSession = resolve;
+      }),
+    );
+    render(<MembershipPage />);
+    await user.click(screen.getByRole('radio', { name: new RegExp(`^${enMessages.MembershipPage.options.student}`) }));
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.email), 'member@example.com');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.firstName), 'Maya');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.lastName), 'Chen');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.address), '123 Main Street');
+    await user.click(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment }));
+    await user.click(screen.getByRole('radio', { name: new RegExp(`^${enMessages.MembershipPage.options.family}`) }));
+
+    finishSession({ sessionId: 'pi_old_student', clientSecret: 'pi_secret_old' });
+    await waitFor(() => expect(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment })).toBeEnabled());
+    expect(screen.queryByTestId('membership-stripe-element')).not.toBeInTheDocument();
+  });
+
+  it('shows a translated safe error and allows retry when a session fails', async () => {
+    const user = userEvent.setup();
+    // This sentinel stands in for sensitive upstream text, which must stay
+    // out of the rendered error while leaving the visitor able to retry.
+    jest.mocked(createMembershipPaymentSession).mockRejectedValue(new Error('private-stripe-detail'));
+    render(<MembershipPage />);
+    await user.click(screen.getByRole('radio', { name: new RegExp(`^${enMessages.MembershipPage.options.student}`) }));
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.email), 'member@example.com');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.firstName), 'Maya');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.lastName), 'Chen');
+    await user.type(screen.getByLabelText(enMessages.MembershipPage.address), '123 Main Street');
+    await user.click(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(enMessages.MembershipPage.paymentSessionError);
+    expect(screen.queryByText(/private-stripe-detail/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: enMessages.MembershipPage.continueToPayment })).toBeEnabled();
   });
 
   it('keeps continue disabled until invalid information is corrected', async () => {
