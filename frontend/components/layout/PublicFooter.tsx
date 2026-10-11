@@ -53,7 +53,7 @@ export const PublicFooter = () => {
           <address className="mt-3 space-y-1.5 text-label not-italic text-white/85">
             <p className="text-white/85">{t('fullName')}</p>
             <p className="text-white/85">{t('address')}</p>
-            <p><a className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline" href={`mailto:${t('email')}`}>{t('email')}</a></p>
+            <p><span className='!text-white/85'>{t('emailLabel')}</span><a className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline" href={`mailto:${t('email')}`}>{t('email')}</a></p>
             <p><a className="!text-white transition-colors hover:!text-msscc-teal-sky hover:underline" href={`tel:${t('phone')}`}>{t('phone')}</a></p>
             <p className="text-white/85">{t('TAX_ID')}</p>
           </address>
