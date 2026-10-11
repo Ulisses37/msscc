@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from partners.models import Partner
 
+
 # serializer allows for easier access to partner metadata
 class PartnerSerializer(serializers.ModelSerializer):
     """Serializer for partner records."""
@@ -17,6 +18,7 @@ class PartnerSerializer(serializers.ModelSerializer):
             "website_url",
             "contribution_amount",
             "is_visible",
+            "media_is_visible",
             "display_order",
             "created_at",
             "updated_at",
