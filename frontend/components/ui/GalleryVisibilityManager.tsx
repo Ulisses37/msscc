@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import PostImage from './PostImage';
 
 type GalleryMediaItem = {
   media_asset_id: number;
@@ -25,7 +26,9 @@ export function GalleryVisibilityManager({ onClose }: GalleryVisibilityManagerPr
     const loadMedia = async () => {
       setError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`, {
+          cache: 'no-store',
+        });
         if (!response.ok) throw new Error('Failed to load media assets.');
         setItems((await response.json()) as GalleryMediaItem[]);
       } catch (loadError) {
@@ -117,10 +120,10 @@ export function GalleryVisibilityManager({ onClose }: GalleryVisibilityManagerPr
           </button>
         </div>
 
-        {isLoading && <p className="text-sm text-msscc-gray-mid">Loading media assets…</p>}
+        {isLoading && <p className="text-sm text-msscc-gray-mid p-2">  Loading…</p>}
         {error && <p className="text-sm text-msscc-danger">{error}</p>}
         {!isLoading && !error && items.length === 0 && (
-          <p className="text-sm text-msscc-gray-mid">No stored images found.</p>
+          <p className="text-sm text-msscc-gray-mid p-2">No stored images found.</p>
         )}
 
         {!isLoading && !error && items.length > 0 && (
@@ -144,10 +147,13 @@ export function GalleryVisibilityManager({ onClose }: GalleryVisibilityManagerPr
                         : 'border-msscc-gray-light hover:border-msscc-pink-light'
                     }`}
                   >
-                    <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-msscc-gray-light bg-msscc-gray-faint">
+                    <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded border border-msscc-gray-light bg-msscc-gray-faint">
                       {item.file_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.file_url} alt={item.file_name} className="h-full w-full object-contain" />
+                        <PostImage
+                          mediaID={item.media_asset_id}
+                          configVariant="thumbnail"
+                          className="h-full w-full object-contain"
+                        />
                       ) : (
                         <span className="text-center text-[10px] text-msscc-gray-mid">No preview</span>
                       )}
@@ -182,7 +188,13 @@ export function GalleryVisibilityManager({ onClose }: GalleryVisibilityManagerPr
                     aria-label={`Remove ${item.file_name} from gallery`}
                   >
                     {item.file_url ? (
-                      <img src={item.file_url} alt={item.file_name} className="h-full w-full object-contain" />
+                      <div className="relative size-full">
+                        <PostImage
+                          mediaID={item.media_asset_id}
+                          configVariant="thumbnail"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
                     ) : (
                       <span className="flex h-full items-center justify-center text-[10px] text-msscc-gray-mid">Error: No Image</span>
                     )}
