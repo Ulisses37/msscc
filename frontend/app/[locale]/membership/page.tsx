@@ -244,6 +244,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
           <MembershipPaymentElement
             key={paymentSession.sessionId}
             clientSecret={paymentSession.clientSecret}
+            confirmationReference={paymentSession.confirmationReference}
             locale={locale}
             membershipInformationValid={membershipInformationValid}
             onPaymentStateChange={setPaymentState}
