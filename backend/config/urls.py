@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+
 from events.views import run_event_reminders
 
 urlpatterns = [
@@ -36,4 +37,5 @@ urlpatterns = [
     path("api/content/", include("content.urls")),
     path("api/donations/", include("donations.urls")),
     path("api/payments/", include("payments.urls")),
+    path("api/emails/", include("emails.urls")),
 ]
