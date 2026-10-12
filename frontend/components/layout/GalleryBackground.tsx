@@ -7,6 +7,7 @@ type GalleryImage = {
   media_asset_id: number;
   file_url: string | null;
   file_name: string;
+  file_type?: string;
   alt_text_en?: string;
 };
 
@@ -77,36 +78,87 @@ export default function GalleryBackground() {
 
   const activeImage = images[activeIndex];
   const previousImage = transitioningFrom === null ? null : images[transitioningFrom];
+  const isJfif = (image: GalleryImage) =>
+    image.file_type?.toLowerCase() === 'image/jfif' || /\.jfif$/i.test(image.file_name);
+
+  const changeImage = (direction: -1 | 1) => {
+    setActiveIndex((currentIndex) => {
+      setTransitioningFrom(currentIndex);
+      return (currentIndex + direction + images.length) % images.length;
+    });
+  };
 
   return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-x-0 top-1/2 z-0 h-[70vh] min-h-[240px] max-h-[680px] -translate-y-1/2 overflow-hidden opacity-[0.18] blur-[1px]"
-    >
-      {previousImage && !prefersReducedMotion && (
+    <>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-1/2 z-0 h-[80vh] min-h-[240px] max-h-[680px] -translate-y-1/2 overflow-hidden opacity-[0.18] blur-[1px]"
+      >
+        {previousImage && !prefersReducedMotion && (
+          <Image
+            key={`gallery-previous-${previousImage.media_asset_id}`}
+            src={previousImage.file_url as string}
+            alt=""
+            fill
+            unoptimized={isJfif(previousImage)}
+            sizes="100vw"
+            className="object-cover animate-gallery-fade-out"
+          />
+        )}
+
         <Image
-          key={`gallery-previous-${previousImage.media_asset_id}`}
-          src={previousImage.file_url as string}
+          key={`gallery-active-${activeImage.media_asset_id}`}
+          src={activeImage.file_url as string}
           alt=""
           fill
+          unoptimized={isJfif(activeImage)}
+          priority={activeIndex === 0}
           sizes="100vw"
-          className="object-cover animate-gallery-fade-out"
+          className={`object-cover ${
+            previousImage && !prefersReducedMotion ? 'animate-gallery-fade-in' : ''
+          }`}
         />
+
+        <div className="absolute inset-0 bg-white/35" />
+      </div>
+
+      {images.length > 1 && (
+        <div
+          className="fixed bottom-8 right-4 z-20 flex flex-col items-center rounded-full border border-msscc-teal/20 bg-white/60 p-0.5 shadow-sm backdrop-blur-sm"
+        >
+          <span className="px-2 pt-0.5 text-center text-[9px] leading-none text-msscc-teal/70">
+            Background Gallery
+          </span>
+          <div
+            role="group"
+            aria-label="Gallery controls"
+            className="flex items-center gap-0.5"
+          >
+            <button
+              type="button"
+              onClick={() => changeImage(-1)}
+              className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+              aria-label="Show previous gallery image"
+            >
+              ‹
+            </button>
+            <span
+              className="min-w-8 px-0.5 text-center text-[10px] tabular-nums text-msscc-teal/75"
+              aria-live="polite"
+            >
+              {activeIndex + 1} / {images.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => changeImage(1)}
+              className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+              aria-label="Show next gallery image"
+            >
+              ›
+            </button>
+          </div>
+        </div>
       )}
-
-      <Image
-        key={`gallery-active-${activeImage.media_asset_id}`}
-        src={activeImage.file_url as string}
-        alt=""
-        fill
-        priority={activeIndex === 0}
-        sizes="100vw"
-        className={`object-cover ${
-          previousImage && !prefersReducedMotion ? 'animate-gallery-fade-in' : ''
-        }`}
-      />
-
-      <div className="absolute inset-0 bg-white/35" />
-    </div>
+    </>
   );
 }
