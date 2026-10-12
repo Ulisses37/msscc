@@ -64,12 +64,14 @@ export default function BoardOfDirectors() {
     }, []);
 
   return (
-    <div className="container w-[80%] mx-auto">
-      <h1 className="text-4xl text-center font-bold mb-10">Board of Directors</h1>
+   <div className="min-h-dvh bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+      <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
+        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Board of Directors</h1>
+      </header>
 
-      <div className="border border-gray-300 my-6 py-4">
-        <h2 className="text-2xl font-serif pl-2">Officers</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="border border-gray-300 my-6 pb-3 bg-msscc-gray-faint">
+        <h2 className="text-2xl font-serif px-3 py-2">Officers</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-3">
           {boardMembers
           .filter((member) => member.boardMemberRoleEn !== "Director")
           .map((member) => (
@@ -86,10 +88,12 @@ export default function BoardOfDirectors() {
       </div>
 
 
-      <div className="border border-gray-300 my-8 py-4">
-        <span className="flex justify-between items-center px-2 pb-2">
+      <div className="border border-gray-300 py-2 pb-3 bg-msscc-gray-faint">
+        <div className="flex justify-between items-center px-3 pb-2">
           <h2 className="text-2xl font-serif">Directors</h2>
           <button
+            type="button"
+            aria-label="Add director"
             onClick={() => {
             setSelectedMember({
               boardMemberId: -1,
@@ -103,12 +107,12 @@ export default function BoardOfDirectors() {
             });
             setIsOpen("director");
             }}
-            className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600">
+            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center bg-green-400 text-white font-bold rounded hover:bg-green-600">
             +
           </button>
-        </span>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-3">
           {boardMembers
           .filter((member) => member.boardMemberRoleEn === "Director")
           .map((member) => (

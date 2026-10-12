@@ -17,16 +17,16 @@ const permissionCategories: Record<string, CategoryData> = {
     tooltip: "Allows editing of common page text, translation, and images:\nEdit Pages"
   },
   Board_Members: {
-    pages:  ["Board Members", "Board of Directors"],
+    pages:  ["Board of Directors"],
     tooltip: "Allows managing of board members names, images, and descriptions:\nBoard of Directors"
   },
   Events: {
     pages: ["Events", "Volunteers"],
     tooltip: "Allows creation and editing of Events and Volunteers:\nEvents"
   },
-  Executive: {
+  Permissions: {
     pages: ["Permissions Pages"],
-    tooltip: "Allows for editing of admin information and permission:\nPermissions Pages"
+    tooltip: "Allows for editing of admin permissions:\nPermissions Pages"
   },
   Media_Management: {
     pages: ["Media"],
@@ -74,6 +74,7 @@ export function fetchLocalStorageAdmin(){
     userId: string;
     email: string;
     firstName: string;
+    lastName: string;
     permissionData: Record<string, boolean>;
     isExecutive: boolean;
   } = JSON.parse(current_admin);
@@ -83,4 +84,9 @@ export function fetchLocalStorageAdmin(){
 
 export function getToolTip(category: string): string | undefined {
   return permissionCategories[category]?.tooltip;
+}
+
+// get list of pages from category
+export function getPageList(category:string): string[] | undefined{
+  return permissionCategories[category]?.pages;
 }

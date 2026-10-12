@@ -72,12 +72,14 @@ def update_membership_from_payment_intent(
             membership.payment_status = target
             membership.status = "active"
             membership.amount_paid = membership.expected_amount
+            # Store the Stripe event time, not the later webhook delivery time.
+            membership.completed_at = datetime.fromtimestamp(event_created, tz=UTC)
             membership.start_date = start
             membership.renewal_date = renewal
             membership.end_date = renewal - timedelta(days=1)
             membership.save(update_fields=[
                 "payment_status", "status", "amount_paid", "start_date",
-                "renewal_date", "end_date", "updated_at",
+                "renewal_date", "end_date", "completed_at", "updated_at",
             ])
             return True
 
@@ -119,7 +121,9 @@ def create_pending_membership(*, option_id, first_name, last_name, email, phone=
             # The unique database index prevents linking an intent to two rows.
             membership.stripe_payment_intent_id = intent_id
             membership.save(update_fields=["stripe_payment_intent_id", "updated_at"])
-        return session
+        # Only the opaque checkout reference is needed to read the eventual
+        # result. Never use a Stripe secret or the database ID as the lookup key.
+        return {**session, "confirmation_reference": reference}
     except (DatabaseError, stripe.StripeError, RuntimeError, ValueError) as exc:
         # Stripe cannot join a database transaction. If persistence fails after
         # intent creation, do not return its secret; attempt to cancel it.

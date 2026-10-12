@@ -8,6 +8,34 @@
    Add this import to any page/component that renders Japanese text:
    @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap"); */
 
+@keyframes gallery-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes gallery-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-gallery-fade-in {
+  animation: gallery-fade-in 1000ms ease-in-out both;
+}
+
+.animate-gallery-fade-out {
+  animation: gallery-fade-out 1000ms ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gallery-fade-in {
+    animation: none;
+  }
+
+  .animate-gallery-fade-out {
+    animation: none;
+  }
+}
+
 @layer base {
   /* ─── CSS Custom Properties (design tokens) ─────────────── */
   /* theme() is only reliable for simple scalar paths in CSS.

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -13,10 +13,207 @@ from donations.models import Donation, Membership
 
 from .views import (
     MembershipPaymentSessionCreateView,
+    MembershipPaymentStatusView,
+    PaymentReceiptView,
     PaymentSessionCreateView,
+    PaymentStatusView,
     StripeWebhookView,
     _update_donation_payment_status,
 )
+
+
+class PaymentReceiptTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.donation_reference = "DON-00000042"
+        self.membership_reference = "MEM-" + "a" * 32
+        self.completed_at = datetime(2026, 10, 10, 15, 30, tzinfo=UTC)
+        self.donation = Donation.objects.create(
+            donor_first_name="Maya", donor_last_name="Chen",
+            donor_email="private@example.com", amount=Decimal("12.50"),
+            donation_date=date(2026, 10, 1), is_anonymous=False,
+            message="private donor message is not a purpose",
+            reference_id=self.donation_reference,
+            payment_status=Donation.PaymentStatus.COMPLETED,
+            completed_at=self.completed_at,
+        )
+        self.membership = Membership.objects.create(
+            first_name="Maya", last_name="Chen", email="member@example.com",
+            phone="private phone", membership_type="student",
+            membership_option_id="student", amount_paid=Decimal("20.00"),
+            currency="usd", expected_amount=Decimal("20.00"),
+            start_date=date(2026, 10, 10), end_date=date(2027, 10, 9),
+            renewal_date=date(2027, 10, 10),
+            payment_status=Membership.PaymentStatus.COMPLETED,
+            completed_at=self.completed_at, status="active", notes="private note",
+            reference_id=self.membership_reference,
+            checkout_reference=self.membership_reference,
+            stripe_payment_intent_id="pi_private_test",
+        )
+
+    def receipt(self, reference, **extra):
+        return PaymentReceiptView.as_view()(
+            self.factory.get(reverse("payment-receipt"), {
+                "confirmation_reference": reference, **extra,
+            })
+        )
+
+    def test_donation_receipt_contains_only_stored_safe_values(self):
+        response = self.receipt(self.donation_reference, amount="999", donation_purpose="forged")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {
+            "payment_purpose": "donation", "amount": "12.50",
+            "currency": "usd", "completed_at": "2026-10-10T15:30:00Z",
+            "confirmation_reference": self.donation_reference,
+        })
+        self.assertNotIn("private", str(response.data))
+        self.assertNotIn("donation_id", response.data)
+        self.assertNotIn("donation_purpose", response.data)
+
+    def test_membership_receipt_excludes_profile_and_stripe_fields(self):
+        response = self.receipt(self.membership_reference, amount="999")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {
+            "payment_purpose": "membership", "amount": "20.00",
+            "currency": "usd", "completed_at": "2026-10-10T15:30:00Z",
+            "confirmation_reference": self.membership_reference,
+            "membership_option": "student",
+        })
+        for sensitive in ("pi_private_test", "member@example.com", "private phone",
+                          "membership_id", "expected_amount", "client_secret"):
+            self.assertNotIn(sensitive, str(response.data))
+
+    def test_pending_failed_canceled_and_missing_completion_date_are_unavailable(self):
+        for model, reference in ((self.donation, self.donation_reference),
+                                 (self.membership, self.membership_reference)):
+            for state in ("pending", "failed", "canceled"):
+                with self.subTest(reference=reference, state=state):
+                    model.payment_status = state
+                    model.save(update_fields=["payment_status"])
+                    self.assertEqual(self.receipt(reference).status_code, 404)
+            model.payment_status = "completed"
+            model.completed_at = None
+            model.save(update_fields=["payment_status", "completed_at"])
+            self.assertEqual(self.receipt(reference).status_code, 404)
+
+    def test_unknown_malformed_and_unlinked_references_share_safe_response(self):
+        unknown = self.receipt("MEM-" + "b" * 32)
+        for reference in ("pi_secret", "DON-00000099", "MEM-INVALID", ""):
+            with self.subTest(reference=reference):
+                response = self.receipt(reference)
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.data, unknown.data)
+        self.membership.stripe_payment_intent_id = None
+        self.membership.save(update_fields=["stripe_payment_intent_id"])
+        self.assertEqual(self.receipt(self.membership_reference).data, unknown.data)
+
+    def test_webhook_completion_records_timestamp_once(self):
+        self.donation.payment_status = Donation.PaymentStatus.PENDING
+        self.donation.completed_at = None
+        self.donation.save(update_fields=["payment_status", "completed_at"])
+        with patch("payments.views.timezone.now", return_value=self.completed_at):
+            self.assertTrue(_update_donation_payment_status(
+                self.donation_reference, Donation.PaymentStatus.COMPLETED
+            ))
+        self.donation.refresh_from_db()
+        self.assertEqual(self.donation.completed_at, self.completed_at)
+        self.assertFalse(_update_donation_payment_status(
+            self.donation_reference, Donation.PaymentStatus.COMPLETED
+        ))
+        self.donation.refresh_from_db()
+        self.assertEqual(self.donation.completed_at, self.completed_at)
+        self.assertEqual(self.receipt(self.donation_reference).status_code, 200)
+
+    @patch("payments.views.stripe.checkout.Session.retrieve")
+    def test_donation_return_status_only_provides_reference_after_completion(self, retrieve):
+        retrieve.return_value.to_dict.return_value = {
+            "client_reference_id": self.donation_reference,
+        }
+        request = self.factory.get(reverse("payment-status"), {"session_id": "cs_test_safe"})
+        for state in ("pending", "failed", "canceled", "completed"):
+            with self.subTest(state=state):
+                self.donation.payment_status = state
+                self.donation.save(update_fields=["payment_status"])
+                response = PaymentStatusView.as_view()(request)
+                self.assertEqual(response.status_code, 200)
+                expected = {"payment_status": state}
+                if state == "completed":
+                    expected["confirmation_reference"] = self.donation_reference
+                self.assertEqual(response.data, expected)
+
+
+class MembershipPaymentStatusSmokeTests(TestCase):
+    """Keep the first status-endpoint commit independently verifiable."""
+
+    def setUp(self):
+        self.reference = "MEM-" + "a" * 32
+        self.member = Membership.objects.create(
+            first_name="Maya", last_name="Chen", email="maya@example.com", phone="",
+            membership_type="student", amount_paid=0, start_date=date(2025, 1, 1),
+            end_date=date(2025, 1, 1), renewal_date=date(2025, 1, 1),
+            payment_status=Membership.PaymentStatus.PENDING, status="pending", notes="",
+            reference_id=self.reference, checkout_reference=self.reference,
+            stripe_payment_intent_id="pi_status_test",
+        )
+        self.factory = APIRequestFactory()
+
+    def status_for(self, reference):
+        return MembershipPaymentStatusView.as_view()(
+            self.factory.get("/api/payments/membership/status/", {
+                "confirmation_reference": reference,
+                "payment_status": "complete",  # Client input cannot change stored state.
+            })
+        )
+
+    def test_status_is_database_backed_read_only_and_minimal(self):
+        self.assertEqual(reverse("membership-payment-status"), "/api/payments/membership/status/")
+        self.assertEqual(self.status_for(self.reference).data, {
+            "payment_purpose": "membership", "payment_status": "pending",
+        })
+        self.member.payment_status = Membership.PaymentStatus.COMPLETED
+        self.member.save(update_fields=["payment_status"])
+        self.assertEqual(self.status_for(self.reference).data, {
+            "payment_purpose": "membership", "payment_status": "complete",
+        })
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
+
+    def test_each_stored_payment_state_is_read_only_and_normalized(self):
+        for stored, public in (
+            (Membership.PaymentStatus.PENDING, "pending"),
+            (Membership.PaymentStatus.COMPLETED, "complete"),
+            (Membership.PaymentStatus.FAILED, "failed"),
+            (Membership.PaymentStatus.CANCELED, "canceled"),
+        ):
+            with self.subTest(stored=stored):
+                self.member.payment_status = stored
+                self.member.save(update_fields=["payment_status"])
+                # status_for deliberately sends a forged 'complete' query value;
+                # even repeated reads must return only the database state.
+                for _ in range(2):
+                    response = self.status_for(self.reference)
+                    self.assertEqual(response.status_code, status.HTTP_200_OK)
+                    self.assertEqual(response.data, {
+                        "payment_purpose": "membership", "payment_status": public,
+                    })
+                self.member.refresh_from_db()
+                self.assertEqual(self.member.payment_status, stored)
+
+    def test_unknown_and_malformed_references_share_a_safe_404(self):
+        expected = {"detail": "Payment status was not found."}
+        for reference in ("MEM-invalid", "MEM-" + "b" * 32):
+            with self.subTest(reference=reference):
+                response = self.status_for(reference)
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertEqual(response.data, expected)
+
+    @patch("payments.views.Membership.objects.only")
+    def test_database_failure_hides_private_details(self, only):
+        only.side_effect = DatabaseError("private-database-detail")
+        with self.assertLogs("payments.views", level="ERROR") as logs:
+            response = self.status_for(self.reference)
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertNotIn("private-database-detail", str(response.data) + str(logs.output))
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
@@ -59,11 +256,13 @@ class MembershipPaymentSessionTests(TestCase):
                     self.request(membership_option_id=option_id)
                 )
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                membership = Membership.objects.get(stripe_payment_intent_id=intent.id)
                 self.assertEqual(
                     response.data,
                     {
                         "session_id": f"pi_test_{option_id}",
                         "client_secret": "pi_test_secret_membership",
+                        "confirmation_reference": membership.checkout_reference,
                     },
                 )
                 params = stripe_client.return_value.v1.payment_intents.create.call_args.args[0]
@@ -71,7 +270,6 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertEqual(params["currency"], "usd")
                 self.assertEqual(params["metadata"]["payment_purpose"], "membership")
                 self.assertEqual(params["metadata"]["membership_option_id"], option_id)
-                membership = Membership.objects.get(stripe_payment_intent_id=intent.id)
                 self.assertEqual(
                     params["metadata"]["internal_reference"], membership.checkout_reference
                 )

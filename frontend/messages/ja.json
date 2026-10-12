@@ -121,6 +121,33 @@
     "error": "メーリングリストに登録できませんでした。もう一度お試しください。"
   },
 
+  "MembershipPaymentResult": {
+    "heading": "会費のお支払い状況",
+    "loading": "会費のお支払い状況を確認しています...",
+    "pending": "お支払いを処理しています。確認が完了するまで再度お支払いをしないでください。",
+    "takingLonger": "お支払いを引き続き処理しています。状況を再確認できますが、まだ再度お支払いをしないでください。",
+    "complete": "会費のお支払いが完了しました。",
+    "failed": "お支払いを完了できませんでした。会員登録フォームに戻って、もう一度お試しいただけます。",
+    "canceled": "お支払いはキャンセルされました。会員登録フォームに戻って、もう一度お試しいただけます。",
+    "statusError": "現在お支払い状況を確認できません。しばらくしてからもう一度お試しください。",
+    "retryStatus": "お支払い状況を再確認",
+    "returnToPayment": "会員登録のお支払いに戻る"
+  },
+
+  "PaymentReceipt": {
+    "heading": "お支払いの領収書",
+    "loading": "領収書を読み込んでいます...",
+    "unavailable": "お支払いは完了しましたが、現在領収書の詳細を表示できません。",
+    "type": "お支払いの種類",
+    "donation": "寄付",
+    "membership": "会費",
+    "amount": "お支払い金額",
+    "date": "完了日",
+    "reference": "確認番号",
+    "membershipOption": "会員種別",
+    "donationPurpose": "寄付の目的"
+  },
+
   "SupportPage": {
     "heading": "ご支援をお願いします",
     "email": "メールアドレス",
@@ -168,6 +195,7 @@
     "secureStripePayment": "Stripeによる安全なお支払い",
     "paymentPending": "お支払いは現在処理中です。結果を確認するまでしばらくお待ちください。",
     "paymentCompleted": "ありがとうございます。寄付のお支払いが正常に完了しました。",
+    "receiptUnavailable": "お支払いは完了しましたが、現在領収書の詳細を表示できません。",
     "paymentFailed": "寄付のお支払いに失敗し、完了しませんでした。",
     "paymentCanceled": "お支払いはキャンセルされたか、有効期限が切れました。寄付は完了していません。",
     "paymentResultUnavailable": "お支払い結果を確認できませんでした。しばらくしてからもう一度ご確認ください。",

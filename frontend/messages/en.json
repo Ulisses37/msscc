@@ -121,6 +121,33 @@
     "error": "We could not add you to the mailing list. Please try again."
   },
 
+  "MembershipPaymentResult": {
+    "heading": "Membership payment status",
+    "loading": "Checking your membership payment...",
+    "pending": "Your payment is processing. Please do not pay again while we confirm it.",
+    "takingLonger": "Your payment is still processing. You can check its status again; please do not pay again yet.",
+    "complete": "Your membership payment is complete.",
+    "failed": "We could not complete your payment. You can return to the membership form to try again.",
+    "canceled": "Your payment was canceled. You can return to the membership form to try again.",
+    "statusError": "We could not check your payment status right now. Please try again later.",
+    "retryStatus": "Check payment status again",
+    "returnToPayment": "Return to membership payment"
+  },
+
+  "PaymentReceipt": {
+    "heading": "Payment receipt",
+    "loading": "Loading your receipt...",
+    "unavailable": "Your payment is complete, but receipt details are unavailable right now.",
+    "type": "Payment for",
+    "donation": "Donation",
+    "membership": "Membership",
+    "amount": "Amount paid",
+    "date": "Completed on",
+    "reference": "Confirmation reference",
+    "membershipOption": "Membership option",
+    "donationPurpose": "Donation purpose"
+  },
+
   "SupportPage": {
     "heading": "Support Us Today",
     "email": "Email",
@@ -168,6 +195,7 @@
     "secureStripePayment": "Secure payment powered by Stripe",
     "paymentPending": "Your payment is still being processed. Please wait while we confirm the result.",
     "paymentCompleted": "Thank you. Your donation payment was completed successfully.",
+    "receiptUnavailable": "Your payment is complete, but receipt details are unavailable right now.",
     "paymentFailed": "Your donation payment failed and was not completed.",
     "paymentCanceled": "Your payment was canceled or expired. Your donation was not completed.",
     "paymentResultUnavailable": "We could not confirm your payment result. Please check again shortly.",

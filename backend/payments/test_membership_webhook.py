@@ -71,6 +71,7 @@ class MembershipWebhookTests(TestCase):
         self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
         self.assertEqual(self.member.status, "active")
         self.assertEqual(self.member.amount_paid, Decimal("20.00"))
+        self.assertEqual(self.member.completed_at, datetime(2025, 3, 1, 12, tzinfo=UTC))
         self.assertEqual(self.member.start_date, date(2025, 3, 1))
         self.assertEqual(self.member.renewal_date, date(2026, 3, 1))
         self.assertEqual(self.member.end_date, self.member.renewal_date - timedelta(days=1))
@@ -233,6 +234,7 @@ class MembershipWebhookTests(TestCase):
             self.assertEqual(self.member.payment_status, expected)
             self.assertEqual(self.member.status, "pending")
             self.assertEqual(self.member.amount_paid, 0)
+            self.assertIsNone(self.member.completed_at)
 
     def test_mismatches_cannot_activate(self):
         # Check both the stored intent/reference linkage and paid amount/state.

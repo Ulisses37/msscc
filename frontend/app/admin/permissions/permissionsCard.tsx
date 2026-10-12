@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
 import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
 
+// text-base keeps iOS Safari from zooming in when an input is focused
+const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+
 function formatPermissionKey(key: string): string {
     return key
         .split("_")
@@ -11,81 +14,95 @@ function formatPermissionKey(key: string): string {
         .join(" ");
 }
 
-export function PermissionCard (
+export function PermissionCard(
   {
     adminInformation,
+    logInType,
     onPermissionToggle,
-    setSelectedAdmin,
     setAdminPopUpType,
-    currentLogInEmail,
-  }:{
+    setSelectedAdmin,
+  } : {
     adminInformation:AdminRecord,
+    logInType: string;
     onPermissionToggle: (id: number, permissionName: string) => void
     setSelectedAdmin: (selectedAdmin: AdminRecord) => void
     setAdminPopUpType: (pType: string) => void
-    currentLogInEmail: string | undefined;
-  } ){
-
-  return (
-    <div className={`border rounded-md p-6 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x min-h-32 items-center bg-gray-50`}>
-      <div className = "basis-2/12 w-full md:w-auto">
-        <h1 className = "text-black text-[clamp(0.75rem,2vw,1.25rem)]">{adminInformation.first_name} {adminInformation.last_name}</h1>
-          {currentLogInEmail == "msscc.scrumlords.dev@gmail.com" ? (
-            adminInformation.is_executive ? (
-              <p
-                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-red-400 hover:bg-red-600 text-center mx-8 cursor-pointer"
-                onClick={() => confirmAndPromote
-                  ({
-                    selectedAdmin:adminInformation,
-                    moteType: "demote",
-                })}
-              >
-                Demote
-              </p>
-            ) : (
-                <p
-                className="text-white text-[clamp(.5rem,1vw,1rem)] bg-green-400 hover:bg-green-600 text-center mx-8 cursor-pointer"
-                onClick={() => confirmAndPromote
-                  ({
-                    selectedAdmin:adminInformation,
+  }){
+  const visiblePermissions = Object.entries(adminInformation.permissions).filter(
+    ([permissionName]) => !(logInType === "Admin" && permissionName === "Permissions")
+  );
+  const canEdit = logInType !== "Admin";
+  return(
+  <div
+    className={`bg-white mx-2 my-2 flex flex-1 flex-col sm:flex-row border-2 border-msscc-gray-light ${
+      canEdit ? "cursor-pointer hover:bg-msscc-pink-faint" : ""
+    }`}
+    onClick={
+      canEdit
+       ? () => {
+          setSelectedAdmin(adminInformation);
+          setAdminPopUpType("update");
+        }
+      : undefined
+    }
+  >
+      {/* Name / email / rank: on top on phones, left column from sm up */}
+      <div className="flex flex-col px-2 pt-2 pb-0 sm:py-0 sm:my-2 w-full sm:w-64 sm:shrink-0 sm:border-r-2 border-msscc-gray-light">
+        <div className="text-xl break-words">
+          {adminInformation.first_name + " " + adminInformation.last_name}
+        </div>
+        <div className="text-sm text-gray-500 break-all">
+          {adminInformation.email}
+        </div>
+        <div className="text-right pt-1 sm:mt-auto">
+          {adminInformation.is_executive ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                confirmAndPromote({
+                  selectedAdmin: adminInformation,
+                  moteType: "demote",
+                });
+              }}
+              className="group min-w-28 rounded px-2 py-1 text-xs font-bold text-msscc-pink-dark hover:bg-red-500 hover:text-white"
+            >
+              <span className="group-hover:hidden">Executive Admin</span>
+              <span className="hidden group-hover:inline">Demote Admin</span>
+            </button>
+          ) : (
+            logInType === "Developer Admin" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmAndPromote({
+                    selectedAdmin: adminInformation,
                     moteType: "promote",
-                })}
+                  });
+                }}
+                className="min-w-28 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white hover:bg-green-600"
               >
-                Promote
-              </p>
-              )
-          )  : (
-            adminInformation.is_executive && (
-            <p className="text-gray-500 text-[clamp(0.5rem,1vw,1rem)]">Executive</p>
-          )
-        )}
-      </div>
-      <p className = "basis-3/12 w-full md:w-auto flex items-center justify-center text-black text-[clamp(0.5rem,1.5vw,1.0rem)]">{adminInformation.email}</p>
-
-      {/* Permissions Grid*/}
-      <div className = "basis-6/12 w-full md:w-auto gap-2 md:gap-4 px-4 grid grid-cols-2 md:grid-cols-3">
-      {Object.entries(adminInformation.permissions).slice()
-      .map(([permissionName, hasPermission]) => (
-      <p key={permissionName}>
-        {PermissionIcon({
-            currentPermission: { permissionName, hasPermission },
-            onToggle: () => onPermissionToggle(adminInformation.id, permissionName)
-        })}
-      </p>
-      ))}
-      </div>
-      {/*Create and Delete*/}
-      <div className="flex-col basis-1/12 pl-4 gap-2">
-        <div
-        className="bg-gray-500 hover:bg-gray-600 text-white text-center py-2 px-4 cursor-pointer mb-1"
-        onClick={() => {setSelectedAdmin(adminInformation); setAdminPopUpType("update")}}
-        >Edit</div>
-        <div
-        className="bg-red-500 hover:bg-red-600 text-white text-center py-2 px-4 cursor-pointer mt-1"
-        onClick={() => confirmAndDelete({selectedAdmin: adminInformation})}
-        >Delete</div>
+                Promote Admin
+              </button>
+            )
+          )}
+        </div>
       </div>
 
+      <div className="mx-4 border-t-2 border-msscc-gray-light sm:hidden" />
+
+      {/* Permission icons: 2 columns on phones, 3 from sm up */}
+      <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">
+        {visiblePermissions.map(([permissionName, hasPermission]) => (
+          <div key={permissionName} className="min-w-0" onClick={(e) => e.stopPropagation()}>
+            <PermissionIcon
+              currentPermission={{ permissionName, hasPermission }}
+              onToggle={() => onPermissionToggle(adminInformation.id, permissionName)}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -98,7 +115,8 @@ function PermissionIcon({ currentPermission, onToggle }: {
       <div
       className={`
         ${currentPermission.hasPermission ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-600"}
-        cursor-pointer text-white text-[clamp(0.25rem, 1.2vw, 0.75rem)] rounded-sm py-1 w-full text-center
+        flex h-10 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm px-1
+        text-center text-sm leading-tight text-white break-words
         `}
       onClick={onToggle}
       title={getToolTip(currentPermission.permissionName)}
@@ -140,16 +158,16 @@ export function AdminPopup({
 }, [submissionError]);
   return(
     <div
-    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
     onClick={() => setPType("")}
     >
       <div
-      className="bg-white rounded p-6 w-96"
+      className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
       >
           {
           pType =="update" ?
-           <h2 className="text-xl font-bold mb-4">Update {email} </h2>
+           <h2 className="text-xl font-bold mb-4 break-all">Update {email} </h2>
             : <h2 className="text-xl font-bold mb-4"> Create New Admin </h2>
           }
         {/* Editable fields */}
@@ -161,7 +179,7 @@ export function AdminPopup({
               value={firstName || ""}
               onChange={(e) => setFirstName(e.target.value)}
               onBlur={(e)=>setFirstName(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {firstName == "" &&
@@ -175,7 +193,7 @@ export function AdminPopup({
               value={lastName || ""}
               onChange={(e) => setLastName(e.target.value)}
               onBlur={(e)=>setLastName(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {lastName == "" &&
@@ -189,7 +207,7 @@ export function AdminPopup({
               value={email|| ""}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={(e)=>setEmail(e.target.value)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
             </label>
             {email == "" &&
@@ -201,8 +219,8 @@ export function AdminPopup({
           </div>
         </div>
 
-        {/* Validation and Submission */ }
-        <div className="flex">
+        {/* Validation and Submission: stacked on phones, a row from sm up */}
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
         <button
           onClick={async() => await validateAndSubmit(
             {
@@ -216,15 +234,21 @@ export function AdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="mx-12 mt-4 w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-100 disabled:cursor-not-allowed"
+          className="w-full bg-blue-500 font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-200 disabled:cursor-not-allowed"
         >
-          {pType =="update" ? <p>Update</p> : <p>Create</p>}
+          {pType =="update" ? <p className="text-white"> Save </p> : <p className="text-white">Create</p>}
         </button>
         <button
           onClick={() => setPType("")}
-          className="mx-12 mt-4 w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          className="w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
         >
           Cancel
+        </button>
+        <button
+          onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
+          className="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+        >
+          Delete
         </button>
         </div>
       </div>
@@ -232,7 +256,7 @@ export function AdminPopup({
   )
 }
 
-async function validateAndSubmit({
+export async function validateAndSubmit({
   firstName,
   lastName,
   email,
@@ -315,23 +339,18 @@ async function validateAndSubmit({
   }
 }
 
-async function confirmAndDelete({
+export async function confirmAndDelete({
   selectedAdmin,
 } : {
-  selectedAdmin : AdminRecord;
+  selectedAdmin : AdminRecord | null;
 }){
+  if (!selectedAdmin) return;
   const token = localStorage.getItem("msscc_access_token");
 
-  const confirmationOne = window.confirm("Are you sure you want to delete:\n"
-     + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
 
-  if (!confirmationOne){
-    return;
-  }
+  const confirmationOne = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
 
-  const confirmationTwo = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
-
-  if(!confirmationTwo){
+  if(!confirmationOne){
     return;
   }
 
@@ -368,7 +387,7 @@ async function confirmAndDelete({
   }
 }
 
-async function confirmAndPromote(
+export async function confirmAndPromote(
   {
     selectedAdmin,
     moteType,
@@ -380,13 +399,6 @@ async function confirmAndPromote(
   const devEmail = fetchLocalStorageAdmin()?.email;
 
   if(devEmail != "msscc.scrumlords.dev@gmail.com") return; // not approved dev email
-
-  const confirmationOne = window.confirm(`Are you sure you want to ${moteType}:\n`
-     + selectedAdmin.email + "\n" + selectedAdmin.last_name + ", " + selectedAdmin.first_name);
-
-  if (!confirmationOne){ // canceled
-    return;
-  }
 
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/promote-executive/${selectedAdmin.id}`,
@@ -426,4 +438,3 @@ async function confirmAndPromote(
     window.alert("Network Error. Please reload the page and try again.");
   }
 }
-

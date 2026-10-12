@@ -20,7 +20,7 @@ import { createMembershipPaymentSession } from '@/services/paymentService';
 import type { DbContentBlock } from '@/types/content';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
-import type { MembershipIdentity, PaymentSession } from '@/types/payment';
+import type { MembershipIdentity, MembershipPaymentSession } from '@/types/payment';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
@@ -56,7 +56,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   // form validation all use it, so membership details are never duplicated.
   const [selectedOptionId, setSelectedOptionId] =
     useState<MembershipOptionId | null>(null);
-  const [paymentSession, setPaymentSession] = useState<PaymentSession | null>(null);
+  const [paymentSession, setPaymentSession] = useState<MembershipPaymentSession | null>(null);
   const [isPreparingPayment, setIsPreparingPayment] = useState(false);
   const [paymentSessionError, setPaymentSessionError] = useState(false);
   const [membershipInformationValid, setMembershipInformationValid] = useState(false);
@@ -244,6 +244,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
           <MembershipPaymentElement
             key={paymentSession.sessionId}
             clientSecret={paymentSession.clientSecret}
+            confirmationReference={paymentSession.confirmationReference}
             locale={locale}
             membershipInformationValid={membershipInformationValid}
             onPaymentStateChange={setPaymentState}
