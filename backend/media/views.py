@@ -55,6 +55,8 @@ class MediaUploadView(APIView):
 class MediaListView(APIView):
     def get(self, request):
         media_files = MediaAsset.objects.order_by("-created_at")
+        if request.query_params.get("is_visible_to_gallery") == "true":
+            media_files = media_files.filter(is_visible_to_gallery=True)
         serializer = MediaFileSerializer(media_files, many=True, context={"request": request})
         return Response(serializer.data)
 
