@@ -2,6 +2,10 @@
 
 import {BoardMember} from "./page"
 import { useState } from "react";
+
+// text-base keeps iOS Safari from zooming in when an input is focused
+const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+
 interface DirectorCardProps {
   boardMemberName: string;
   boardMemberImageURL: string | null;
@@ -22,21 +26,21 @@ export function OfficerCardPreview({
 }: OfficerCardProps & { onClick?: () => void }) {
   return (
     <div onClick={onClick}
-    className="text-left align-middle basis-1/6 pt-2 w-full ml-1 mr-1 md:w-auto cursor-pointer hover:bg-gray-500 rounded">
-      <h2 className="text-2xl font-serif mb-2 pl-3 text-black">{boardMemberRole}</h2>
+    className="min-w-0 w-full text-left pt-2 cursor-pointer border-2 border-msscc-gray-light bg-msscc-white hover:bg-msscc-pink-faint rounded">
+      <h2 className="text-xl sm:text-xl mb-2 px-4 sm:pl-6 text-msscc-gray-dark break-words">{boardMemberRole}</h2>
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={boardMemberImageURL}
           alt={`${boardMemberName} portrait`}
-          className="mx-auto h-24 w-24 sm:h-16 sm:w-16 lg:h-48 lg:w-48"
+          className="mx-auto h-32 w-32 sm:h-40 sm:w-40 lg:h-48 lg:w-48"
         />
       ) : (
-        <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-white">
+        <div className="mx-auto flex h-32 w-32 sm:h-40 sm:w-40 lg:h-48 lg:w-48 items-center justify-center rounded-full bg-slate-200 text-sm text-white">
           No photo
         </div>
       )}
-      <p className="text-center pb-3 mt-2 font-serif text-black text-[clamp(0.75rem,2vw,1.5rem)]">
+      <p className="text-center px-2 pb-3 mt-2 font-serif text-black text-lg lg:text-xl break-words">
         <span className="block">{boardMemberName}</span>
       </p>
     </div>
@@ -50,7 +54,7 @@ export function DirectorCardPreview({
 }: DirectorCardProps & { onClick?: () => void }) {
   return (
     <div onClick={onClick}
-    className="flex items-center gap-3 justify-left ml-3 pl-1 py-1 w-48 cursor-pointer hover:bg-gray-500 rounded">
+    className="min-w-0 w-full flex items-center gap-3 pl-1 pr-2 py-1 cursor-pointer border-2 border-msscc-gray-light bg-msscc-white hover:bg-msscc-pink-faint rounded">
       {boardMemberImageURL ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -63,7 +67,7 @@ export function DirectorCardPreview({
           No photo
         </div>
       )}
-      <p className="font-serif text-black">{boardMemberName}</p>
+      <p className="min-w-0 font-serif text-black break-words">{boardMemberName}</p>
     </div>
   );
 }
@@ -81,8 +85,8 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
   const [editedFile, setEditedFile] = useState<File | null>(null);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded p-6 w-96">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">
           {type === "officer" ? "Edit Officer" : "Edit Director"}
         </h2>
@@ -94,7 +98,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               <img
                 src={edited.boardMemberImageURL}
                 alt="portrait"
-                className="h-48 w-48 hover:opacity-70 transition-opacity"
+                className="h-32 w-32 sm:h-48 sm:w-48 hover:opacity-70 transition-opacity"
               />
             ) : (
               <div className="h-24 w-24 bg-slate-200 flex items-center justify-center text-sm text-gray-500 hover:opacity-70 transition-opacity">
@@ -124,7 +128,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               type="text"
               value={edited?.boardMemberNameEn ?? ""}
               onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameEn: e.target.value } : prev)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
           </label>
           <label className="text-sm font-semibold">Name (Japanese)
@@ -132,7 +136,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               type="text"
               value={edited?.boardMemberNameJa ?? ""}
               onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameJa: e.target.value } : prev)}
-              className="w-full border rounded px-2 py-1 mt-1 font-normal"
+              className={inputClass}
             />
           </label>
 
@@ -144,7 +148,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                   type="text"
                   value={edited?.boardMemberRoleEn ?? ""}
                   onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleEn: e.target.value } : prev)}
-                  className="w-full border rounded px-2 py-1 mt-1 font-normal"
+                  className={inputClass}
                 />
               </label>
               <label className="text-sm font-semibold">Role (Japanese)
@@ -152,14 +156,14 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                   type="text"
                   value={edited?.boardMemberRoleJa ?? ""}
                   onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleJa: e.target.value } : prev)}
-                  className="w-full border rounded px-2 py-1 mt-1 font-normal"
+                  className={inputClass}
                 />
               </label>
               <label className="text-sm font-semibold">Caption (English)
                 <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
                 onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionEn: e.target.value } : prev)}
-                className="w-full border rounded px-2 py-1 mt-1 font-normal resize-none"
+                className={`${inputClass} resize-none`}
                 rows={4}
                 />
               </label>
@@ -167,7 +171,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 <textarea
                 value={edited?.boardMemberCaptionJa ?? ""}
                 onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionJa: e.target.value } : prev)}
-                className="w-full border rounded px-2 py-1 mt-1 font-normal resize-none"
+                className={`${inputClass} resize-none`}
                 rows={4}
                 />
               </label>
@@ -176,10 +180,10 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button onClick={() => onClose(null)} className="px-4 py-2 bg-gray-500 text-white rounded">
+          <button onClick={() => onClose(null)} className="flex-1 px-2 sm:px-4 py-2 bg-gray-500 text-white rounded">
             Close
           </button>
-          <button onClick={() => { onDelete(member); onClose(null); }} className="px-4 py-2 bg-red-500 text-white rounded">
+          <button onClick={() => { onDelete(member); onClose(null); }} className="flex-1 px-2 sm:px-4 py-2 bg-red-500 text-white rounded">
             Delete
           </button>
           <button
@@ -191,7 +195,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               onUpdate(edited, editedFile);
               onClose(null);
             }}
-            className="px-4 py-2 bg-green-500 text-white rounded"
+            className="flex-1 px-2 sm:px-4 py-2 bg-green-500 text-white rounded"
           >
             {member?.boardMemberNameEn ? "Update" : "Add"}
           </button>
