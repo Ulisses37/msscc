@@ -55,6 +55,8 @@ class MediaUploadView(APIView):
 class MediaListView(APIView):
     def get(self, request):
         media_files = MediaAsset.objects.order_by("-created_at")
+        if request.query_params.get("is_visible_to_gallery") == "true":
+            media_files = media_files.filter(is_visible_to_gallery=True)
         serializer = MediaFileSerializer(media_files, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -125,6 +127,23 @@ class MediaDetailView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+    def patch(self, request, pk):
+        try:
+            media = MediaAsset.objects.get(pk=pk)
+        except MediaAsset.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        value = request.data.get("is_visible_to_gallery")
+        if not isinstance(value, bool):
+            return Response(
+                {"is_visible_to_gallery": ["Expected a boolean value."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        media.is_visible_to_gallery = value
+        media.save(update_fields=["is_visible_to_gallery"])
+        return Response(MediaFileSerializer(media).data, status=status.HTTP_200_OK)
 
 
 class StaticImageListView(generics.ListAPIView):

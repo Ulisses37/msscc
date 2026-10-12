@@ -9,6 +9,7 @@ import { getMessages } from 'next-intl/server';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { Banner } from '@/components/layout/Banner';
 import { PublicFooter } from '@/components/layout/PublicFooter';
+import GalleryBackground from '@/components/layout/GalleryBackground';
 
 export default async function LocaleLayout({
   children,
@@ -21,21 +22,28 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <div className="flex min-h-screen flex-col">
+      <div className="relative isolate flex min-h-screen flex-col">
+            <GalleryBackground />
             {/* Banner Section.*/}
-            <Banner />
+            <div className="relative z-10">
+              <Banner />
+            </div>
             {/* Navbar Section. Banner content goes above this. */}
 
             {/* Navbar Section. Banner content goes above this. */}
-            <PublicNavbar />
+            <div className="relative z-10">
+              <PublicNavbar />
+            </div>
 
             {/* Main content area */}
-            <main className="flex-grow pb-10">
+            <main className="relative z-10 flex-grow pb-10">
               {children}
             </main>
 
             {/* <Footer /> */}
-            <PublicFooter />
+            <div className="relative z-10">
+              <PublicFooter />
+            </div>
       </div>
     </NextIntlClientProvider>
   );

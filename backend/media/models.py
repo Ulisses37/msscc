@@ -9,6 +9,7 @@ class MediaAsset(models.Model):
     file_type = models.CharField(max_length=100)
     alt_text_en = models.CharField(max_length=255, blank=True)
     alt_text_ja = models.CharField(max_length=255, blank=True)
+    is_visible_to_gallery = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
