@@ -23,9 +23,8 @@ export function AvailablePages(
     CategoryTitle: string;
 }){
   const pageList = getPageList(CategoryTitle);
-  console.log(pageList);
   return(
-    <div className="flex flex-col my-2 border border-1 border-msscc-gray pl-1">
+    <div className="flex flex-col my-2 pl-1">
       {pageList && pageList.map((page) =>(
         <PageCard key={page} PageTitle={page}/>
       ))}

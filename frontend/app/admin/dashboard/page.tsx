@@ -82,7 +82,6 @@ function ProgressBar({ percent }: { percent: number }) {
       aria-valuenow={clamped}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-orientation="vertical"
     >
       <div
         className="w-full bg-blue-600 transition-all duration-500"
