@@ -12,6 +12,7 @@ from donations.models import Donation, Membership
 from donations.services import create_pending_membership, update_membership_from_payment_intent
 from payments.serializers import (
     MembershipPaymentSessionRequestSerializer,
+    MembershipPaymentStatusSerializer,
     PaymentSessionRequestSerializer,
 )
 from payments.services.stripe_service import (
@@ -307,6 +308,59 @@ def _update_donation_payment_status(reference_id, new_status):
             # Raising inside atomic() rolls back the transaction.
             raise DatabaseError("Donation payment status was not updated.")
         return True
+
+
+class MembershipPaymentStatusView(APIView):
+    """Read the locally verified checkout state without contacting Stripe."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        reference = request.query_params.get("confirmation_reference")
+        not_found = {"detail": "Payment status was not found."}
+        # A malformed or unknown reference has the same public response. The
+        # exact UUID-derived namespace is checked before touching the database.
+        if not isinstance(reference, str) or not MEMBERSHIP_REFERENCE_PATTERN.fullmatch(reference):
+            return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Exclude legacy/manual records: only a Stripe-linked checkout can
+            # be confirmed through this public reference lookup.
+            membership = Membership.objects.only("payment_status").get(
+                checkout_reference=reference, stripe_payment_intent_id__isnull=False
+            )
+        except Membership.DoesNotExist:
+            return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+        except DatabaseError:
+            logger.error("Database error while retrieving a membership payment status.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Internal 'completed' becomes the result page's 'complete'. Never
+        # infer success from the browser, the membership's provisional dates,
+        # or an unrecognized legacy/admin payment status.
+        public_status = {
+            Membership.PaymentStatus.PENDING: "pending",
+            Membership.PaymentStatus.COMPLETED: "complete",
+            Membership.PaymentStatus.FAILED: "failed",
+            Membership.PaymentStatus.CANCELED: "canceled",
+        }.get(membership.payment_status)
+        if public_status is None:
+            logger.error("Membership contains an unsupported payment status.")
+            return Response(
+                {"detail": "Payment status is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # A serializer allowlist prevents model fields (PII, IDs, secrets) from
+        # accidentally leaking if the underlying membership model changes.
+        result = MembershipPaymentStatusSerializer(
+            {"payment_purpose": "membership", "payment_status": public_status}
+        )
+        return Response(result.data, status=status.HTTP_200_OK)
 
 
 class PaymentStatusView(APIView):

@@ -1,9 +1,12 @@
 import type {
   CreateMembershipPaymentSessionRequest,
+  MembershipPaymentSession,
   PaymentSession,
 } from '@/types/payment';
 
 export type { PaymentSession } from '@/types/payment';
+
+export type MembershipPaymentStatus = 'pending' | 'complete' | 'failed' | 'canceled';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -69,7 +72,7 @@ export async function createMembershipPaymentSession({
   lastName,
   email,
   phone,
-}: CreateMembershipPaymentSessionRequest): Promise<PaymentSession> {
+}: CreateMembershipPaymentSessionRequest): Promise<MembershipPaymentSession> {
   // Keep the failure generic even when the network, backend, or Stripe response
   // contains details; the calling page shows its own translated message.
   const unavailable = () => new Error('Unable to create the payment session.');
@@ -100,7 +103,11 @@ export async function createMembershipPaymentSession({
     if (data === null || typeof data !== 'object' || Array.isArray(data)) {
       throw unavailable();
     }
-    const { session_id: sessionId, client_secret: clientSecret } = data as Record<
+    const {
+      session_id: sessionId,
+      client_secret: clientSecret,
+      confirmation_reference: confirmationReference,
+    } = data as Record<
       string,
       unknown
     >;
@@ -108,12 +115,45 @@ export async function createMembershipPaymentSession({
       typeof sessionId !== 'string' ||
       !sessionId.trim() ||
       typeof clientSecret !== 'string' ||
-      !clientSecret.trim()
+      !clientSecret.trim() ||
+      typeof confirmationReference !== 'string' ||
+      !/^MEM-[0-9a-f]{32}$/.test(confirmationReference)
     ) {
       throw unavailable();
     }
 
-    return { sessionId, clientSecret };
+    return { sessionId, clientSecret, confirmationReference };
+  } catch {
+    throw unavailable();
+  }
+}
+
+/** Read the locally confirmed membership state; never trust a browser-supplied status. */
+export async function getMembershipPaymentStatus(
+  confirmationReference: string,
+): Promise<MembershipPaymentStatus> {
+  const unavailable = () => new Error('Unable to retrieve payment status.');
+  if (!API_BASE_URL || !/^MEM-[0-9a-f]{32}$/.test(confirmationReference)) {
+    throw unavailable();
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/payments/membership/status/?confirmation_reference=${encodeURIComponent(confirmationReference)}`,
+      { method: 'GET', cache: 'no-store' },
+    );
+    if (!response.ok) throw unavailable();
+    const data: unknown = await response.json();
+    if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+      throw unavailable();
+    }
+    const { payment_purpose: purpose, payment_status: status } = data as Record<string, unknown>;
+    // Return only the allowlisted status: never pass through extra response
+    // fields (including any future Stripe objects or secrets) to the page.
+    if (purpose !== 'membership' || typeof status !== 'string' || !['pending', 'complete', 'failed', 'canceled'].includes(status)) {
+      throw unavailable();
+    }
+    return status as MembershipPaymentStatus;
   } catch {
     throw unavailable();
   }
