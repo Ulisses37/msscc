@@ -1,6 +1,6 @@
 from django.urls import path
 
-from emails.views import AnnouncementSendView
+from emails.views import AnnouncementSendView, SubscribeView
 
 urlpatterns = [
     path(
@@ -8,4 +8,5 @@ urlpatterns = [
         AnnouncementSendView.as_view(),
         name="email-announcement-send",
     ),
+    path("subscribe/", SubscribeView.as_view(), name="email-subscribe"),
 ]

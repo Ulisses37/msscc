@@ -9,7 +9,7 @@ import logging
 import resend
 from django.conf import settings
 
-from emails.providers.base import EmailProvider, ProviderError
+from emails.providers.base import ContactState, EmailProvider, ProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,10 @@ class ResendProvider(EmailProvider):
     def __init__(self) -> None:
         # Resend reads the key from the module-level attribute on every call.
         resend.api_key = settings.RESEND_API_KEY
+        # The SDK default is 30 seconds. A single signup can make two calls
+        # (lookup, then create), so keep each one short rather than letting a
+        # stalled provider hold the request for a minute.
+        resend.default_http_client = resend.RequestsClient(timeout=10)
 
     def send_email(self, *, to: str, subject: str, html: str) -> None:
         """Send a transactional email through Resend."""
@@ -38,24 +42,30 @@ class ResendProvider(EmailProvider):
             },
         )
 
-    def upsert_contact(self, email: str) -> None:
-        """Create the contact and add it to the announcement segment.
+    def upsert_contact(self, email: str) -> ContactState:
+        """Create the contact in the announcement segment, or report an opt-out.
 
-        Resend may reject a create for an address that already exists, so a
-        failed create falls back to adding the segment directly, which keeps the
-        whole call idempotent either way.
+        The lookup is a guard only: reading the contact first means a
+        provider-side unsubscribe is never overwritten. Resend's create is a
+        silent upsert for an address that already exists, so the create is the
+        same call whether the contact is new or already present, and a contact
+        already unsubscribed is left exactly as it is.
         """
         self._require_segment_id()
-        try:
-            self._call(
-                resend.Contacts.create,
-                {"email": email, "segments": [{"id": settings.RESEND_SEGMENT_ID}]},
-            )
-        except ProviderError:
-            # The address may already exist, so a duplicate create is expected.
-            # The segment add below is itself idempotent.
-            logger.info("Contact may already exist in Resend; ensuring segment membership.")
-            self._call(resend.Contacts.Segments.add, self._segment_params(email))
+
+        if self._is_unsubscribed(email):
+            logger.info("Resend contact is unsubscribed; leaving it untouched.")
+            return ContactState.UNSUBSCRIBED
+
+        # The lookup and this create are not atomic, so an unsubscribe landing
+        # between them would be overwritten. That window is accepted: it is
+        # small, and the alternative (skipping create for known links) would
+        # also skip contacts that were never in the segment.
+        self._call(
+            resend.Contacts.create,
+            {"email": email, "segments": [{"id": settings.RESEND_SEGMENT_ID}]},
+        )
+        return ContactState.SUBSCRIBED
 
     def remove_contact(self, email: str) -> None:
         """Remove the contact from the announcement segment.
@@ -81,6 +91,27 @@ class ResendProvider(EmailProvider):
                 "send": True,
             },
         )
+
+    @staticmethod
+    def _is_unsubscribed(email: str) -> bool:
+        """Report whether Resend already holds an opt-out for this address.
+
+        ``Contacts.get`` raises a ``ResendError`` with an integer ``code`` of 404
+        when the address is unknown, which is not an error for us: the caller
+        simply creates it. Any other failure is a real problem and becomes a
+        ``ProviderError`` so the caller can retry later.
+        """
+        try:
+            contact = resend.Contacts.get(email=email)
+        except resend.exceptions.ResendError as exc:
+            if exc.code == 404:
+                return False
+            raise ProviderError("Resend request failed.") from exc
+        except Exception as exc:
+            raise ProviderError("Resend request failed.") from exc
+
+        # Resend returns a dict-like payload; the flag is a key, not an attribute.
+        return bool(contact.get("unsubscribed"))
 
     @staticmethod
     def _require_segment_id() -> None:

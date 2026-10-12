@@ -3,7 +3,7 @@ from importlib import import_module
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from emails.providers.base import EmailProvider, ProviderError
+from emails.providers.base import ContactState, EmailProvider, ProviderError
 
 # Provider name -> dotted path of the adapter class. Adding a provider means
 # adding an entry here and setting EMAIL_PROVIDER; no caller changes.
@@ -31,4 +31,4 @@ def get_provider() -> EmailProvider:
     return getattr(import_module(module_path), class_name)()
 
 
-__all__ = ["EmailProvider", "ProviderError", "get_provider"]
+__all__ = ["ContactState", "EmailProvider", "ProviderError", "get_provider"]

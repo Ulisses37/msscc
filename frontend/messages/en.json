@@ -105,7 +105,20 @@
     "paymentSubmitted": "Payment submitted. Membership status will be confirmed separately.",
     "paymentTakingLonger": "Your payment is still being processed. Please wait; do not submit it again.",
     "printForm": "Print Membership Form",
-    "printFormUnavailable": "Membership form not found on the server."
+    "printFormUnavailable": "Membership form not found on the server.",
+    "mailingListConsent": "Add me to the MSSCC mailing list",
+    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time."
+  },
+
+  "MailingList": {
+    "heading": "Join our mailing list",
+    "description": "Get news about upcoming events and programs.",
+    "emailLabel": "Email address",
+    "submit": "Join",
+    "submitting": "Joining...",
+    "consent": "We will only email you about MSSCC events and programs. You can unsubscribe at any time.",
+    "success": "Thanks, you're on the list.",
+    "error": "We could not add you to the mailing list. Please try again."
   },
 
   "SupportPage": {
@@ -135,6 +148,8 @@
     "lastName": "Last Name",
     "submitSuccess": "Donation recorded. Reference: {reference}",
     "anonymousDonation": "Make this donation anonymous",
+    "mailingListConsent": "Add me to the MSSCC mailing list",
+    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time.",
     "message": "Message (optional)",
     "no": "No",
     "yes": "Yes",

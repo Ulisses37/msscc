@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 import type { MembershipOptionId } from '@/constants/membershipOptions';
+import { subscribeToUpdates } from '@/services/emailService';
 import { isValidEmail } from '@/utils/emailValidation';
 import type { MembershipIdentity } from '@/types/payment';
 
@@ -41,6 +42,8 @@ export function MembershipForm({
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  // Opt-in checkbox: joining the mailing list is independent of the payment.
+  const [wantsUpdates, setWantsUpdates] = useState(false);
 
   // Touched flags delay errors until the user leaves a field. Because each
   // error also checks current validity, correcting a value removes it at once.
@@ -231,6 +234,23 @@ export function MembershipForm({
           />
         </label>
 
+        <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            name="wantsUpdates"
+            checked={wantsUpdates}
+            onChange={(event) => setWantsUpdates(event.target.checked)}
+            disabled={isInformationLocked}
+            className="mt-0.5 h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          <span>
+            {t('mailingListConsent')}
+            <span className="mt-1 block text-caption font-normal text-msscc-gray-mid">
+              {t('mailingListConsentDetail')}
+            </span>
+          </span>
+        </label>
+
         <div className="pt-2">{children}</div>
 
         {/* Keep the existing form validation as the gate for session creation;
@@ -239,6 +259,15 @@ export function MembershipForm({
           type="button"
           onClick={() => {
             if (formIsValid && !isPreparingPayment && !isPaymentSessionReady) {
+              // Mailing list first, but never in the way of payment: a signup
+              // failure is logged and the payment flow proceeds regardless.
+              if (wantsUpdates) {
+                subscribeToUpdates(email.trim().toLowerCase(), 'membership').catch(
+                  (error: unknown) => {
+                    console.error('Mailing-list signup failed for a membership.', error);
+                  },
+                );
+              }
               onContinueToPayment();
             }
           }}

@@ -70,6 +70,11 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    # Only endpoints that set throttle_classes use these, so no other endpoint
+    # changes behavior. The public signup endpoint is per-IP limited.
+    "DEFAULT_THROTTLE_RATES": {
+        "email_subscribe": "30/hour",
+    },
 }
 
 SIMPLE_JWT = {

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import StrEnum
 
 
 class ProviderError(Exception):
@@ -8,6 +9,17 @@ class ProviderError(Exception):
     database even when the provider is unavailable, because the database is the
     source of truth and the provider is only a mirror.
     """
+
+
+class ContactState(StrEnum):
+    """What ``upsert_contact`` found, so the caller can record consent locally.
+
+    Values intentionally match ``Subscriber.Status`` so the service can store
+    them without a mapping table.
+    """
+
+    SUBSCRIBED = "subscribed"
+    UNSUBSCRIBED = "unsubscribed"
 
 
 class EmailProvider(ABC):
@@ -23,8 +35,13 @@ class EmailProvider(ABC):
         """Send one transactional email to a single recipient."""
 
     @abstractmethod
-    def upsert_contact(self, email: str) -> None:
-        """Create or refresh a mailing-list contact. Idempotent."""
+    def upsert_contact(self, email: str) -> ContactState:
+        """Create or refresh a mailing-list contact. Idempotent.
+
+        Returns the provider's view of the contact. An existing provider-side
+        opt-out is reported rather than overridden, because the provider may
+        hold an unsubscribe our database does not know about.
+        """
 
     @abstractmethod
     def remove_contact(self, email: str) -> None:
