@@ -3,9 +3,12 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from emails.models import Subscriber
 from emails.providers import ProviderError, get_provider
 from emails.providers.base import EmailProvider
 from emails.providers.resend import ResendProvider
@@ -58,6 +61,75 @@ class ResendImportGuardTests(TestCase):
     def test_resend_adapter_module_imports_the_sdk(self):
         adapter = pathlib.Path(__file__).resolve().parent / "providers" / "resend.py"
         self.assertIn("import resend", adapter.read_text(encoding="utf-8"))
+
+
+class SubscriberModelTests(TestCase):
+    """Mailing-list consent records behave as the story requires."""
+
+    def create_subscriber(self, **overrides):
+        data = {
+            "email": "member@example.test",
+            "source": Subscriber.Source.FOOTER,
+        }
+        data.update(overrides)
+        return Subscriber.objects.create(**data)
+
+    def test_defaults_match_a_fresh_opt_in(self):
+        subscriber = self.create_subscriber()
+
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        self.assertIsNone(subscriber.unsubscribed_at)
+        self.assertFalse(subscriber.provider_synced)
+        self.assertIsNotNone(subscriber.subscribed_at)
+
+    def test_email_is_unique_at_the_database_level(self):
+        self.create_subscriber(email="duplicate@example.test")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                self.create_subscriber(email="duplicate@example.test")
+
+    def test_database_rejects_an_unsupported_status(self):
+        subscriber = self.create_subscriber()
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Subscriber.objects.filter(pk=subscriber.pk).update(status="bogus")
+
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+
+    def test_missing_email_is_reported_by_full_clean(self):
+        subscriber = Subscriber(source=Subscriber.Source.FOOTER)
+
+        with self.assertRaises(Exception) as caught:
+            subscriber.full_clean()
+
+        self.assertIn("email", caught.exception.message_dict)
+
+    def test_unknown_source_is_rejected_by_full_clean(self):
+        subscriber = Subscriber(email="member@example.test", source="telepathy")
+
+        with self.assertRaises(Exception) as caught:
+            subscriber.full_clean()
+
+        self.assertIn("source", caught.exception.message_dict)
+
+    def test_str_reports_address_and_status(self):
+        subscriber = self.create_subscriber(email="member@example.test")
+
+        self.assertEqual(str(subscriber), "member@example.test (subscribed)")
+
+    def test_unsubscribed_row_records_when_it_happened(self):
+        now = timezone.now()
+        subscriber = self.create_subscriber(
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=now,
+        )
+
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+        self.assertEqual(subscriber.unsubscribed_at, now)
 
 
 class ResendAdapterTests(TestCase):
