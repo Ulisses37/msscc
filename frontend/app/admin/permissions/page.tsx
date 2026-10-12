@@ -1,90 +1,111 @@
 "use client";
-import { AdminRecord} from "./adminRecord";
+import { AdminRecord } from "./adminRecord";
 import { PermissionCard, AdminPopup } from "./permissionsCard";
 import { useEffect, useState } from "react";
 import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler";
 
 
+export default function AdminPermissionPage(){
+  const logInAdmin = fetchLocalStorageAdmin();
+  const logInType = getLogInType();
 
-export default function AdminPermissionPage() {
-  const [adminRecords, setAdminRecords] = useState<AdminRecord[]>([]);
+  const [adminList, setAdminList] = useState<AdminRecord[]>([]);
 
-  const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null)
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null);
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
 
-  const currentLogInEmail = fetchLocalStorageAdmin()?.email
-
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`)
-        .then(res => res.json())
-        .then((data: AdminRecord[]) => {
-            const sorted = data.map(record => ({
-                ...record,
-                permissions: Object.fromEntries(
-                    Object.entries(record.permissions).sort((a, b) => Number(b[1]) - Number(a[1]))
-                )
-            }));
-            setAdminRecords(sorted);
-        });
+    filterAdmins().then(setAdminList);
   }, []);
 
-  return (
-    <div className="flex justify-center min-h-screen">
-      <div className="border w-full max-w-[2400px] rounded-md p-6 flex flex-col gap-4 bg-zinc-300">
-          <div className="my-5 flex items-center">
-            <div className="text-3xl text-left font-bold ml-2">Admin Permissions</div>
-            <div
-              onClick={()=>{setSelectedAdmin(null); setAdminPopUpType("create")}}
-              className="w-8 h-8 mx-4 bg-green-500 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center cursor-pointer"
-              >
-              +
+  return(
+    <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+      <header className="mb-6 border-b border-msscc-gray-light pb-4 w-full">
+        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
+      </header>
+
+      {/* Stacked on phones and tablets, side by side from lg up */}
+      <div className="flex w-full flex-col lg:flex-row lg:items-start">
+        {/*Div for asides*/}
+        <div className="flex w-full flex-col items-center gap-2 lg:w-auto lg:shrink-0">
+          {/*Current Logged in Admin Info*/}
+          <aside className="mb-4 w-full rounded-sm border-msscc-gray-light bg-msscc-pink lg:mb-0 lg:mr-4 lg:w-64">
+            <div className="text-xl text-white pl-1 pt-2 border-b-2 border-msscc-gray-light mx-2 font-bold">
+              {logInType}
+            </div>
+            <div className="mt-2 ml-2 text-msscc-gray-faint">
+                Name:
               </div>
-            <div className="flex-1 shrink justify-end align-right flex">
-              <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded whitespace-nowrap
-              text-[clamp(0.75rem,1.2vw,1rem)] py-[clamp(0.25rem,0.5vw,0.5rem)] px-[clamp(0.75rem,1vw,1rem)]"
-              onClick={() => updateDatabase()}>
-              Update
-              </button>
-          </div>
+            <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
+              <div className="text-xl text-white break-words">
+                {logInAdmin?.firstName + " " + logInAdmin?.lastName}
+              </div>
+            </div>
+            <div className="mt-2 ml-2 text-msscc-gray-faint">
+                Email:
+            </div>
+            <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
+                <div
+                  className="text-base text-white mb-3 truncate"
+                  title={logInAdmin?.email}>
+                {logInAdmin?.email}
+              </div>
+            </div>
+          </aside>
         </div>
+
+        <div className="bg-msscc-gray-faint w-full min-w-0 flex flex-col rounded-md">
+          {/* Toolbar: sticks to the top on phones/tablets, normal from lg up.
+              If you have a fixed site header, change top-0 to its height (e.g. top-16). */}
+          <div className="sticky top-0 z-20 flex items-center gap-2 rounded-t-md bg-msscc-gray-faint px-2 py-2 shadow-sm lg:static lg:shadow-none">
+  <div className="whitespace-nowrap text-lg text-msscc-teal-dark sm:text-2xl">
+    Admin List
+  </div>
+  <div className="flex flex-1 justify-end gap-2 sm:gap-4">
+    {logInType === "Developer Admin" && (
+      <button
+        type="button"
+        className="w-16 rounded-md bg-green-500 py-1 text-center text-sm text-white hover:bg-green-600 sm:w-24 sm:py-2 sm:text-base"
+        onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
+      >
+        Add
+      </button>
+    )}
+    <button
+      type="button"
+      className="w-16 rounded-md bg-blue-400 py-1 text-center text-sm text-white hover:bg-blue-600 sm:w-24 sm:py-2 sm:text-base"
+      onClick={() => updateDatabase()}
+    >
+      Update
+    </button>
+  </div>
+</div>
+
+          {adminList.map((record) => (
+            <PermissionCard
+            key={record.id}
+            adminInformation={record}
+            onPermissionToggle={handlePermissionToggle}
+            setSelectedAdmin={setSelectedAdmin}
+            setAdminPopUpType={setAdminPopUpType}
+            logInType={logInType}
+            />
+          ))}
+        </div>
+
         {adminPopupType != "" && <AdminPopup
-          currentAdminList = {adminRecords}
+          currentAdminList = {adminList}
           setPType = {setAdminPopUpType}
           pType = {adminPopupType}
           selectedAdmin = {selectedAdmin}
-          />
+        />
         }
-        {adminRecords.map((record) => (
-          <PermissionCard
-           key={record.id}
-           adminInformation={record}
-           onPermissionToggle={handlePermissionToggle}
-           setSelectedAdmin={setSelectedAdmin}
-           setAdminPopUpType={setAdminPopUpType}
-           currentLogInEmail={currentLogInEmail}
-          />
-        ))}
       </div>
     </div>
   );
 
-
-  function updateDatabase() {
-    Promise.all(
-        adminRecords.map(record =>
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/${record.id}/permissions/`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ permissions: record.permissions }),
-            })
-        )
-    ).then(() => {
-        window.location.reload();
-    });
-  }
-
   function handlePermissionToggle(id: number, permissionName: string) {
-    setAdminRecords(prev =>
+    setAdminList(prev =>
         prev.map(record => {
             if (record.id !== id) return record;
             return {
@@ -96,5 +117,58 @@ export default function AdminPermissionPage() {
             };
         })
     );
+  }
+
+  function updateDatabase() {
+    Promise.all(
+        adminList.map(record =>
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/${record.id}/permissions/`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ permissions: record.permissions }),
+            })
+        )
+    ).then(() => {
+        window.location.reload();
+    });
+  }
+
+  function getLogInType(){
+    if (logInAdmin?.email == "msscc.scrumlords.dev@gmail.com"){
+      return "Developer Admin";
+    }else if (logInAdmin?.isExecutive){
+      return "Executive Admin"
+    }
+    return "Admin"
+  }
+
+  async function filterAdmins() {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`);
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
+      const allAdminList: AdminRecord[] = await res.json();
+
+      return allAdminList.filter(a => {
+        const isDeveloper = a.email === "msscc.scrumlords.dev@gmail.com";
+        const isSelf = a.email === logInAdmin?.email;
+
+        switch (logInType) {
+          case "Developer Admin":
+            return !isDeveloper;
+          case "Executive Admin":
+            return (!isDeveloper && !a.is_executive);
+          default: // "Admin"
+            return !isDeveloper && !a.is_executive && !isSelf;
+        }
+    }).sort((a, b) =>
+      Number(b.is_executive) - Number(a.is_executive) ||
+      a.first_name.localeCompare(b.first_name) ||
+      a.last_name.localeCompare(b.last_name)
+    );
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      return [];
+    }
   }
 }

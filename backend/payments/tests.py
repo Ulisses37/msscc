@@ -13,10 +13,85 @@ from donations.models import Donation, Membership
 
 from .views import (
     MembershipPaymentSessionCreateView,
+    MembershipPaymentStatusView,
     PaymentSessionCreateView,
     StripeWebhookView,
     _update_donation_payment_status,
 )
+
+
+class MembershipPaymentStatusSmokeTests(TestCase):
+    """Keep the first status-endpoint commit independently verifiable."""
+
+    def setUp(self):
+        self.reference = "MEM-" + "a" * 32
+        self.member = Membership.objects.create(
+            first_name="Maya", last_name="Chen", email="maya@example.com", phone="",
+            membership_type="student", amount_paid=0, start_date=date(2025, 1, 1),
+            end_date=date(2025, 1, 1), renewal_date=date(2025, 1, 1),
+            payment_status=Membership.PaymentStatus.PENDING, status="pending", notes="",
+            reference_id=self.reference, checkout_reference=self.reference,
+            stripe_payment_intent_id="pi_status_test",
+        )
+        self.factory = APIRequestFactory()
+
+    def status_for(self, reference):
+        return MembershipPaymentStatusView.as_view()(
+            self.factory.get("/api/payments/membership/status/", {
+                "confirmation_reference": reference,
+                "payment_status": "complete",  # Client input cannot change stored state.
+            })
+        )
+
+    def test_status_is_database_backed_read_only_and_minimal(self):
+        self.assertEqual(reverse("membership-payment-status"), "/api/payments/membership/status/")
+        self.assertEqual(self.status_for(self.reference).data, {
+            "payment_purpose": "membership", "payment_status": "pending",
+        })
+        self.member.payment_status = Membership.PaymentStatus.COMPLETED
+        self.member.save(update_fields=["payment_status"])
+        self.assertEqual(self.status_for(self.reference).data, {
+            "payment_purpose": "membership", "payment_status": "complete",
+        })
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
+
+    def test_each_stored_payment_state_is_read_only_and_normalized(self):
+        for stored, public in (
+            (Membership.PaymentStatus.PENDING, "pending"),
+            (Membership.PaymentStatus.COMPLETED, "complete"),
+            (Membership.PaymentStatus.FAILED, "failed"),
+            (Membership.PaymentStatus.CANCELED, "canceled"),
+        ):
+            with self.subTest(stored=stored):
+                self.member.payment_status = stored
+                self.member.save(update_fields=["payment_status"])
+                # status_for deliberately sends a forged 'complete' query value;
+                # even repeated reads must return only the database state.
+                for _ in range(2):
+                    response = self.status_for(self.reference)
+                    self.assertEqual(response.status_code, status.HTTP_200_OK)
+                    self.assertEqual(response.data, {
+                        "payment_purpose": "membership", "payment_status": public,
+                    })
+                self.member.refresh_from_db()
+                self.assertEqual(self.member.payment_status, stored)
+
+    def test_unknown_and_malformed_references_share_a_safe_404(self):
+        expected = {"detail": "Payment status was not found."}
+        for reference in ("MEM-invalid", "MEM-" + "b" * 32):
+            with self.subTest(reference=reference):
+                response = self.status_for(reference)
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+                self.assertEqual(response.data, expected)
+
+    @patch("payments.views.Membership.objects.only")
+    def test_database_failure_hides_private_details(self, only):
+        only.side_effect = DatabaseError("private-database-detail")
+        with self.assertLogs("payments.views", level="ERROR") as logs:
+            response = self.status_for(self.reference)
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertNotIn("private-database-detail", str(response.data) + str(logs.output))
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_dummy")
@@ -59,11 +134,13 @@ class MembershipPaymentSessionTests(TestCase):
                     self.request(membership_option_id=option_id)
                 )
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                membership = Membership.objects.get(stripe_payment_intent_id=intent.id)
                 self.assertEqual(
                     response.data,
                     {
                         "session_id": f"pi_test_{option_id}",
                         "client_secret": "pi_test_secret_membership",
+                        "confirmation_reference": membership.checkout_reference,
                     },
                 )
                 params = stripe_client.return_value.v1.payment_intents.create.call_args.args[0]
@@ -71,7 +148,6 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertEqual(params["currency"], "usd")
                 self.assertEqual(params["metadata"]["payment_purpose"], "membership")
                 self.assertEqual(params["metadata"]["membership_option_id"], option_id)
-                membership = Membership.objects.get(stripe_payment_intent_id=intent.id)
                 self.assertEqual(
                     params["metadata"]["internal_reference"], membership.checkout_reference
                 )
