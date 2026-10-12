@@ -105,7 +105,20 @@
     "paymentSubmitted": "お支払いを送信しました。会員登録の状況は別途確認されます。",
     "paymentTakingLonger": "お支払いを処理しています。しばらくお待ちください。再度送信しないでください。",
     "printForm": "会員申込書を印刷",
-    "printFormUnavailable": "会員申込書がサーバーに見つかりませんでした。"
+    "printFormUnavailable": "会員申込書がサーバーに見つかりませんでした。",
+    "mailingListConsent": "MSSCCのメーリングリストに登録する",
+    "mailingListConsentDetail": "今後のイベントやプログラムについてメールでお知らせします。いつでも配信を停止できます。"
+  },
+
+  "MailingList": {
+    "heading": "メーリングリストに登録",
+    "description": "今後のイベントやプログラムのお知らせをお届けします。",
+    "emailLabel": "メールアドレス",
+    "submit": "登録",
+    "submitting": "登録中...",
+    "consent": "MSSCCのイベントやプログラムに関するご連絡にのみ使用いたします。",
+    "success": "ご登録ありがとうございます。",
+    "error": "メーリングリストに登録できませんでした。もう一度お試しください。"
   },
 
   "MembershipPaymentResult": {
@@ -162,6 +175,8 @@
     "lastName": "姓",
     "submitSuccess": "寄付が記録されました。参照: {reference}",
     "anonymousDonation": "匿名で寄付する",
+    "mailingListConsent": "MSSCCのメーリングリストに登録する",
+    "mailingListConsentDetail": "今後のイベントやプログラムについてメールでお知らせします。いつでも配信を停止できます。",
     "message": "メッセージ（任意）",
     "no": "いいえ",
     "yes": "はい" ,

@@ -46,6 +46,9 @@
                     &copy; {% now "Y" %} Matsuyama-Sacramento Sister City Corporation
                   </td>
                 </tr>
+                {# Marketing emails only: CAN-SPAM requires an unsubscribe link and a
+                   physical mailing address, which transactional emails do not need. #}
+                {% block footer_unsubscribe %}{% endblock %}
               </table>
             </td>
           </tr>

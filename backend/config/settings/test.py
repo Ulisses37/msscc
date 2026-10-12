@@ -1,3 +1,4 @@
+import base64
 import os
 
 os.environ["DJANGO_SECRET_KEY"] = "test-secret-key-for-pytest-only"
@@ -6,6 +7,7 @@ os.environ["S3_ENDPOINT_URL"] = "http://127.0.0.1:1"
 os.environ["S3_ACCESS_KEY"] = "test"
 os.environ["S3_SECRET_KEY"] = "test"
 os.environ["RESEND_API_KEY"] = "re_test_dummy"
+os.environ["RESEND_WEBHOOK_SECRET"] = "whsec_" + base64.b64encode(b"test-webhook-secret").decode()
 os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_test_dummy"
 
 from .base import *  # noqa: E402, F403

@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
-from dotenv import load_dotenv
 import os
 from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -69,6 +70,11 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    # Only endpoints that set throttle_classes use these, so no other endpoint
+    # changes behavior. The public signup endpoint is per-IP limited.
+    "DEFAULT_THROTTLE_RATES": {
+        "email_subscribe": "30/hour",
+    },
 }
 
 SIMPLE_JWT = {
@@ -195,6 +201,17 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
+
+# Which email provider adapter emails.providers.get_provider() returns.
+EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "resend")
+
+# The Resend segment every mailing-list contact belongs to and every
+# announcement Broadcast is sent to.
+RESEND_SEGMENT_ID = os.getenv("RESEND_SEGMENT_ID", "")
+
+# Svix signing secret Resend uses to sign webhook deliveries, used to verify
+# that unsubscribe notifications really came from Resend.
+RESEND_WEBHOOK_SECRET = os.getenv("RESEND_WEBHOOK_SECRET", "")
 
 # When enabled (development only), every outgoing email is routed to
 # RESEND_DEV_ALERT_EMAIL instead of the real recipient. See services.py.

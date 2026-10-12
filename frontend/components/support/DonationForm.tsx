@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { DonationSummary } from '@/components/support/DonationSummary';
 import { PaymentReceipt } from '@/components/payments/PaymentReceipt';
 import { StripePaymentElement } from '@/components/support/StripePaymentElement';
+import { subscribeToUpdates } from '@/services/emailService';
 import { createPaymentSession } from '@/services/paymentService';
 
 const inputClassName =
@@ -40,6 +41,8 @@ export function DonationForm() {
   const [address, setAddress] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [message, setMessage] = useState('');
+  // Opt-in checkbox: joining the mailing list is independent of the payment.
+  const [wantsUpdates, setWantsUpdates] = useState(false);
 
   // Values displayed in the existing donation summary.
   const [summaryDonation, setSummaryDonation] = useState('');
@@ -260,6 +263,17 @@ export function DonationForm() {
         setSubmittedReference(donationReference);
       }
 
+      // Only after the donation record exists. This is deliberately not
+      // awaited: the backend makes synchronous Resend calls, and a mailing-list
+      // signup must never delay checkout. Failures are logged and ignored.
+      if (wantsUpdates) {
+        subscribeToUpdates(email.trim().toLowerCase(), 'donation').catch(
+          (error: unknown) => {
+            console.error('Mailing-list signup failed after a donation.', error);
+          },
+        );
+      }
+
       // Use the reusable PR1 endpoint to create a Stripe Checkout Session.
       const paymentSession = await createPaymentSession({
         amount: donation,
@@ -466,6 +480,23 @@ export function DonationForm() {
             className="h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
           />
           {t('anonymousDonation')}
+        </label>
+
+        <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            name="wantsUpdates"
+            checked={wantsUpdates}
+            onChange={(event) => setWantsUpdates(event.target.checked)}
+            disabled={!emailIsValid || fieldsAreLocked}
+            className="mt-0.5 h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          <span>
+            {t('mailingListConsent')}
+            <span className="mt-1 block text-caption font-normal text-msscc-gray-mid">
+              {t('mailingListConsentDetail')}
+            </span>
+          </span>
         </label>
 
         <label className="block text-sm font-medium text-slate-700">
