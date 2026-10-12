@@ -121,6 +121,20 @@
     "returnToPayment": "Return to membership payment"
   },
 
+  "PaymentReceipt": {
+    "heading": "Payment receipt",
+    "loading": "Loading your receipt...",
+    "unavailable": "Your payment is complete, but receipt details are unavailable right now.",
+    "type": "Payment for",
+    "donation": "Donation",
+    "membership": "Membership",
+    "amount": "Amount paid",
+    "date": "Completed on",
+    "reference": "Confirmation reference",
+    "membershipOption": "Membership option",
+    "donationPurpose": "Donation purpose"
+  },
+
   "SupportPage": {
     "heading": "Support Us Today",
     "email": "Email",
@@ -166,6 +180,7 @@
     "secureStripePayment": "Secure payment powered by Stripe",
     "paymentPending": "Your payment is still being processed. Please wait while we confirm the result.",
     "paymentCompleted": "Thank you. Your donation payment was completed successfully.",
+    "receiptUnavailable": "Your payment is complete, but receipt details are unavailable right now.",
     "paymentFailed": "Your donation payment failed and was not completed.",
     "paymentCanceled": "Your payment was canceled or expired. Your donation was not completed.",
     "paymentResultUnavailable": "We could not confirm your payment result. Please check again shortly.",

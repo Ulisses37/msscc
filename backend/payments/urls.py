@@ -3,12 +3,14 @@ from django.urls import path
 from payments.views import (
     MembershipPaymentSessionCreateView,
     MembershipPaymentStatusView,
+    PaymentReceiptView,
     PaymentSessionCreateView,
     PaymentStatusView,
     StripeWebhookView,
 )
 
 urlpatterns = [
+    path("receipt/", PaymentReceiptView.as_view(), name="payment-receipt"),
     # PaymentIntent-based membership checkout is separate from donation Checkout.
     path(
         "membership/session/",

@@ -72,12 +72,14 @@ def update_membership_from_payment_intent(
             membership.payment_status = target
             membership.status = "active"
             membership.amount_paid = membership.expected_amount
+            # Store the Stripe event time, not the later webhook delivery time.
+            membership.completed_at = datetime.fromtimestamp(event_created, tz=UTC)
             membership.start_date = start
             membership.renewal_date = renewal
             membership.end_date = renewal - timedelta(days=1)
             membership.save(update_fields=[
                 "payment_status", "status", "amount_paid", "start_date",
-                "renewal_date", "end_date", "updated_at",
+                "renewal_date", "end_date", "completed_at", "updated_at",
             ])
             return True
 

@@ -4,6 +4,7 @@ import re
 import stripe
 from django.conf import settings
 from django.db import DatabaseError, transaction
+from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,8 +12,10 @@ from rest_framework.views import APIView
 from donations.models import Donation, Membership
 from donations.services import create_pending_membership, update_membership_from_payment_intent
 from payments.serializers import (
+    MEMBERSHIP_PRICES,
     MembershipPaymentSessionRequestSerializer,
     MembershipPaymentStatusSerializer,
+    PaymentReceiptSerializer,
     PaymentSessionRequestSerializer,
 )
 from payments.services.stripe_service import (
@@ -301,13 +304,85 @@ def _update_donation_payment_status(reference_id, new_status):
             # status is already stored.
             return False
 
-        # QuerySet.update() makes the permitted database field explicit and
-        # avoids writing any donor or payment amount fields.
-        if Donation.objects.filter(pk=donation.pk).update(payment_status=new_status) != 1:
+        # Only the verified transition to completed records a receipt date;
+        # duplicate and late events cannot rewrite the original timestamp.
+        update = {"payment_status": new_status}
+        if new_status == Donation.PaymentStatus.COMPLETED:
+            update["completed_at"] = timezone.now()
+        if Donation.objects.filter(pk=donation.pk).update(**update) != 1:
             # A missing write must never be reported as a successful update.
             # Raising inside atomic() rolls back the transaction.
             raise DatabaseError("Donation payment status was not updated.")
         return True
+
+
+class PaymentReceiptView(APIView):
+    """Expose a small, database-backed receipt for completed checkout payments."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        reference = request.query_params.get("confirmation_reference")
+        not_found = {"detail": "Receipt was not found."}
+        # Treat unknown, malformed, and non-completed references identically.
+        if not isinstance(reference, str):
+            return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+        try:
+            if MEMBERSHIP_REFERENCE_PATTERN.fullmatch(reference):
+                payment = Membership.objects.get(
+                    checkout_reference=reference,
+                    stripe_payment_intent_id__isnull=False,
+                    payment_status=Membership.PaymentStatus.COMPLETED,
+                    completed_at__isnull=False,
+                )
+                # Only checkout catalog IDs may be shown; never use legacy
+                # free-text membership_type or other member profile fields.
+                if payment.membership_option_id not in MEMBERSHIP_PRICES:
+                    return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+                receipt = {
+                    "payment_purpose": "membership",
+                    "amount": payment.amount_paid,
+                    "currency": payment.currency,
+                    "completed_at": payment.completed_at,
+                    "confirmation_reference": payment.checkout_reference,
+                    "membership_option": payment.membership_option_id,
+                }
+            elif DONATION_REFERENCE_PATTERN.fullmatch(reference):
+                payment = Donation.objects.get(
+                    reference_id=reference,
+                    payment_status=Donation.PaymentStatus.COMPLETED,
+                    completed_at__isnull=False,
+                )
+                # A donor message is not a donation purpose; omit optional
+                # purpose until a dedicated backend field is available.
+                receipt = {
+                    "payment_purpose": "donation",
+                    "amount": payment.amount,
+                    "currency": payment.currency,
+                    "completed_at": payment.completed_at,
+                    "confirmation_reference": payment.reference_id,
+                }
+            else:
+                return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+        except (Donation.DoesNotExist, Membership.DoesNotExist):
+            return Response(not_found, status=status.HTTP_404_NOT_FOUND)
+        except Donation.MultipleObjectsReturned:
+            logger.error("Receipt lookup matched multiple donations.")
+            return Response(
+                {"detail": "Receipt is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        except DatabaseError:
+            logger.error("Database error while retrieving payment receipt.")
+            return Response(
+                {"detail": "Receipt is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Explicit serializer fields prevent new model fields from leaking.
+        result = PaymentReceiptSerializer(receipt)
+        return Response(result.data, status=status.HTTP_200_OK)
 
 
 class MembershipPaymentStatusView(APIView):
@@ -454,10 +529,12 @@ class PaymentStatusView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(
-            {"payment_status": donation.payment_status},
-            status=status.HTTP_200_OK,
-        )
+        result = {"payment_status": donation.payment_status}
+        # Only a completed, database-confirmed donation needs its internal
+        # reference on the Stripe return page to request a separate receipt.
+        if donation.payment_status == Donation.PaymentStatus.COMPLETED:
+            result["confirmation_reference"] = reference_id
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class StripeWebhookView(APIView):

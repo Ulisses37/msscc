@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { DonationSummary } from '@/components/support/DonationSummary';
+import { PaymentReceipt } from '@/components/payments/PaymentReceipt';
 import { StripePaymentElement } from '@/components/support/StripePaymentElement';
 import { createPaymentSession } from '@/services/paymentService';
 
@@ -18,6 +19,7 @@ type PaymentStatus = 'pending' | 'completed' | 'failed' | 'canceled';
 
 interface PaymentStatusResponse {
   payment_status?: unknown;
+  confirmation_reference?: unknown;
 }
 
 const isPaymentStatus = (value: unknown): value is PaymentStatus =>
@@ -28,6 +30,7 @@ const isPaymentStatus = (value: unknown): value is PaymentStatus =>
 
 export function DonationForm() {
   const t = useTranslations('SupportPage');
+  const locale = useLocale();
 
   // Non-payment donation information remains in application state.
   const [donation, setDonation] = useState('');
@@ -60,6 +63,7 @@ export function DonationForm() {
     null,
   );
   const [paymentStatusError, setPaymentStatusError] = useState(false);
+  const [receiptReference, setReceiptReference] = useState('');
 
   // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
@@ -85,6 +89,7 @@ export function DonationForm() {
     setClientSecret('');
     setSubmittedReference('');
     setPaymentStatus(null);
+    setReceiptReference('');
     setPaymentStatusError(false);
     setSubmitError('');
     clearReturnedSessionFromUrl();
@@ -94,6 +99,7 @@ export function DonationForm() {
     setClientSecret('');
     setSubmittedReference('');
     setPaymentStatus(null);
+    setReceiptReference('');
     setPaymentStatusError(false);
     setSubmitError('');
     clearReturnedSessionFromUrl();
@@ -132,6 +138,14 @@ export function DonationForm() {
 
         if (isCancelled) return;
 
+        // Only the confirmed backend status supplies a receipt lookup key;
+        // submitted form state and Stripe URL values are never receipt data.
+        setReceiptReference(
+          nextStatus === 'completed' &&
+          typeof data?.confirmation_reference === 'string' &&
+          /^DON-[0-9]{8,}$/.test(data.confirmation_reference)
+            ? data.confirmation_reference : '',
+        );
         setPaymentStatus(nextStatus);
         setPaymentStatusError(false);
 
@@ -301,6 +315,16 @@ export function DonationForm() {
           aria-live="polite"
         >
           <p>{paymentStatusMessage}</p>
+          {paymentStatus === 'completed' && (
+            receiptReference ? (
+              <PaymentReceipt
+                reference={receiptReference}
+                locale={locale}
+              />
+            ) : (
+              <p className="mt-4 text-slate-700">{t('receiptUnavailable')}</p>
+            )
+          )}
 
           {(paymentStatus === 'failed' || paymentStatus === 'canceled') && (
             <button
