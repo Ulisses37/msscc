@@ -34,6 +34,16 @@ class EmailProvider(ABC):
     def send_email(self, *, to: str, subject: str, html: str) -> None:
         """Send one transactional email to a single recipient."""
 
+    @property
+    @abstractmethod
+    def unsubscribe_url(self) -> str:
+        """Return a string a template can put in an ``href`` attribute.
+
+        The provider replaces it with a working, per-recipient unsubscribe link
+        when a broadcast is sent. Views read this instead of importing a
+        provider-specific constant, so the calling code stays provider agnostic.
+        """
+
     @abstractmethod
     def upsert_contact(self, email: str) -> ContactState:
         """Create or refresh a mailing-list contact. Idempotent.

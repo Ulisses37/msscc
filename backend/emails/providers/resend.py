@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 # Resend replaces this placeholder with a working, per-recipient unsubscribe URL
 # when a Broadcast is sent. Resend does not add an unsubscribe link on its own,
 # and CAN-SPAM requires one, so the announcement template must always render it.
+#
+# UNVERIFIED: we have no verified sending domain yet, so a Broadcast cannot be
+# sent from this project's Resend account and the substitution has never been
+# observed end to end. Confirm it on the first real broadcast.
 UNSUBSCRIBE_URL_PLACEHOLDER = "{{{RESEND_UNSUBSCRIBE_URL}}}"
 
 
@@ -41,6 +45,11 @@ class ResendProvider(EmailProvider):
                 "html": html,
             },
         )
+
+    @property
+    def unsubscribe_url(self) -> str:
+        """Return the placeholder Resend substitutes at send time."""
+        return UNSUBSCRIBE_URL_PLACEHOLDER
 
     def upsert_contact(self, email: str) -> ContactState:
         """Create the contact in the announcement segment, or report an opt-out.

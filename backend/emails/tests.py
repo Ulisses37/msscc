@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import DatabaseError, IntegrityError, transaction
+from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from resend.exceptions import ResendError
@@ -16,7 +17,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from emails.models import Subscriber
 from emails.providers import ContactState, ProviderError, get_provider
 from emails.providers.base import EmailProvider
-from emails.providers.resend import ResendProvider
+from emails.providers.resend import UNSUBSCRIBE_URL_PLACEHOLDER, ResendProvider
 from emails.services import send_email
 from emails.subscribers import subscribe_contact
 from emails.views import SUBSCRIBE_RESPONSE
@@ -68,6 +69,32 @@ class ResendImportGuardTests(TestCase):
     def test_resend_adapter_module_imports_the_sdk(self):
         adapter = pathlib.Path(__file__).resolve().parent / "providers" / "resend.py"
         self.assertIn("import resend", adapter.read_text(encoding="utf-8"))
+
+
+class ProviderLayeringGuardTests(TestCase):
+    """Only the provider package may import a concrete adapter."""
+
+    def test_no_module_imports_the_resend_adapter_directly(self):
+        backend_root = pathlib.Path(__file__).resolve().parent.parent
+        offenders = []
+        for path in backend_root.rglob("*.py"):
+            if "venv" in path.parts or "__pycache__" in path.parts:
+                continue
+            if backend_root / "emails" / "providers" in path.parents:
+                continue
+            if path == pathlib.Path(__file__).resolve():
+                continue
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                modules = []
+                if isinstance(node, ast.Import):
+                    modules = [alias.name for alias in node.names]
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    modules = [node.module]
+                if any(m == "emails.providers.resend" for m in modules):
+                    offenders.append(str(path.relative_to(backend_root)))
+                    break
+
+        self.assertEqual(offenders, [])
 
 
 class SubscribeContactImportGuardTests(TestCase):
@@ -287,6 +314,12 @@ class ResendAdapterTests(TestCase):
         # The SDK default is 30 seconds; a signup can make two calls, so this
         # must stay short. Import is not needed: the client is the SDK's own.
         self.assertEqual(resend.default_http_client._timeout, 10)
+
+    def test_unsubscribe_url_is_the_provider_placeholder(self):
+        self.assertEqual(
+            self.provider.unsubscribe_url,
+            UNSUBSCRIBE_URL_PLACEHOLDER,
+        )
 
     @override_settings(RESEND_SEGMENT_ID="seg_123", RESEND_FROM_EMAIL="a@example.test")
     def test_send_email_posts_the_expected_payload(self):
@@ -615,6 +648,55 @@ class SubscribeEndpointTests(TestCase):
         self.assertNotIn("DatabaseError", str(response.json()))
 
 
+class AnnouncementTemplateTests(TestCase):
+    """The announcement body carries the CAN-SPAM footer without provider syntax."""
+
+    CONTEXT = {
+        "announcement_title": "Summer Festival",
+        "announcement_body_html": "<p>Save the date.</p>",
+        "unsubscribe_url": UNSUBSCRIBE_URL_PLACEHOLDER,
+    }
+
+    def test_footer_renders_the_unsubscribe_link_and_mailing_address(self):
+        html = render_to_string("emails/announcement.html", self.CONTEXT)
+
+        self.assertIn(UNSUBSCRIBE_URL_PLACEHOLDER, html)
+        self.assertIn("Unsubscribe from future announcements", html)
+        self.assertIn("PO BOX 162785, Sacramento, CA 95816", html)
+
+    def test_body_and_title_are_rendered(self):
+        html = render_to_string("emails/announcement.html", self.CONTEXT)
+
+        self.assertIn("Summer Festival", html)
+        self.assertIn("<p>Save the date.</p>", html)
+
+    def test_template_contains_no_resend_specific_syntax(self):
+        # The provider placeholder arrives as a context value, so the template
+        # itself must never name the provider.
+        template = (
+            pathlib.Path(__file__).resolve().parent
+            / "templates"
+            / "emails"
+            / "announcement.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("RESEND", template)
+
+    def test_transactional_templates_do_not_render_the_unsubscribe_footer(self):
+        # The footer block must stay empty for emails that are not marketing.
+        html = render_to_string(
+            "emails/event_reminder.html",
+            {
+                "first_name": "",
+                "event_name": "Event",
+                "start_datetime": "Jan 1, 2026 at 10:00 AM",
+                "location": "Hall",
+            },
+        )
+
+        self.assertNotIn("Unsubscribe from future announcements", html)
+
+
 class AnnouncementEndpointTests(TestCase):
     """The announcement endpoint is admin-only and forwards the supplied HTML."""
 
@@ -643,20 +725,38 @@ class AnnouncementEndpointTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
-    def test_admin_request_forwards_the_html_unchanged(self):
+    def test_admin_request_renders_the_template_before_sending(self):
         self.client.force_authenticate(user=self.user)
-        html = "<p>Hello {{{RESEND_UNSUBSCRIBE_URL}}}</p>"
         with patch("emails.views.get_provider") as get_provider_mock:
+            get_provider_mock.return_value.unsubscribe_url = "https://unsubscribe.test/abc"
             response = self.client.post(
                 "/api/emails/announcements/send/",
-                {"subject": "News", "html": html},
+                {"subject": "News", "title": "Latest news", "html": "<p>Body</p>"},
                 format="json",
             )
 
         self.assertEqual(response.status_code, 200)
-        get_provider_mock.return_value.send_broadcast.assert_called_once_with(
-            subject="News", html=html
-        )
+        sent = get_provider_mock.return_value.send_broadcast.call_args.kwargs
+        self.assertEqual(sent["subject"], "News")
+        # The provider gets rendered HTML, not the raw submitted fragment.
+        self.assertIn("Latest news", sent["html"])
+        self.assertIn("<p>Body</p>", sent["html"])
+        # The footer value comes from the provider, not a hardcoded constant.
+        self.assertIn('href="https://unsubscribe.test/abc"', sent["html"])
+        self.assertIn("Unsubscribe from future announcements", sent["html"])
+
+    def test_the_same_provider_instance_renders_and_sends(self):
+        self.client.force_authenticate(user=self.user)
+        with patch("emails.views.get_provider") as get_provider_mock:
+            get_provider_mock.return_value.unsubscribe_url = "https://unsubscribe.test/abc"
+            self.client.post(
+                "/api/emails/announcements/send/",
+                {"subject": "News", "html": "<p>News</p>"},
+                format="json",
+            )
+
+        get_provider_mock.assert_called_once()
+        get_provider_mock.return_value.send_broadcast.assert_called_once()
 
     def test_provider_failure_returns_a_generic_error(self):
         self.client.force_authenticate(user=self.user)
@@ -672,4 +772,21 @@ class AnnouncementEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("provider-internal-detail", str(response.json()))
+
+    def test_provider_failure_logs_the_underlying_cause(self):
+        # Without the cause, a failure like an unverified sending domain would
+        # be an unexplained 503.
+        self.client.force_authenticate(user=self.user)
+        provider_error = ProviderError("generic")
+        provider_error.__cause__ = RuntimeError("Broadcasts cannot be sent from resend.dev.")
+        with patch("emails.views.get_provider") as get_provider_mock:
+            get_provider_mock.return_value.send_broadcast.side_effect = provider_error
+            with self.assertLogs("emails.views", level="ERROR") as captured:
+                self.client.post(
+                    "/api/emails/announcements/send/",
+                    {"subject": "News", "html": "<p>News</p>"},
+                    format="json",
+                )
+
+        self.assertIn("Broadcasts cannot be sent from resend.dev.", "\n".join(captured.output))
 

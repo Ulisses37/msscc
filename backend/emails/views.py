@@ -1,6 +1,7 @@
 import logging
 
 from django.db import DatabaseError
+from django.template.loader import render_to_string
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -20,29 +21,46 @@ SUBSCRIBE_RESPONSE = {"detail": "Thanks, you're on the list."}
 class AnnouncementSendView(APIView):
     """Send a mailing-list announcement through the configured email provider.
 
-    The caller supplies the finished HTML body, so this view stays free of any
-    template or provider-specific knowledge. The admin UI for composing
-    announcements is deferred; clients can also send Broadcasts from Resend's
-    dashboard.
+    The view renders the announcement template and hands the result to the
+    provider. Templates stay free of provider-specific syntax: the adapter
+    supplies the unsubscribe URL through ``UNSUBSCRIBE_URL_PLACEHOLDER``, which
+    the provider replaces with a working link when the broadcast is sent.
+    The admin UI for composing announcements is deferred; clients can also send
+    Broadcasts from Resend's dashboard.
     """
 
     permission_classes = [permissions.IsAdminUser]
 
     def post(self, request):
-        """Forward the submitted subject and HTML to the provider."""
+        """Render the announcement, then ask the provider to broadcast it."""
         subject = str(request.data.get("subject", "")).strip()
-        html = str(request.data.get("html", ""))
-        if not subject or not html:
+        title = str(request.data.get("title", "")).strip() or subject
+        body_html = str(request.data.get("html", ""))
+        if not subject or not body_html:
             return Response(
                 {"detail": "A subject and HTML body are required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # One provider instance for both the footer value and the send, so a
+        # different EMAIL_PROVIDER is never combined with Resend's placeholder.
+        provider = get_provider()
+
+        html = render_to_string(
+            "emails/announcement.html",
+            {
+                "announcement_title": title,
+                "announcement_body_html": body_html,
+                "unsubscribe_url": provider.unsubscribe_url,
+            },
+        )
+
         try:
-            get_provider().send_broadcast(subject=subject, html=html)
-        except ProviderError:
-            # Never return provider or SDK error text to the client.
-            logger.error("Announcement broadcast failed.")
+            provider.send_broadcast(subject=subject, html=html)
+        except ProviderError as exc:
+            # The response stays generic, but the cause has to reach the log or
+            # a failure like an unverified sending domain is undiagnosable.
+            logger.error("Announcement broadcast failed: %s", exc.__cause__ or exc)
             return Response(
                 {"detail": "The announcement could not be sent."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
