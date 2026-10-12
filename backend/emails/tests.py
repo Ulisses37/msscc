@@ -1,8 +1,15 @@
 import ast
+import base64
+import hashlib
+import hmac
+import json
 import pathlib
+import time
+from datetime import timedelta
 from unittest.mock import patch
 
 import resend
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -72,9 +79,32 @@ class ResendImportGuardTests(TestCase):
 
 
 class ProviderLayeringGuardTests(TestCase):
-    """Only the provider package may import a concrete adapter."""
+    """Only the provider package may import a concrete adapter.
 
-    def test_no_module_imports_the_resend_adapter_directly(self):
+    ``emails.providers.resend`` is the adapter itself: importing it anywhere
+    outside the package would load the Resend SDK unconditionally and defeat the
+    lazy lookup in ``get_provider()``. ``emails.providers.resend_webhook`` is the
+    one deliberate exception: it is the integration point for Resend's webhook,
+    so it has to be reachable from the URL configuration. It must not be used by
+    any other module.
+    """
+
+    ADAPTER_MODULE = "emails.providers.resend"
+    WEBHOOK_MODULE = "emails.providers.resend_webhook"
+    # urls.py imports from views, not from the webhook module, so only views is
+    # allowed to name it.
+    WEBHOOK_ALLOWED_IMPORTERS = {"emails/views.py"}
+
+    def _imported_modules(self, path):
+        modules = set()
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Import):
+                modules.update(alias.name for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules.add(node.module)
+        return modules
+
+    def _scan(self, forbidden_module, allowed_importers=frozenset()):
         backend_root = pathlib.Path(__file__).resolve().parent.parent
         offenders = []
         for path in backend_root.rglob("*.py"):
@@ -82,19 +112,24 @@ class ProviderLayeringGuardTests(TestCase):
                 continue
             if backend_root / "emails" / "providers" in path.parents:
                 continue
+            relative = str(path.relative_to(backend_root)).replace("\\", "/")
             if path == pathlib.Path(__file__).resolve():
                 continue
-            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-                modules = []
-                if isinstance(node, ast.Import):
-                    modules = [alias.name for alias in node.names]
-                elif isinstance(node, ast.ImportFrom) and node.module:
-                    modules = [node.module]
-                if any(m == "emails.providers.resend" for m in modules):
-                    offenders.append(str(path.relative_to(backend_root)))
-                    break
+            if relative in allowed_importers:
+                continue
+            if forbidden_module in self._imported_modules(path):
+                offenders.append(relative)
 
-        self.assertEqual(offenders, [])
+        return offenders
+
+    def test_no_module_imports_the_resend_adapter_directly(self):
+        self.assertEqual(self._scan(self.ADAPTER_MODULE), [])
+
+    def test_only_views_and_urls_import_the_resend_webhook_module(self):
+        self.assertEqual(
+            self._scan(self.WEBHOOK_MODULE, self.WEBHOOK_ALLOWED_IMPORTERS),
+            [],
+        )
 
 
 class SubscribeContactImportGuardTests(TestCase):
@@ -646,6 +681,243 @@ class SubscribeEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("DatabaseError", str(response.json()))
+
+
+class ResendWebhookTests(TestCase):
+    """Signed unsubscribe deliveries sync our records; everything else is ignored.
+
+    The payload shape used here comes from Resend's documentation. A real signed
+    delivery has not been observed, so these tests pin our own contract rather
+    than a confirmed wire format.
+    """
+
+    # Sign with the same secret the handler reads, so these tests do not depend
+    # on a duplicated literal. No real secret is involved.
+    SECRET = settings.RESEND_WEBHOOK_SECRET
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def sign(self, body: bytes, secret=None, timestamp=None, svix_id="msg_test_1"):
+        """Produce the Svix headers Resend would send for this body.
+
+        Returned as Django test-client ``extra`` names, because passing raw
+        header names to ``client.post`` would not set real request headers.
+        """
+        if timestamp is None:
+            timestamp = str(int(time.time()))
+        raw_secret = (secret or self.SECRET)
+        decoded = base64.b64decode(raw_secret.removeprefix("whsec_"))
+        content = f"{svix_id}.{timestamp}.".encode() + body
+        signature = base64.b64encode(
+            hmac.new(decoded, content, hashlib.sha256).digest()
+        ).decode()
+        return {
+            "HTTP_SVIX_ID": svix_id,
+            "HTTP_SVIX_TIMESTAMP": timestamp,
+            "HTTP_SVIX_SIGNATURE": f"v1,{signature}",
+        }
+
+    def deliver(self, payload: dict, **sign_kwargs):
+        body = json.dumps(payload).encode()
+        extra = self.sign(body, **sign_kwargs)
+        return self.client.post(
+            self.URL, body, content_type="application/json", **extra
+        )
+
+    def contact_payload(self, email, unsubscribed):
+        return {
+            "type": "contact.updated",
+            "data": {"email": email, "unsubscribed": unsubscribed},
+        }
+
+    URL = "/api/emails/webhooks/resend/"
+
+    def create_subscriber(self, email="member@example.test", **overrides):
+        data = {
+            "email": email,
+            "source": Subscriber.Source.FOOTER,
+        }
+        data.update(overrides)
+        return Subscriber.objects.create(**data)
+
+    def test_signed_unsubscribe_event_marks_the_row_unsubscribed(self):
+        self.create_subscriber("member@example.test")
+
+        response = self.deliver(self.contact_payload("member@example.test", True))
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+        self.assertIsNotNone(subscriber.unsubscribed_at)
+
+    def test_email_is_normalized_before_matching(self):
+        self.create_subscriber("member@example.test")
+
+        self.deliver(self.contact_payload("  Member@Example.Test ", True))
+
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+
+    def test_duplicate_delivery_is_a_no_op(self):
+        self.create_subscriber("member@example.test")
+
+        first = self.deliver(self.contact_payload("member@example.test", True))
+        original = Subscriber.objects.get(email="member@example.test").unsubscribed_at
+        second = self.deliver(self.contact_payload("member@example.test", True))
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        after = Subscriber.objects.get(email="member@example.test").unsubscribed_at
+        # A redelivery must not move the recorded time.
+        self.assertEqual(after, original)
+
+    def test_contact_deleted_is_treated_as_an_unsubscribe(self):
+        self.create_subscriber("gone@example.test")
+
+        response = self.deliver({"type": "contact.deleted", "data": {"email": "gone@example.test"}})
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="gone@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+
+    def test_unsubscribed_false_never_flips_a_row_back_to_subscribed(self):
+        # Our own create and segment-remove calls emit this event.
+        self.create_subscriber(
+            "resub@example.test",
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=timezone.now(),
+        )
+
+        response = self.deliver(self.contact_payload("resub@example.test", False))
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="resub@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+
+    def test_unknown_email_is_quietly_ignored(self):
+        response = self.deliver(self.contact_payload("nobody@example.test", True))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Subscriber.objects.filter(email="nobody@example.test").exists())
+
+    def test_already_unsubscribed_row_keeps_its_timestamp(self):
+        original = timezone.now() - timedelta(days=1)
+        self.create_subscriber(
+            "old@example.test",
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=original,
+        )
+
+        response = self.deliver(self.contact_payload("old@example.test", True))
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="old@example.test")
+        self.assertEqual(subscriber.unsubscribed_at, original)
+
+    def test_tampered_body_is_rejected(self):
+        self.create_subscriber("member@example.test")
+        body = json.dumps(self.contact_payload("member@example.test", True)).encode()
+        extra = self.sign(body)
+        # Replace the body after signing it.
+        tampered = json.dumps(self.contact_payload("attacker@example.test", True)).encode()
+
+        response = self.client.post(
+            self.URL, tampered, content_type="application/json", **extra
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
+
+    def test_stale_timestamp_is_rejected(self):
+        self.create_subscriber("member@example.test")
+        stale = str(int(time.time()) - 3600)
+        body = json.dumps(self.contact_payload("member@example.test", True)).encode()
+        extra = self.sign(body, timestamp=stale)
+
+        response = self.client.post(
+            self.URL, body, content_type="application/json", **extra
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
+
+    def test_signature_from_a_different_secret_is_rejected(self):
+        self.create_subscriber("member@example.test")
+        other = "whsec_" + base64.b64encode(b"a-different-secret").decode()
+        body = json.dumps(self.contact_payload("member@example.test", True)).encode()
+        extra = self.sign(body, secret=other)
+
+        response = self.client.post(
+            self.URL, body, content_type="application/json", **extra
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_missing_signature_headers_are_rejected(self):
+        self.create_subscriber("member@example.test")
+        body = json.dumps(self.contact_payload("member@example.test", True)).encode()
+
+        response = self.client.post(self.URL, body, content_type="application/json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
+
+    def test_error_body_never_echoes_signature_details(self):
+        body = b'{"type":"contact.updated"}'
+        extra = self.sign(b"a-completely-different-body")
+        extra["HTTP_SVIX_SIGNATURE"] = "v1,not-a-real-signature"
+
+        response = self.client.post(
+            self.URL, body, content_type="application/json", **extra
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("v1,", str(response.json()))
+        self.assertNotIn("whsec_", str(response.json()))
+
+    def test_recognized_event_without_a_usable_email_is_ignored(self):
+        # Payload shape is unverified, so a missing or non-string email must not
+        # break the handler.
+        for data in ({"unsubscribed": True}, {"email": 123, "unsubscribed": True}):
+            with self.subTest(data=data):
+                response = self.deliver({"type": "contact.updated", "data": data})
+                self.assertEqual(response.status_code, 200)
+
+    def test_unknown_event_type_is_ignored(self):
+        self.create_subscriber("member@example.test")
+
+        response = self.deliver(
+            {"type": "email.delivered", "data": {"email": "member@example.test"}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
+
+    @override_settings(RESEND_WEBHOOK_SECRET="")
+    def test_unconfigured_secret_rejects_every_request(self):
+        self.create_subscriber("member@example.test")
+
+        response = self.deliver(self.contact_payload("member@example.test", True))
+
+        # Fail closed: an unset secret must never accept an unsigned request.
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
 
 
 class AnnouncementTemplateTests(TestCase):
