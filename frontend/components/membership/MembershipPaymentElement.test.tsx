@@ -10,6 +10,8 @@ import jaMessages from '@/messages/ja.json';
 
 const mockConfirmPayment = jest.fn();
 const mockSubmit = jest.fn();
+const mockPush = jest.fn();
+const confirmationReference = `MEM-${'a'.repeat(32)}`;
 let mockMessages: typeof enMessages = enMessages;
 // Switch the mock between Stripe being unavailable, an incomplete method,
 // and a failed iframe load without creating application-owned card fields.
@@ -21,6 +23,8 @@ jest.mock('next-intl', () => ({
   useTranslations: () => (key: keyof typeof enMessages.MembershipPage) =>
     mockMessages.MembershipPage[key],
 }));
+
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 jest.mock('@stripe/stripe-js', () => ({
   loadStripe: () => Promise.resolve({}),
@@ -64,6 +68,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
     render(
       <MembershipPaymentElement
         clientSecret="pi_test_secret"
+        confirmationReference={confirmationReference}
         locale={props.locale ?? 'en'}
         membershipInformationValid={props.membershipInformationValid ?? true}
         onPaymentStateChange={onPaymentStateChange}
@@ -85,6 +90,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
     mockLoadError = false;
     mockConfirmPayment.mockReset();
     mockSubmit.mockReset();
+    mockPush.mockReset();
     mockSubmit.mockResolvedValue({ error: undefined });
   });
 
@@ -115,7 +121,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
       expect.objectContaining({
         redirect: 'if_required',
         confirmParams: {
-          return_url: `${window.location.origin}/en/membership`,
+          return_url: `${window.location.origin}/en/membership/payment-result?confirmation_reference=${confirmationReference}`,
         },
       }),
     );
@@ -125,12 +131,13 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
       await screen.findByText(enMessages.MembershipPage.paymentSubmitted),
     ).toBeInTheDocument();
     expect(onPaymentStateChange).toHaveBeenCalledWith('submitted');
+    expect(mockPush).toHaveBeenCalledWith(`/en/membership/payment-result?confirmation_reference=${confirmationReference}`);
     expect(screen.queryByRole('button', { name: enMessages.MembershipPage.confirmPayment })).not.toBeInTheDocument();
   });
 
   it('keeps payment disabled until Stripe, the element, and membership fields are ready', () => {
     const { rerender } = render(
-      <MembershipPaymentElement clientSecret="pi_test_secret" locale="en" membershipInformationValid={false} onPaymentStateChange={jest.fn()} />,
+      <MembershipPaymentElement clientSecret="pi_test_secret" confirmationReference={confirmationReference} locale="en" membershipInformationValid={false} onPaymentStateChange={jest.fn()} />,
     );
     expect(screen.getByText(enMessages.MembershipPage.loadingPaymentForm)).toBeInTheDocument();
     const pay = screen.getByRole('button', { name: enMessages.MembershipPage.confirmPayment });
@@ -143,7 +150,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
     expect(pay).toBeDisabled();
     // Stripe readiness alone cannot override invalid membership information.
     rerender(
-      <MembershipPaymentElement clientSecret="pi_test_secret" locale="en" membershipInformationValid onPaymentStateChange={jest.fn()} />,
+      <MembershipPaymentElement clientSecret="pi_test_secret" confirmationReference={confirmationReference} locale="en" membershipInformationValid onPaymentStateChange={jest.fn()} />,
     );
     expect(pay).toBeEnabled();
     expect(mockConfirmPayment).not.toHaveBeenCalled();
@@ -203,7 +210,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
     expect(await screen.findByText(jaMessages.MembershipPage.paymentSubmitted)).toBeInTheDocument();
     expect(onPaymentStateChange).toHaveBeenLastCalledWith('submitted');
     expect(mockConfirmPayment).toHaveBeenCalledWith(expect.objectContaining({
-      confirmParams: { return_url: `${window.location.origin}/ja/membership` },
+      confirmParams: { return_url: `${window.location.origin}/ja/membership/payment-result?confirmation_reference=${confirmationReference}` },
       redirect: 'if_required',
     }));
   });
@@ -215,7 +222,7 @@ describe('MembershipPaymentElement no-redirect confirmation', () => {
     expect(screen.getByRole('button', { name: enMessages.MembershipPage.confirmPayment })).toBeDisabled();
     expect(mockSubmit).not.toHaveBeenCalled();
     cleanup();
-    render(<MembershipPaymentElement clientSecret="" locale="en" membershipInformationValid onPaymentStateChange={jest.fn()} />);
+    render(<MembershipPaymentElement clientSecret="" confirmationReference={confirmationReference} locale="en" membershipInformationValid onPaymentStateChange={jest.fn()} />);
     expect(screen.getByRole('alert')).toHaveTextContent(enMessages.MembershipPage.paymentUnavailable);
   });
 

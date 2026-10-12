@@ -2,6 +2,7 @@ from django.urls import path
 
 from payments.views import (
     MembershipPaymentSessionCreateView,
+    MembershipPaymentStatusView,
     PaymentSessionCreateView,
     PaymentStatusView,
     StripeWebhookView,
@@ -13,6 +14,11 @@ urlpatterns = [
         "membership/session/",
         MembershipPaymentSessionCreateView.as_view(),
         name="membership-payment-session-create",
+    ),
+    path(
+        "membership/status/",
+        MembershipPaymentStatusView.as_view(),
+        name="membership-payment-status",
     ),
     # POST /api/payments/session/
     #
