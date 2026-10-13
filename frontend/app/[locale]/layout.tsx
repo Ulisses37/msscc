@@ -25,7 +25,7 @@ export default async function LocaleLayout({
       <div className="relative isolate flex min-h-screen flex-col">
             <GalleryBackground />
             {/* Banner Section.*/}
-            <div className="relative z-10">
+            <div className="relative z-20">
               <Banner />
             </div>
             {/* Navbar Section. Banner content goes above this. */}
