@@ -35,33 +35,13 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Dev User Details
-// TODO(pre-delivery): Remove the dev auto-login toggle before handing the
-// product to MSSCC. The DEV_AUTO_LOGIN block, DEV_USER constant, and the
-// NEXT_PUBLIC_DEV_AUTO_LOGIN env var should all go.
-const DEV_AUTO_LOGIN = process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN === 'true';
-
-const DEV_USER: UserPayload = {
-  userId: 1,
-  email: 'admin@msscc1.org',
-  firstName: 'Bryan',
-  permissionData: {
-    Finances: false,
-    Text_Editing: false,
-    Board_Members: false,
-    Events: false,
-    Executive: false,
-  },
-  isExecutive: true,
-};
-
 /** Wraps the application and provides auth state to all descendants. */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserPayload | null>(
-    DEV_AUTO_LOGIN ? DEV_USER : readStoredUser(),
+    readStoredUser(),
   );
   const [accessToken, setAccessToken] = useState<string | null>(
-    DEV_AUTO_LOGIN ? 'dev-auto-login-token' : readStoredToken(),
+    readStoredToken(),
   );
 
   const router = useRouter();
