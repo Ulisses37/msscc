@@ -37,6 +37,20 @@ export interface EventPhotoFormData {
   imageWidth: ImageWidth;
 }
 
+type EventTranslationField = 'title' | 'location' | 'description';
+
+const EVENT_TRANSLATION_FIELDS: Record<
+  EventTranslationField,
+  {
+    source: 'titleEn' | 'locationEn' | 'descriptionEn';
+    target: 'titleJa' | 'locationJa' | 'descriptionJa';
+  }
+> = {
+  title: { source: 'titleEn', target: 'titleJa' },
+  location: { source: 'locationEn', target: 'locationJa' },
+  description: { source: 'descriptionEn', target: 'descriptionJa' },
+};
+
 interface EventFormProps {
   initialData?: EventFormData;
   initialImageUrl?: string | null;
@@ -102,6 +116,8 @@ export default function EventForm({
   const [deletedEventPhotoIds, setDeletedEventPhotoIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState('');
   const [newEventPhotoId, setNewEventPhotoId] = useState<string | null>(null);
+  // Track each translation separately so one field does not block the others.
+  const [translatingFields, setTranslatingFields] = useState<EventTranslationField[]>([]);
   const previewUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -209,27 +225,53 @@ export default function EventForm({
     });
   };
 
-  const handleTranslate = async (
-    fieldEn: keyof EventFormData,
-    fieldJa: keyof EventFormData,
-  ) => {
+  const requestTranslation = async (text: string): Promise<string | null> => {
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: formData[fieldEn] }),
+        body: JSON.stringify({ text }),
       });
 
-      const data = await response.json();
-
-      if (data.translation) {
-        setFormData((prev) => ({
-          ...prev,
-          [fieldJa]: data.translation,
-        }));
+      if (!response.ok) {
+        console.error(`Translation failed with status ${response.status}.`);
+        return null;
       }
+
+      const data = (await response.json()) as { translation?: unknown };
+
+      return typeof data.translation === 'string' ? data.translation : null;
     } catch (error) {
       console.error('Translation failed:', error);
+      return null;
+    }
+  };
+
+  const handleEventFieldTranslation = async (field: EventTranslationField) => {
+    const { source, target } = EVENT_TRANSLATION_FIELDS[field];
+    setTranslatingFields((currentFields) => [...currentFields, field]);
+
+    try {
+      const translation = await requestTranslation(formData[source]);
+
+      if (translation) {
+        setFormData((prev) => ({
+          ...prev,
+          [target]: translation,
+        }));
+      }
+    } finally {
+      setTranslatingFields((currentFields) =>
+        currentFields.filter((currentField) => currentField !== field),
+      );
+    }
+  };
+
+  const handleEventPhotoTranslation = async (photo: EventPhotoFormData) => {
+    const translation = await requestTranslation(photo.captionEn);
+
+    if (translation) {
+      updateEventPhoto(photo.localId, { captionJa: translation });
     }
   };
 
@@ -285,21 +327,6 @@ export default function EventForm({
 
   return (
     <div>
-      {/* Translate Button */}
-      <div className="flex justify-end mb-8">
-        <button
-          type="button"
-          onClick={() => {
-            handleTranslate('titleEn', 'titleJa');
-            handleTranslate('locationEn', 'locationJa');
-            handleTranslate('descriptionEn', 'descriptionJa');
-          }}
-          className="rounded-sm border border-msscc-teal px-5 py-2 text-msscc-teal text-btn tracking-btn hover:bg-msscc-teal hover:text-white transition-colors"
-        >
-          Translate to Japanese
-        </button>
-      </div>
-
       {/* Image + Title + Datetimes row */}
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
         {/* Image Upload Box */}
@@ -389,9 +416,17 @@ export default function EventForm({
 
           {/* Title JA */}
           <div>
-            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Title (Japanese)
-            </label>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+                Title (Japanese)
+              </label>
+              <TranslationButton
+                fieldLabel="title"
+                isTranslating={translatingFields.includes('title')}
+                disabled={!formData.titleEn.trim()}
+                onClick={() => handleEventFieldTranslation('title')}
+              />
+            </div>
             <input
               type="text"
               placeholder="イベントタイトル..."
@@ -463,9 +498,17 @@ export default function EventForm({
 
           {/* Location JA */}
           <div>
-            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-              Location (Japanese)
-            </label>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+                Location (Japanese)
+              </label>
+              <TranslationButton
+                fieldLabel="location"
+                isTranslating={translatingFields.includes('location')}
+                disabled={!formData.locationEn.trim()}
+                onClick={() => handleEventFieldTranslation('location')}
+              />
+            </div>
             <input
               type="text"
               placeholder="イベント会場..."
@@ -506,9 +549,17 @@ export default function EventForm({
 
         {/* Description JA */}
         <div>
-          <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-            Description (Japanese)
-          </label>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+              Description (Japanese)
+            </label>
+            <TranslationButton
+              fieldLabel="description"
+              isTranslating={translatingFields.includes('description')}
+              disabled={!formData.descriptionEn.trim()}
+              onClick={() => handleEventFieldTranslation('description')}
+            />
+          </div>
 
           <textarea
             rows={5}
@@ -592,6 +643,7 @@ export default function EventForm({
                 }
                 onSelectFile={(file) => selectEventPhotoFile(photo, file)}
                 onDelete={() => deleteEventPhoto(photo)}
+                onTranslate={() => handleEventPhotoTranslation(photo)}
               />
             </div>
           ))}
@@ -665,5 +717,36 @@ export default function EventForm({
         </div>
       )}
     </div>
+  );
+}
+
+interface TranslationButtonProps {
+  fieldLabel: string;
+  isTranslating: boolean;
+  disabled: boolean;
+  onClick: () => Promise<void>;
+}
+
+function TranslationButton({
+  fieldLabel,
+  isTranslating,
+  disabled,
+  onClick,
+}: TranslationButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={`Translate ${fieldLabel} to Japanese`}
+      onClick={() => void onClick()}
+      disabled={disabled || isTranslating}
+      className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest
+        transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+          isTranslating
+            ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
+            : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'
+        }`}
+    >
+      {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+    </button>
   );
 }
