@@ -101,6 +101,7 @@ export default function EventForm({
   );
   const [deletedEventPhotoIds, setDeletedEventPhotoIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState('');
+  const [newEventPhotoId, setNewEventPhotoId] = useState<string | null>(null);
   const previewUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -112,10 +113,12 @@ export default function EventForm({
   }, []);
 
   const addEventPhoto = () => {
+    const newPhotoId = crypto.randomUUID();
+
     setEventPhotos((currentPhotos) => [
       ...currentPhotos,
       {
-        localId: crypto.randomUUID(),
+        localId: newPhotoId,
         eventImageId: null,
         mediaAssetId: null,
         mediaUrl: null,
@@ -126,7 +129,19 @@ export default function EventForm({
         imageWidth: 100,
       },
     ]);
+
+    // Track the new photo so the form can scroll to it after rendering.
+    setNewEventPhotoId(newPhotoId);
   };
+
+  useEffect(() => {
+    if (!newEventPhotoId) return;
+
+    // Scroll only after the new photo exists on the page.
+    const newPhoto = document.getElementById(`event-photo-${newEventPhotoId}`);
+    newPhoto?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setNewEventPhotoId(null);
+  }, [newEventPhotoId]);
 
   const updateEventPhoto = (
     localId: string,
@@ -533,7 +548,11 @@ export default function EventForm({
 
         <div className="space-y-6">
           {eventPhotos.map((photo, index) => (
-            <div key={photo.localId} className="space-y-2">
+            <div
+              key={photo.localId}
+              id={`event-photo-${photo.localId}`}
+              className="space-y-2"
+            >
               <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
