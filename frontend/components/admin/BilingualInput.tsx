@@ -45,7 +45,7 @@ export default function BilingualInput({
     };
 
     return (
-      <div className="group relative border border-msscc-gray-light p-6 rounded-md bg-white shadow-none">
+      <div className="group relative rounded-md border border-msscc-gray-light bg-white p-4 shadow-none sm:p-6">
 
         {/* DELETE BUTTON */}
         <button
@@ -67,7 +67,8 @@ export default function BilingualInput({
               </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Keep paired fields stacked until the editor has enough horizontal space. */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* English Textbox */}
               <RichTextInput
                   label={labelEn}
