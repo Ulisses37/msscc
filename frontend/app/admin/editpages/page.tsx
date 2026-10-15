@@ -638,6 +638,8 @@ export default function EditPagesPage() {
                           });
                         }}
                         onDelete={() => handleDeleteBlock(block.id)}
+                        // Pass the existing editor translation flow to image captions.
+                        onTranslate={() => handleTranslate(block.id, block.contentEn)}
                       />
                     ) : (
                       <BilingualInput
