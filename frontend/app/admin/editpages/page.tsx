@@ -54,6 +54,7 @@ const snippetBlockRenderers: Record<BlockType, () => React.ReactNode> = {
 export default function EditPagesPage() {
   // Block array
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [newBlockId, setNewBlockId] = useState<string | null>(null);
 
   // ContentBlock creation
   const addBlock = (type: BlockType) =>{
@@ -67,8 +68,20 @@ export default function EditPagesPage() {
         ? { imageAlignment: 'left' as const, imageWidth: 100 as const }
         : {}),
     };
-    setBlocks([...blocks, newBlock]);
+    setBlocks((currentBlocks) => [...currentBlocks, newBlock]);
+
+    // Track the new block so the editor can scroll to it after rendering.
+    setNewBlockId(newBlock.id);
   };
+
+  useEffect(() => {
+    if (!newBlockId) return;
+
+    // Scroll only after the new block exists on the page.
+    const newBlock = document.getElementById(`content-block-${newBlockId}`);
+    newBlock?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setNewBlockId(null);
+  }, [newBlockId]);
 
   // Removing ContentBlock from array.
   const handleDeleteBlock = (id: string) => {
@@ -567,7 +580,11 @@ export default function EditPagesPage() {
             {/* Loop through blocks array to show each created block */}
             <div className="flex-1 space-y-6">
                 {blocks.map((block, index) => (
-                  <div key={block.id} className="space-y-2">
+                  <div
+                    key={block.id}
+                    id={`content-block-${block.id}`}
+                    className="space-y-2"
+                  >
                     <div className="flex justify-end gap-2">
                       {/* Up and Down Control Buttons */}
                       <button
