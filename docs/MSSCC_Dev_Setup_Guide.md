@@ -478,8 +478,10 @@ To review DeepL quota states without consuming the shared account quota, set
 `DEEPL_USAGE_MOCK` in `frontend/.env.local`, restart the frontend, and open
 `/admin/dashboard`. Supported development-only values are `seventy-nine-percent`,
 `eighty-percent`, `near-limit`, `max`, and `unavailable`. These scenarios let reviewers verify
-the meter at representative usage levels and confirm that an unavailable response hides the
-meter. Remove the value to use the real DeepL usage endpoint.
+the meter at representative usage levels. They also let reviewers verify translation behavior:
+`seventy-nine-percent` proceeds normally, `eighty-percent` requests confirmation, `near-limit`
+can confirm or block based on text length, `max` blocks translation, and `unavailable` reports a
+generic error. Remove the value to use the real DeepL usage endpoint.
 
 ### 12.5 Editor extensions for the testing workflow
 

@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { requestDeepLTranslation } from '@/services/deeplService';
+
 // Components
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
@@ -240,34 +242,12 @@ export default function EventForm({
     });
   };
 
-  const requestTranslation = async (text: string): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        console.error(`Translation failed with status ${response.status}.`);
-        return null;
-      }
-
-      const data = (await response.json()) as { translation?: unknown };
-
-      return typeof data.translation === 'string' ? data.translation : null;
-    } catch (error) {
-      console.error('Translation failed:', error);
-      return null;
-    }
-  };
-
   const handleEventFieldTranslation = async (field: EventTranslationField) => {
     const { source, target } = EVENT_TRANSLATION_FIELDS[field];
     setTranslatingFields((currentFields) => [...currentFields, field]);
 
     try {
-      const translation = await requestTranslation(formData[source]);
+      const translation = await requestDeepLTranslation(formData[source]);
 
       if (translation) {
         setFormData((prev) => ({
@@ -283,7 +263,7 @@ export default function EventForm({
   };
 
   const handleEventPhotoTranslation = async (photo: EventPhotoFormData) => {
-    const translation = await requestTranslation(photo.captionEn);
+    const translation = await requestDeepLTranslation(photo.captionEn);
 
     if (translation) {
       updateEventPhoto(photo.localId, { captionJa: translation });

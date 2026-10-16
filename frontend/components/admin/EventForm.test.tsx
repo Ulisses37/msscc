@@ -8,9 +8,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import EventForm from '@/components/admin/EventForm';
+import { requestDeepLTranslation } from '@/services/deeplService';
 
-const originalFetch = global.fetch;
 const NOTICE_TEXT = '⚠ The English text was changed. Please review the Japanese text.';
+
+jest.mock('@/services/deeplService', () => ({
+  requestDeepLTranslation: jest.fn(),
+}));
 
 jest.mock('@/components/admin/ImageBlockInput', () => ({
   __esModule: true,
@@ -33,26 +37,15 @@ jest.mock('@/components/admin/ImageBlockInput', () => ({
 }));
 
 describe('EventForm translation buttons', () => {
-  beforeEach(() => {
-    global.fetch = jest.fn();
-  });
-
   afterEach(() => {
-    global.fetch = originalFetch;
     jest.clearAllMocks();
   });
 
   it('translates the selected event field and event-photo caption separately', async () => {
-    const fetchMock = jest.mocked(global.fetch);
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ translation: '翻訳されたタイトル' }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ translation: '翻訳されたキャプション' }),
-      } as Response);
+    // Distinct results prove that each button updates only its paired Japanese field.
+    jest.mocked(requestDeepLTranslation)
+      .mockResolvedValueOnce('翻訳されたタイトル')
+      .mockResolvedValueOnce('翻訳されたキャプション');
 
     render(
       <EventForm
@@ -92,11 +85,7 @@ describe('EventForm translation buttons', () => {
         '翻訳されたタイトル',
       );
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Autumn Festival' }),
-    });
+    expect(requestDeepLTranslation).toHaveBeenNthCalledWith(1, 'Autumn Festival');
 
     await user.click(
       screen.getByRole('button', { name: 'Translate image caption to Japanese' }),
@@ -107,11 +96,7 @@ describe('EventForm translation buttons', () => {
         '翻訳されたキャプション',
       );
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Festival guests' }),
-    });
+    expect(requestDeepLTranslation).toHaveBeenNthCalledWith(2, 'Festival guests');
     expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
   });
 

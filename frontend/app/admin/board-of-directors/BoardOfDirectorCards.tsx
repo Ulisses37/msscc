@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+import { requestDeepLTranslation } from '@/services/deeplService';
 
 import type { BoardMember } from './page';
 
@@ -126,26 +127,13 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     setTranslatingFields((currentFields) => [...currentFields, field]);
 
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: edited[source] }),
-      });
-
-      if (!response.ok) {
-        console.error(`Translation failed with status ${response.status}.`);
-        return;
-      }
-
-      const data = (await response.json()) as { translation?: unknown };
-      if (typeof data.translation !== 'string') return;
+      const translation = await requestDeepLTranslation(edited[source]);
+      if (!translation) return;
 
       // Keep the translated value in the popup draft until the admin saves it.
       setEdited((currentMember) =>
-        currentMember ? { ...currentMember, [target]: data.translation } : currentMember,
+        currentMember ? { ...currentMember, [target]: translation } : currentMember,
       );
-    } catch (error) {
-      console.error('Translation failed:', error);
     } finally {
       setTranslatingFields((currentFields) =>
         currentFields.filter((currentField) => currentField !== field),
