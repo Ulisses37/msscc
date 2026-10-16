@@ -11,6 +11,7 @@ import { MemberPopUp } from './BoardOfDirectorCards';
 import type { BoardMember } from './page';
 
 const originalFetch = global.fetch;
+const NOTICE_TEXT = '⚠ The English text was changed. Please review the Japanese text.';
 
 const BOARD_MEMBER: BoardMember = {
   boardMemberId: 12,
@@ -108,5 +109,37 @@ describe('MemberPopUp translation buttons', () => {
       },
       null,
     );
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+  });
+
+  it('shows a per-field notice after manual English edits without changing Japanese text', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={{ ...BOARD_MEMBER, boardMemberNameJa: 'アイコ・スミス' }}
+        type="officer"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Name (English)'), ' Jr.');
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss English text change notice' }),
+    );
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Name (Japanese)')).toHaveValue('アイコ・スミス');
+
+    await user.clear(screen.getByLabelText('Name (English)'));
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+
+    await user.type(screen.getByLabelText('Role (English)'), ' and Chair');
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(2);
   });
 });

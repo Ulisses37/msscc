@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 
 // Components
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
+import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { ImportImage } from '@/components/ui/ImportImage';
+import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
 
 // Types
 import type { ImageAlignment, ImageWidth } from '@/types/content';
@@ -118,7 +120,20 @@ export default function EventForm({
   const [newEventPhotoId, setNewEventPhotoId] = useState<string | null>(null);
   // Track each translation separately so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<EventTranslationField[]>([]);
+  const titleReviewNotice = useTranslationReviewNotice();
+  const locationReviewNotice = useTranslationReviewNotice();
+  const descriptionReviewNotice = useTranslationReviewNotice();
   const previewUrlsRef = useRef(new Set<string>());
+
+  const updateEnglishField = (
+    field: 'titleEn' | 'locationEn' | 'descriptionEn',
+    value: string,
+    markEnglishChanged: () => void,
+  ) => {
+    // Only input events use this helper, so initial and automatic values stay silent.
+    markEnglishChanged();
+    setFormData((currentData) => ({ ...currentData, [field]: value }));
+  };
 
   useEffect(() => {
     const previewUrls = previewUrlsRef.current;
@@ -404,11 +419,12 @@ export default function EventForm({
               type="text"
               placeholder="Event title..."
               value={formData.titleEn}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  titleEn: e.target.value,
-                }))
+              onChange={(event) =>
+                updateEnglishField(
+                  'titleEn',
+                  event.target.value,
+                  titleReviewNotice.markEnglishChanged,
+                )
               }
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
             />
@@ -416,6 +432,9 @@ export default function EventForm({
 
           {/* Title JA */}
           <div>
+            {titleReviewNotice.showNotice && (
+              <TranslationReviewNotice onDismiss={titleReviewNotice.dismissNotice} />
+            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Title (Japanese)
@@ -486,11 +505,12 @@ export default function EventForm({
               type="text"
               placeholder="Event location..."
               value={formData.locationEn}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  locationEn: e.target.value,
-                }))
+              onChange={(event) =>
+                updateEnglishField(
+                  'locationEn',
+                  event.target.value,
+                  locationReviewNotice.markEnglishChanged,
+                )
               }
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
             />
@@ -498,6 +518,9 @@ export default function EventForm({
 
           {/* Location JA */}
           <div>
+            {locationReviewNotice.showNotice && (
+              <TranslationReviewNotice onDismiss={locationReviewNotice.dismissNotice} />
+            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Location (Japanese)
@@ -537,11 +560,12 @@ export default function EventForm({
             rows={5}
             placeholder="Event description..."
             value={formData.descriptionEn}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                descriptionEn: e.target.value,
-              }))
+            onChange={(event) =>
+              updateEnglishField(
+                'descriptionEn',
+                event.target.value,
+                descriptionReviewNotice.markEnglishChanged,
+              )
             }
             className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none resize-none"
           />
@@ -549,6 +573,9 @@ export default function EventForm({
 
         {/* Description JA */}
         <div>
+          {descriptionReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={descriptionReviewNotice.dismissNotice} />
+          )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
               Description (Japanese)

@@ -4,6 +4,8 @@
 import React, { useState } from 'react';
 
 import { RichTextInput } from '@/components/admin/RichTextInput';
+import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
+import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
 import { getRichTextPlainText } from '@/utils/richText';
 
 interface BilingualInputProps {
@@ -34,6 +36,14 @@ export default function BilingualInput({
 }: BilingualInputProps) {
     // State to show that the translation is processing
     const [isTranslating, setIsTranslating] = useState(false);
+    const { showNotice, dismissNotice, markEnglishChanged } =
+      useTranslationReviewNotice();
+
+    const handleEnglishUpdate = (value: string) => {
+        // RichTextInput only emits updates for user edits, not parent-populated values.
+        markEnglishChanged();
+        onUpdateEn(value);
+    };
 
     const handleTranslationClick = async () => {
         setIsTranslating(true);
@@ -74,30 +84,33 @@ export default function BilingualInput({
                   label={labelEn}
                   language="en"
                   value={valueEn}
-                  onUpdate={onUpdateEn}
+                   onUpdate={handleEnglishUpdate}
               />
 
               {/* Japanese Textbox */}
-              <RichTextInput
-                label={labelJa}
-                language="ja"
-                value={valueJa}
-                onUpdate={onUpdateJa}
-                headerAction={(
-                  <button
-                    type="button"
-                    onClick={handleTranslationClick}
-                    disabled={isTranslating || !getRichTextPlainText(valueEn).trim()}
-                    className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase
-                      tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-50
-                      ${isTranslating
-                        ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
-                        : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'}`}
-                  >
-                    {isTranslating ? 'Translating...' : 'Translate to Japanese'}
-                  </button>
-                )}
-              />
+               <div>
+                 {showNotice && <TranslationReviewNotice onDismiss={dismissNotice} />}
+                 <RichTextInput
+                   label={labelJa}
+                   language="ja"
+                   value={valueJa}
+                   onUpdate={onUpdateJa}
+                   headerAction={(
+                     <button
+                       type="button"
+                       onClick={handleTranslationClick}
+                       disabled={isTranslating || !getRichTextPlainText(valueEn).trim()}
+                       className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase
+                         tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-50
+                         ${isTranslating
+                           ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
+                           : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'}`}
+                     >
+                       {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+                     </button>
+                   )}
+                 />
+               </div>
           </div>
       </div>
     );

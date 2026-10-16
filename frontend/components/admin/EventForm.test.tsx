@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import EventForm from '@/components/admin/EventForm';
 
 const originalFetch = global.fetch;
+const NOTICE_TEXT = '⚠ The English text was changed. Please review the Japanese text.';
 
 jest.mock('@/components/admin/ImageBlockInput', () => ({
   __esModule: true,
@@ -111,5 +112,47 @@ describe('EventForm translation buttons', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: 'Festival guests' }),
     });
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+  });
+
+  it('shows independent notices for manual English edits and redisplays after dismissal', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EventForm
+        initialData={{
+          titleEn: 'Autumn Festival',
+          titleJa: '秋祭り',
+          descriptionEn: 'Celebrate with us.',
+          descriptionJa: '一緒に祝いましょう。',
+          locationEn: 'Community Center',
+          locationJa: 'コミュニティセンター',
+          startDatetime: '2026-10-20T10:00',
+          endDatetime: '2026-10-20T12:00',
+          sendVolunteerReminders: false,
+        }}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+
+    const titleInput = screen.getByPlaceholderText('Event title...');
+    const japaneseTitle = screen.getByPlaceholderText('イベントタイトル...');
+    await user.type(titleInput, ' updated');
+
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss English text change notice' }),
+    );
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+    expect(japaneseTitle).toHaveValue('秋祭り');
+
+    await user.clear(titleInput);
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+
+    await user.type(screen.getByPlaceholderText('Event location...'), ' Annex');
+    expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(2);
   });
 });
