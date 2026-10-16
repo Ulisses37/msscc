@@ -474,6 +474,13 @@ npm --prefix frontend test
 
 `npm --prefix frontend run test:watch` re-runs on every save and never exits, so do not use it in a script or in a terminal you intend to reuse. Test files are `<SourceName>.test.ts` or `.test.tsx`, colocated with the source, and `frontend/tsconfig.json` excludes them from `next build`.
 
+To review DeepL quota states without consuming the shared account quota, set
+`DEEPL_USAGE_MOCK` in `frontend/.env.local`, restart the frontend, and open
+`/admin/dashboard`. Supported development-only values are `seventy-nine-percent`,
+`eighty-percent`, `near-limit`, `max`, and `unavailable`. These scenarios let reviewers verify
+the meter at representative usage levels and confirm that an unavailable response hides the
+meter. Remove the value to use the real DeepL usage endpoint.
+
 ### 12.5 Editor extensions for the testing workflow
 
 Install these in VS Code, in addition to the list in section 4. They are personal to your machine: `.vscode/` is gitignored and there is no `.vscode/extensions.json` in this repo, so nothing here is shared or auto-installed.
