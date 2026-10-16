@@ -467,10 +467,10 @@ export default function EditPagesPage() {
             Edit Pages Page
         </h1>
 
-        {/* Stack the editor controls above the content on small screens. */}
-        <div className="flex min-w-0 flex-col gap-6 md:flex-row md:gap-10">
+        {/* Keep controls above the editor through iPad Mini width, then restore the sidebar. */}
+        <div className="flex min-w-0 flex-col gap-6 min-[800px]:flex-row min-[800px]:gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
-            <div className="flex w-full flex-col space-y-3 md:w-48 md:shrink-0">
+            <div className="flex w-full flex-col space-y-3 min-[800px]:w-48 min-[800px]:shrink-0">
               {/* Save and Preview Buttons */}
               <div className="mb-0 flex flex-col gap-2">
                 <button

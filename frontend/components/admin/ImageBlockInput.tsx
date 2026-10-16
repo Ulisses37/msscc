@@ -129,8 +129,8 @@ export default function ImageBlockInput({
       </fieldset>
 
       {/* Input fields for image caption */}
-      {/* Keep paired fields stacked until the editor has enough horizontal space. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Use two columns only for iPad Mini portrait and wide desktop layouts. */}
+      <div className="grid grid-cols-1 gap-6 md:max-[799px]:grid-cols-2 lg:grid-cols-2">
         <RichTextInput
           label="English Caption"
           language="en"
