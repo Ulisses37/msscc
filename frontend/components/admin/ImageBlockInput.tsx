@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 
 import { RichTextInput } from '@/components/admin/RichTextInput';
+import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
+import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
 import type { ImageAlignment, ImageWidth } from '@/types/content';
 import { getRichTextPlainText } from '@/utils/richText';
 
@@ -36,6 +38,14 @@ export default function ImageBlockInput({
   onTranslate,
 }: ImageBlockInputProps) {
   const [isTranslating, setIsTranslating] = useState(false);
+  const { showNotice, dismissNotice, markEnglishChanged } =
+    useTranslationReviewNotice();
+
+  const handleEnglishUpdate = (value: string) => {
+    // RichTextInput only emits updates for user edits, not parent-populated values.
+    markEnglishChanged();
+    onUpdateEn(value);
+  };
 
   const handleTranslationClick = async () => {
     if (!onTranslate) return;
@@ -151,31 +161,34 @@ export default function ImageBlockInput({
           label="English Caption"
           language="en"
           value={contentEn}
-          onUpdate={onUpdateEn}
+          onUpdate={handleEnglishUpdate}
         />
 
-        <RichTextInput
-          label="Japanese Caption"
-          language="ja"
-          value={contentJa}
-          onUpdate={onUpdateJa}
-          // Keep this optional because Page Editor image blocks use this component too.
-          headerAction={onTranslate ? (
-            <button
-              type="button"
-              aria-label="Translate image caption to Japanese"
-              onClick={() => void handleTranslationClick()}
-              disabled={isTranslating || !getRichTextPlainText(contentEn).trim()}
-              className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase
-                tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-50
-                ${isTranslating
-                  ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
-                  : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'}`}
-            >
-              {isTranslating ? 'Translating...' : 'Translate to Japanese'}
-            </button>
-          ) : undefined}
-        />
+        <div>
+          {showNotice && <TranslationReviewNotice onDismiss={dismissNotice} />}
+          <RichTextInput
+            label="Japanese Caption"
+            language="ja"
+            value={contentJa}
+            onUpdate={onUpdateJa}
+            // Keep this optional because Page Editor image blocks use this component too.
+            headerAction={onTranslate ? (
+              <button
+                type="button"
+                aria-label="Translate image caption to Japanese"
+                onClick={() => void handleTranslationClick()}
+                disabled={isTranslating || !getRichTextPlainText(contentEn).trim()}
+                className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase
+                  tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-50
+                  ${isTranslating
+                    ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
+                    : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'}`}
+              >
+                {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+              </button>
+            ) : undefined}
+          />
+        </div>
       </div>
     </div>
   );

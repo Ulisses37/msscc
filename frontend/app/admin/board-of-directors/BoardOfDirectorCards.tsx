@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 
+import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
+import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+
 import type { BoardMember } from './page';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
@@ -100,6 +103,21 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
   const [editedFile, setEditedFile] = useState<File | null>(null);
   // Keep each board-member translation independent so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
+  const nameReviewNotice = useTranslationReviewNotice();
+  const roleReviewNotice = useTranslationReviewNotice();
+  const captionReviewNotice = useTranslationReviewNotice();
+
+  const updateEnglishField = (
+    field: 'boardMemberNameEn' | 'boardMemberRoleEn' | 'boardMemberCaptionEn',
+    value: string,
+    markEnglishChanged: () => void,
+  ) => {
+    // Only input events use this helper, so initial and automatic values stay silent.
+    markEnglishChanged();
+    setEdited((currentMember) =>
+      currentMember ? { ...currentMember, [field]: value } : currentMember,
+    );
+  };
 
   const handleTranslation = async (field: BoardMemberTranslationField) => {
     if (!edited) return;
@@ -178,11 +196,20 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             <input
               type="text"
               value={edited?.boardMemberNameEn ?? ""}
-              onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameEn: e.target.value } : prev)}
+              onChange={(event) =>
+                updateEnglishField(
+                  'boardMemberNameEn',
+                  event.target.value,
+                  nameReviewNotice.markEnglishChanged,
+                )
+              }
               className={inputClass}
             />
           </label>
           <div>
+            {nameReviewNotice.showNotice && (
+              <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label htmlFor="board-member-name-ja" className="text-sm font-semibold">
                 Name (Japanese)
@@ -210,11 +237,20 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 <input
                   type="text"
                   value={edited?.boardMemberRoleEn ?? ""}
-                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleEn: e.target.value } : prev)}
+                  onChange={(event) =>
+                    updateEnglishField(
+                      'boardMemberRoleEn',
+                      event.target.value,
+                      roleReviewNotice.markEnglishChanged,
+                    )
+                  }
                   className={inputClass}
                 />
               </label>
               <div>
+                {roleReviewNotice.showNotice && (
+                  <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-role-ja" className="text-sm font-semibold">
                     Role (Japanese)
@@ -237,12 +273,21 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               <label className="text-sm font-semibold">Caption (English)
                 <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
-                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionEn: e.target.value } : prev)}
+                onChange={(event) =>
+                  updateEnglishField(
+                    'boardMemberCaptionEn',
+                    event.target.value,
+                    captionReviewNotice.markEnglishChanged,
+                  )
+                }
                 className={`${inputClass} resize-none`}
                 rows={4}
                 />
               </label>
               <div>
+                {captionReviewNotice.showNotice && (
+                  <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-caption-ja" className="text-sm font-semibold">
                     Caption (Japanese)
