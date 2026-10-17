@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react';
 import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
 
+import { getEvents } from '@/services/eventService';
+import type { Event } from '@/types/event';
+
 import { AvailablePages, CardCarousel } from './pageDisplay';
 
 type LocalAdminInfo = {
@@ -17,9 +20,11 @@ type LocalAdminInfo = {
 
 export default function Dashboard() {
   const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     setLocalAdmin(fetchLocalStorageAdmin() ?? null);
+    fetchEvents().then(setEvents);
   }, []);
 
   if (!localAdmin) return null;
@@ -83,11 +88,11 @@ export default function Dashboard() {
         <div>
           <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16">
             <div className="text-msscc-pink-dark text-2xl lg:text-3xl font-bold border-b-4 border-msscc-pink-light">
-              Recent User Updates
+              Recent Page Updates
             </div>
-            <CardCarousel carouselType="Events" />
-            <CardCarousel carouselType="Donations"/>
-            <CardCarousel carouselType="Memberships"/>
+            <CardCarousel carouselType="Events" data={events} />
+            {/*<CardCarousel carouselType="Donations"/>
+            <CardCarousel carouselType="Memberships"/>*/}
           </div>
         </div>
     </div>
@@ -111,4 +116,20 @@ function ProgressBar({ percent }: { percent: number }) {
       />
     </div>
   );
+}
+
+async function fetchEvents(){
+  try {
+    const data = await getEvents();
+
+    // Filter to published only, then sort by startDatetime ascending
+    const sorted = data
+      .sort((a, b) =>
+      new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime(),
+      );
+      return(sorted);
+  } catch (error) {
+    console.error("Error fetching events:", error);
+  }
+  return [];
 }
