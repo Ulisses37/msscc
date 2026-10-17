@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
 
-import { AvailablePages } from './pageDisplay';
+import { AvailablePages, CardCarousel } from './pageDisplay';
 
 type LocalAdminInfo = {
   userId: string;
@@ -25,54 +25,71 @@ export default function Dashboard() {
   if (!localAdmin) return null;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-dvh bg-msscc-white font-body text-msscc-gray-dark">
-      {/* Left Panel */}
-      <aside className="w-full lg:w-48 flex-shrink-0 flex flex-col lg:self-start bg-msscc-pink-light">
-        <div className="w-full bg-msscc-pink px-4 py-2 text-white">
-          <div className="text-xl break-words">
-            {localAdmin.firstName + ' ' + localAdmin.lastName}
-          </div>
-          <div className="text-sm text-gray-200 break-all">
-            {localAdmin.email}
-          </div>
-        </div>
-      </aside>
-
-      {/* Center */}
-      <div className="w-full min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-4">
-        <div className="text-msscc-pink-dark text-2xl lg:text-3xl font-bold border-b-4 border-msscc-pink-light">
-          Your Pages
-        </div>
-        {Object.entries(localAdmin.permissionData)
-          .filter(([, allowed]) => allowed)
-          .map(([page]) => (
-            <AvailablePages key={page} CategoryTitle={page} />
-          ))}
-      </div>
-
-      {/* Right Panel */}
-      <aside className="w-full lg:w-48 flex-shrink-0 flex flex-col sm:flex-row lg:flex-col lg:self-start gap-4 px-4 pb-4 lg:px-0 lg:pb-0 lg:mr-8">
-        {/* Visit Counter */}
-        <div className="bg-msscc-pink px-4 py-2 text-white text-center sm:flex-1 lg:flex-none">
-          <div className="text-5xl">00</div>
-          <div className="text-sm text-gray-200">Site Visits</div>
-        </div>
-
-        {/* Cloud Storage Capacity */}
-        <div className="items-center flex bg-msscc-pink py-4 flex-col sm:flex-1 lg:flex-none">
-          <div className="flex flex-row justify-center items-center gap-3 mb-3">
-            <ProgressBar percent={72} />
-            <div className="text-white items-center flex flex-col">
-              <div className="text-2xl">00</div>
-              <div className="text-base">Gb Free</div>
+    <div>
+      <div className="flex flex-col lg:flex-row bg-msscc-white font-body text-msscc-gray-dark">
+        {/* Left Panel */}
+        <aside className="w-full lg:w-48 flex-shrink-0 flex flex-col lg:self-start bg-msscc-pink-light">
+          <div className="w-full bg-msscc-pink px-4 py-2 text-white">
+            <div className="text-xl break-words">
+              {localAdmin.firstName + ' ' + localAdmin.lastName}
+            </div>
+            <div className="text-sm text-gray-200 break-all">
+              {localAdmin.email}
             </div>
           </div>
-          <div className="text-gray-200">Image Storage Capacity</div>
-        </div>
+        </aside>
 
-        {/* Keep translation quota visible beside the other dashboard capacity information. */}
-        <DeepLUsageMeter />
-      </aside>
+        {/* Center */}
+        <div className="w-full min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-4 lg:self-start">
+          {/* Page list */}
+          <div className="mb-12">
+            <div className="text-msscc-pink-dark text-2xl lg:text-3xl font-bold border-b-4 border-msscc-pink-light">
+              Your Pages
+            </div>
+            {Object.entries(localAdmin.permissionData)
+              .filter(([, allowed]) => allowed)
+              .map(([page]) => (
+              <AvailablePages key={page} CategoryTitle={page} />
+            ))}
+          </div>
+        </ div>
+
+        {/* Right Panel */}
+        <aside className="w-full lg:w-48 flex-shrink-0 flex flex-col sm:flex-row lg:flex-col lg:self-start gap-4 px-4 pb-4 lg:px-0 lg:pb-0 lg:mr-8">
+          {/* Visit Counter */}
+          <div className="bg-msscc-pink px-4 py-2 text-white text-center sm:flex-1 lg:flex-none">
+            <div className="text-5xl">00</div>
+            <div className="text-sm text-gray-200">Site Visits</div>
+          </div>
+
+          {/* Cloud Storage Capacity */}
+          <div className="items-center flex bg-msscc-pink py-4 flex-col sm:flex-1 lg:flex-none">
+            <div className="flex flex-row justify-center items-center gap-3 mb-3">
+              <ProgressBar percent={72} />
+              <div className="text-white items-center flex flex-col">
+                <div className="text-2xl">00</div>
+                <div className="text-base">Gb Free</div>
+              </div>
+            </div>
+            <div className="text-gray-200">Image Storage Capacity</div>
+          </div>
+
+          {/* Keep translation quota visible beside the other dashboard capacity information. */}
+          <DeepLUsageMeter />
+        </aside>
+      </div>
+
+        {/* Front end preview */}
+        <div>
+          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16">
+            <div className="text-msscc-pink-dark text-2xl lg:text-3xl font-bold border-b-4 border-msscc-pink-light">
+              Recent User Updates
+            </div>
+            <CardCarousel carouselType="Events" />
+            <CardCarousel carouselType="Donations"/>
+            <CardCarousel carouselType="Memberships"/>
+          </div>
+        </div>
     </div>
   );
 }

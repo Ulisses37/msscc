@@ -59,3 +59,20 @@ function PageCard(
     </div>
   )
 }
+
+export function previewCards(){
+
+}
+
+export function CardCarousel(
+  {
+    carouselType
+  }:{
+    carouselType: string;
+}){
+  return(
+    <div>
+      {carouselType}
+    </div>
+  )
+}
