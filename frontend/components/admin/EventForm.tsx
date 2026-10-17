@@ -132,7 +132,9 @@ export default function EventForm({
     value: string,
     markEnglishChanged: () => void,
   ) => {
-    // Only input events use this helper, so initial and automatic values stay silent.
+    // Ignore blur or tab-return events that report the current value without an edit.
+    if (formData[field] === value) return;
+
     markEnglishChanged();
     setFormData((currentData) => ({ ...currentData, [field]: value }));
   };
@@ -390,6 +392,10 @@ export default function EventForm({
 
         {/* Title + Datetimes + Location */}
         <div className="flex flex-col gap-4 flex-1">
+          {titleReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={titleReviewNotice.dismissNotice} />
+          )}
+
           {/* Title EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -412,9 +418,6 @@ export default function EventForm({
 
           {/* Title JA */}
           <div>
-            {titleReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={titleReviewNotice.dismissNotice} />
-            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Title (Japanese)
@@ -476,6 +479,10 @@ export default function EventForm({
             />
           </div>
 
+          {locationReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={locationReviewNotice.dismissNotice} />
+          )}
+
           {/* Location EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -498,9 +505,6 @@ export default function EventForm({
 
           {/* Location JA */}
           <div>
-            {locationReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={locationReviewNotice.dismissNotice} />
-            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Location (Japanese)
@@ -530,6 +534,10 @@ export default function EventForm({
 
       {/* Description EN + JA */}
       <div className="flex flex-col gap-4">
+        {descriptionReviewNotice.showNotice && (
+          <TranslationReviewNotice onDismiss={descriptionReviewNotice.dismissNotice} />
+        )}
+
         {/* Description EN */}
         <div>
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -553,9 +561,6 @@ export default function EventForm({
 
         {/* Description JA */}
         <div>
-          {descriptionReviewNotice.showNotice && (
-            <TranslationReviewNotice onDismiss={descriptionReviewNotice.dismissNotice} />
-          )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
               Description (Japanese)

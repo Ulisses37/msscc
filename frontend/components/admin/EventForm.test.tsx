@@ -127,6 +127,11 @@ describe('EventForm translation buttons', () => {
     await user.type(titleInput, ' updated');
 
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+    const titleNotice = screen.getByRole('status');
+    expect(titleNotice.compareDocumentPosition(titleInput)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(titleNotice.compareDocumentPosition(japaneseTitle)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
 
     await user.click(
       screen.getByRole('button', { name: 'Dismiss English text change notice' }),
@@ -139,5 +144,31 @@ describe('EventForm translation buttons', () => {
 
     await user.type(screen.getByPlaceholderText('Event location...'), ' Annex');
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(2);
+  });
+
+  it('does not show a notice when an English field loses focus without a change', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EventForm
+        initialData={{
+          titleEn: 'Autumn Festival',
+          titleJa: '秋祭り',
+          descriptionEn: 'Celebrate with us.',
+          descriptionJa: '一緒に祝いましょう。',
+          locationEn: 'Community Center',
+          locationJa: 'コミュニティセンター',
+          startDatetime: '2026-10-20T10:00',
+          endDatetime: '2026-10-20T12:00',
+          sendVolunteerReminders: false,
+        }}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await user.click(screen.getByPlaceholderText('Event title...'));
+    await user.tab();
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
   });
 });

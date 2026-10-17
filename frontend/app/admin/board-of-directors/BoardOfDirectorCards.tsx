@@ -113,7 +113,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     value: string,
     markEnglishChanged: () => void,
   ) => {
-    // Only input events use this helper, so initial and automatic values stay silent.
+    // Ignore focus changes that report the current value without an actual edit.
+    if (edited?.[field] === value) return;
+
     markEnglishChanged();
     setEdited((currentMember) =>
       currentMember ? { ...currentMember, [field]: value } : currentMember,
@@ -180,6 +182,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 
           {/* Editable fields */}
         <div className="flex flex-col gap-3">
+          {nameReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
+          )}
           <label className="text-sm font-semibold">Name (English)
             <input
               type="text"
@@ -195,9 +200,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             />
           </label>
           <div>
-            {nameReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
-            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label htmlFor="board-member-name-ja" className="text-sm font-semibold">
                 Name (Japanese)
@@ -221,6 +223,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           {/* Officer*/}
           {type === "officer" && (
             <>
+              {roleReviewNotice.showNotice && (
+                <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
+              )}
               <label className="text-sm font-semibold">Role (English)
                 <input
                   type="text"
@@ -236,9 +241,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 />
               </label>
               <div>
-                {roleReviewNotice.showNotice && (
-                  <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
-                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-role-ja" className="text-sm font-semibold">
                     Role (Japanese)
@@ -258,6 +260,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                   className={inputClass}
                 />
               </div>
+              {captionReviewNotice.showNotice && (
+                <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
+              )}
               <label className="text-sm font-semibold">Caption (English)
                 <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
@@ -273,9 +278,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 />
               </label>
               <div>
-                {captionReviewNotice.showNotice && (
-                  <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
-                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-caption-ja" className="text-sm font-semibold">
                     Caption (Japanese)

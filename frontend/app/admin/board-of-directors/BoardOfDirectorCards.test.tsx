@@ -108,6 +108,13 @@ describe('MemberPopUp translation buttons', () => {
 
     await user.type(screen.getByLabelText('Name (English)'), ' Jr.');
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+    const nameNotice = screen.getByRole('status');
+    expect(nameNotice.compareDocumentPosition(screen.getByLabelText('Name (English)'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(nameNotice.compareDocumentPosition(screen.getByLabelText('Name (Japanese)'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
 
     await user.click(
       screen.getByRole('button', { name: 'Dismiss English text change notice' }),
@@ -120,5 +127,24 @@ describe('MemberPopUp translation buttons', () => {
 
     await user.type(screen.getByLabelText('Role (English)'), ' and Chair');
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(2);
+  });
+
+  it('does not show a notice when an English field loses focus without a change', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={BOARD_MEMBER}
+        type="officer"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByLabelText('Name (English)'));
+    await user.tab();
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
   });
 });

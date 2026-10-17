@@ -48,4 +48,53 @@ describe('BilingualInput translation review notice', () => {
     fireEvent.input(englishEditor, { target: { innerHTML: '' } });
     expect(screen.getByText(NOTICE_TEXT)).toBeInTheDocument();
   });
+
+  it('does not show the notice when focus leaves without changing English text', () => {
+    const onUpdateEn = jest.fn();
+
+    render(
+      <BilingualInput
+        labelEn="English Text"
+        labelJa="Japanese Text"
+        valueEn="Original English"
+        valueJa="元の日本語"
+        onUpdateEn={onUpdateEn}
+        onUpdateJa={jest.fn()}
+        onTranslate={jest.fn().mockResolvedValue(undefined)}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    const englishEditor = screen.getByRole('textbox', { name: 'English Text' });
+    fireEvent.focus(englishEditor);
+    fireEvent.blur(englishEditor, { target: { innerHTML: 'Original English' } });
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+    expect(onUpdateEn).not.toHaveBeenCalled();
+  });
+
+  it('renders the notice before both language fields', () => {
+    render(
+      <BilingualInput
+        labelEn="English Text"
+        labelJa="Japanese Text"
+        valueEn="Original English"
+        valueJa="元の日本語"
+        onUpdateEn={jest.fn()}
+        onUpdateJa={jest.fn()}
+        onTranslate={jest.fn().mockResolvedValue(undefined)}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    fireEvent.input(screen.getByRole('textbox', { name: 'English Text' }), {
+      target: { innerHTML: 'Changed English' },
+    });
+
+    const notice = screen.getByRole('status');
+    const englishEditor = screen.getByRole('textbox', { name: 'English Text' });
+    const japaneseEditor = screen.getByRole('textbox', { name: 'Japanese Text' });
+    expect(notice.compareDocumentPosition(englishEditor)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(notice.compareDocumentPosition(japaneseEditor)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });

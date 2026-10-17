@@ -42,7 +42,9 @@ export default function ImageBlockInput({
     useTranslationReviewNotice();
 
   const handleEnglishUpdate = (value: string) => {
-    // RichTextInput only emits updates for user edits, not parent-populated values.
+    // RichTextInput also emits on blur, so ignore focus changes that did not edit text.
+    if (value === contentEn) return;
+
     markEnglishChanged();
     onUpdateEn(value);
   };
@@ -157,6 +159,12 @@ export default function ImageBlockInput({
       {/* Input fields for image caption */}
       {/* Use two columns only for iPad Mini portrait and wide desktop layouts. */}
       <div className="grid grid-cols-1 gap-6 md:max-[799px]:grid-cols-2 lg:grid-cols-2">
+        {showNotice && (
+          <div className="md:max-[799px]:col-span-2 lg:col-span-2">
+            <TranslationReviewNotice onDismiss={dismissNotice} />
+          </div>
+        )}
+
         <RichTextInput
           label="English Caption"
           language="en"
@@ -165,7 +173,6 @@ export default function ImageBlockInput({
         />
 
         <div>
-          {showNotice && <TranslationReviewNotice onDismiss={dismissNotice} />}
           <RichTextInput
             label="Japanese Caption"
             language="ja"
