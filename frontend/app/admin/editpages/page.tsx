@@ -17,6 +17,7 @@ import type {
 // Components
 import BilingualInput from '@/components/admin/BilingualInput';
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
+import { requestDeepLTranslation } from '@/services/deeplService';
 
 /**
  * Admin page for allowing client to dynamically add/edit content on their website
@@ -130,28 +131,17 @@ export default function EditPagesPage() {
         setBlocks(blocks.map((b) => (b.id === updatedBlock.id ? updatedBlock : b)));
     };
 
-  // Deepl translate button handling
+  // Keep quota policy consistent across every admin translation button.
   const handleTranslate = async (id: string, textToTranslate: string) => {
-    try {
-        // Send the text to be converted as a package
-        const response = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textToTranslate }),
-        });
+    const translation = await requestDeepLTranslation(textToTranslate);
 
-        const data = await response.json();
-
-        // Ensure that the newly translated text is placed in the correct content block
-        if (data.translation) {
-            setBlocks((prevBlocks) => // Search the array in its current state
-                prevBlocks.map((block) =>
-                    block.id === id ? { ...block, contentJa: data.translation } : block // Search based on block id
-                )
-            );
-        }
-    } catch (error) {
-        console.error("Translation failed:", error);
+    if (translation) {
+      // Match the result to the block that initiated the request.
+      setBlocks((currentBlocks) =>
+        currentBlocks.map((block) =>
+          block.id === id ? { ...block, contentJa: translation } : block,
+        ),
+      );
     }
   };
 

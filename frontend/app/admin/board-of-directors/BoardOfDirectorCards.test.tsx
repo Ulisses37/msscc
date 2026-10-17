@@ -7,11 +7,16 @@ import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { requestDeepLTranslation } from '@/services/deeplService';
+
 import { MemberPopUp } from './BoardOfDirectorCards';
 import type { BoardMember } from './page';
 
-const originalFetch = global.fetch;
 const NOTICE_TEXT = '⚠ The English text was changed. Please review the Japanese text.';
+
+jest.mock('@/services/deeplService', () => ({
+  requestDeepLTranslation: jest.fn(),
+}));
 
 const BOARD_MEMBER: BoardMember = {
   boardMemberId: 12,
@@ -25,30 +30,16 @@ const BOARD_MEMBER: BoardMember = {
 };
 
 describe('MemberPopUp translation buttons', () => {
-  beforeEach(() => {
-    global.fetch = jest.fn();
-  });
-
   afterEach(() => {
-    global.fetch = originalFetch;
     jest.clearAllMocks();
   });
 
   it('translates each board-member field and keeps the values in the draft', async () => {
-    const fetchMock = jest.mocked(global.fetch);
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ translation: 'アイコ・スミス' }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ translation: '会長' }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ translation: '組織を率いています。' }),
-      } as Response);
+    // Distinct values prove the popup updates the draft field that initiated each request.
+    jest.mocked(requestDeepLTranslation)
+      .mockResolvedValueOnce('アイコ・スミス')
+      .mockResolvedValueOnce('会長')
+      .mockResolvedValueOnce('組織を率いています。');
     const onUpdate = jest.fn();
     const user = userEvent.setup();
 
@@ -83,21 +74,9 @@ describe('MemberPopUp translation buttons', () => {
       expect(screen.getByLabelText('Caption (Japanese)')).toHaveValue('組織を率いています。');
     });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Aiko Smith' }),
-    });
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'President' }),
-    });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Leads the organization.' }),
-    });
+    expect(requestDeepLTranslation).toHaveBeenNthCalledWith(1, 'Aiko Smith');
+    expect(requestDeepLTranslation).toHaveBeenNthCalledWith(2, 'President');
+    expect(requestDeepLTranslation).toHaveBeenNthCalledWith(3, 'Leads the organization.');
 
     await user.click(screen.getByRole('button', { name: 'Update' }));
     expect(onUpdate).toHaveBeenCalledWith(
@@ -129,6 +108,13 @@ describe('MemberPopUp translation buttons', () => {
 
     await user.type(screen.getByLabelText('Name (English)'), ' Jr.');
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(1);
+    const nameNotice = screen.getByRole('status');
+    expect(nameNotice.compareDocumentPosition(screen.getByLabelText('Name (English)'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(nameNotice.compareDocumentPosition(screen.getByLabelText('Name (Japanese)'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
 
     await user.click(
       screen.getByRole('button', { name: 'Dismiss English text change notice' }),
@@ -141,5 +127,24 @@ describe('MemberPopUp translation buttons', () => {
 
     await user.type(screen.getByLabelText('Role (English)'), ' and Chair');
     expect(screen.getAllByText(NOTICE_TEXT)).toHaveLength(2);
+  });
+
+  it('does not show a notice when an English field loses focus without a change', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={BOARD_MEMBER}
+        type="officer"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByLabelText('Name (English)'));
+    await user.tab();
+
+    expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
   });
 });

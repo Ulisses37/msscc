@@ -1,7 +1,9 @@
 'use client';
 
-import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import { useEffect, useState } from 'react';
+
+import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
+import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
 
 import { AvailablePages } from './pageDisplay';
 
@@ -67,6 +69,9 @@ export default function Dashboard() {
           </div>
           <div className="text-gray-200">Image Storage Capacity</div>
         </div>
+
+        {/* Keep translation quota visible beside the other dashboard capacity information. */}
+        <DeepLUsageMeter />
       </aside>
     </div>
   );

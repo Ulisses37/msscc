@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { requestDeepLTranslation } from '@/services/deeplService';
+
 // Components
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
@@ -130,7 +132,9 @@ export default function EventForm({
     value: string,
     markEnglishChanged: () => void,
   ) => {
-    // Only input events use this helper, so initial and automatic values stay silent.
+    // Ignore blur or tab-return events that report the current value without an edit.
+    if (formData[field] === value) return;
+
     markEnglishChanged();
     setFormData((currentData) => ({ ...currentData, [field]: value }));
   };
@@ -240,34 +244,12 @@ export default function EventForm({
     });
   };
 
-  const requestTranslation = async (text: string): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        console.error(`Translation failed with status ${response.status}.`);
-        return null;
-      }
-
-      const data = (await response.json()) as { translation?: unknown };
-
-      return typeof data.translation === 'string' ? data.translation : null;
-    } catch (error) {
-      console.error('Translation failed:', error);
-      return null;
-    }
-  };
-
   const handleEventFieldTranslation = async (field: EventTranslationField) => {
     const { source, target } = EVENT_TRANSLATION_FIELDS[field];
     setTranslatingFields((currentFields) => [...currentFields, field]);
 
     try {
-      const translation = await requestTranslation(formData[source]);
+      const translation = await requestDeepLTranslation(formData[source]);
 
       if (translation) {
         setFormData((prev) => ({
@@ -283,7 +265,7 @@ export default function EventForm({
   };
 
   const handleEventPhotoTranslation = async (photo: EventPhotoFormData) => {
-    const translation = await requestTranslation(photo.captionEn);
+    const translation = await requestDeepLTranslation(photo.captionEn);
 
     if (translation) {
       updateEventPhoto(photo.localId, { captionJa: translation });
@@ -410,6 +392,10 @@ export default function EventForm({
 
         {/* Title + Datetimes + Location */}
         <div className="flex flex-col gap-4 flex-1">
+          {titleReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={titleReviewNotice.dismissNotice} />
+          )}
+
           {/* Title EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -432,9 +418,6 @@ export default function EventForm({
 
           {/* Title JA */}
           <div>
-            {titleReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={titleReviewNotice.dismissNotice} />
-            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Title (Japanese)
@@ -496,6 +479,10 @@ export default function EventForm({
             />
           </div>
 
+          {locationReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={locationReviewNotice.dismissNotice} />
+          )}
+
           {/* Location EN */}
           <div>
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -518,9 +505,6 @@ export default function EventForm({
 
           {/* Location JA */}
           <div>
-            {locationReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={locationReviewNotice.dismissNotice} />
-            )}
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
                 Location (Japanese)
@@ -550,6 +534,10 @@ export default function EventForm({
 
       {/* Description EN + JA */}
       <div className="flex flex-col gap-4">
+        {descriptionReviewNotice.showNotice && (
+          <TranslationReviewNotice onDismiss={descriptionReviewNotice.dismissNotice} />
+        )}
+
         {/* Description EN */}
         <div>
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
@@ -573,9 +561,6 @@ export default function EventForm({
 
         {/* Description JA */}
         <div>
-          {descriptionReviewNotice.showNotice && (
-            <TranslationReviewNotice onDismiss={descriptionReviewNotice.dismissNotice} />
-          )}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
               Description (Japanese)

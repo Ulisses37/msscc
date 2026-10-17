@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+import { requestDeepLTranslation } from '@/services/deeplService';
 
 import type { BoardMember } from './page';
 
@@ -112,7 +113,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     value: string,
     markEnglishChanged: () => void,
   ) => {
-    // Only input events use this helper, so initial and automatic values stay silent.
+    // Ignore focus changes that report the current value without an actual edit.
+    if (edited?.[field] === value) return;
+
     markEnglishChanged();
     setEdited((currentMember) =>
       currentMember ? { ...currentMember, [field]: value } : currentMember,
@@ -126,26 +129,13 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     setTranslatingFields((currentFields) => [...currentFields, field]);
 
     try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: edited[source] }),
-      });
-
-      if (!response.ok) {
-        console.error(`Translation failed with status ${response.status}.`);
-        return;
-      }
-
-      const data = (await response.json()) as { translation?: unknown };
-      if (typeof data.translation !== 'string') return;
+      const translation = await requestDeepLTranslation(edited[source]);
+      if (!translation) return;
 
       // Keep the translated value in the popup draft until the admin saves it.
       setEdited((currentMember) =>
-        currentMember ? { ...currentMember, [target]: data.translation } : currentMember,
+        currentMember ? { ...currentMember, [target]: translation } : currentMember,
       );
-    } catch (error) {
-      console.error('Translation failed:', error);
     } finally {
       setTranslatingFields((currentFields) =>
         currentFields.filter((currentField) => currentField !== field),
@@ -192,6 +182,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 
           {/* Editable fields */}
         <div className="flex flex-col gap-3">
+          {nameReviewNotice.showNotice && (
+            <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
+          )}
           <label className="text-sm font-semibold">Name (English)
             <input
               type="text"
@@ -207,9 +200,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             />
           </label>
           <div>
-            {nameReviewNotice.showNotice && (
-              <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
-            )}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label htmlFor="board-member-name-ja" className="text-sm font-semibold">
                 Name (Japanese)
@@ -233,6 +223,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           {/* Officer*/}
           {type === "officer" && (
             <>
+              {roleReviewNotice.showNotice && (
+                <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
+              )}
               <label className="text-sm font-semibold">Role (English)
                 <input
                   type="text"
@@ -248,9 +241,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 />
               </label>
               <div>
-                {roleReviewNotice.showNotice && (
-                  <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
-                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-role-ja" className="text-sm font-semibold">
                     Role (Japanese)
@@ -270,6 +260,9 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                   className={inputClass}
                 />
               </div>
+              {captionReviewNotice.showNotice && (
+                <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
+              )}
               <label className="text-sm font-semibold">Caption (English)
                 <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
@@ -285,9 +278,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 />
               </label>
               <div>
-                {captionReviewNotice.showNotice && (
-                  <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
-                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <label htmlFor="board-member-caption-ja" className="text-sm font-semibold">
                     Caption (Japanese)
