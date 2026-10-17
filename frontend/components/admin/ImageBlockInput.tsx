@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { RichTextInput } from '@/components/admin/RichTextInput';
 import type { ImageAlignment, ImageWidth } from '@/types/content';
+import { getRichTextPlainText } from '@/utils/richText';
 
 interface ImageBlockInputProps {
   contentEn: string;
@@ -17,6 +18,7 @@ interface ImageBlockInputProps {
   onUpdateWidth: (value: ImageWidth) => void;
   onSelectFile: (file: File) => void;
   onDelete: () => void;
+  onTranslate?: () => Promise<void>;
 }
 
 export default function ImageBlockInput({
@@ -31,7 +33,21 @@ export default function ImageBlockInput({
   onUpdateWidth,
   onSelectFile,
   onDelete,
+  onTranslate,
 }: ImageBlockInputProps) {
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleTranslationClick = async () => {
+    if (!onTranslate) return;
+
+    setIsTranslating(true);
+    try {
+      await onTranslate();
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <div className="group relative rounded-md border border-msscc-gray-light bg-white p-4 sm:p-6">
       <button
@@ -143,6 +159,22 @@ export default function ImageBlockInput({
           language="ja"
           value={contentJa}
           onUpdate={onUpdateJa}
+          // Keep this optional because Page Editor image blocks use this component too.
+          headerAction={onTranslate ? (
+            <button
+              type="button"
+              aria-label="Translate image caption to Japanese"
+              onClick={() => void handleTranslationClick()}
+              disabled={isTranslating || !getRichTextPlainText(contentEn).trim()}
+              className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase
+                tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-50
+                ${isTranslating
+                  ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
+                  : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'}`}
+            >
+              {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+            </button>
+          ) : undefined}
         />
       </div>
     </div>

@@ -1,10 +1,25 @@
 'use client';
 
-import {BoardMember} from "./page"
-import { useState } from "react";
+import { useState } from 'react';
+
+import type { BoardMember } from './page';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+
+type BoardMemberTranslationField = 'name' | 'role' | 'caption';
+
+const BOARD_MEMBER_TRANSLATION_FIELDS: Record<
+  BoardMemberTranslationField,
+  {
+    source: 'boardMemberNameEn' | 'boardMemberRoleEn' | 'boardMemberCaptionEn';
+    target: 'boardMemberNameJa' | 'boardMemberRoleJa' | 'boardMemberCaptionJa';
+  }
+> = {
+  name: { source: 'boardMemberNameEn', target: 'boardMemberNameJa' },
+  role: { source: 'boardMemberRoleEn', target: 'boardMemberRoleJa' },
+  caption: { source: 'boardMemberCaptionEn', target: 'boardMemberCaptionJa' },
+};
 
 interface DirectorCardProps {
   boardMemberName: string;
@@ -83,6 +98,42 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 ) {
   const [edited, setEdited] = useState<BoardMember | null>(member);
   const [editedFile, setEditedFile] = useState<File | null>(null);
+  // Keep each board-member translation independent so one field does not block the others.
+  const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
+
+  const handleTranslation = async (field: BoardMemberTranslationField) => {
+    if (!edited) return;
+
+    const { source, target } = BOARD_MEMBER_TRANSLATION_FIELDS[field];
+    setTranslatingFields((currentFields) => [...currentFields, field]);
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: edited[source] }),
+      });
+
+      if (!response.ok) {
+        console.error(`Translation failed with status ${response.status}.`);
+        return;
+      }
+
+      const data = (await response.json()) as { translation?: unknown };
+      if (typeof data.translation !== 'string') return;
+
+      // Keep the translated value in the popup draft until the admin saves it.
+      setEdited((currentMember) =>
+        currentMember ? { ...currentMember, [target]: data.translation } : currentMember,
+      );
+    } catch (error) {
+      console.error('Translation failed:', error);
+    } finally {
+      setTranslatingFields((currentFields) =>
+        currentFields.filter((currentField) => currentField !== field),
+      );
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
@@ -131,14 +182,26 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               className={inputClass}
             />
           </label>
-          <label className="text-sm font-semibold">Name (Japanese)
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="board-member-name-ja" className="text-sm font-semibold">
+                Name (Japanese)
+              </label>
+              <BoardMemberTranslationButton
+                fieldLabel="board member name"
+                isTranslating={translatingFields.includes('name')}
+                disabled={!edited?.boardMemberNameEn.trim()}
+                onClick={() => handleTranslation('name')}
+              />
+            </div>
             <input
+              id="board-member-name-ja"
               type="text"
               value={edited?.boardMemberNameJa ?? ""}
               onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameJa: e.target.value } : prev)}
               className={inputClass}
             />
-          </label>
+          </div>
 
           {/* Officer*/}
           {type === "officer" && (
@@ -151,14 +214,26 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                   className={inputClass}
                 />
               </label>
-              <label className="text-sm font-semibold">Role (Japanese)
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="board-member-role-ja" className="text-sm font-semibold">
+                    Role (Japanese)
+                  </label>
+                  <BoardMemberTranslationButton
+                    fieldLabel="board member role"
+                    isTranslating={translatingFields.includes('role')}
+                    disabled={!edited?.boardMemberRoleEn.trim()}
+                    onClick={() => handleTranslation('role')}
+                  />
+                </div>
                 <input
+                  id="board-member-role-ja"
                   type="text"
                   value={edited?.boardMemberRoleJa ?? ""}
                   onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleJa: e.target.value } : prev)}
                   className={inputClass}
                 />
-              </label>
+              </div>
               <label className="text-sm font-semibold">Caption (English)
                 <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
@@ -167,14 +242,26 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 rows={4}
                 />
               </label>
-              <label className="text-sm font-semibold">Caption (Japanese)
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="board-member-caption-ja" className="text-sm font-semibold">
+                    Caption (Japanese)
+                  </label>
+                  <BoardMemberTranslationButton
+                    fieldLabel="board member caption"
+                    isTranslating={translatingFields.includes('caption')}
+                    disabled={!edited?.boardMemberCaptionEn.trim()}
+                    onClick={() => handleTranslation('caption')}
+                  />
+                </div>
                 <textarea
+                id="board-member-caption-ja"
                 value={edited?.boardMemberCaptionJa ?? ""}
                 onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionJa: e.target.value } : prev)}
                 className={`${inputClass} resize-none`}
                 rows={4}
                 />
-              </label>
+              </div>
             </>
           )}
         </div>
@@ -202,5 +289,36 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
         </div>
       </div>
     </div>
+  );
+}
+
+interface BoardMemberTranslationButtonProps {
+  fieldLabel: string;
+  isTranslating: boolean;
+  disabled: boolean;
+  onClick: () => Promise<void>;
+}
+
+function BoardMemberTranslationButton({
+  fieldLabel,
+  isTranslating,
+  disabled,
+  onClick,
+}: BoardMemberTranslationButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={`Translate ${fieldLabel} to Japanese`}
+      onClick={() => void onClick()}
+      disabled={disabled || isTranslating}
+      className={`rounded border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest
+        transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+          isTranslating
+            ? 'border-msscc-gray-light bg-gray-100 text-msscc-gray-mid'
+            : 'border-msscc-teal/30 bg-msscc-teal/10 text-msscc-teal hover:bg-msscc-teal hover:text-white active:scale-95 active:transform'
+        }`}
+    >
+      {isTranslating ? 'Translating...' : 'Translate to Japanese'}
+    </button>
   );
 }
