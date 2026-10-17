@@ -3,9 +3,16 @@ interface PartnerCardProps {
   imageUrl?: string;
   description?: string;
   websiteUrl?: string;
+  visitWebsiteLabel: string;
 }
 
-export function PartnerCard({ name, imageUrl, description, websiteUrl }: PartnerCardProps) {
+export function PartnerCard({
+  name,
+  imageUrl,
+  description,
+  websiteUrl,
+  visitWebsiteLabel,
+}: PartnerCardProps) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 rounded-md border border-msscc-gray-light bg-msscc-white p-4">
       <div className="inline-flex min-w-0 max-w-full items-center gap-1">
@@ -37,7 +44,7 @@ export function PartnerCard({ name, imageUrl, description, websiteUrl }: Partner
           rel="noopener noreferrer"
           className="mt-auto break-words font-body text-caption text-msscc-teal underline underline-offset-[3px]"
         >
-          Visit website →
+          {visitWebsiteLabel}
         </a>
       )}
 

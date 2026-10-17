@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   CheckoutElementsProvider,
@@ -19,12 +19,6 @@ interface CheckoutPaymentFormProps {
   email: string;
   onEditDonationDetails: () => void;
 }
-
-// Load Stripe once instead of creating a new Stripe instance every time
-// the component renders.
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
-);
 
 function CheckoutPaymentForm({
   email,
@@ -192,9 +186,19 @@ export function StripePaymentElement({
   email,
   onEditDonationDetails,
 }: StripePaymentElementProps) {
+  const locale = useLocale();
   const t = useTranslations("SupportPage");
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+  const stripePromise = useMemo(
+    () =>
+      publishableKey
+        // Stripe localizes its embedded Checkout UI when the instance is created.
+        ? loadStripe(publishableKey, { locale: locale === "ja" ? "ja" : "en" })
+        : null,
+    [locale, publishableKey],
+  );
 
-  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+  if (!publishableKey) {
     return (
       <p className="text-sm text-red-600" role="alert">
         {t("paymentConfirmationError")}
@@ -218,6 +222,7 @@ export function StripePaymentElement({
       </div>
 
       <CheckoutElementsProvider
+        key={locale}
         stripe={stripePromise}
         options={{ clientSecret }}
       >

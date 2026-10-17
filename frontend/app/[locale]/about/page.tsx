@@ -2,6 +2,7 @@
 
 // React and Next Imports
 import { useEffect, useState } from "react";
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 
 // Components
@@ -25,6 +26,7 @@ interface BoardMember {
 }
 
 export default function AboutPage() {
+  const t = useTranslations('AboutPage');
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +89,8 @@ export default function AboutPage() {
       .finally(() => setIsLoading(false));
   }, [isJapanese]);
 
-  if (isLoading) return <main className="p-6">Loading...</main>;
-  if (error) return <main className="p-6 text-red-600">{error}</main>;
+  if (isLoading) return <main className="p-6">{t('loading')}</main>;
+  if (error) return <main className="p-6 text-red-600">{t('error')}</main>;
 
   return (
     <main className="min-w-0 max-w-full">
@@ -111,11 +113,11 @@ export default function AboutPage() {
       <div className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0">
         {/* Smaller mobile headings and side padding prevent the title from overflowing at 320px. */}
         <p className="px-4 pt-8 text-center font-serif text-4xl leading-tight text-white sm:text-5xl lg:px-0 lg:text-6xl">
-          Board of Directors
+          {t('boardOfDirectors')}
         </p>
 
         <p className="mb-6 px-4 pt-2 text-center font-serif text-2xl leading-snug text-white sm:text-3xl lg:px-0">
-          Officers
+          {t('officers')}
         </p>
 
         {/* Officers Section */}
@@ -141,7 +143,7 @@ export default function AboutPage() {
         {/* Directors Section */}
         <div className="text-center mt-12 mb-6">
           <p className="text-3xl text-center font-serif text-white mb-4">
-            Directors
+            {t('directors')}
           </p>
         </div>
         {/* Narrow gutters remain visible while keeping four Director frames inside a 768px viewport. */}

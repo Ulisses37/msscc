@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import type { Event } from '@/types/event';
+import { formatLocalizedDate } from '@/utils/dateLocalization';
 
 interface EventNavigationProps {
   previousEvent: Event | null;
@@ -11,8 +13,8 @@ interface EventNavigationProps {
 }
 
 // Formats ISO datetime string to readable date
-function formatDate(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('en-US', {
+function formatDate(datetime: string, locale: string): string {
+  return formatLocalizedDate(datetime, locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -28,6 +30,7 @@ interface NavLinkProps {
 
 // Individual nav link with hover state
 function NavLink({ event, direction, locale }: NavLinkProps) {
+  const t = useTranslations('EventDetailPage');
   const [hovered, setHovered] = useState(false);
   const isPrevious = direction === 'previous';
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
@@ -57,7 +60,7 @@ function NavLink({ event, direction, locale }: NavLinkProps) {
         textTransform: 'uppercase',
         letterSpacing: 'var(--letter-spacing-label)',
       }}>
-        {isPrevious ? '← Previous' : 'Next →'}
+        {isPrevious ? `← ${t('previous')}` : `${t('next')} →`}
       </span>
 
       {/* Event title */}
@@ -77,13 +80,14 @@ function NavLink({ event, direction, locale }: NavLinkProps) {
         fontSize: 'var(--fs-caption)',
         color: 'var(--color-gray-mid)',
       }}>
-        {formatDate(event.startDatetime)}
+        {formatDate(event.startDatetime, locale)}
       </span>
     </Link>
   );
 }
 
 export function EventNavigation({ previousEvent, nextEvent }: EventNavigationProps) {
+  const t = useTranslations('EventDetailPage');
   const { locale } = useParams();
 
   // Nothing to render if no adjacent events
@@ -91,7 +95,7 @@ export function EventNavigation({ previousEvent, nextEvent }: EventNavigationPro
 
   return (
     <nav
-      aria-label="Event navigation"
+      aria-label={t('navigation')}
       style={{
         display: 'flex',
         justifyContent: 'space-between',
