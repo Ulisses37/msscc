@@ -77,6 +77,8 @@ export function EventCalendar({ event }: EventCalendarProps) {
         locale={dateLocale}
         activeStartDate={new Date(startDate.getFullYear(), startDate.getMonth(), 1)}
         showNavigation={false}
+        // Keep Japanese month and weekday labels, but show compact numeric day tiles without 日.
+        formatDay={(_, date) => String(date.getDate())}
         onClickDay={() => null}
         tileClassName={({ date }) =>
           isTileHighlighted(date) ? 'event-highlight' : null
