@@ -45,7 +45,7 @@ export default function BilingualInput({
     };
 
     return (
-      <div className="group relative border border-msscc-gray-light p-6 rounded-md bg-white shadow-none">
+      <div className="group relative rounded-md border border-msscc-gray-light bg-white p-4 shadow-none sm:p-6">
 
         {/* DELETE BUTTON */}
         <button
@@ -67,7 +67,8 @@ export default function BilingualInput({
               </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Use two columns only for iPad Mini portrait and wide desktop layouts. */}
+          <div className="grid grid-cols-1 gap-6 md:max-[799px]:grid-cols-2 lg:grid-cols-2">
               {/* English Textbox */}
               <RichTextInput
                   label={labelEn}

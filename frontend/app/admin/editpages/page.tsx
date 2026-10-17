@@ -424,29 +424,30 @@ export default function EditPagesPage() {
   };
 
   return (
-    <div className="p-10 max-w-content mx-auto font-body bg-msscc-white min-h-screen text-msscc-gray-dark">
+    <div className="mx-auto min-h-dvh w-full min-w-0 max-w-content bg-msscc-white px-0 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
         {/* Save Status Toast */}
         {saveMessage && (
-          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-5 py-3 text-center text-label font-semibold text-msscc-gray-dark shadow-md">
+          <div className="mb-6 rounded-md border border-msscc-gray-light bg-gray-100 px-3 py-3 text-center text-label font-semibold text-msscc-gray-dark shadow-md sm:px-5">
             {saveMessage}
           </div>
         )}
          {isPreviewOpen && previewPath && (
            <div
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4"
                onClick={() => setIsPreviewOpen(false)}
              role="dialog"
              aria-modal="true"
              aria-label="Page preview"
            >
+             {/* Give the preview more vertical space on phones. */}
              <div
-               className="relative aspect-video max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl"
+               className="relative h-[calc(100dvh-1rem)] w-full max-w-6xl overflow-hidden rounded-lg bg-white shadow-2xl sm:h-[85vh] lg:aspect-video lg:h-auto lg:max-h-[85vh]"
                onClick={(event) => event.stopPropagation()}
              >
                <button
                  type="button"
                  onClick={() => setIsPreviewOpen(false)}
-                 className="absolute right-6 top-2 z-10 rounded-full bg-white px-2 text-msscc-gray-dark shadow hover:bg-gray-100 opacity-75"
+                 className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl text-msscc-gray-dark opacity-90 shadow hover:bg-gray-100 sm:right-4"
                  aria-label="Close page preview"
                >
                  ×
@@ -462,20 +463,21 @@ export default function EditPagesPage() {
              </div>
            </div>
          )}
-        <h1 className="font-heading text-display mb-10 text-msscc-teal border-b border-msscc-gray-light pb-4">
+        <h1 className="mb-6 border-b border-msscc-gray-light pb-4 font-heading text-2xl text-msscc-teal sm:text-display md:mb-10">
             Edit Pages Page
         </h1>
 
-        <div className="flex flex-col md:flex-row gap-10">
+        {/* Keep controls above the editor through iPad Mini width, then restore the sidebar. */}
+        <div className="flex min-w-0 flex-col gap-6 min-[800px]:flex-row min-[800px]:gap-10">
             {/* The 3 Buttons used to generate the textbox containers */}
-            <div className="md:w-48 flex flex-col space-y-3">
+            <div className="flex w-full flex-col space-y-3 min-[800px]:w-48 min-[800px]:shrink-0">
               {/* Save and Preview Buttons */}
-              <div className="mb-0 flex flex-row items-end gap-1.5">
+              <div className="mb-0 flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={handlePreviewInitialization}
                   disabled={selectedPageId === null}
-                  className="whitespace-nowrap rounded-sm border border-msscc-teal px-2.5 py-2 text-msscc-teal text-btn transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-sm border border-msscc-teal px-2.5 py-2 text-btn text-msscc-teal transition-colors hover:bg-msscc-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Preview Page
                 </button>
@@ -483,7 +485,7 @@ export default function EditPagesPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving || selectedPageId === null}
-                  className="rounded-sm bg-msscc-pink px-2 py-2 left-6 w-20 text-white text-btn transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-sm bg-msscc-pink px-2 py-2 text-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
@@ -493,7 +495,7 @@ export default function EditPagesPage() {
                 Switch Localization
               </label>
               <button type="button"
-                className="whitespace-nowrap rounded-sm border border-msscc-pink px-2.5 py-2 text-msscc-white bg-msscc-pink text-btn transition-colors hover:bg-msscc-pink-dark hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-sm border border-msscc-pink bg-msscc-pink px-2.5 py-2 text-btn text-msscc-white transition-colors hover:bg-msscc-pink-dark hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => setSelectedLanguage(selectedLanguage === 'en' ? 'ja' : 'en')}
               >
                 {selectedLanguage === 'en' ? 'EN' : '日本語'}
@@ -505,7 +507,7 @@ export default function EditPagesPage() {
                     Select Page
                   </label>
                   <select
-                  className="border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white w-48"
+                  className="w-full rounded-sm border border-msscc-gray-light bg-white px-4 py-2 font-body text-msscc-gray-dark"
                   value={selectedPageId ?? ''}
                   onChange={(e) => {
                   setBlocks([]);
@@ -578,14 +580,14 @@ export default function EditPagesPage() {
             </div>
 
             {/* Loop through blocks array to show each created block */}
-            <div className="flex-1 space-y-6">
+            <div className="min-w-0 flex-1 space-y-6">
                 {blocks.map((block, index) => (
                   <div
                     key={block.id}
                     id={`content-block-${block.id}`}
                     className="space-y-2"
                   >
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       {/* Up and Down Control Buttons */}
                       <button
                         type="button"

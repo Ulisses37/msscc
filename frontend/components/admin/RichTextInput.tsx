@@ -124,7 +124,7 @@ export function RichTextInput({
 
   return (
     <div>
-      <div className="mb-2 flex min-h-9 items-end justify-between gap-2">
+      <div className="mb-2 flex min-h-9 items-end justify-between gap-2 md:max-[799px]:flex-wrap">
         <label
           id={labelId}
           className="block text-label uppercase text-msscc-gray-mid"

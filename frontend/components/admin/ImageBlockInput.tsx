@@ -33,7 +33,7 @@ export default function ImageBlockInput({
   onDelete,
 }: ImageBlockInputProps) {
   return (
-    <div className="group relative border border-msscc-gray-light p-6 rounded-md bg-white">
+    <div className="group relative rounded-md border border-msscc-gray-light bg-white p-4 sm:p-6">
       <button
         type="button"
         onClick={onDelete}
@@ -51,6 +51,7 @@ export default function ImageBlockInput({
         <input
           type="file"
           accept="image/*"
+          className="w-full min-w-0 text-body-sm"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) {
@@ -128,7 +129,8 @@ export default function ImageBlockInput({
       </fieldset>
 
       {/* Input fields for image caption */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Use two columns only for iPad Mini portrait and wide desktop layouts. */}
+      <div className="grid grid-cols-1 gap-6 md:max-[799px]:grid-cols-2 lg:grid-cols-2">
         <RichTextInput
           label="English Caption"
           language="en"
