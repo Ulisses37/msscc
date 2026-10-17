@@ -1,14 +1,18 @@
 'use client';
 
 import Calendar from 'react-calendar';
+import { useLocale } from 'next-intl';
 import 'react-calendar/dist/Calendar.css';
 import type { Event } from '@/types/event';
+import { getDateLocale } from '@/utils/dateLocalization';
 
 interface EventCalendarProps {
   event: Event;
 }
 
 export function EventCalendar({ event }: EventCalendarProps) {
+  const locale = useLocale();
+  const dateLocale = getDateLocale(locale);
   const startDate = new Date(event.startDatetime);
   const endDate = new Date(event.endDatetime);
 
@@ -61,12 +65,16 @@ export function EventCalendar({ event }: EventCalendarProps) {
           margin: 0,
           fontWeight: 600,
         }}>
-          {startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
+          {new Intl.DateTimeFormat(dateLocale, {
+            month: 'long',
+            year: 'numeric',
+          }).format(startDate).toLocaleUpperCase(dateLocale)}
         </p>
       </div>
 
       <Calendar
-        locale="en-US"  // to have calendar be sun, mon, ..., fri, sat
+        // react-calendar uses this locale for its weekday and month labels.
+        locale={dateLocale}
         activeStartDate={new Date(startDate.getFullYear(), startDate.getMonth(), 1)}
         showNavigation={false}
         onClickDay={() => null}

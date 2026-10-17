@@ -15,7 +15,26 @@ import { useAuth } from '@/context/AuthContext'
 import { LoginModal } from '@/components/auth/LoginModal';
 import PostStaticMedia from '../ui/PostStaticMedia';
 
-export const Banner = () =>{
+interface BannerLabels {
+  login: string;
+  logout: string;
+  adminPortal: string;
+  publicSite: string;
+  modalTitle: string;
+  email: string;
+  password: string;
+  forgotPassword: string;
+  loggingIn: string;
+  invalidEmail: string;
+  invalidCredentials: string;
+  closeModal: string;
+}
+
+interface BannerProps {
+  labels?: BannerLabels;
+}
+
+export const Banner = ({ labels }: BannerProps) =>{
 
   const { isAuthenticated } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -66,16 +85,35 @@ export const Banner = () =>{
         {!isAdminRoute && <LanguageToggle />}
         {!isPreviewMode && isAuthenticated && (
           <>
-            <PortalToggle isAdminRoute={isAdminRoute} />
-            <LogoutButton />
+            <PortalToggle
+              isAdminRoute={isAdminRoute}
+              adminPortalLabel={labels?.adminPortal}
+              publicSiteLabel={labels?.publicSite}
+            />
+            <LogoutButton label={labels?.logout} />
           </>
         )}
         {!isPreviewMode && !isAuthenticated && (
-          <LoginButton onLoginClick={handleLoginClick} />
+          <LoginButton onLoginClick={handleLoginClick} label={labels?.login} />
         )}
       </div>
 
-      {isLoginModalOpen && <LoginModal onClose={() => setIsLoginModalOpen(false)} />}
+      {isLoginModalOpen && (
+        <LoginModal
+          onClose={() => setIsLoginModalOpen(false)}
+          labels={labels ? {
+            title: labels.modalTitle,
+            email: labels.email,
+            password: labels.password,
+            forgotPassword: labels.forgotPassword,
+            loggingIn: labels.loggingIn,
+            login: labels.login,
+            invalidEmail: labels.invalidEmail,
+            invalidCredentials: labels.invalidCredentials,
+            closeModal: labels.closeModal,
+          } : undefined}
+        />
+      )}
     </div>
   );
 };

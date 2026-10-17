@@ -110,7 +110,7 @@ export default function EventsPage() {
           fontSize: 'var(--fs-heading-2)',
           marginBottom: 'var(--space-4)',
         }}>
-          Events and Activities
+          {t('heading')}
         </h2>
       </header>
 
@@ -121,7 +121,7 @@ export default function EventsPage() {
           color: 'var(--color-gray-mid)',
           fontSize: 'var(--fs-body)',
         }}>
-          Loading events...
+          {t('loading')}
         </p>
       )}
 
@@ -132,7 +132,7 @@ export default function EventsPage() {
           color: 'var(--color-gray-mid)',
           fontSize: 'var(--fs-body)',
         }}>
-          No upcoming events at this time. Please check back soon.
+          {t('empty')}
         </p>
       )}
 
@@ -170,10 +170,10 @@ export default function EventsPage() {
         {hasVolunteerOpportunities ? (
           <div style={{ textAlign: 'center' }}>
             <p style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-dark)' }}>
-              Interested in helping out? We have positions available!
+              {t('volunteerPrompt')}
             </p>
             <Button
-              text="View Volunteer Opportunities"
+              text={t('volunteerButton')}
               width="300px" // Adjusted from 100% to look more professional
               height="48px"
               fontSize="14px"
@@ -182,7 +182,7 @@ export default function EventsPage() {
           </div>
         ) : (
           <p style={{ textAlign: 'center', color: 'var(--color-gray-mid)' }}>
-            No volunteer opportunities exist at this time.
+            {t('noVolunteerOpportunities')}
           </p>
         )}
       </div>

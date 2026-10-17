@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface DirectorCardProps {
   boardMemberName: string;
   boardMemberImageURL: string | null;
@@ -16,6 +18,7 @@ export function OfficerCard({
   boardMemberCaption,
   boardMemberImageURL,
 }: OfficerCardProps) {
+  const t = useTranslations('AboutPage');
   // Long bilingual content must shrink and wrap inside its grid cell instead of overflowing.
   // A shared media area keeps details aligned when source portraits have different aspect ratios.
   return (
@@ -25,12 +28,12 @@ export function OfficerCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={boardMemberImageURL}
-            alt={`${boardMemberName} portrait`}
+            alt={t('portraitAlt', { name: boardMemberName })}
             className="max-h-full max-w-full object-contain"
           />
         ) : (
           <div className="flex size-full items-center justify-center rounded-full bg-slate-200 text-sm text-white">
-            No photo
+            {t('noPhoto')}
           </div>
         )}
       </div>
@@ -55,6 +58,7 @@ export function DirectorCard({
   boardMemberName,
   boardMemberImageURL
 }: DirectorCardProps) {
+  const t = useTranslations('AboutPage');
   return (
     <div className="min-w-0 w-full text-center">
       {/* Matching square frames crop varied uploads consistently and preserve the teal grid gutters. */}
@@ -63,12 +67,12 @@ export function DirectorCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={boardMemberImageURL}
-            alt={`${boardMemberName} portrait`}
+            alt={t('portraitAlt', { name: boardMemberName })}
             className="size-full object-cover"
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-slate-200 text-sm text-white">
-            No photo
+            {t('noPhoto')}
           </div>
         )}
       </div>

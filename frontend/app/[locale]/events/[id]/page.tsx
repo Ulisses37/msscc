@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter for navigation
 import Link from 'next/link';
 import { getEventById, getEventImages, getEvents } from '@/services/eventService';
@@ -11,6 +12,7 @@ import { EventCalendar } from '@/components/events/EventCalendar';
 import { EventMap } from '@/components/events/EventMap';
 
 export default function EventDetailPage() {
+  const t = useTranslations('EventDetailPage');
   const { id, locale } = useParams();
   const router = useRouter(); // Initialize the router
   const [event, setEvent] = useState<Event | null>(null);
@@ -71,7 +73,7 @@ export default function EventDetailPage() {
         padding: 'var(--space-10) var(--space-6)',
       }}>
         <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body)' }}>
-          Loading event...
+          {t('loading')}
         </p>
       </main>
     );
@@ -92,13 +94,13 @@ export default function EventDetailPage() {
           fontSize: 'var(--fs-display)',
           marginBottom: 'var(--space-4)',
         }}>
-          Event Not Found
+          {t('notFound')}
         </h1>
         <p style={{ color: 'var(--color-gray-mid)', fontSize: 'var(--fs-body)', marginBottom: 'var(--space-6)' }}>
-          This event does not exist or is no longer available.
+          {t('unavailable')}
         </p>
         <Link href={`/${locale}/events`} style={{ color: 'var(--color-teal)', textDecoration: 'underline' }}>
-          ← Back to events
+          ← {t('backToEvents')}
         </Link>
       </main>
     );
@@ -123,7 +125,7 @@ export default function EventDetailPage() {
           marginBottom: 'var(--space-6)',
         }}
       >
-        ← Back to events
+        ← {t('backToEvents')}
       </Link>
 
       {/* 60/40 layout — left: event detail, right: calendar */}
