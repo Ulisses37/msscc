@@ -53,9 +53,22 @@ export default function EventHistoryPage() {
     fetchPastEvents();
   }, []);
 
+  // Normalize the query so searches ignore case and surrounding spaces.
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+
+  // Match either language's title; pagination below runs on the filtered list.
+  const filteredEvents = pastEvents.filter((event) => {
+    if (!normalizedSearchQuery) return true;
+
+    return (
+      event.titleEn.toLocaleLowerCase().includes(normalizedSearchQuery)
+      || event.titleJa.toLocaleLowerCase().includes(normalizedSearchQuery)
+    );
+  });
+
   const totalPages = Math.max(1, Math.ceil(pastEvents.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedEvents = pastEvents.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     // Keep the page selection valid if the available history changes.
@@ -105,7 +118,11 @@ export default function EventHistoryPage() {
               id="past-event-search"
               type="search"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                // A new search starts from the first page of results.
+                setCurrentPage(1);
+              }}
               placeholder={t('searchPlaceholder')}
               className="w-full rounded-md border border-msscc-gray-light bg-msscc-white px-4 py-2 text-body text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-teal sm:max-w-md"
             />
