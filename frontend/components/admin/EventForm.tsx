@@ -322,6 +322,14 @@ export default function EventForm({
     }
   };
 
+  // Clear the validation error after a few seconds so it doesn't linger in the sticky bar
+  useEffect(() => {
+    if (!saveError) return;
+
+    const timer = setTimeout(() => setSaveError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [saveError]);
+
   return (
     <div>
       {/* Image + Title + Datetimes row */}
