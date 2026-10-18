@@ -34,6 +34,10 @@
     "partners": "Partners"
   },
 
+  "SocialLink": {
+    "facebook": "Visit our Facebook page (opens in a new tab)"
+  },
+
   "EventsPage": {
     "historyLink": "Click here to see past events!"
   },

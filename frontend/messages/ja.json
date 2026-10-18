@@ -34,6 +34,11 @@
     "partners": "パートナー"
   },
 
+  "SocialLink": {
+    "facebook": "Facebookページを見る（新しいタブで開きます）"
+  },
+
+
   "EventsPage": {
     "historyLink": "過去のイベントはこちらからご覧ください！"
   },
