@@ -128,20 +128,28 @@ export default function EventHistoryPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-6">
-            {paginatedEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          {filteredEvents.length === 0 ? (
+            <p role="status" className="text-body text-msscc-gray-mid">
+              {t('noResults')}
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-6">
+                {paginatedEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
 
-          <PostPages
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            onItemsPerPageChange={handleItemsPerPageChange}
-          />
+              <PostPages
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
+          </>
+          )}
         </>
       )}
     </main>

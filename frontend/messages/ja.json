@@ -178,7 +178,8 @@
     "error": "過去のイベントを読み込めませんでした。後でもう一度お試しください。",
     "empty": "現在、過去のイベントはありません。",
     "searchLabel": "過去のイベントを検索",
-    "searchPlaceholder": "イベント名で検索..."
+    "searchPlaceholder": "イベント名で検索...",
+    "noResults": "検索に一致する過去のイベントはありません。"
   },
 
   "VolunteerCancellationPage": {

@@ -177,7 +177,8 @@
     "error": "Unable to load past events. Please try again later.",
     "empty": "No past events are available at this time.",
     "searchLabel": "Search past events",
-    "searchPlaceholder": "Search by event title..."
+    "searchPlaceholder": "Search by event title...",
+    "noResults": "No past events match your search."
   },
 
   "VolunteerCancellationPage": {
