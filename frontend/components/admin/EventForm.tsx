@@ -693,41 +693,41 @@ export default function EventForm({
         </div>
       )}
 
-      {/* Submit Button */}
-      <div className="flex justify-end mt-6">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? 'Saving...' : submitLabel}
-        </button>
-      </div>
-
-      {/* Feedback messages */}
-      <div className="h-6 mt-2 text-right">
+      {/* Sticky save bar: stays pinned to the bottom of the viewport while scrolling.
+          Messages live inside the bar so they're visible without scrolling down. */}
+      <div className="sticky bottom-0 z-10 mt-6 border-t border-msscc-gray-light bg-msscc-white py-3">
+        {/* Feedback messages (only take up space when there is something to show) */}
         {successMessage && (
-          <p className="text-body-sm text-msscc-teal">
+          <p className="mb-2 text-right text-body-sm text-msscc-teal">
             {successMessage}
           </p>
         )}
 
         {errorMessage && (
-          <p className="text-body-sm text-msscc-danger">
+          <p className="mb-2 text-right text-body-sm text-msscc-danger">
             {errorMessage}
           </p>
         )}
-      </div>
 
-      {/* Validation / Submission Error */}
-      {saveError && (
-        <div className="h-6 mt-2 text-right">
-          <p className="text-body-sm text-msscc-danger">
+        {/* Validation / Submission Error */}
+        {saveError && (
+          <p className="mb-2 text-right text-body-sm text-msscc-danger">
             {saveError}
           </p>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting ? 'Saving...' : submitLabel}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
