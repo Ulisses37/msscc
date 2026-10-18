@@ -322,14 +322,22 @@ export default function EventForm({
     }
   };
 
+  // Clear the validation error after a few seconds so it doesn't linger in the sticky bar
+  useEffect(() => {
+    if (!saveError) return;
+
+    const timer = setTimeout(() => setSaveError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [saveError]);
+
   return (
     <div>
-      {/* Image + Title + Datetimes row */}
+      {/* Event Thumbnail + Title + Datetimes row */}
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
         {/* Image Upload Box */}
         <div className="flex-shrink-0 w-full lg:w-72">
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-            Image {requireImage && <span className="text-msscc-danger">*</span>}
+            Event Thumbnail {requireImage && <span className="text-msscc-danger">*</span>}
           </label>
           {/* Image Preview Box */}
           <div className="w-full lg:w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
@@ -605,7 +613,7 @@ export default function EventForm({
             onClick={addEventPhoto}
             className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-left text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:w-auto"
           >
-            +Image
+            + Image
           </button>
         </div>
 
@@ -693,41 +701,41 @@ export default function EventForm({
         </div>
       )}
 
-      {/* Submit Button */}
-      <div className="flex justify-end mt-6">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? 'Saving...' : submitLabel}
-        </button>
-      </div>
-
-      {/* Feedback messages */}
-      <div className="h-6 mt-2 text-right">
+      {/* Sticky save bar: stays pinned to the bottom of the viewport while scrolling.
+          Messages live inside the bar so they're visible without scrolling down. */}
+      <div className="sticky bottom-0 z-10 mt-6 border-t border-msscc-gray-light bg-msscc-white py-3">
+        {/* Feedback messages (only take up space when there is something to show) */}
         {successMessage && (
-          <p className="text-body-sm text-msscc-teal">
+          <p className="mb-2 text-right text-body-sm text-msscc-teal">
             {successMessage}
           </p>
         )}
 
         {errorMessage && (
-          <p className="text-body-sm text-msscc-danger">
+          <p className="mb-2 text-right text-body-sm text-msscc-danger">
             {errorMessage}
           </p>
         )}
-      </div>
 
-      {/* Validation / Submission Error */}
-      {saveError && (
-        <div className="h-6 mt-2 text-right">
-          <p className="text-body-sm text-msscc-danger">
+        {/* Validation / Submission Error */}
+        {saveError && (
+          <p className="mb-2 text-right text-body-sm text-msscc-danger">
             {saveError}
           </p>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-sm bg-msscc-pink px-5 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSubmitting ? 'Saving...' : submitLabel}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

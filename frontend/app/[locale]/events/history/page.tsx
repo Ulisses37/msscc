@@ -22,6 +22,7 @@ export default function EventHistoryPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchPastEvents = async () => {
@@ -52,9 +53,22 @@ export default function EventHistoryPage() {
     fetchPastEvents();
   }, []);
 
+  // Normalize the query so searches ignore case and surrounding spaces.
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+
+  // Match either language's title; pagination below runs on the filtered list.
+  const filteredEvents = pastEvents.filter((event) => {
+    if (!normalizedSearchQuery) return true;
+
+    return (
+      event.titleEn.toLocaleLowerCase().includes(normalizedSearchQuery)
+      || event.titleJa.toLocaleLowerCase().includes(normalizedSearchQuery)
+    );
+  });
+
   const totalPages = Math.max(1, Math.ceil(pastEvents.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedEvents = pastEvents.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     // Keep the page selection valid if the available history changes.
@@ -95,20 +109,47 @@ export default function EventHistoryPage() {
 
       {!isLoading && !hasError && pastEvents.length > 0 && (
         <>
-          <div className="flex flex-col gap-6">
-            {paginatedEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
+          {/* Search Bar */}
+          <div className="mb-6">
+            <label htmlFor="past-event-search" className="sr-only">
+              {t('searchLabel')}
+            </label>
+            <input
+              id="past-event-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                // A new search starts from the first page of results.
+                setCurrentPage(1);
+              }}
+              placeholder={t('searchPlaceholder')}
+              className="w-full rounded-md border border-msscc-gray-light bg-msscc-white px-4 py-2 text-body text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-teal sm:max-w-md"
+            />
           </div>
 
-          <PostPages
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            onItemsPerPageChange={handleItemsPerPageChange}
-          />
+          {filteredEvents.length === 0 ? (
+            <p role="status" className="text-body text-msscc-gray-mid">
+              {t('noResults')}
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-6">
+                {paginatedEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+
+              <PostPages
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
+          </>
+          )}
         </>
       )}
     </main>

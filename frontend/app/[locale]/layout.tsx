@@ -20,6 +20,7 @@ export default async function LocaleLayout({
 }) {
   const messages = await getMessages();
   const t = await getTranslations('PublicAuth');
+  const socialLinkT = await getTranslations('SocialLink');
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
@@ -29,6 +30,7 @@ export default async function LocaleLayout({
             <div className="relative z-20">
               <Banner
                 labels={{
+                  facebook: socialLinkT('facebook'),
                   login: t('login'),
                   logout: t('logout'),
                   adminPortal: t('adminPortal'),

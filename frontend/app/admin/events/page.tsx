@@ -127,6 +127,18 @@ export default function EventsPage() {
     }
   }, [showForm, selectedEvent]);
 
+  // Auto-dismiss save feedback so it doesn't linger in the sticky save bar
+  useEffect(() => {
+    if (!saveMessage && !saveError) return;
+
+    const timer = setTimeout(() => {
+      setSaveMessage('');
+      setSaveError('');
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [saveMessage, saveError]);
+
   // Both primary images and additional photos must become media assets before association.
   const uploadMediaAsset = async (file: File): Promise<number> => {
     const imageFormData = new FormData();

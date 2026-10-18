@@ -49,6 +49,10 @@
     "partners": "Partners"
   },
 
+  "SocialLink": {
+    "facebook": "Visit our Facebook page (opens in a new tab)"
+  },
+
   "EventsPage": {
     "heading": "Events and Activities",
     "loading": "Loading events...",
@@ -171,7 +175,10 @@
     "heading": "Event History",
     "loading": "Loading past events...",
     "error": "Unable to load past events. Please try again later.",
-    "empty": "No past events are available at this time."
+    "empty": "No past events are available at this time.",
+    "searchLabel": "Search past events",
+    "searchPlaceholder": "Search by event title...",
+    "noResults": "No past events match your search."
   },
 
   "VolunteerCancellationPage": {

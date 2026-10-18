@@ -16,6 +16,7 @@ import { LoginModal } from '@/components/auth/LoginModal';
 import PostStaticMedia from '../ui/PostStaticMedia';
 
 interface BannerLabels {
+  facebook: string;
   login: string;
   logout: string;
   adminPortal: string;
@@ -64,7 +65,7 @@ export const Banner = ({ labels }: BannerProps) =>{
     <div className="relative w-full h-[18vh] md:h-[22vh] overflow-hidden">
       <PostStaticMedia staticImageId={1} configVariant="banner" className="absolute inset-0 z-0" />
       {/* FB ICON  */}
-      <SocialIcon />
+      {labels && <SocialIcon facebookLabel={labels.facebook} />}
 
       {/* Mobile bottom padding reserves room for the action buttons below the logo. */}
       <div className="relative z-10 flex h-full items-center justify-center pb-12 sm:pb-0">
