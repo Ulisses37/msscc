@@ -3,7 +3,7 @@ import React from 'react';
 
 // Third-party
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 
 // Components
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
@@ -19,6 +19,7 @@ export default async function LocaleLayout({
   params: { locale: string };
 }) {
   const messages = await getMessages();
+  const t = await getTranslations('PublicAuth');
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
@@ -26,7 +27,22 @@ export default async function LocaleLayout({
             <GalleryBackground />
             {/* Banner Section.*/}
             <div className="relative z-20">
-              <Banner />
+              <Banner
+                labels={{
+                  login: t('login'),
+                  logout: t('logout'),
+                  adminPortal: t('adminPortal'),
+                  publicSite: t('publicSite'),
+                  modalTitle: t('modalTitle'),
+                  email: t('email'),
+                  password: t('password'),
+                  forgotPassword: t('forgotPassword'),
+                  loggingIn: t('loggingIn'),
+                  invalidEmail: t('invalidEmail'),
+                  invalidCredentials: t('invalidCredentials'),
+                  closeModal: t('closeModal'),
+                }}
+              />
             </div>
             {/* Navbar Section. Banner content goes above this. */}
 

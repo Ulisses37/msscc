@@ -2,6 +2,7 @@
 
 // React and Next Imports
 import React, { useEffect, useState }from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
 
@@ -56,6 +57,7 @@ function PartnerLink({ name, href, imageUrl }: PartnerLinkProps) {
 }
 
 export default function PartnersPage() {
+  const t = useTranslations('PartnersPage');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('partners'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const [partners, setPartners] = useState<PartnerRecord[]>([]);
@@ -178,10 +180,10 @@ export default function PartnersPage() {
           widening the section or causing horizontal page scrolling. */}
       <section className="w-full min-w-0 max-w-content border-b border-msscc-gray-light px-4 py-8 sm:px-6 sm:py-10">
         <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
-          Partner Links
+          {t('partnerLinks')}
         </h2>
         <p className="mb-4 break-words text-body leading-loose text-msscc-gray-dark">
-          We are proud to celebrate our partner organizations and sponsors.
+          {t('partnerDescription')}
         </p>
         <ul className="list-disc space-y-2 break-words pl-6 leading-loose sm:pl-10">
           {partnerLinks.map((partner) => (
@@ -200,10 +202,10 @@ export default function PartnersPage() {
       {/* Keep acknowledgment copy separate from the responsive card groups below. */}
       <section className="w-full min-w-0 max-w-content px-4 py-6 sm:px-6">
         <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
-          Donor and Sponsor Acknowledgment
+          {t('acknowledgment')}
         </h2>
         <p className="mb-4 break-words text-body leading-loose text-msscc-gray-dark">
-          We extend our sincerest thanks to the generous members, individuals, businesses, and organizations that support our success.
+          {t('acknowledgmentDescription')}
         </p>
       </section>
 
@@ -213,7 +215,7 @@ export default function PartnersPage() {
         {/* Donors box */}
         <div className="w-full min-w-0 self-start rounded-lg border border-msscc-gray-light bg-msscc-gray-faint p-4 sm:p-6 md:flex-1">
           <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
-            Donors
+            {t('donors')}
           </h2>
           <div className="flex min-w-0 flex-col gap-3">
             {donors.map((donor) => (
@@ -222,6 +224,7 @@ export default function PartnersPage() {
                 name={donor.name}
                 imageUrl={donor.imageUrl}
                 websiteUrl={donor.websiteUrl}
+                visitWebsiteLabel={t('visitWebsite')}
               />
             ))}
           </div>
@@ -230,7 +233,7 @@ export default function PartnersPage() {
         {/* Sponsors box */}
         <div className="w-full min-w-0 self-start rounded-lg border border-msscc-gray-light bg-msscc-gray-faint p-4 sm:p-6 md:flex-1">
           <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
-            Sponsors
+            {t('sponsors')}
           </h2>
           <div className="flex min-w-0 flex-col gap-3">
             {sponsors.map((sponsor) => (
@@ -239,6 +242,7 @@ export default function PartnersPage() {
                 name={sponsor.name}
                 imageUrl={sponsor.imageUrl}
                 websiteUrl={sponsor.websiteUrl}
+                visitWebsiteLabel={t('visitWebsite')}
               />
             ))}
           </div>

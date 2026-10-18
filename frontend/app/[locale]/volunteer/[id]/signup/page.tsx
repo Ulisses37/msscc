@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getEventById } from '@/services/eventService';
@@ -9,6 +10,7 @@ import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button';
 
 export default function VolunteerSignupPage() {
+  const t = useTranslations('VolunteerSignupPage');
   const { id, locale } = useParams();
   const router = useRouter();
 
@@ -75,7 +77,7 @@ export default function VolunteerSignupPage() {
 
     // Validate phone number before proceeding
     if (!validatePhone(formData.phone)) {
-      setSubmitError("Please enter a valid phone number (e.g., 123-456-7890).");
+      setSubmitError(t('phoneError'));
       return;
     }
 
@@ -91,22 +93,24 @@ export default function VolunteerSignupPage() {
     try {
       const res = await submitVolunteerSignup(payload);
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(JSON.stringify(errorData) || "Submission failed.");
+        throw new Error('Volunteer signup request failed.');
       }
       const successData = await res.json();
       setSubmittedData(successData);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : "Unexpected error.");
+    } catch (error) {
+      console.error('Failed to submit volunteer registration:', error);
+      setSubmitError(t('submitError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <main style={{ padding: '4rem', textAlign: 'center' }}>Loading...</main>;
+  if (loading) return <main style={{ padding: '4rem', textAlign: 'center' }}>{t('loading')}</main>;
 
-  if (!event) return <main style={{ padding: '4rem', textAlign: 'center' }}>Event not found. </main>;
+  if (!event) {
+    return <main style={{ padding: '4rem', textAlign: 'center' }}>{t('eventNotFound')}</main>;
+  }
 
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
 
@@ -117,26 +121,28 @@ export default function VolunteerSignupPage() {
       {submittedData && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <h2 style={modalHeadingStyle}>Registration Confirmed!</h2>
-            <p style={{ marginBottom: '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>Please save this information:</p>
+            <h2 style={modalHeadingStyle}>{t('confirmationTitle')}</h2>
+            <p style={{ marginBottom: '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>
+              {t('saveInformation')}
+            </p>
             <div style={infoBoxStyle}>
-              <p><strong>Signup ID:</strong> <span style={{ color: '#d72638', fontWeight: 800 }}>{submittedData.volunteer_signup_id}</span></p>
-              <p><strong>Event:</strong> {title}</p>
-              <p><strong>Name:</strong> {submittedData.first_name} {submittedData.last_name}</p>
-              <p><strong>Email:</strong> {submittedData.email}</p>
-              <p><strong>Phone:</strong> {submittedData.phone || 'N/A'}</p>
+              <p><strong>{t('signupId')}</strong> <span style={{ color: '#d72638', fontWeight: 800 }}>{submittedData.volunteer_signup_id}</span></p>
+              <p><strong>{t('event')}</strong> {title}</p>
+              <p><strong>{t('name')}</strong> {submittedData.first_name} {submittedData.last_name}</p>
+              <p><strong>{t('email')}</strong> {submittedData.email}</p>
+              <p><strong>{t('phone')}</strong> {submittedData.phone || t('notAvailable')}</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Button text="Finish & Return" onClick={() => router.push(`/${locale}/events/${id}`)} padding="12px 48px" />
+              <Button text={t('finish')} onClick={() => router.push(`/${locale}/events/${id}`)} padding="12px 48px" />
             </div>
           </div>
         </div>
       )}
 
-      <Link href={`/${locale}/volunteer/${id}`} style={{ color: 'var(--color-teal)', textDecoration: 'none' }}>← Back to Shifts</Link>
+      <Link href={`/${locale}/volunteer/${id}`} style={{ color: 'var(--color-teal)', textDecoration: 'none' }}>← {t('backToShifts')}</Link>
 
       <section style={{ marginTop: 'var(--space-8)' }}>
-        <h1 style={{ color: '#d72638' }}>Volunteer Signup</h1>
+        <h1 style={{ color: '#d72638' }}>{t('heading')}</h1>
         <h2>{title}</h2>
       </section>
 
@@ -152,9 +158,9 @@ export default function VolunteerSignupPage() {
           )}
 
           <div>
-            <label style={{ display: 'block', fontWeight: 700, marginBottom: '0.5rem' }}>Position (Optional)</label>
+            <label style={{ display: 'block', fontWeight: 700, marginBottom: '0.5rem' }}>{t('positionOptional')}</label>
             <select style={inputStyle} value={selectedSlotId} onChange={(e) => setSelectedSlotId(e.target.value === "" ? "" : Number(e.target.value))}>
-              <option value="">-- General Volunteer --</option>
+              <option value="">-- {t('generalVolunteer')} --</option>
               {slots.filter(s => s.filled_count < s.capacity).map(slot => (
                 <option key={slot.volunteer_slot_id} value={slot.volunteer_slot_id}>{slot.position_name}</option>
               ))}
@@ -162,13 +168,13 @@ export default function VolunteerSignupPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input required placeholder="First Name" style={inputStyle} value={formData.first_name}
+            <input required placeholder={t('firstName')} style={inputStyle} value={formData.first_name}
              onChange={e => setFormData({...formData, first_name: e.target.value})} />
-            <input required placeholder="Last Name" style={inputStyle} value={formData.last_name}
+            <input required placeholder={t('lastName')} style={inputStyle} value={formData.last_name}
             onChange={e => setFormData({...formData, last_name: e.target.value})} />
           </div>
 
-          <input type="email" required placeholder="Email" style={inputStyle} value={formData.email}
+          <input type="email" required placeholder={t('emailPlaceholder')} style={inputStyle} value={formData.email}
            onChange={e => setFormData({...formData, email: e.target.value})} />
 
           {/* Phone Input with validation and hover tooltip */}
@@ -176,16 +182,16 @@ export default function VolunteerSignupPage() {
             <input
               type="tel"
               required
-              placeholder="Phone Number (e.g. 123-456-7890)"
+              placeholder={t('phonePlaceholder')}
               style={inputStyle}
               value={formData.phone}
               onChange={e => setFormData({...formData, phone: e.target.value})}
-              title="Please enter a 10-digit phone number (e.g., 123-456-7890)"
+              title={t('phoneHelp')}
             />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Button text={isSubmitting ? "Processing..." : "Register Now"} />
+            <Button text={isSubmitting ? t('processing') : t('register')} />
           </div>
         </form>
       </div>

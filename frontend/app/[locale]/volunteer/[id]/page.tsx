@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import { getSlotsByEventId } from '@/services/volunteerService';
 import { getEventById } from '@/services/eventService';
 import type { Event } from '@/types/event';
+import { formatLocalizedDate } from '@/utils/dateLocalization';
 
 interface VolunteerSlot {
   volunteer_slot_id: number;
@@ -19,22 +21,23 @@ interface VolunteerSlot {
   event: number;
 }
 
-function formatSlotDate(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('en-US', {
+function formatSlotDate(datetime: string, locale: string | string[] | undefined): string {
+  return formatLocalizedDate(datetime, locale, {
     weekday: 'short',
     month: 'long',
     day: 'numeric',
   });
 }
 
-function formatSlotTime(datetime: string): string {
-  return new Date(datetime).toLocaleTimeString('en-US', {
+function formatSlotTime(datetime: string, locale: string | string[] | undefined): string {
+  return formatLocalizedDate(datetime, locale, {
     hour: 'numeric',
     minute: '2-digit',
   });
 }
 
 export default function VolunteerShiftsPage() {
+  const t = useTranslations('VolunteerShiftsPage');
   const { id, locale } = useParams();
 
   const [shifts, setShifts] = useState<VolunteerSlot[]>([]);
@@ -49,14 +52,14 @@ export default function VolunteerShiftsPage() {
         setShifts(data || []);
       } catch (error) {
         console.error('Failed to fetch volunteer shifts:', error);
-        setShiftError('Failed to load volunteer shifts.');
+        setShiftError(t('loadError'));
       } finally {
         setIsLoadingShifts(false);
       }
     };
 
     loadShifts();
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     const loadEvent = async () => {
@@ -85,7 +88,7 @@ export default function VolunteerShiftsPage() {
         onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
         onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
       >
-        ← Back to event
+        ← {t('backToEvent')}
       </Link>
 
       {/* Corresponding Event Title */}
@@ -120,7 +123,7 @@ export default function VolunteerShiftsPage() {
             fontSize: 'var(--fs-body)',
             margin: 0,
           }}>
-            Loading shifts...
+            {t('loading')}
           </p>
         </div>
       )}
@@ -158,7 +161,7 @@ export default function VolunteerShiftsPage() {
             fontSize: 'var(--fs-body)',
             margin: 0,
           }}>
-            No volunteer shifts available for this event at this time.
+            {t('empty')}
           </p>
         </div>
       )}
@@ -191,7 +194,8 @@ export default function VolunteerShiftsPage() {
                 margin: 0,
                 fontWeight: 700,
               }}>
-                {formatSlotDate(shift.start_datetime)}
+                {/* The route locale controls labels and date presentation, not the stored shift time. */}
+                {formatSlotDate(shift.start_datetime, locale)}
               </p>
               <p style={{
                 fontFamily: 'var(--font-body)',
@@ -199,7 +203,8 @@ export default function VolunteerShiftsPage() {
                 color: 'var(--color-gray-mid)',
                 margin: 0,
               }}>
-                {formatSlotTime(shift.start_datetime)} – {formatSlotTime(shift.end_datetime)}
+                {formatSlotTime(shift.start_datetime, locale)} –{' '}
+                {formatSlotTime(shift.end_datetime, locale)}
               </p>
             </div>
 
@@ -220,7 +225,7 @@ export default function VolunteerShiftsPage() {
                 color: '#dc2626',
                 margin: 0,
               }}>
-                {shift.filled_count} of {shift.capacity} filled
+                {t('filled', { filled: shift.filled_count, capacity: shift.capacity })}
               </p>
             </div>
 
@@ -233,11 +238,11 @@ export default function VolunteerShiftsPage() {
                   color: 'var(--color-gray-mid)',
                   margin: 0,
                 }}>
-                  Full
+                  {t('full')}
                 </p>
               ) : (
                 <Link href={`/${locale}/volunteer/${id}/signup?slot_id=${shift.volunteer_slot_id}`}>
-                  <Button text="Volunteer" padding="8px 16px" fontSize="12px" />
+                  <Button text={t('volunteer')} padding="8px 16px" fontSize="12px" />
                 </Link>
               )}
             </div>

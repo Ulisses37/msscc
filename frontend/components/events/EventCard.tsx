@@ -2,17 +2,19 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import Button from '@/components/ui/Button';
 import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
+import { formatLocalizedDate } from '@/utils/dateLocalization';
 
 interface EventCardProps {
   event: Event;
 }
 
 // Formats ISO datetime string to readable date
-function formatDate(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('en-US', {
+function formatDate(datetime: string, locale: string | string[] | undefined): string {
+  return formatLocalizedDate(datetime, locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -21,8 +23,8 @@ function formatDate(datetime: string): string {
 }
 
 // Formats ISO datetime string to readable time
-function formatTime(datetime: string): string {
-  return new Date(datetime).toLocaleTimeString('en-US', {
+function formatTime(datetime: string, locale: string | string[] | undefined): string {
+  return formatLocalizedDate(datetime, locale, {
     hour: 'numeric',
     minute: '2-digit',
   });
@@ -34,6 +36,7 @@ function truncate(text: string, maxLength: number = 100): string {
 }
 
 export function EventCard({ event }: EventCardProps) {
+  const t = useTranslations('EventDetailPage');
   const { locale } = useParams();
   const eventUrl = `/${locale}/events/${event.id}`;
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
@@ -104,7 +107,8 @@ export function EventCard({ event }: EventCardProps) {
           borderRadius: 'var(--radius-sm)',
           lineHeight: 1.4,
         }}>
-          <div>{formatDate(event.startDatetime)}</div>
+          {/* Locale changes the visible date language without changing the stored event time. */}
+          <div>{formatDate(event.startDatetime, locale)}</div>
         </div>
 
       </Link>
@@ -141,7 +145,7 @@ export function EventCard({ event }: EventCardProps) {
           color: 'var(--color-gray-mid)',
           margin: 0,
         }}>
-          {formatTime(event.startDatetime)} – {formatTime(event.endDatetime)}
+          {formatTime(event.startDatetime, locale)} – {formatTime(event.endDatetime, locale)}
         </p>
 
         {/* Truncated description */}
@@ -165,14 +169,14 @@ export function EventCard({ event }: EventCardProps) {
             color: 'var(--color-teal)',
             margin: 0,
           }}>
-            {event.volunteerSlots} volunteer slot{event.volunteerSlots !== 1 ? 's' : ''} available
+            {t('volunteerSlots', { count: event.volunteerSlots })}
           </p>
         )}
 
         {/* View Details button — pushes to bottom of card */}
         <div style={{ marginTop: 'auto', paddingTop: 'var(--space-3)' }}>
           <Link href={eventUrl}>
-            <Button text="View Event →" />
+            <Button text={t('viewEvent')} />
           </Link>
         </div>
 
