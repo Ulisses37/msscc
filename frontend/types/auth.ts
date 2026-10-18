@@ -26,4 +26,5 @@ export interface AuthContextValue {
 /** Props for the LoginButton component. */
 export interface LoginButtonProps {
   onLoginClick: () => void;
+  label?: string;
 }

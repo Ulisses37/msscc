@@ -8,10 +8,35 @@ import { isValidEmail } from '@/utils/emailValidation';
 
 interface LoginModalProps {
   onClose: () => void;
+  labels?: LoginModalLabels;
 }
 
+interface LoginModalLabels {
+  title: string;
+  email: string;
+  password: string;
+  forgotPassword: string;
+  loggingIn: string;
+  login: string;
+  invalidEmail: string;
+  invalidCredentials: string;
+  closeModal: string;
+}
+
+const DEFAULT_LABELS: LoginModalLabels = {
+  title: 'Log in',
+  email: 'Email',
+  password: 'Password',
+  forgotPassword: 'Forgot password?',
+  loggingIn: 'Logging in…',
+  login: 'Log In',
+  invalidEmail: 'Please enter a valid email address',
+  invalidCredentials: 'Invalid email or password',
+  closeModal: 'Close login modal',
+};
+
 /** Login modal with email and password inputs. Closes on success, X, or backdrop click. */
-export function LoginModal({ onClose }: LoginModalProps) {
+export function LoginModal({ onClose, labels = DEFAULT_LABELS }: LoginModalProps) {
   const { login } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -43,7 +68,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     if (!canSubmit) return;
 
     if (!isValidEmail(email)) {
-      setSubmitError('Please enter a valid email address');
+      setSubmitError(labels.invalidEmail);
       return;
     }
 
@@ -54,7 +79,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       await login(email, password);
       onClose();
     } catch {
-      setSubmitError('Invalid email or password');
+      setSubmitError(labels.invalidCredentials);
       setIsSubmitting(false);
     }
   };
@@ -72,16 +97,16 @@ export function LoginModal({ onClose }: LoginModalProps) {
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 text-msscc-gray-mid hover:text-msscc-gray-dark"
-          aria-label="Close login modal"
+          aria-label={labels.closeModal}
         >
           ✕
         </button>
 
-        <h2 className="mb-4">Log in</h2>
+        <h2 className="mb-4">{labels.title}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-body-sm">Email</span>
+            <span className="text-body-sm">{labels.email}</span>
             <input
               ref={emailInputRef}
               type="email"
@@ -93,7 +118,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-body-sm">Password</span>
+            <span className="text-body-sm">{labels.password}</span>
             <input
               type="password"
               value={password}
@@ -112,7 +137,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             onClick={onClose}
             className="text-body-sm text-msscc-teal hover:underline"
           >
-            Forgot password?
+            {labels.forgotPassword}
           </Link>
 
           <button
@@ -120,7 +145,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             disabled={!canSubmit}
             className="mt-2 rounded-sm bg-msscc-teal px-4 py-2 text-btn tracking-btn text-msscc-white transition-colors hover:bg-msscc-teal-dark disabled:opacity-60"
           >
-            {isSubmitting ? 'Logging in…' : 'Log In'}
+            {isSubmitting ? labels.loggingIn : labels.login}
           </button>
         </form>
       </div>

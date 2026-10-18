@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation'; // Added useRouter and useParams
 import { getEvents } from '@/services/eventService';
 import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button'; // Using your Button component
+import { formatLocalizedDate } from '@/utils/dateLocalization';
 
 export default function VolunteerPage() {
+  const t = useTranslations('VolunteerPage');
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,25 +29,37 @@ export default function VolunteerPage() {
   return (
     <main style={{ maxWidth: '75rem', margin: '0 auto', padding: 'var(--space-10) var(--space-6)' }}>
       <header style={{ borderBottom: '0.5px solid var(--color-gray-light)', marginBottom: 'var(--space-10)', paddingBottom: 'var(--space-6)' }}>
-        <h2 style={{ color: '#dc2626', fontSize: 'var(--fs-heading-2)' }}>Volunteer Opportunities</h2>
+        <h2 style={{ color: '#dc2626', fontSize: 'var(--fs-heading-2)' }}>
+          {t('heading')}
+        </h2>
       </header>
 
-      {loading && <p>Loading opportunities...</p>}
+      {loading && <p>{t('loading')}</p>}
       {!loading && events.length === 0 && (
-        <p style={{ color: 'var(--color-gray-mid)' }}>No Volunteers Needed at this time.</p>
+        <p style={{ color: 'var(--color-gray-mid)' }}>{t('empty')}</p>
       )}
 
       <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
         {events.map((event) => (
           <div key={event.id} style={{ border: '1px solid var(--color-gray-light)', padding: 'var(--space-6)', borderRadius: '8px' }}>
             <h3>{locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn}</h3>
-            <p><strong>Location:</strong> {locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn}</p>
-            <p><strong>Time:</strong> {new Date(event.startDatetime).toLocaleString()}</p>
-            <p><strong>Volunteers Needed:</strong> {event.volunteerSlots}</p>
+            <p>
+              <strong>{t('location')}</strong>{' '}
+              {locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn}
+            </p>
+            <p>
+              <strong>{t('time')}</strong>{' '}
+              {/* Keep the existing browser timezone while localizing the visible date and time. */}
+              {formatLocalizedDate(event.startDatetime, locale, {
+                dateStyle: 'long',
+                timeStyle: 'short',
+              })}
+            </p>
+            <p><strong>{t('volunteersNeeded')}</strong> {event.volunteerSlots}</p>
 
             {/* Updated to use your Button component with a redirect */}
             <Button
-              text="Sign Up"
+              text={t('signUp')}
               onClick={() => router.push(`/${locale}/volunteer/${event.id}`)}
               padding="12px 24px"
             />

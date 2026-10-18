@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 
 export default function VolunteerEditPage() {
+  const t = useTranslations('VolunteerEditPage');
   const { signupId, locale } = useParams();
   const router = useRouter();
 
@@ -35,7 +37,7 @@ export default function VolunteerEditPage() {
     const fetchSignupData = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signupId}/`);
-        if (!response.ok) throw new Error("Could not find registration.");
+        if (!response.ok) throw new Error('Volunteer registration request failed.');
         
         const data = await response.json();
         setFormData({
@@ -44,22 +46,23 @@ export default function VolunteerEditPage() {
           email: data.email,
           phone: data.phone || '',
         });
-        setEventTitle(data.event_details?.title || "Event Volunteer");
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Unexpected error.");
+        setEventTitle(data.event_details?.title || t('defaultEvent'));
+      } catch (fetchError) {
+        console.error('Failed to load volunteer registration:', fetchError);
+        setError(t('loadError'));
       } finally {
         setLoading(false);
       }
     };
     fetchSignupData();
-  }, [signupId]);
+  }, [signupId, t]);
 
   const handleUpdate = async () => {
     setError(null);
     setSuccessMessage(null);
 
     if (!validatePhone(formData.phone)) {
-      setError("Please enter a valid phone number (e.g., 123-456-7890).");
+      setError(t('phoneError'));
       return;
     }
 
@@ -71,12 +74,13 @@ export default function VolunteerEditPage() {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error("Update failed.");
+      if (!response.ok) throw new Error('Volunteer registration update failed.');
       
-      setSuccessMessage("Changes saved successfully!");
+      setSuccessMessage(t('saved'));
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unexpected error.");
+    } catch (updateError) {
+      console.error('Failed to update volunteer registration:', updateError);
+      setError(t('updateError'));
     } finally {
       setIsProcessing(false);
     }
@@ -89,17 +93,18 @@ export default function VolunteerEditPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error("Deletion failed.");
+      if (!response.ok) throw new Error('Volunteer registration deletion failed.');
       router.push(`/${locale}/events`);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unexpected error.");
+    } catch (deleteError) {
+      console.error('Failed to cancel volunteer registration:', deleteError);
+      setError(t('deleteError'));
       setShowDeleteConfirm(false);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <main style={{ padding: '4rem', textAlign: 'center' }}>Loading...</main>;
+  if (loading) return <main style={{ padding: '4rem', textAlign: 'center' }}>{t('loading')}</main>;
 
   return (
     <main style={{ maxWidth: '75rem', margin: '0 auto', padding: 'var(--space-10) var(--space-6)', fontFamily: 'var(--font-body)' }}>
@@ -110,16 +115,15 @@ export default function VolunteerEditPage() {
 {showDeleteConfirm && (
   <div style={modalOverlayStyle}>
     <div style={modalContentStyle}>
-      <h2 style={{ color: '#d72638', marginBottom: '1rem', fontSize: '1.5rem' }}>Cancel Registration?</h2>
+      <h2 style={{ color: '#d72638', marginBottom: '1rem', fontSize: '1.5rem' }}>{t('confirmationTitle')}</h2>
       <p style={{ marginBottom: '2rem', fontSize: '1rem' }}>
-        Are you sure you want to remove your volunteer registration for <strong>{eventTitle}</strong>? 
-        This action cannot be undone.
+        {t('confirmationMessage', { event: eventTitle })}
       </p>
       
       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'center' }}>
         {/* Primary Action: Yes, Cancel */}
         <Button 
-          text={isProcessing ? "..." : "Yes, Cancel"} 
+          text={isProcessing ? '...' : t('confirmCancel')}
           onClick={handleDelete} 
           width="140px"
           padding="12px 0px" 
@@ -130,7 +134,7 @@ export default function VolunteerEditPage() {
           filter: 'invert(0)' 
         }}>
           <Button 
-            text="Go Back"
+            text={t('goBack')}
             onClick={() => setShowDeleteConfirm(false)}
             width="140px"
             padding="12px 0px"
@@ -143,11 +147,11 @@ export default function VolunteerEditPage() {
   </div>
 )}
       <Link href={`/${locale}/events`} style={{ color: 'var(--color-teal)', textDecoration: 'none' }}>
-        ← Back to Events
+        ← {t('backToEvents')}
       </Link>
 
       <section style={{ marginTop: 'var(--space-8)' }}>
-        <h1 style={{ color: '#d72638' }}>Edit Volunteer Registration</h1>
+        <h1 style={{ color: '#d72638' }}>{t('heading')}</h1>
         <h2>{eventTitle}</h2>
       </section>
 
@@ -170,36 +174,36 @@ export default function VolunteerEditPage() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <input required placeholder="First Name" style={inputStyle} value={formData.first_name}
+            <input required placeholder={t('firstName')} style={inputStyle} value={formData.first_name}
              onChange={e => setFormData({...formData, first_name: e.target.value})} />
-            <input required placeholder="Last Name" style={inputStyle} value={formData.last_name}
+            <input required placeholder={t('lastName')} style={inputStyle} value={formData.last_name}
              onChange={e => setFormData({...formData, last_name: e.target.value})} />
           </div>
 
-          <input type="email" required placeholder="Email" style={inputStyle} value={formData.email}
+          <input type="email" required placeholder={t('email')} style={inputStyle} value={formData.email}
            onChange={e => setFormData({...formData, email: e.target.value})} />
           
           <div>
             <input 
               type="tel" 
               required
-              placeholder="Phone (e.g., 123-456-7890)" 
+              placeholder={t('phone')}
               style={inputStyle} 
               value={formData.phone} 
               onChange={e => setFormData({...formData, phone: e.target.value})} 
-              title="Required format: 123-456-7890" 
+              title={t('phoneHelp')}
             />
-            <small style={{ color: 'var(--color-gray-mid)', marginTop: '4px', display: 'block' }}>Hover for required format.</small>
+            <small style={{ color: 'var(--color-gray-mid)', marginTop: '4px', display: 'block' }}>{t('phoneHint')}</small>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
             <Button 
-              text={isProcessing && !showDeleteConfirm ? "Saving..." : "Update Info"} 
+              text={isProcessing && !showDeleteConfirm ? t('saving') : t('update')}
               onClick={handleUpdate}
               padding="12px 32px"
             />
             <Button 
-              text="Cancel Registration" 
+              text={t('cancel')}
               onClick={() => setShowDeleteConfirm(true)}
               padding="12px 32px"
             />

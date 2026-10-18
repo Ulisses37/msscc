@@ -1,7 +1,9 @@
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 
 import { getRichTextPlainText } from '@/utils/richText';
+import { formatLocalizedDate } from '@/utils/dateLocalization';
 
 import { RichTextContent } from '@/components/content/RichTextContent';
 import Button from '@/components/ui/Button';
@@ -30,8 +32,11 @@ interface EventDetailProps {
 }
 
 // Formats ISO datetime string to readable date and time
-function formatDateTime(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('en-US', {
+function formatDateTime(
+  datetime: string,
+  locale: string | string[] | undefined,
+): string {
+  return formatLocalizedDate(datetime, locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -42,7 +47,7 @@ function formatDateTime(datetime: string): string {
 }
 
 // Generates a Google Calendar add-event link from event data
-function generateGoogleCalendarLink(event: Event): string {
+function generateGoogleCalendarLink(event: Event, locale: string | string[] | undefined): string {
   const formatDateForCalendar = (datetime: string): string => {
     return new Date(datetime)
       .toISOString()
@@ -50,12 +55,14 @@ function generateGoogleCalendarLink(event: Event): string {
       .replace('.000Z', 'Z');
   };
 
+  // Calendar content follows the page language, with English as the existing fallback.
+  const isJapanese = locale === 'ja';
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: event.titleEn,
+    text: isJapanese ? event.titleJa || event.titleEn : event.titleEn,
     dates: `${formatDateForCalendar(event.startDatetime)}/${formatDateForCalendar(event.endDatetime)}`,
-    details: event.descriptionEn,
-    location: event.locationEn,
+    details: isJapanese ? event.descriptionJa || event.descriptionEn : event.descriptionEn,
+    location: isJapanese ? event.locationJa || event.locationEn : event.locationEn,
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -71,6 +78,7 @@ export function EventDetail({
   eventImages = [],
   onVolunteer,
 }: EventDetailProps) {
+  const t = useTranslations('EventDetailPage');
   const { locale } = useParams();
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const description = locale === 'ja' ? event.descriptionJa || event.descriptionEn : event.descriptionEn;
@@ -106,7 +114,7 @@ export function EventDetail({
           {/* Button below image */}
           {!isPastEvent && onVolunteer && (
             <div style={{ marginBottom: 'var(--space-6)' }}>
-              <Button text="Volunteer for this Event" width="auto" padding="12px 24px"
+              <Button text={t('volunteerForEvent')} width="auto" padding="12px 24px"
               onClick={onVolunteer} />
             </div>
           )}
@@ -141,14 +149,14 @@ export function EventDetail({
           margin: 0,
         }}>
           {isSameDay(event.startDatetime, event.endDatetime)
-            ? formatDateTime(event.startDatetime)
-            : `${formatDateTime(event.startDatetime)} – ${formatDateTime(event.endDatetime)}`
+            ? formatDateTime(event.startDatetime, locale)
+            : `${formatDateTime(event.startDatetime, locale)} – ${formatDateTime(event.endDatetime, locale)}`
           }
         </p>
 
         {/* Google Calendar link */}
         <a
-          href={generateGoogleCalendarLink(event)}
+          href={generateGoogleCalendarLink(event, locale)}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -161,7 +169,7 @@ export function EventDetail({
           onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
           onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
         >
-          Google Calendar
+          {t('googleCalendar')}
         </a>
 
         {/* Location */}
@@ -182,7 +190,7 @@ export function EventDetail({
             color: 'var(--color-teal)',
             margin: 0,
           }}>
-            {event.volunteerSlots} volunteer slot{event.volunteerSlots !== 1 ? 's' : ''} available
+            {t('volunteerSlots', { count: event.volunteerSlots })}
           </p>
         )}
 
@@ -201,7 +209,7 @@ export function EventDetail({
               alignSelf: 'flex-start',
             }}
           >
-            Add to Google Calendar →
+            {t('addToGoogleCalendar')}
           </a>
         )}
 
@@ -210,7 +218,12 @@ export function EventDetail({
       {/* Button below location if no image, below description if description exists */}
       {!event.media?.fileUrl && !isPastEvent && onVolunteer && (
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <Button text="Volunteer for this Event" width="auto" padding="12px 24px" onClick={onVolunteer} />
+          <Button
+            text={t('volunteerForEvent')}
+            width="auto"
+            padding="12px 24px"
+            onClick={onVolunteer}
+          />
         </div>
       )}
 

@@ -13,6 +13,21 @@
     "partners": "Partners"
   },
 
+  "PublicAuth": {
+    "login": "Log In",
+    "logout": "Log Out",
+    "adminPortal": "Admin Portal",
+    "publicSite": "Public Site",
+    "modalTitle": "Log in",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "loggingIn": "Logging in…",
+    "invalidEmail": "Please enter a valid email address",
+    "invalidCredentials": "Invalid email or password",
+    "closeModal": "Close login modal"
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "Connecting our community through service and shared opportunity throughout MatsuyamaSacramento and Sacramento.",
@@ -39,7 +54,120 @@
   },
 
   "EventsPage": {
-    "historyLink": "Click here to see past events!"
+    "heading": "Events and Activities",
+    "loading": "Loading events...",
+    "empty": "No upcoming events at this time. Please check back soon.",
+    "historyLink": "Click here to see past events!",
+    "volunteerPrompt": "Interested in helping out? We have positions available!",
+    "volunteerButton": "View Volunteer Opportunities",
+    "noVolunteerOpportunities": "No volunteer opportunities exist at this time."
+  },
+
+  "EventDetailPage": {
+    "loading": "Loading event...",
+    "notFound": "Event Not Found",
+    "unavailable": "This event does not exist or is no longer available.",
+    "backToEvents": "Back to events",
+    "viewEvent": "View Event →",
+    "volunteerForEvent": "Volunteer for this Event",
+    "googleCalendar": "Google Calendar",
+    "addToGoogleCalendar": "Add to Google Calendar →",
+    "previous": "Previous",
+    "next": "Next",
+    "navigation": "Event navigation",
+    "volunteerSlots": "{count, plural, one {# volunteer slot available} other {# volunteer slots available}}"
+  },
+
+  "AboutPage": {
+    "boardOfDirectors": "Board of Directors",
+    "officers": "Officers",
+    "directors": "Directors",
+    "noPhoto": "No photo",
+    "portraitAlt": "{name} portrait",
+    "loading": "Loading...",
+    "error": "Unable to load the board of directors."
+  },
+
+  "PartnersPage": {
+    "partnerLinks": "Partner Links",
+    "partnerDescription": "We are proud to celebrate our partner organizations and sponsors.",
+    "acknowledgment": "Donor and Sponsor Acknowledgment",
+    "acknowledgmentDescription": "We extend our sincerest thanks to the generous members, individuals, businesses, and organizations that support our success.",
+    "donors": "Donors",
+    "sponsors": "Sponsors",
+    "visitWebsite": "Visit website →"
+  },
+
+  "VolunteerPage": {
+    "heading": "Volunteer Opportunities",
+    "loading": "Loading opportunities...",
+    "empty": "No volunteers are needed at this time.",
+    "location": "Location:",
+    "time": "Time:",
+    "volunteersNeeded": "Volunteers Needed:",
+    "signUp": "Sign Up"
+  },
+
+  "VolunteerShiftsPage": {
+    "backToEvent": "Back to event",
+    "loading": "Loading shifts...",
+    "loadError": "Failed to load volunteer shifts.",
+    "empty": "No volunteer shifts are available for this event at this time.",
+    "filled": "{filled} of {capacity} filled",
+    "full": "Full",
+    "volunteer": "Volunteer"
+  },
+
+  "VolunteerSignupPage": {
+    "loading": "Loading...",
+    "eventNotFound": "Event not found.",
+    "confirmationTitle": "Registration Confirmed!",
+    "saveInformation": "Please save this information:",
+    "signupId": "Signup ID:",
+    "event": "Event:",
+    "name": "Name:",
+    "email": "Email:",
+    "phone": "Phone:",
+    "notAvailable": "N/A",
+    "finish": "Finish & Return",
+    "backToShifts": "Back to Shifts",
+    "heading": "Volunteer Signup",
+    "positionOptional": "Position (Optional)",
+    "generalVolunteer": "General Volunteer",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "emailPlaceholder": "Email",
+    "phonePlaceholder": "Phone Number (e.g. 123-456-7890)",
+    "phoneHelp": "Please enter a 10-digit phone number (e.g., 123-456-7890)",
+    "phoneError": "Please enter a valid phone number (e.g., 123-456-7890).",
+    "processing": "Processing...",
+    "register": "Register Now",
+    "submitError": "Unable to complete the volunteer registration. Please try again."
+  },
+
+  "VolunteerEditPage": {
+    "loading": "Loading...",
+    "confirmationTitle": "Cancel Registration?",
+    "confirmationMessage": "Are you sure you want to remove your volunteer registration for {event}? This action cannot be undone.",
+    "confirmCancel": "Yes, Cancel",
+    "goBack": "Go Back",
+    "backToEvents": "Back to Events",
+    "heading": "Edit Volunteer Registration",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone (e.g., 123-456-7890)",
+    "phoneHelp": "Required format: 123-456-7890",
+    "phoneHint": "Hover for required format.",
+    "phoneError": "Please enter a valid phone number (e.g., 123-456-7890).",
+    "saving": "Saving...",
+    "update": "Update Info",
+    "cancel": "Cancel Registration",
+    "saved": "Changes saved successfully!",
+    "loadError": "Could not find registration.",
+    "updateError": "Unable to update the registration. Please try again.",
+    "deleteError": "Unable to cancel the registration. Please try again.",
+    "defaultEvent": "Event Volunteer"
   },
 
   "EventHistoryPage": {

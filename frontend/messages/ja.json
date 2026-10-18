@@ -13,6 +13,21 @@
     "partners": "パートナー"
   },
 
+  "PublicAuth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "adminPortal": "管理者ポータル",
+    "publicSite": "公開サイト",
+    "modalTitle": "ログイン",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "loggingIn": "ログイン中…",
+    "invalidEmail": "有効なメールアドレスを入力してください",
+    "invalidCredentials": "メールアドレスまたはパスワードが正しくありません",
+    "closeModal": "ログイン画面を閉じる"
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "松山・サクラメントおよびサクラメント全域において、奉仕活動と共有の機会を通じて地域社会をつなぐ。",
@@ -40,7 +55,120 @@
 
 
   "EventsPage": {
-    "historyLink": "過去のイベントはこちらからご覧ください！"
+    "heading": "イベントと活動",
+    "loading": "イベントを読み込んでいます...",
+    "empty": "現在、開催予定のイベントはありません。しばらくしてからもう一度ご確認ください。",
+    "historyLink": "過去のイベントはこちらからご覧ください！",
+    "volunteerPrompt": "一緒に活動しませんか？ボランティアを募集しています！",
+    "volunteerButton": "ボランティア募集を見る",
+    "noVolunteerOpportunities": "現在、ボランティアの募集はありません。"
+  },
+
+  "EventDetailPage": {
+    "loading": "イベントを読み込んでいます...",
+    "notFound": "イベントが見つかりません",
+    "unavailable": "このイベントは存在しないか、現在ご覧いただけません。",
+    "backToEvents": "イベント一覧に戻る",
+    "viewEvent": "イベントを見る →",
+    "volunteerForEvent": "このイベントでボランティアをする",
+    "googleCalendar": "Google カレンダー",
+    "addToGoogleCalendar": "Google カレンダーに追加 →",
+    "previous": "前へ",
+    "next": "次へ",
+    "navigation": "イベント間の移動",
+    "volunteerSlots": "ボランティア募集中：{count}名"
+  },
+
+  "AboutPage": {
+    "boardOfDirectors": "理事会",
+    "officers": "役員",
+    "directors": "理事",
+    "noPhoto": "写真なし",
+    "portraitAlt": "{name}の写真",
+    "loading": "読み込んでいます...",
+    "error": "理事会情報を読み込めませんでした。"
+  },
+
+  "PartnersPage": {
+    "partnerLinks": "パートナーリンク",
+    "partnerDescription": "提携団体およびスポンサーの皆様をご紹介します。",
+    "acknowledgment": "寄付者・スポンサーへの謝辞",
+    "acknowledgmentDescription": "私たちの活動を支えてくださる会員、個人、企業、団体の皆様に心より感謝申し上げます。",
+    "donors": "寄付者",
+    "sponsors": "スポンサー",
+    "visitWebsite": "ウェブサイトを見る →"
+  },
+
+  "VolunteerPage": {
+    "heading": "ボランティア募集",
+    "loading": "募集情報を読み込んでいます...",
+    "empty": "現在、ボランティアの募集はありません。",
+    "location": "場所：",
+    "time": "日時：",
+    "volunteersNeeded": "募集人数：",
+    "signUp": "申し込む"
+  },
+
+  "VolunteerShiftsPage": {
+    "backToEvent": "イベントに戻る",
+    "loading": "シフトを読み込んでいます...",
+    "loadError": "ボランティアシフトを読み込めませんでした。",
+    "empty": "現在、このイベントで募集しているボランティアシフトはありません。",
+    "filled": "{capacity}名中{filled}名登録済み",
+    "full": "定員に達しました",
+    "volunteer": "申し込む"
+  },
+
+  "VolunteerSignupPage": {
+    "loading": "読み込んでいます...",
+    "eventNotFound": "イベントが見つかりません。",
+    "confirmationTitle": "登録が完了しました！",
+    "saveInformation": "以下の情報を保存してください：",
+    "signupId": "登録番号：",
+    "event": "イベント：",
+    "name": "お名前：",
+    "email": "メールアドレス：",
+    "phone": "電話番号：",
+    "notAvailable": "なし",
+    "finish": "完了して戻る",
+    "backToShifts": "シフト一覧に戻る",
+    "heading": "ボランティア申込み",
+    "positionOptional": "担当（任意）",
+    "generalVolunteer": "一般ボランティア",
+    "firstName": "名",
+    "lastName": "姓",
+    "emailPlaceholder": "メールアドレス",
+    "phonePlaceholder": "電話番号（例：123-456-7890）",
+    "phoneHelp": "10桁の電話番号を入力してください（例：123-456-7890）",
+    "phoneError": "有効な電話番号を入力してください（例：123-456-7890）。",
+    "processing": "処理中...",
+    "register": "申し込む",
+    "submitError": "ボランティア登録を完了できませんでした。もう一度お試しください。"
+  },
+
+  "VolunteerEditPage": {
+    "loading": "読み込んでいます...",
+    "confirmationTitle": "登録をキャンセルしますか？",
+    "confirmationMessage": "{event}のボランティア登録を削除してもよろしいですか？この操作は元に戻せません。",
+    "confirmCancel": "はい、キャンセルします",
+    "goBack": "戻る",
+    "backToEvents": "イベント一覧に戻る",
+    "heading": "ボランティア登録を編集",
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "メールアドレス",
+    "phone": "電話番号（例：123-456-7890）",
+    "phoneHelp": "入力形式：123-456-7890",
+    "phoneHint": "入力形式はカーソルを合わせると確認できます。",
+    "phoneError": "有効な電話番号を入力してください（例：123-456-7890）。",
+    "saving": "保存中...",
+    "update": "情報を更新",
+    "cancel": "登録をキャンセル",
+    "saved": "変更を保存しました！",
+    "loadError": "登録情報が見つかりませんでした。",
+    "updateError": "登録情報を更新できませんでした。もう一度お試しください。",
+    "deleteError": "登録をキャンセルできませんでした。もう一度お試しください。",
+    "defaultEvent": "イベントボランティア"
   },
 
   "EventHistoryPage": {
