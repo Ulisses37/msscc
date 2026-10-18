@@ -22,6 +22,7 @@ export default function EventHistoryPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchPastEvents = async () => {
@@ -95,6 +96,21 @@ export default function EventHistoryPage() {
 
       {!isLoading && !hasError && pastEvents.length > 0 && (
         <>
+          {/* Search Bar */}
+          <div className="mb-6">
+            <label htmlFor="past-event-search" className="sr-only">
+              {t('searchLabel')}
+            </label>
+            <input
+              id="past-event-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={t('searchPlaceholder')}
+              className="w-full rounded-md border border-msscc-gray-light bg-msscc-white px-4 py-2 text-body text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-teal sm:max-w-md"
+            />
+          </div>
+
           <div className="flex flex-col gap-6">
             {paginatedEvents.map((event) => (
               <EventCard key={event.id} event={event} />
