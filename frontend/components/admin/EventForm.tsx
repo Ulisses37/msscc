@@ -332,12 +332,12 @@ export default function EventForm({
 
   return (
     <div>
-      {/* Image + Title + Datetimes row */}
+      {/* Event Thumbnail + Title + Datetimes row */}
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
         {/* Image Upload Box */}
         <div className="flex-shrink-0 w-full lg:w-72">
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
-            Image {requireImage && <span className="text-msscc-danger">*</span>}
+            Event Thumbnail {requireImage && <span className="text-msscc-danger">*</span>}
           </label>
           {/* Image Preview Box */}
           <div className="w-full lg:w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
@@ -613,7 +613,7 @@ export default function EventForm({
             onClick={addEventPhoto}
             className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-left text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:w-auto"
           >
-            +Image
+            + Image
           </button>
         </div>
 
