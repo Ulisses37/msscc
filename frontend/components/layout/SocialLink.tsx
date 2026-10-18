@@ -1,18 +1,15 @@
 import React from 'react';
 import Image from 'next/image';
-import { useTranslations } from 'next-intl';
 import fbIcon from '@/public/icons/FB_Icon.svg';
 
 // Facebook link: 44px tap target, icon scales by screen size and sits further left on mobile
-export const SocialIcon = () => {
-  const t = useTranslations('SocialLink');
-
+export const SocialIcon = ({ facebookLabel }: { facebookLabel: string }) => {
   return (
     <a
       href="https://www.facebook.com/MSSCC1/"
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={t('facebook')}
+      aria-label={facebookLabel}
       className="absolute left-0 top-1/2 -translate-y-1/2 z-20 flex h-[44px] w-[44px] items-center justify-start pl-[6px] md:left-[clamp(8px,2vw,24px)] md:justify-center md:pl-0"
     >
       <Image
