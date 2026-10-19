@@ -249,6 +249,21 @@ export default function EventsPage() {
         deletedEventPhotoIds,
       );
 
+      // Reload the list, then open the new event in the edit form so the admin can keep
+      // working on it. This has its own try/catch so a failed reload doesn't report the
+      // create as failed.
+      try {
+        const refreshedEvents = await getEvents();
+        setEvents(refreshedEvents);
+
+        const newEvent = refreshedEvents.find(
+          (event) => event.id === createdEvent.event_id,
+        );
+        if (newEvent) await handleEditEvent(newEvent);
+      } catch (refreshError) {
+        console.error('Failed to refresh event list:', refreshError);
+      }
+
       setSaveMessage('Event created successfully.');
     } catch (error) {
       console.error('Event creation failed:', error);
