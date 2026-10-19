@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
 import { formatLocalizedDate } from '@/utils/dateLocalization';
+import { getCropImageStyle } from '@/utils/thumbnailCrop';
 
 interface EventCardProps {
   event: Event;
@@ -64,7 +65,7 @@ export function EventCard({ event }: EventCardProps) {
             alt={event.media.altText ?? title}
             fill
             sizes="(min-width: 640px) 400px, 100vw"
-            style={{ objectFit: 'cover' }}
+            style={getCropImageStyle(event.thumbnailCrop)}
           />
         ) : (
           // Placeholder when no image is provided
