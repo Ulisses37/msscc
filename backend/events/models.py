@@ -43,15 +43,24 @@ class Event(models.Model):
     )
     calendar_link = models.URLField(blank=True, null=True)
 
-    # Focal point of the card thumbnail as percentages of the image (0-100).
-    # 50/50 is the center, so existing events keep their current crop.
-    thumbnail_focus_x = models.FloatField(
-        default=50,
+    # Crop of the card thumbnail, as percentages of the image. The defaults are
+    # the whole image, which the card shows as a centered crop, so existing
+    # events look the same as before.
+    thumbnail_crop_x = models.FloatField(
+        default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
-    thumbnail_focus_y = models.FloatField(
-        default=50,
+    thumbnail_crop_y = models.FloatField(
+        default=0,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    thumbnail_crop_width = models.FloatField(
+        default=100,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+    )
+    thumbnail_crop_height = models.FloatField(
+        default=100,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
     )
 
     class Meta:
