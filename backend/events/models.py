@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 EVENT_IMAGE_ALIGNMENT_CHOICES = [
@@ -41,6 +42,17 @@ class Event(models.Model):
         null=True,
     )
     calendar_link = models.URLField(blank=True, null=True)
+
+    # Focal point of the card thumbnail as percentages of the image (0-100).
+    # 50/50 is the center, so existing events keep their current crop.
+    thumbnail_focus_x = models.FloatField(
+        default=50,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
+    thumbnail_focus_y = models.FloatField(
+        default=50,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
 
     class Meta:
         ordering = ["start_datetime", "event_id"]
