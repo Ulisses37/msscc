@@ -27,9 +27,48 @@ class EventSerializer(serializers.ModelSerializer):
             "updated_at",
             "media_asset",
             "calendar_link",
-            "thumbnail_focus_x",
-            "thumbnail_focus_y",
+            "thumbnail_crop_x",
+            "thumbnail_crop_y",
+            "thumbnail_crop_width",
+            "thumbnail_crop_height",
         ]
+
+    def validate(self, attrs: dict) -> dict:
+        """Reject a thumbnail crop that extends past the edge of the image."""
+        crop_defaults = {
+            "thumbnail_crop_x": 0,
+            "thumbnail_crop_y": 0,
+            "thumbnail_crop_width": 100,
+            "thumbnail_crop_height": 100,
+        }
+
+        # Leave other updates alone unless they touch the crop.
+        if not any(field in attrs for field in crop_defaults):
+            return attrs
+
+        # On a partial update, fields that weren't sent keep their saved values.
+        crop = {}
+        for field, default in crop_defaults.items():
+            if field in attrs:
+                crop[field] = attrs[field]
+            elif self.instance is not None:
+                crop[field] = getattr(self.instance, field)
+            else:
+                crop[field] = default
+
+        # A small tolerance covers rounding in the values the picker sends.
+        if crop["thumbnail_crop_x"] + crop["thumbnail_crop_width"] > 100.01:
+            raise serializers.ValidationError(
+                {"thumbnail_crop_width": "The crop cannot extend past the "
+                "right edge of the image."}
+            )
+        if crop["thumbnail_crop_y"] + crop["thumbnail_crop_height"] > 100.01:
+            raise serializers.ValidationError(
+                {"thumbnail_crop_height": "The crop cannot extend past the bottom "
+                "edge of the image."}
+            )
+
+        return attrs
 
 
 class EventImageSerializer(serializers.ModelSerializer):

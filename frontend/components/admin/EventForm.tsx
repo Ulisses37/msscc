@@ -12,10 +12,13 @@ import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { ImportImage } from '@/components/ui/ImportImage';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+import ThumbnailCropModal from '@/components/admin/ThumbnailCropModal';
+import { CARD_IMAGE_RATIO, FULL_CROP, getCropImageStyle } from '@/utils/thumbnailCrop';
 
 // Types
 import type { ImageAlignment, ImageWidth } from '@/types/content';
 import type { EventImage } from '@/types/event';
+import type { ThumbnailCrop } from '@/utils/thumbnailCrop';
 
 export interface EventFormData {
   titleEn: string;
@@ -27,6 +30,7 @@ export interface EventFormData {
   startDatetime: string;
   endDatetime: string;
   sendVolunteerReminders: boolean;
+  thumbnailCrop: ThumbnailCrop;
 }
 
 export interface EventPhotoFormData {
@@ -90,6 +94,7 @@ export default function EventForm({
     startDatetime: '',
     endDatetime: '',
     sendVolunteerReminders: false,
+    thumbnailCrop: FULL_CROP,
   },
   initialImageUrl = null,
   initialEventPhotos = [],
@@ -126,6 +131,36 @@ export default function EventForm({
   const locationReviewNotice = useTranslationReviewNotice();
   const descriptionReviewNotice = useTranslationReviewNotice();
   const previewUrlsRef = useRef(new Set<string>());
+
+  // Create the preview URL once per chosen file, not on every render.
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const thumbnailUrlRef = useRef<string | null>(null);
+
+  // Free the preview URL when the form closes
+  useEffect(() => {
+    return () => {
+      if (thumbnailUrlRef.current) URL.revokeObjectURL(thumbnailUrlRef.current);
+    };
+  }, []);
+
+  // The new file if one was chosen, otherwise the event's saved image
+  const pickerImageUrl = thumbnailPreviewUrl ?? initialImageUrl;
+
+  const handleThumbnailFileChange = (file: File | null) => {
+    if (thumbnailUrlRef.current) URL.revokeObjectURL(thumbnailUrlRef.current);
+
+    // Create the preview URL once per chosen file, not on every render.
+    const url = file ? URL.createObjectURL(file) : null;
+    thumbnailUrlRef.current = url;
+
+    setSelectedFile(file);
+    setThumbnailPreviewUrl(url);
+    // A saved crop belongs to the old image, so start over
+    setFormData((prev) => ({ ...prev, thumbnailCrop: FULL_CROP }));
+    // Open the crop dialog straight away so the new image can be framed
+    if (file) setIsCropModalOpen(true);
+  };
 
   const updateEnglishField = (
     field: 'titleEn' | 'locationEn' | 'descriptionEn',
@@ -339,34 +374,49 @@ export default function EventForm({
           <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
             Event Thumbnail {requireImage && <span className="text-msscc-danger">*</span>}
           </label>
-          {/* Image Preview Box */}
-          <div className="w-full lg:w-72 h-72 border border-msscc-gray-light rounded-sm flex flex-col items-center justify-center overflow-hidden bg-msscc-gray-faint">
-            {selectedFile ? (
+          {/* Image Preview Box: shows the card crop, click to change it */}
+          {pickerImageUrl ? (
+            <button
+              type="button"
+              onClick={() => setIsCropModalOpen(true)}
+              aria-label="Adjust how this image is cropped on the event card"
+              className="group relative block w-full cursor-pointer overflow-hidden rounded-sm border border-msscc-gray-light bg-msscc-gray-faint lg:w-72"
+              style={{ aspectRatio: CARD_IMAGE_RATIO }}
+            >
               <Image
-                src={URL.createObjectURL(selectedFile)}
-                alt="Selected event image preview"
+                src={pickerImageUrl}
+                alt={thumbnailPreviewUrl ? 'Selected event image preview' : 'Current event image'}
                 width={288}
-                height={288}
-                className="object-cover w-full h-full"
+                height={190}
+                className="h-full w-full"
+                style={getCropImageStyle(formData.thumbnailCrop)}
               />
-            ) : initialImageUrl ? (
-              <Image
-                src={initialImageUrl}
-                alt="Current event image"
-                width={288}
-                height={288}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <span className="text-msscc-gray-mid text-body-sm text-center px-2">
+
+              {/* Hint shown on hover and on keyboard focus */}
+              <span className="absolute inset-0 flex items-center justify-center bg-black/50 px-2 text-center text-body-sm font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                Click to adjust the crop
+              </span>
+            </button>
+          ) : (
+            <div
+              className="flex w-full items-center justify-center overflow-hidden rounded-sm border border-msscc-gray-light bg-msscc-gray-faint lg:w-72"
+              style={{ aspectRatio: CARD_IMAGE_RATIO }}
+            >
+              <span className="px-2 text-center text-body-sm text-msscc-gray-mid">
                 No image selected
               </span>
-            )}
-          </div>
+            </div>
+          )}
+
+          {pickerImageUrl && (
+            <p className="mt-1 text-caption text-msscc-gray-mid">
+              This is how the image will look on the event card. Click it to change the crop.
+            </p>
+          )}
 
           <div className="mt-2">
             <ImportImage
-              onChange={(file) => setSelectedFile(file)}
+              onChange={handleThumbnailFileChange}
               id="event-image"
             />
           </div>
@@ -539,6 +589,19 @@ export default function EventForm({
           </div>
         </div>
       </div>
+
+      {/* Card thumbnail: choose which part of the image shows on the event card */}
+      {isCropModalOpen && pickerImageUrl && (
+        <ThumbnailCropModal
+          imageUrl={pickerImageUrl}
+          crop={formData.thumbnailCrop}
+          onSave={(thumbnailCrop) => {
+            setFormData((prev) => ({ ...prev, thumbnailCrop }));
+            setIsCropModalOpen(false);
+          }}
+          onCancel={() => setIsCropModalOpen(false)}
+        />
+      )}
 
       {/* Description EN + JA */}
       <div className="flex flex-col gap-4">

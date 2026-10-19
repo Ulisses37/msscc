@@ -227,6 +227,10 @@ export default function EventsPage() {
             media_asset: mediaAssetId,
             is_published: true,
             send_volunteer_reminders: data.sendVolunteerReminders,
+            thumbnail_crop_x: data.thumbnailCrop.x,
+            thumbnail_crop_y: data.thumbnailCrop.y,
+            thumbnail_crop_width: data.thumbnailCrop.width,
+            thumbnail_crop_height: data.thumbnailCrop.height,
           }),
         },
       );
@@ -292,6 +296,7 @@ export default function EventsPage() {
             end_datetime: data.endDatetime,
             media_asset: mediaAssetId,
             send_volunteer_reminders: data.sendVolunteerReminders,
+            thumbnailCrop: data.thumbnailCrop,
           }),
         },
       );
@@ -591,6 +596,7 @@ export default function EventsPage() {
                 startDatetime: formatDatetimeLocal(selectedEvent.startDatetime),
                 endDatetime: formatDatetimeLocal(selectedEvent.endDatetime),
                 sendVolunteerReminders: selectedEvent.sendVolunteerReminders,
+                thumbnailCrop: selectedEvent.thumbnailCrop,
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
               initialEventPhotos={selectedEventImages}
