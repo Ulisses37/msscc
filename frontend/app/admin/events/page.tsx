@@ -125,7 +125,7 @@ export default function EventsPage() {
     if (showForm && mainRef.current) {
       mainRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [showForm, selectedEvent]);
+  }, [showForm, selectedEvent?.id]);
 
   // Auto-dismiss save feedback so it doesn't linger in the sticky save bar
   useEffect(() => {
