@@ -18,6 +18,8 @@ interface RawEvent {
   reminder_sent_at: string | null;
   calendar_link: string | null;
   media_asset: number | null;
+  thumbnail_focus_x: number;
+  thumbnail_focus_y: number;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +86,8 @@ function mapEvent(raw: RawEvent): Event {
     reminderSentAt: raw.reminder_sent_at,
     calendarLink:   raw.calendar_link ?? undefined,
     mediaAssetId: raw.media_asset,
+    thumbnailFocusX: raw.thumbnail_focus_x,
+    thumbnailFocusY: raw.thumbnail_focus_y,
     createdAt:      raw.created_at,
     updatedAt:      raw.updated_at,
   };

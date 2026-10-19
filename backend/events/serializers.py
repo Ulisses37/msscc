@@ -27,6 +27,8 @@ class EventSerializer(serializers.ModelSerializer):
             "updated_at",
             "media_asset",
             "calendar_link",
+            "thumbnail_focus_x",
+            "thumbnail_focus_y",
         ]
 
 

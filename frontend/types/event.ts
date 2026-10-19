@@ -36,4 +36,6 @@ export interface Event {
   calendarLink?: string;
   media?: MediaAsset;
   mediaAssetId: number | null;
+  thumbnailFocusX: number;
+  thumbnailFocusY: number;
 }
