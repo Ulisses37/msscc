@@ -135,6 +135,31 @@ export async function getEvents(): Promise<Event[]> {
   });
 }
 
+/**
+ * Fetch every published event, upcoming and past, for the events calendar.
+ * Unlike the events page, no end-date filter is applied. Media assets are skipped
+ * because the calendar only shows start times and titles.
+ */
+export async function getCalendarEvents(): Promise<Event[]> {
+  const response = await fetch(`${API_BASE_URL}/api/events/`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch calendar events: ${response.status}`);
+  }
+
+  const events: RawEvent[] = await response.json();
+
+  return events
+    // The API also returns unpublished events, which visitors should not see.
+    .filter((event) => event.is_published)
+    .map(mapEvent)
+    .sort(
+      (firstEvent, secondEvent) =>
+        new Date(firstEvent.startDatetime).getTime()
+        - new Date(secondEvent.startDatetime).getTime(),
+    );
+}
+
 export async function getEventById(id: number): Promise<Event | undefined> {
   const res = await fetch(`${API_BASE_URL}/api/events/${id}/`);
 
