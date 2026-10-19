@@ -296,7 +296,10 @@ export default function EventsPage() {
             end_datetime: data.endDatetime,
             media_asset: mediaAssetId,
             send_volunteer_reminders: data.sendVolunteerReminders,
-            thumbnailCrop: data.thumbnailCrop,
+            thumbnail_crop_x: data.thumbnailCrop.x,
+            thumbnail_crop_y: data.thumbnailCrop.y,
+            thumbnail_crop_width: data.thumbnailCrop.width,
+            thumbnail_crop_height: data.thumbnailCrop.height,
           }),
         },
       );
@@ -331,6 +334,7 @@ export default function EventsPage() {
                 endDatetime: data.endDatetime,
                 mediaAssetId,
                 sendVolunteerReminders: data.sendVolunteerReminders,
+                thumbnailCrop: data.thumbnailCrop,
               }
             : event,
         ),
@@ -350,6 +354,7 @@ export default function EventsPage() {
               endDatetime: data.endDatetime,
               mediaAssetId,
               sendVolunteerReminders: data.sendVolunteerReminders,
+              thumbnailCrop: data.thumbnailCrop,
             }
           : currentEvent,
       );
