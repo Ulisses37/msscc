@@ -267,11 +267,11 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                 // A day with exactly one event links straight to it
                 const singleEvent = dayEvents.length === 1 ? dayEvents[0] : null;
 
-                // Today gets a filled circle. A day with events gets a pink date number.
+                // Today gets a filled circle. A day with events gets a teal date number.
                 const dateNumberClassName = isToday
                   ? 'bg-msscc-teal font-semibold text-white'
                   : hasEvents
-                    ? 'font-semibold text-msscc-pink'
+                    ? 'font-semibold text-msscc-teal'
                     : 'text-msscc-gray-mid';
                 const dateNumber = (
                   <span
@@ -362,7 +362,7 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                     // On table cells, height acts as the minimum height
                     className={`${cellHeightClassName} relative p-1 align-top ${
                       hasEvents
-                        ? 'border border-msscc-pink bg-msscc-white'
+                        ? 'border border-msscc-teal bg-msscc-white'
                         : 'bg-msscc-gray-faint'
                     }`}
                   >
