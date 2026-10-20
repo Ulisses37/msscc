@@ -136,7 +136,6 @@
     "finish": "完了して戻る",
     "backToShifts": "シフト一覧に戻る",
     "heading": "ボランティア申込み",
-    "positionOptional": "担当（任意）",
     "generalVolunteer": "一般ボランティア",
     "firstName": "名",
     "lastName": "姓",
@@ -146,7 +145,13 @@
     "phoneError": "有効な電話番号を入力してください（例：123-456-7890）。",
     "processing": "処理中...",
     "register": "申し込む",
-    "submitError": "ボランティア登録を完了できませんでした。もう一度お試しください。"
+    "submitError": "ボランティア登録を完了できませんでした。もう一度お試しください。",
+    "commentsLabel": "コメント（任意）",
+    "commentsPlaceholder": "主催者にお伝えしたいことがあればご記入ください（ご質問や参加可能な時間帯など）。",
+    "commentsCount": "{count} / {max}文字",
+    "shiftHeading": "シフト",
+    "shiftNotFound": "このシフトが見つかりませんでした。前のページに戻って、ボランティアするシフトを選んでください。",
+    "shiftFull": "このシフトは定員に達しました。前のページに戻って、別のシフトを選んでください。"
   },
 
   "VolunteerEditPage": {
