@@ -184,7 +184,9 @@
   "EventsCalendar": {
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "eventCount": "{count, plural, one {# event} other {# events}}"
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "pastEvent": "Past event",
+    "selectDayHint": "Select a highlighted date to see its events."
   },
 
   "VolunteerCancellationPage": {

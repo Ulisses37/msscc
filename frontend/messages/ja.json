@@ -185,7 +185,9 @@
   "EventsCalendar": {
     "previousMonth": "前の月",
     "nextMonth": "次の月",
-    "eventCount": "{count}件のイベント"
+    "eventCount": "{count}件のイベント",
+    "pastEvent": "終了したイベント",
+    "selectDayHint": "色のついた日付を選ぶと、その日のイベントが表示されます。"
   },
 
   "VolunteerCancellationPage": {
