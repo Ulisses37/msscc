@@ -94,6 +94,7 @@ export default function VolunteerSignupsPage() {
             email: data.email,
             phone: data.phone,
             status: 'approved',
+            comments: data.comments.trim() || null,
           }),
         },
       );
@@ -136,6 +137,7 @@ export default function VolunteerSignupsPage() {
             last_name: data.lastName,
             email: data.email,
             phone: data.phone,
+            comments: data.comments.trim() || null,
           }),
         },
       );
@@ -346,6 +348,7 @@ export default function VolunteerSignupsPage() {
                 lastName: selectedSignup.last_name,
                 email: selectedSignup.email,
                 phone: selectedSignup.phone,
+                comments: selectedSignup.comments ?? '',
               }
             : undefined
         }

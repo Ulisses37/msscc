@@ -7,6 +7,7 @@ export interface VolunteerFormData {
   lastName: string;
   email: string;
   phone: string;
+  comments: string;
 }
 
 interface AdminVolunteerFormProps {
@@ -25,6 +26,7 @@ export function AdminVolunteerForm({
     lastName: '',
     email: '',
     phone: '',
+    comments: '',
   },
   onClose,
   onSubmit,
@@ -176,6 +178,23 @@ export function AdminVolunteerForm({
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="w-full border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
             />
+          </div>
+
+          {/* Comments (optional) */}
+          <div>
+            <label className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid block mb-2">
+              Comments <span className="normal-case tracking-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={formData.comments}
+              onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+              className="w-full resize-y border border-msscc-gray-light rounded-sm px-4 py-2 font-body text-msscc-gray-dark bg-white focus:border-msscc-teal outline-none"
+            />
+            <p className="mt-1 text-right text-caption text-msscc-gray-mid">
+              {formData.comments.length}/500
+            </p>
           </div>
 
           {/* Feedback messages */}
