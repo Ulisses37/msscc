@@ -197,7 +197,7 @@ export default function EventsPage() {
       <div style={{
         marginTop: 'var(--space-10)',
         borderTop: '1px solid var(--color-gray-light)',
-        paddingTop: 'var(--space-8)',
+        paddingTop: 'var(--space-10)',
       }}>
         {hasVolunteerOpportunities ? (
           <div style={{ textAlign: 'center' }}>
