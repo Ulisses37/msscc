@@ -182,6 +182,12 @@
     "noResults": "検索に一致する過去のイベントはありません。"
   },
 
+  "EventsCalendar": {
+    "previousMonth": "前の月",
+    "nextMonth": "次の月",
+    "eventCount": "{count}件のイベント"
+  },
+
   "VolunteerCancellationPage": {
     "eyebrow": "ボランティアシフト",
     "title": "ボランティアシフトの確認",

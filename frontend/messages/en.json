@@ -181,6 +181,12 @@
     "noResults": "No past events match your search."
   },
 
+  "EventsCalendar": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "eventCount": "{count, plural, one {# event} other {# events}}"
+  },
+
   "VolunteerCancellationPage": {
     "eyebrow": "Volunteer shift",
     "title": "Review your volunteer shift",
