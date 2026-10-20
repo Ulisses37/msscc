@@ -81,18 +81,6 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
     };
   }, [activeDay]);
 
-  // Group events by the day they start so each cell can look its events up quickly
-  const eventsByDay = useMemo(() => {
-    const groups = new Map<string, Event[]>();
-
-    for (const event of events) {
-      const key = getDateKey(new Date(event.startDatetime));
-      groups.set(key, [...(groups.get(key) ?? []), event]);
-    }
-
-    return groups;
-  }, [events]);
-
   const timeFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }),
     [locale],
@@ -180,6 +168,26 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
   const isPastEvent = (event: Event): boolean =>
     new Date(event.endDatetime).getTime() < today.getTime();
 
+  // Events running on a given day, including ones that started on an earlier day
+  const getEventsForDay = (cellYear: number, cellMonth: number, cellDay: number): Event[] => {
+    const dayStart = new Date(cellYear, cellMonth, cellDay).getTime();
+    const dayEnd = new Date(cellYear, cellMonth, cellDay + 1).getTime();
+
+    return events.filter((event) => {
+      const start = new Date(event.startDatetime).getTime();
+      // An event that ends the instant a day begins doesn't count as running on that day
+      const end = Math.max(new Date(event.endDatetime).getTime(), start + 1);
+
+      return start < dayEnd && end > dayStart;
+    });
+  };
+
+  // Start time on the day an event begins, "Continued" on the days after it
+  const getTimeLabel = (event: Event, dateKey: string): string =>
+    getDateKey(new Date(event.startDatetime)) === dateKey
+      ? timeFormatter.format(new Date(event.startDatetime))
+      : t('continued');
+
   const getEventHref = (event: Event): string => `/${locale}/events/${event.id}`;
 
   const eventLinkClassName =
@@ -256,7 +264,7 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                 }
 
                 const dateKey = getDateKey(new Date(year, month, day));
-                const dayEvents = eventsByDay.get(dateKey) ?? [];
+                const dayEvents = getEventsForDay(year, month, day);
                 const hasEvents = dayEvents.length > 0;
                 const hasUpcomingEvent = dayEvents.some((event) => !isPastEvent(event));
                 const isToday = dateKey === todayKey;
@@ -302,7 +310,7 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                                 }`}
                               >
                                 <span className="block text-caption font-semibold">
-                                  {timeFormatter.format(new Date(event.startDatetime))}
+                                  {getTimeLabel(event, dateKey)}
                                 </span>
                                 <span
                                   className="break-words text-caption"
@@ -423,7 +431,7 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                                     className={eventLinkClassName}
                                   >
                                     <span className="block text-caption font-semibold">
-                                      {timeFormatter.format(new Date(event.startDatetime))}
+                                      {getTimeLabel(event, dateKey)}
                                     </span>
                                     <span className="block text-body-sm">{getTitle(event)}</span>
                                     {isPast && <span className="sr-only">{t('pastEvent')}</span>}

@@ -186,7 +186,8 @@
     "nextMonth": "Next month",
     "eventCount": "{count, plural, one {# event} other {# events}}",
     "pastEvent": "Past event",
-    "selectDayHint": "Select a highlighted date to see its events."
+    "selectDayHint": "Select a highlighted date to see its events.",
+    "continued": "Continued"
   },
 
   "VolunteerCancellationPage": {
