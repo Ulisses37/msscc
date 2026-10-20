@@ -19,7 +19,13 @@ export default function VolunteerPage() {
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
       const data = await getEvents();
-      const needsVolunteers = data.filter(e => e.volunteerSlots > 0 && e.isPublished);
+      // Hide events that have already ended, matching the events page
+      const needsVolunteers = data.filter(
+        (e) =>
+          e.volunteerSlots > 0
+          && e.isPublished
+          && new Date(e.endDatetime).getTime() >= Date.now(),
+      );
       setEvents(needsVolunteers);
       setLoading(false);
     };
