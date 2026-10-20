@@ -60,7 +60,10 @@
     "historyLink": "Click here to see past events!",
     "volunteerPrompt": "Interested in helping out? We have positions available!",
     "volunteerButton": "View Volunteer Opportunities",
-    "noVolunteerOpportunities": "No volunteer opportunities exist at this time."
+    "noVolunteerOpportunities": "No volunteer opportunities exist at this time.",
+    "calendarLoading": "Loading calendar...",
+    "calendarError": "The calendar couldn't be loaded. Please try again later.",
+    "calendarLabel": "Events calendar"
   },
 
   "EventDetailPage": {
@@ -179,6 +182,14 @@
     "searchLabel": "Search past events",
     "searchPlaceholder": "Search by event title...",
     "noResults": "No past events match your search."
+  },
+
+  "EventsCalendar": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "pastEvent": "Past event",
+    "continued": "Continued"
   },
 
   "VolunteerCancellationPage": {

@@ -61,7 +61,10 @@
     "historyLink": "過去のイベントはこちらからご覧ください！",
     "volunteerPrompt": "一緒に活動しませんか？ボランティアを募集しています！",
     "volunteerButton": "ボランティア募集を見る",
-    "noVolunteerOpportunities": "現在、ボランティアの募集はありません。"
+    "noVolunteerOpportunities": "現在、ボランティアの募集はありません。",
+    "calendarLoading": "カレンダーを読み込み中...",
+    "calendarError": "カレンダーを読み込めませんでした。しばらくしてからもう一度お試しください。",
+    "calendarLabel": "イベントカレンダー"
   },
 
   "EventDetailPage": {
@@ -180,6 +183,14 @@
     "searchLabel": "過去のイベントを検索",
     "searchPlaceholder": "イベント名で検索...",
     "noResults": "検索に一致する過去のイベントはありません。"
+  },
+
+  "EventsCalendar": {
+    "previousMonth": "前の月",
+    "nextMonth": "次の月",
+    "eventCount": "{count}件のイベント",
+    "pastEvent": "終了したイベント",
+    "continued": "継続中"
   },
 
   "VolunteerCancellationPage": {
