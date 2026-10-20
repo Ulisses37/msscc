@@ -13,7 +13,7 @@ import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNot
 import { ImportImage } from '@/components/ui/ImportImage';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
 import ThumbnailCropModal from '@/components/admin/ThumbnailCropModal';
-import { CARD_IMAGE_RATIO, FULL_CROP, getCropImageStyle } from '@/utils/thumbnailCrop';
+import { CARD_IMAGE_RATIO, FULL_CROP, getCropImageStyle, sanitizeCrop } from '@/utils/thumbnailCrop';
 
 // Types
 import type { ImageAlignment, ImageWidth } from '@/types/content';
@@ -346,7 +346,7 @@ export default function EventForm({
 
     try {
       await onSubmit(
-        formData,
+        { ...formData, thumbnailCrop: sanitizeCrop(formData.thumbnailCrop) },
         selectedFile,
         eventPhotos,
         deletedEventPhotoIds,

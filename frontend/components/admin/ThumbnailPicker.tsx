@@ -69,7 +69,11 @@ const roundCrop = (crop: ThumbnailCrop): ThumbnailCrop => {
 export default function ThumbnailPicker({ imageUrl, crop, onChange }: ThumbnailPickerProps) {
   const imageBoxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
-  const [imageAspect, setImageAspect] = useState<number | null>(null);
+  // Remember which image the aspect belongs to, so a new image never reuses an old ratio.
+  const [loadedImage, setLoadedImage] = useState<{ url: string; aspect: number } | null>(null);
+  const imageAspect = loadedImage && loadedImage.url === imageUrl ? loadedImage.aspect : null;
+  // Very tall images get a minimum width so the crop box is big enough to use.
+  const isTall = imageAspect !== null && imageAspect < 0.5;
 
   // The crop as actually shown: the stored crop reshaped to the card's proportions.
   const displayCrop = imageAspect ? fitCropToRatio(crop, imageAspect) : null;
@@ -229,6 +233,7 @@ export default function ThumbnailPicker({ imageUrl, crop, onChange }: ThumbnailP
           Thumbnail crop
         </p>
 
+        <div className="max-h-[60vh] overflow-y-auto">
         <div
           ref={imageBoxRef}
           onPointerMove={handlePointerMove}
@@ -245,11 +250,25 @@ export default function ThumbnailPicker({ imageUrl, crop, onChange }: ThumbnailP
             draggable={false}
             onLoad={(event) => {
               const { naturalWidth, naturalHeight } = event.currentTarget;
-              if (naturalWidth && naturalHeight) {
-                setImageAspect(naturalWidth / naturalHeight);
+              if (naturalWidth && naturalHeight && imageUrl) {
+                const aspect = naturalWidth / naturalHeight;
+                setLoadedImage({ url: imageUrl, aspect });
+
+                // ── START NEW ──
+                // Store the crop the way it is shown, so what is saved matches the preview.
+                const fitted = roundCrop(fitCropToRatio(crop, aspect));
+                const differs =
+                  Math.abs(fitted.x - crop.x) > 0.01 ||
+                  Math.abs(fitted.y - crop.y) > 0.01 ||
+                  Math.abs(fitted.width - crop.width) > 0.01 ||
+                  Math.abs(fitted.height - crop.height) > 0.01;
+                if (differs) onChange(fitted);
+                // ── END NEW ──
               }
             }}
-            className="pointer-events-none block h-auto max-h-[360px] w-auto max-w-full"
+            className={`pointer-events-none block h-auto max-w-full ${
+              isTall ? 'w-[220px]' : 'max-h-[360px] w-auto'
+            }`}
           />
 
           {displayCrop && (
@@ -275,12 +294,18 @@ export default function ThumbnailPicker({ imageUrl, crop, onChange }: ThumbnailP
                   aria-hidden="true"
                   onPointerDown={(event) => handleResizeStart(event, handle)}
                   className={`absolute flex h-8 w-8 ${handle.position} ${handle.cursor} ${handle.align}`}
+                  // Full size on normal boxes, but never more than 45% of a small one
+                  style={{ width: 'min(2rem, 45%)', height: 'min(2rem, 45%)' }}
                 >
-                  <span className="h-3.5 w-3.5 border-2 border-msscc-teal bg-white" />
+                  <span
+                    className="h-3.5 w-3.5 border-2 border-msscc-teal bg-white"
+                    style={{ width: 'min(0.875rem, 100%)', height: 'min(0.875rem, 100%)' }}
+                  />
                 </span>
               ))}
             </div>
           )}
+        </div>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
