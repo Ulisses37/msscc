@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
+import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { Event } from '@/types/event';
@@ -179,6 +180,12 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
   const isPastEvent = (event: Event): boolean =>
     new Date(event.endDatetime).getTime() < today.getTime();
 
+  const getEventHref = (event: Event): string => `/${locale}/events/${event.id}`;
+
+  const eventLinkClassName =
+    'block rounded-sm hover:underline '
+    + 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-msscc-teal';
+
   const arrowClassName =
     'rounded-full p-2 text-msscc-teal transition-colors hover:bg-msscc-gray-faint '
     + 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-msscc-teal';
@@ -257,6 +264,8 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                 const isActive = canShowPopup && activeDay === day;
                 const popupId = `calendar-popup-${year}-${month}-${day}`;
                 const dayLabel = dayLabelFormatter.format(new Date(year, month, day));
+                // A day with exactly one event links straight to it
+                const singleEvent = dayEvents.length === 1 ? dayEvents[0] : null;
 
                 // Today gets a filled circle. A day with events gets a pink date number.
                 const dateNumberClassName = isToday
@@ -286,23 +295,30 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                               key={event.id}
                               className={isPast ? 'text-msscc-gray-mid' : 'text-msscc-gray-dark'}
                             >
-                              <span className="block text-caption font-semibold">
-                                {timeFormatter.format(new Date(event.startDatetime))}
-                              </span>
-                              <span
-                                className="break-words text-caption"
-                                style={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                }}
+                              <Link
+                                href={getEventHref(event)}
+                                className={`${eventLinkClassName}${
+                                  singleEvent ? ' after:absolute after:inset-0' : ''
+                                }`}
                               >
-                                {getTitle(event)}
-                              </span>
-                              {isPast && (
-                                <span className="sr-only">{t('pastEvent')}</span>
-                              )}
+                                <span className="block text-caption font-semibold">
+                                  {timeFormatter.format(new Date(event.startDatetime))}
+                                </span>
+                                <span
+                                  className="break-words text-caption"
+                                  style={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  {getTitle(event)}
+                                </span>
+                                {isPast && (
+                                  <span className="sr-only">{t('pastEvent')}</span>
+                                )}
+                              </Link>
                             </li>
                           );
                         })}
@@ -352,17 +368,29 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                   >
                     {canShowPopup ? (
                       <>
-                        <div
-                          tabIndex={0}
-                          role="group"
-                          aria-label={`${dayLabel}, ${t('eventCount', { count: dayEvents.length })}`}
-                          aria-describedby={popupId}
-                          data-event-day
-                          onClick={() => setActiveDay(day)}
-                          className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-msscc-teal"
-                        >
-                          {cellContent}
-                        </div>
+                        {singleEvent ? (
+                          <Link
+                            href={getEventHref(singleEvent)}
+                            aria-label={`${dayLabel}: ${getTitle(singleEvent)}`}
+                            aria-describedby={popupId}
+                            data-event-day
+                            className="block rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-msscc-teal"
+                          >
+                            {cellContent}
+                          </Link>
+                        ) : (
+                          <div
+                            tabIndex={0}
+                            role="group"
+                            aria-label={`${dayLabel}, ${t('eventCount', { count: dayEvents.length })}`}
+                            aria-describedby={popupId}
+                            data-event-day
+                            onClick={() => setActiveDay(day)}
+                            className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-msscc-teal"
+                          >
+                            {cellContent}
+                          </div>
+                        )}
 
                         {/* Events for this day. Left-side columns open to the right, right-side
                             columns open to the left, and the last rows open upward so the popup
@@ -387,11 +415,19 @@ export default function EventsCalendarView({ events }: EventsCalendarViewProps) 
                                   key={event.id}
                                   className={isPast ? 'text-msscc-gray-mid' : 'text-msscc-gray-dark'}
                                 >
-                                  <span className="block text-caption font-semibold">
-                                    {timeFormatter.format(new Date(event.startDatetime))}
-                                  </span>
-                                  <span className="block text-body-sm">{getTitle(event)}</span>
-                                  {isPast && <span className="sr-only">{t('pastEvent')}</span>}
+                                  {/* On a single-event day the date cell is already a link to this
+                                      event, so Tab skips this one. It can still be clicked. */}
+                                  <Link
+                                    href={getEventHref(event)}
+                                    tabIndex={singleEvent ? -1 : undefined}
+                                    className={eventLinkClassName}
+                                  >
+                                    <span className="block text-caption font-semibold">
+                                      {timeFormatter.format(new Date(event.startDatetime))}
+                                    </span>
+                                    <span className="block text-body-sm">{getTitle(event)}</span>
+                                    {isPast && <span className="sr-only">{t('pastEvent')}</span>}
+                                  </Link>
                                 </li>
                               );
                             })}
