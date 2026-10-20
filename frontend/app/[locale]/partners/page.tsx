@@ -19,6 +19,7 @@ import type { DbContentBlock } from '@/types/content';
 // Utils Imports
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 
 interface PartnerLinkProps {
   name: string;
@@ -60,6 +61,7 @@ export default function PartnersPage() {
   const t = useTranslations('PartnersPage');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('partners'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
   const [partners, setPartners] = useState<PartnerRecord[]>([]);
   const params = useParams();
   const locale = params?.locale;
@@ -172,7 +174,7 @@ export default function PartnersPage() {
             locale={String(locale)}
           />
         ))}
-        {!contentBlocks.length && <FallBack source="partners" />}
+        {showFallback && <FallBack source="partners" />}
       </section>
 
       {/* Partner Links */}

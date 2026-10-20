@@ -14,6 +14,7 @@ import type { DbContentBlock } from '@/types/content';
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 
 /**
  * This is the general view home page
@@ -23,6 +24,7 @@ import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 export default function HomePage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('home'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const locale = params?.locale;
 
@@ -38,7 +40,7 @@ export default function HomePage() {
       }
     };
 
-    loadPageContent();
+   loadPageContent();
   }, []);
 
   return (
@@ -52,7 +54,7 @@ export default function HomePage() {
             locale={String(locale)}
           />
         ))}
-        {!contentBlocks.length && <FallBack source="home" />}
+        {showFallback && <FallBack source="home" />}
       </section>
     </main>
   );

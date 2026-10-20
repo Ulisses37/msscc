@@ -10,11 +10,13 @@ import type { DbContentBlock } from '@/types/content';
 
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { FallBack } from '@/components/content/ContentFallBack';
 
 export default function SupportPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const locale = params?.locale;
 
@@ -42,7 +44,7 @@ export default function SupportPage() {
             locale={String(locale)}
           />
         ))}
-        {!contentBlocks.length && <FallBack source="support" />}
+        {showFallback && <FallBack source="support" />}
       </section>
 
       <DonationForm />

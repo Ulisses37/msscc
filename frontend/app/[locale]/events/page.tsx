@@ -14,6 +14,7 @@ import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer'
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Types
@@ -30,6 +31,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('events'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;
@@ -95,7 +97,7 @@ export default function EventsPage() {
           locale={String(locale)}
         />
       ))}
-      {!contentBlocks.length && <FallBack source="events" />}
+      {showFallback && <FallBack source="events" />}
     </section>
 
       {/* Header */}

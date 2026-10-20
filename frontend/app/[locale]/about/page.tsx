@@ -15,6 +15,7 @@ import type { DbContentBlock } from '@/types/content';
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { FallBack } from "@/components/content/ContentFallBack";
 
 interface BoardMember {
@@ -32,6 +33,7 @@ export default function AboutPage() {
   const [error, setError] = useState<string | null>(null);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('about'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const locale = params?.locale;
   const isJapanese = locale === 'ja';
@@ -107,7 +109,7 @@ export default function AboutPage() {
             locale={String(locale)}
           />
         ))}
-        {!contentBlocks.length && <FallBack source="about" />}
+        {showFallback && <FallBack source="about" />}
       </section>
 
       <div className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0">

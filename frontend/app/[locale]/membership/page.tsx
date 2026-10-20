@@ -23,6 +23,7 @@ import jaMessages from '@/messages/ja.json';
 import type { MembershipIdentity, MembershipPaymentSession } from '@/types/payment';
 
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { fetchPageContent, getCachedPageContent } from '@/utils/content';
 
 export default function MembershipPage() {
@@ -66,6 +67,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const sessionRequestVersion = useRef(0);
 
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const showFallback = useDelayedFallback(contentBlocks.length);
 
   const selectedOption =
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
@@ -196,7 +198,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
           />
         ))}
 
-        {!contentBlocks.length && <FallBack source="membership" />}
+        {showFallback && <FallBack source="membership" />}
       </section>
 
       {/* Printable membership form */}
