@@ -274,7 +274,7 @@ export default function VolunteerSignupsPage() {
                   backgroundColor: 'var(--color-white)',
                 }}
               >
-                <div>
+                <div className="min-w-0">
                   <p style={{
                     fontFamily: 'var(--font-body)',
                     fontSize: 'var(--fs-body-sm)',
@@ -300,6 +300,18 @@ export default function VolunteerSignupsPage() {
                   }}>
                     Status: {signup.status} · Signed up {formatDateTime(signup.submitted_at)}
                   </p>
+                  {signup.comments?.trim() && (
+                    <p style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: 'var(--fs-caption)',
+                      color: 'var(--color-gray-dark)',
+                      margin: 'var(--space-2) 0 0',
+                      whiteSpace: 'pre-wrap',
+                      overflowWrap: 'anywhere',
+                    }}>
+                      <strong>Comment:</strong> {signup.comments}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex gap-2 justify-center sm:justify-end">
