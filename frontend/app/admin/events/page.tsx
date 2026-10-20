@@ -333,6 +333,11 @@ export default function EventsPage() {
       const refreshedEventImages = await getEventImages(selectedEvent.id);
       setSelectedEventImages(refreshedEventImages);
 
+      // Reload the primary image so the form shows the one that was just saved.
+      const refreshedMedia = mediaAssetId
+        ? await getMediaAssetById(mediaAssetId).catch(() => undefined)
+        : undefined;
+
       // Update the list of events in the display after a save occurs
       setEvents((prevEvents) =>
         prevEvents.map((event) =>
@@ -368,6 +373,12 @@ export default function EventsPage() {
               startDatetime: data.startDatetime,
               endDatetime: data.endDatetime,
               mediaAssetId,
+              media: refreshedMedia?.file_url
+                ? {
+                    fileUrl: refreshedMedia.file_url,
+                    altText: refreshedMedia.alt_text_en,
+                  }
+                : currentEvent.media,
               sendVolunteerReminders: data.sendVolunteerReminders,
               thumbnailCrop: data.thumbnailCrop,
             }
