@@ -35,6 +35,7 @@ export interface VolunteerSignup {
   last_name: string;
   email: string;
   phone: string;
+  comments?: string | null;
   status: string;
   submitted_at: string;
 }

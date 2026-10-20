@@ -118,10 +118,13 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "phone",
+            "comments",
             "status",
             "submitted_at",
         ]
         read_only_fields = ["volunteer_signup_id", "status", "submitted_at"]
+        # Keep this in step with the character limit on the signup form
+        extra_kwargs = {"comments": {"max_length": 500}}
 
 
 class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):
