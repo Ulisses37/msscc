@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
 import { formatLocalizedDate } from '@/utils/dateLocalization';
+import { getCropImageStyle } from '@/utils/thumbnailCrop';
 
 interface EventCardProps {
   event: Event;
@@ -45,7 +46,7 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <div
-      className="flex flex-col sm:flex-row"
+      className="flex shrink-0 flex-col sm:min-h-[264px] sm:flex-row"
       style={{
         border: '0.5px solid var(--color-gray-light)',
         borderRadius: 'var(--radius-md)',
@@ -56,15 +57,15 @@ export function EventCard({ event }: EventCardProps) {
     >
 
       {/* Image — links to event detail page */}
-      <Link href={eventUrl} className="w-full sm:w-auto" style={{ flexShrink: 0, position: 'relative', display: 'block' }}>
+      <Link href={eventUrl} className="h-[260px] w-full sm:h-auto sm:w-[400px]" style={{ flexShrink: 0, position: 'relative', display: 'block' }}>
         {event.media?.fileUrl ? (
+          // `fill` sizes the image to the box and cover crops it, so the image can't change the card's size
           <Image
             src={event.media.fileUrl}
             alt={event.media.altText ?? title}
-            width={400}
-            height={300}
-            className="w-full h-[260px] sm:w-[400px] sm:h-full"
-            style={{ objectFit: 'cover' }}
+            fill
+            sizes="(min-width: 640px) 400px, 100vw"
+            style={getCropImageStyle(event.thumbnailCrop)}
           />
         ) : (
           // Placeholder when no image is provided
@@ -133,6 +134,11 @@ export function EventCard({ event }: EventCardProps) {
             lineHeight: 1.3,
             overflowWrap: 'break-word',
             wordBreak: 'break-word',
+            // Cap long titles at two lines so they can't stretch the card
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
           }}
         >
           {title}
@@ -156,6 +162,11 @@ export function EventCard({ event }: EventCardProps) {
             color: 'var(--color-gray-dark)',
             margin: 0,
             lineHeight: 1.6,
+            // Cap at three lines for the same reason
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
           }}>
             {truncate(description)}
           </p>
