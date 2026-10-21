@@ -211,6 +211,11 @@ copy .env.example .env
 
 Open `.env` in VS Code and fill in the values. Active team members: see the shared OneDrive for development credentials. External replicators: supply your own database, storage, and API credentials.
 
+`FIELD_ENCRYPTION_KEYS` is required for encrypted database fields. Set it to a comma-separated
+Fernet keyring, with the active key first and prior keys after it. Generate and distribute keys
+through the team's approved secret-management process. Never reuse `DJANGO_SECRET_KEY`, commit
+an encryption key, or remove an old key until all stored values have been rotated.
+
 Run migrations and start the development server:
 
 ```powershell
