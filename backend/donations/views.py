@@ -1,10 +1,13 @@
 import logging
 
-from django.db import DatabaseError
+from django.core.exceptions import ImproperlyConfigured
+from django.db import DatabaseError, transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from config.encryption import EncryptedTextError
 from donations.models import AdminTableRevision, Donation, Membership
 from donations.serializers import DonationSerializer, MembershipSerializer
 
@@ -42,10 +45,54 @@ class AdminTableRevisionView(APIView):
         return Response(revisions)
 
 
-class DonationListCreateView(generics.ListCreateAPIView):
+class EncryptedPIIResponseMixin:
+    """Contain encryption failures before DRF or Django can log sensitive exceptions."""
+
+    def get_object(self):
+        """Do not let DRF turn an encrypted-field ValueError into a misleading 404."""
+        queryset = self.filter_queryset(self.get_queryset())
+        lookup = self.lookup_url_kwarg or self.lookup_field
+        obj = get_object_or_404(queryset, **{self.lookup_field: self.kwargs[lookup]})
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def perform_create(self, serializer):
+        """Roll back any failed encrypted write before handling the error."""
+        with transaction.atomic():
+            serializer.save()
+
+    def perform_update(self, serializer):
+        """Keep PII and non-PII updates together if field encryption fails."""
+        with transaction.atomic():
+            serializer.save()
+
+    def handle_exception(self, exc):
+        """Return a fixed error without attaching exception text or traceback to logs."""
+        if isinstance(exc, (EncryptedTextError, ImproperlyConfigured)):
+            logger.error("Encrypted record processing is temporarily unavailable.")
+            return Response(
+                {"detail": "Record processing is temporarily unavailable."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return super().handle_exception(exc)
+
+
+def filter_encrypted_email(queryset, field_name, email):
+    """Preserve exact email lookup without querying randomized ciphertext."""
+    expected = email.casefold()
+    matches = [
+        record.pk
+        for record in queryset.only("pk", field_name).iterator()
+        if (getattr(record, field_name) or "").casefold() == expected
+    ]
+    return queryset.filter(pk__in=matches)
+
+
+class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIView):
     """List donation records or create a new donation."""
 
     serializer_class = DonationSerializer
+    permission_classes = [permissions.IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""
@@ -58,11 +105,11 @@ class DonationListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-    # def get_permissions(self):
-    #     """Allow public donations while protecting the donor list."""
-    #     if self.request.method == "POST":
-    #         return [permissions.AllowAny()]
-    #     return [permissions.IsAdminUser()]
+    def get_permissions(self):
+        """Allow public creation while restricting donor records to admins."""
+        if self.request.method == "POST":
+            return [permissions.AllowAny()]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = Donation.objects.all()
@@ -71,17 +118,17 @@ class DonationListCreateView(generics.ListCreateAPIView):
         payment_status = self.request.query_params.get("payment_status")
         reference_id = self.request.query_params.get("reference_id")
 
-        if donor_email:
-            queryset = queryset.filter(donor_email__iexact=donor_email)
         if payment_status:
             queryset = queryset.filter(payment_status__iexact=payment_status)
         if reference_id:
             queryset = queryset.filter(reference_id=reference_id)
+        if donor_email:
+            queryset = filter_encrypted_email(queryset, "donor_email_encrypted", donor_email)
 
         return queryset.order_by("-donation_date", "-created_at", "donation_id")
 
 
-class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
+class DonationDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a single donation record."""
 
     queryset = Donation.objects.all()
@@ -90,10 +137,11 @@ class DonationDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAdminUser]
 
 
-class MembershipListCreateView(generics.ListCreateAPIView):
+class MembershipListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIView):
     """List membership records; only admins can create manual records."""
 
     serializer_class = MembershipSerializer
+    permission_classes = [permissions.IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         """Never expose a database exception or claim a failed creation succeeded."""
@@ -107,13 +155,6 @@ class MembershipListCreateView(generics.ListCreateAPIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-    def get_permissions(self):
-        # Until the verified-payment lifecycle creates pending memberships,
-        # public callers cannot submit an active record or a paid amount.
-        if self.request.method == "POST":
-            return [permissions.IsAdminUser()]
-        return super().get_permissions()
-
     def get_queryset(self):
         queryset = Membership.objects.all()
 
@@ -123,8 +164,6 @@ class MembershipListCreateView(generics.ListCreateAPIView):
         membership_type = self.request.query_params.get("membership_type")
         reference_id = self.request.query_params.get("reference_id")
 
-        if email:
-            queryset = queryset.filter(email__iexact=email)
         if payment_status:
             queryset = queryset.filter(payment_status__iexact=payment_status)
         if status:
@@ -133,11 +172,13 @@ class MembershipListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(membership_type__iexact=membership_type)
         if reference_id:
             queryset = queryset.filter(reference_id=reference_id)
+        if email:
+            queryset = filter_encrypted_email(queryset, "email_encrypted", email)
 
         return queryset.order_by("-start_date", "-created_at", "membership_id")
 
 
-class MembershipDetailView(generics.RetrieveUpdateDestroyAPIView):
+class MembershipDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a single membership record."""
 
     queryset = Membership.objects.all()

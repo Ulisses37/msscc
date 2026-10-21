@@ -55,8 +55,8 @@ class Donation(models.Model):
         ]
 
     def __str__(self):
-        """Return a readable donor summary for admin screens."""
-        return f"{self.donor_first_name} {self.donor_last_name} - {self.amount}"
+        """Identify the donation without exposing PII in incidental logging."""
+        return f"Donation {self.pk} - {self.amount}"
 
 
 class Membership(models.Model):
@@ -103,8 +103,8 @@ class Membership(models.Model):
         verbose_name_plural = "Memberships"
 
     def __str__(self):
-        """Return a readable member summary for admin screens."""
-        return f"{self.first_name} {self.last_name} - {self.membership_type}"
+        """Identify the membership without exposing PII in incidental logging."""
+        return f"Membership {self.pk} - {self.membership_type}"
 
 
 class AdminTableRevision(models.Model):

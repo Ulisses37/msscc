@@ -345,8 +345,8 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         member = Membership.objects.get()
-        self.assertEqual(member.first_name, "O'Connor")
-        self.assertEqual(member.last_name, "Anne-Marie 日本")
+        self.assertEqual(member.first_name_encrypted, "O'Connor")
+        self.assertEqual(member.last_name_encrypted, "Anne-Marie 日本")
 
     def test_sql_like_input_in_every_membership_text_field_is_only_data(self):
         # A quoted Boolean condition plus a SQL comment is valid free text.
@@ -361,7 +361,10 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
                 )
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
                 member = Membership.objects.get(pk=response.data["membership_id"])
-                self.assertEqual(getattr(member, field), payload)
+                stored_field = f"{field}_encrypted" if field in (
+                    "first_name", "last_name", "phone"
+                ) else field
+                self.assertEqual(getattr(member, stored_field), payload)
         self.assertEqual(Membership.objects.count(), 8)
         self.assertFalse(Membership.objects.filter(status="active").exists())
 
@@ -478,7 +481,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         donation = Donation.objects.get()
         self.assertEqual(donation.message, message)
-        self.assertEqual(donation.donor_first_name, "O'Connor")
+        self.assertEqual(donation.donor_first_name_encrypted, "O'Connor")
         self.assertEqual(donation.payment_status, Donation.PaymentStatus.PENDING)
         self.assertEqual(donation.reference_id, f"DON-{donation.pk:08d}")
 
@@ -497,7 +500,8 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
                 )
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
                 donation = Donation.objects.get(pk=response.data["donation_id"])
-                self.assertEqual(getattr(donation, field), payload)
+                stored_field = f"{field}_encrypted" if field != "message" else field
+                self.assertEqual(getattr(donation, stored_field), payload)
                 self.assertEqual(donation.payment_status, Donation.PaymentStatus.PENDING)
         self.assertEqual(Donation.objects.count(), 3)
 
@@ -509,7 +513,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         self.assertEqual(Donation.objects.count(), 3)
 
         # Exact ORM filtering must not expose those three rows to a malicious
-        # email or reference query, even though public donation GET is enabled.
+        # email or reference query through the authenticated record API.
         for field in ("donor_email", "reference_id"):
             with self.subTest(lookup=field):
                 response = self.client.get("/api/donations/", {field: "' OR 1=1 --"})

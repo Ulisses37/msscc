@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -162,7 +163,9 @@ export default function AdminDonationsPage() {
     const fetchDonations = useCallback(async () => {
       setError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/`, {
+          headers: getAdminRequestHeaders(),
+        });
         if (!response.ok) {
           throw new Error('Failed to load donation list.');
         }

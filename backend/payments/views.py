@@ -3,6 +3,7 @@ import re
 
 import stripe
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
 from django.utils import timezone
 from rest_framework import permissions, status
@@ -206,7 +207,7 @@ class MembershipPaymentSessionCreateView(APIView):
                 {"detail": "Payment processing is temporarily unavailable."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        except (stripe.StripeError, RuntimeError, ValueError):
+        except (stripe.StripeError, RuntimeError, ValueError, ImproperlyConfigured):
             # Exception text and Stripe objects may contain sensitive details.
             logger.error("Unable to create membership payment session.")
             return Response(
@@ -330,7 +331,10 @@ class PaymentReceiptView(APIView):
             return Response(not_found, status=status.HTTP_404_NOT_FOUND)
         try:
             if MEMBERSHIP_REFERENCE_PATTERN.fullmatch(reference):
-                payment = Membership.objects.get(
+                payment = Membership.objects.defer(
+                    "first_name_encrypted", "last_name_encrypted", "email_encrypted",
+                    "phone_encrypted",
+                ).get(
                     checkout_reference=reference,
                     stripe_payment_intent_id__isnull=False,
                     payment_status=Membership.PaymentStatus.COMPLETED,
@@ -349,7 +353,10 @@ class PaymentReceiptView(APIView):
                     "membership_option": payment.membership_option_id,
                 }
             elif DONATION_REFERENCE_PATTERN.fullmatch(reference):
-                payment = Donation.objects.get(
+                payment = Donation.objects.defer(
+                    "donor_first_name_encrypted", "donor_last_name_encrypted",
+                    "donor_email_encrypted",
+                ).get(
                     reference_id=reference,
                     payment_status=Donation.PaymentStatus.COMPLETED,
                     completed_at__isnull=False,

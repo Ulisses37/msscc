@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
@@ -188,7 +189,10 @@ export default function AdminMembershipsPage() {
     setError(null);
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`,
+        { headers: getAdminRequestHeaders() },
+      );
       if (!response.ok) {
         throw new Error('Failed to load membership list.');
       }
