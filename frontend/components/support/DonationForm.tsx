@@ -6,8 +6,13 @@ import { useLocale, useTranslations } from 'next-intl';
 import { DonationSummary } from '@/components/support/DonationSummary';
 import { PaymentReceipt } from '@/components/payments/PaymentReceipt';
 import { StripePaymentElement } from '@/components/support/StripePaymentElement';
+import {
+  DEFAULT_DONATION_AMOUNT,
+  DONATION_PRESET_AMOUNTS,
+} from '@/constants/donationAmounts';
 import { subscribeToUpdates } from '@/services/emailService';
 import { createPaymentSession } from '@/services/paymentService';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const inputClassName =
   'mt-1 block w-full rounded-sm border border-msscc-gray-light px-3 py-2 text-sm text-msscc-gray-dark shadow-sm outline-none transition focus:border-msscc-teal focus:ring-2 focus:ring-msscc-teal/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60';
@@ -34,7 +39,11 @@ export function DonationForm() {
   const locale = useLocale();
 
   // Non-payment donation information remains in application state.
-  const [donation, setDonation] = useState('');
+  // The preset list is the single place to maintain suggested amounts. The
+  // separate selection tells us whether the text input represents a custom
+  // value, rather than inferring that from a coincidentally matching number.
+  const [selectedAmount, setSelectedAmount] = useState<string>(DEFAULT_DONATION_AMOUNT);
+  const [donation, setDonation] = useState(DEFAULT_DONATION_AMOUNT);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -45,7 +54,7 @@ export function DonationForm() {
   const [wantsUpdates, setWantsUpdates] = useState(false);
 
   // Values displayed in the existing donation summary.
-  const [summaryDonation, setSummaryDonation] = useState('');
+  const [summaryDonation, setSummaryDonation] = useState(DEFAULT_DONATION_AMOUNT);
   const [summaryEmail, setSummaryEmail] = useState('');
   const [summaryFirstName, setSummaryFirstName] = useState('');
   const [summaryLastName, setSummaryLastName] = useState('');
@@ -387,39 +396,125 @@ export function DonationForm() {
           )}
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
-          {t('donationAmount')}
-          <input
-            type="text"
-            name="donationAmount"
-            inputMode="decimal"
-            value={donation}
-            onChange={(event) => setDonation(event.target.value)}
-            onBlur={() => {
-              setDonationTouched(true);
-              setSummaryDonation(donation);
-            }}
-            placeholder={t('donationPlaceholder')}
-            disabled={!emailIsValid || fieldsAreLocked}
-            required
-            className={inputClassName}
-            aria-invalid={donationTouched && !donationIsValid}
-            aria-describedby={
-              donationTouched && !donationIsValid
-                ? 'donation-amount-error'
-                : undefined
-            }
-          />
+        <fieldset className="min-w-0" aria-describedby="donation-options-description">
+          <legend className="text-sm font-medium text-slate-700">
+            {t('donationAmount')}
+          </legend>
+          <p id="donation-options-description" className="mt-1 text-sm text-slate-600">
+            {t('donationOptionsDescription')}
+          </p>
 
-          {donationTouched && !donationIsValid && (
-            <p
-              id="donation-amount-error"
-              className="mt-1 text-sm text-red-600"
+          {/* Native radios share a name for arrow-key navigation and expose the
+              current choice to screen readers. Match the membership card grid,
+              including a single column on narrow screens. */}
+          <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2">
+            {DONATION_PRESET_AMOUNTS.map((amount) => {
+              const isSelected = selectedAmount === amount;
+
+              return (
+                <label
+                  key={amount}
+                  className={`flex min-w-0 max-w-full items-center gap-2 rounded-md border px-3 py-2.5 transition-colors ${
+                    isSelected
+                      ? 'border-pink-700 bg-pink-50 ring-1 ring-pink-700'
+                      : 'border-slate-300 bg-white hover:border-pink-500'
+                  } ${fieldsAreLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                >
+                  <input
+                    type="radio"
+                    name="donationOption"
+                    value={amount}
+                    checked={isSelected}
+                    onChange={() => {
+                      if (fieldsAreLocked) return;
+                      // Keep the existing summary and amount input synchronized
+                      // until the flow integration is completed in SCRUM-738.
+                      setSelectedAmount(amount);
+                      setDonation(amount);
+                      setSummaryDonation(amount);
+                      setDonationTouched(false);
+                    }}
+                    disabled={fieldsAreLocked}
+                    className="h-4 w-4 shrink-0 accent-pink-700"
+                  />
+                  <span className="min-w-0 break-words text-sm font-medium text-slate-800">
+                    {formatCurrency(Number(amount), locale === 'ja' ? 'ja-JP' : 'en-US')}
+                  </span>
+                </label>
+              );
+            })}
+
+            <label
+              className={`flex min-w-0 max-w-full items-center gap-2 rounded-md border px-3 py-2.5 transition-colors ${
+                selectedAmount === 'custom'
+                  ? 'border-pink-700 bg-pink-50 ring-1 ring-pink-700'
+                  : 'border-slate-300 bg-white hover:border-pink-500'
+              } ${fieldsAreLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
             >
-              {t('donationAmountError')}
-            </p>
+              <input
+                type="radio"
+                name="donationOption"
+                value="custom"
+                checked={selectedAmount === 'custom'}
+                onChange={() => {
+                  if (fieldsAreLocked) return;
+                  // Do not carry a previously selected preset into the custom
+                  // field as if the donor had typed it. This also prevents an
+                  // old preset from appearing in the review summary.
+                  setSelectedAmount('custom');
+                  setDonation('');
+                  setSummaryDonation('');
+                  setDonationTouched(false);
+                }}
+                disabled={fieldsAreLocked}
+                className="h-4 w-4 shrink-0 accent-pink-700"
+              />
+              <span className="min-w-0 break-words text-sm font-medium text-slate-800">
+                {t('customDonationOption')}
+              </span>
+            </label>
+          </div>
+
+          {selectedAmount === 'custom' && (
+            <div className="mt-3 min-w-0">
+              <label className="block text-sm font-medium text-slate-700">
+                {t('customDonationAmount')}
+                <input
+                  type="text"
+                  name="donationAmount"
+                  inputMode="decimal"
+                  value={donation}
+                  onChange={(event) => {
+                    setDonation(event.target.value);
+                    setSummaryDonation(event.target.value);
+                  }}
+                  onBlur={() => {
+                    setDonationTouched(true);
+                    setSummaryDonation(donation);
+                  }}
+                  placeholder={t('donationPlaceholder')}
+                  disabled={fieldsAreLocked}
+                  required
+                  className={inputClassName}
+                  aria-invalid={donationTouched && !donationIsValid}
+                  aria-describedby={
+                    donationTouched && !donationIsValid
+                      ? 'donation-amount-error'
+                      : undefined
+                  }
+                />
+              </label>
+
+              {/* Keep the error out of the label: assistive technology should
+                  announce it as a description, not rename the amount field. */}
+              {donationTouched && !donationIsValid && (
+                <p id="donation-amount-error" className="mt-1 text-sm text-red-600">
+                  {t('donationAmountError')}
+                </p>
+              )}
+            </div>
           )}
-        </label>
+        </fieldset>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
