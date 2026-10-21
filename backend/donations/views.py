@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from config.encryption import EncryptedTextError
 from donations.models import AdminTableRevision, Donation, Membership
 from donations.permissions import HasFinancialRecordPermission
+from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import DonationSerializer, MembershipSerializer
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,11 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
         if donor_email:
             queryset = filter_encrypted_email(queryset, "donor_email_encrypted", donor_email)
 
-        return queryset.order_by("-donation_date", "-created_at", "donation_id")
+        queryset = queryset.order_by("-donation_date", "-created_at", "donation_id")
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            queryset = search_encrypted_pii(queryset, search, DONATION_SEARCH_FIELDS)
+        return queryset
 
 
 class DonationDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestroyAPIView):
@@ -176,7 +181,13 @@ class MembershipListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPI
         if email:
             queryset = filter_encrypted_email(queryset, "email_encrypted", email)
 
-        return queryset.order_by("-start_date", "-created_at", "membership_id")
+        queryset = queryset.order_by("-start_date", "-created_at", "membership_id")
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            queryset = search_encrypted_pii(
+                queryset, search, MEMBERSHIP_SEARCH_FIELDS, "phone_encrypted",
+            )
+        return queryset
 
 
 class MembershipDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestroyAPIView):
