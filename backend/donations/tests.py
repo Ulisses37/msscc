@@ -323,6 +323,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         self.user = User.objects.create_user(
             email="secure-admin@example.com", password="TestPass123!",
             first_name="Admin", last_name="User", is_staff=True,
+            permissions_data={"Finances": True},
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)

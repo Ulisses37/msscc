@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from config.encryption import EncryptedTextError
 from donations.models import AdminTableRevision, Donation, Membership
+from donations.permissions import HasFinancialRecordPermission
 from donations.serializers import DonationSerializer, MembershipSerializer
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
     """List donation records or create a new donation."""
 
     serializer_class = DonationSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [HasFinancialRecordPermission]
 
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""
@@ -134,14 +135,14 @@ class DonationDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestr
     queryset = Donation.objects.all()
     serializer_class = DonationSerializer
     lookup_field = "donation_id"
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [HasFinancialRecordPermission]
 
 
 class MembershipListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIView):
     """List membership records; only admins can create manual records."""
 
     serializer_class = MembershipSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [HasFinancialRecordPermission]
 
     def create(self, request, *args, **kwargs):
         """Never expose a database exception or claim a failed creation succeeded."""
@@ -186,7 +187,7 @@ class MembershipDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDes
     lookup_field = "membership_id"
     # Do not let a public caller mark a membership paid/active or delete it
     # through the detail endpoint while the verified-payment flow is pending.
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [HasFinancialRecordPermission]
 
     def update(self, request, *args, **kwargs):
         """Return a controlled failure if a membership write does not complete."""

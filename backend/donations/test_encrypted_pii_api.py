@@ -32,7 +32,7 @@ class EncryptedPIIAPITests(TestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(
-            email="admin@example.test", is_staff=True,
+            email="admin@example.test", is_staff=True, permissions_data={"Finances": True},
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
@@ -143,18 +143,18 @@ class EncryptedPIIAPITests(TestCase):
             self.client.post(url, {**pii, **other}, format="json")
             record = model.objects.get()
             self.corrupt(record, f"{next(iter(pii))}_encrypted", "damaged")
-            for staff in (None, False):
+            for authenticated in (False, True):
                 client = APIClient()
-                if staff is False:
-                    self.user.is_staff = False
+                if authenticated:
+                    self.user.permissions_data = {"Finances": False}
                     client.force_authenticate(user=self.user)
                 for method, endpoint in (
                     ("get", url), ("get", f"{url}{record.pk}/"),
                     ("patch", f"{url}{record.pk}/"), ("delete", f"{url}{record.pk}/"),
                 ):
                     response = getattr(client, method)(endpoint)
-                    self.assertEqual(response.status_code, 401 if staff is None else 403)
-            self.user.is_staff = True
+                    self.assertEqual(response.status_code, 403 if authenticated else 401)
+            self.user.permissions_data = {"Finances": True}
 
     def test_malformed_and_tampered_ciphertext_fail_without_disclosure(self):
         for model, url, pii, other in self.cases:
