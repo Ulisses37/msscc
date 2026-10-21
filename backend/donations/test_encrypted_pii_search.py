@@ -30,10 +30,8 @@ class EncryptedPIISearchTests(TestCase):
         )
 
     def create_donation(self, **overrides):
-        """Keep conflicting legacy PII to detect accidental plaintext searching."""
+        """Create searchable encrypted donation PII and out-of-scope metadata."""
         data = {
-            "donor_first_name": "LegacyOnly", "donor_last_name": "OldOnly",
-            "donor_email": "legacy-only@example.test",
             "donor_first_name_encrypted": " Maya 松山 José ",
             "donor_last_name_encrypted": "ChenStraße",
             "donor_email_encrypted": "Maya.Private@example.test",
@@ -46,8 +44,7 @@ class EncryptedPIISearchTests(TestCase):
     def create_membership(self, **overrides):
         """Create membership PII with formatted phone and Unicode names."""
         data = {
-            "first_name": "LegacyOnly", "last_name": "OldOnly", "email": "legacy@example.test",
-            "phone": "000000", "first_name_encrypted": " Maya 松山 José ",
+            "first_name_encrypted": " Maya 松山 José ",
             "last_name_encrypted": "ChenStraße", "email_encrypted": "Maya.Private@example.test",
             "phone_encrypted": "+1 (916) 555-0123", "membership_type": "student",
             "amount_paid": 20, "start_date": date(2026, 10, 21),
@@ -74,9 +71,9 @@ class EncryptedPIISearchTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data[0]["membership_id"], self.member.pk)
 
-    def test_nonmatches_and_legacy_or_out_of_scope_values_do_not_match(self):
+    def test_nonmatches_and_out_of_scope_values_do_not_match(self):
         for _, _, url, _ in self.cases:
-            for query in ("absent-person", "LegacyOnly", "OldOnly", "ReferenceOnly",
+            for query in ("absent-person", "ReferenceOnly",
                           "MessageOnly", "NotesOnly", "000000", "---", "()"):
                 response = self.client.get(url, {"search": query})
                 self.assertEqual(response.status_code, 200)

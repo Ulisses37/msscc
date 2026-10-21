@@ -21,9 +21,9 @@ class DonationPaymentDataTests(TestCase):
 
     def create_donation(self, **overrides):
         data = {
-            "donor_first_name": "Test",
-            "donor_last_name": "Donor",
-            "donor_email": "test@example.com",
+            "donor_first_name_encrypted": "Test",
+            "donor_last_name_encrypted": "Donor",
+            "donor_email_encrypted": "test@example.com",
             "amount": Decimal("10.00"),
             "donation_date": date.today(),
             "is_anonymous": False,
@@ -301,8 +301,9 @@ class MembershipInputBoundaryTests(TestCase):
         from .models import Membership
 
         membership = Membership.objects.create(
-            first_name="O'Connor", last_name="Anne-Marie", email="member@example.com",
-            phone="555-0100", membership_type="student", amount_paid=Decimal("20.00"),
+            first_name_encrypted="O'Connor", last_name_encrypted="Anne-Marie",
+            email_encrypted="member@example.com", phone_encrypted="555-0100",
+            membership_type="student", amount_paid=Decimal("20.00"),
             start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
             payment_status="pending", reference_id="MEM-00000001", status="pending", notes="",
         )

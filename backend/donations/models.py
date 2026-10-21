@@ -16,9 +16,6 @@ class Donation(models.Model):
         CANCELED = "canceled", "Canceled"
 
     donation_id = models.AutoField(primary_key=True)
-    donor_first_name = models.CharField(max_length=255)
-    donor_last_name = models.CharField(max_length=255)
-    donor_email = models.EmailField()
     donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_email_encrypted = EncryptedTextField(null=True, blank=True)
@@ -69,10 +66,6 @@ class Membership(models.Model):
         CANCELED = "canceled", "Canceled"
 
     membership_id = models.AutoField(primary_key=True)
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=255)
     first_name_encrypted = EncryptedTextField(null=True, blank=True)
     last_name_encrypted = EncryptedTextField(null=True, blank=True)
     email_encrypted = EncryptedTextField(null=True, blank=True)

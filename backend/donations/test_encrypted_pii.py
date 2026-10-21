@@ -22,14 +22,11 @@ MEMBERSHIP_FIELDS = (
 
 
 class EncryptedPIIFieldTests(TestCase):
-    """Verify encrypted destination columns independently of legacy workflows."""
+    """Verify ciphertext storage and decrypted model values in the final schema."""
 
     def create_donation(self, **overrides):
-        """Create a valid legacy donation with optional encrypted destinations."""
+        """Create a donation with optional encrypted values."""
         data = {
-            "donor_first_name": "Legacy",
-            "donor_last_name": "Donor",
-            "donor_email": "legacy@example.test",
             "amount": Decimal("10.00"),
             "donation_date": date(2026, 10, 21),
             "is_anonymous": False,
@@ -39,12 +36,8 @@ class EncryptedPIIFieldTests(TestCase):
         return Donation.objects.create(**(data | overrides))
 
     def create_membership(self, **overrides):
-        """Create a valid legacy membership with optional encrypted destinations."""
+        """Create a membership with optional encrypted values."""
         data = {
-            "first_name": "Legacy",
-            "last_name": "Member",
-            "email": "legacy@example.test",
-            "phone": "555-0100",
             "membership_type": "individual",
             "amount_paid": Decimal("25.00"),
             "start_date": date(2026, 10, 21),
@@ -115,7 +108,7 @@ class EncryptedPIIFieldTests(TestCase):
                         record.save(update_fields=[field])
                         self.assert_encrypted_value(record, field, value)
 
-    def test_save_and_queryset_updates_preserve_legacy_and_non_pii_values(self):
+    def test_save_and_queryset_updates_preserve_non_pii_values(self):
         for factory, fields in (
             (self.create_donation, DONATION_FIELDS),
             (self.create_membership, MEMBERSHIP_FIELDS),

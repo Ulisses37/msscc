@@ -1,8 +1,6 @@
 from datetime import UTC, date, datetime
-from importlib import import_module
 from unittest.mock import patch
 
-from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import connection
@@ -69,10 +67,16 @@ class EncryptedPIIAPITests(TestCase):
             )
 
     def assert_storage(self, record, pii):
-        """Independently verify all selected PII fields and blank legacy columns."""
+        """Verify ciphertext storage and absence of legacy database columns."""
+        with connection.cursor() as cursor:
+            columns = {
+                column.name for column in connection.introspection.get_table_description(
+                    cursor, record._meta.db_table,
+                )
+            }
         for field, expected in pii.items():
-            raw = self.raw_values(record, [field, f"{field}_encrypted"])
-            self.assertEqual(raw[field], "")
+            self.assertNotIn(field, columns)
+            raw = self.raw_values(record, [f"{field}_encrypted"])
             ciphertext = raw[f"{field}_encrypted"]
             self.assertTrue(ciphertext.startswith("msscc:enc:v1:"))
             self.assertNotEqual(ciphertext, expected)
@@ -112,16 +116,12 @@ class EncryptedPIIAPITests(TestCase):
                 for field, value in updated.items():
                     self.assertEqual(response.data[field], value)
 
-    def test_existing_backfilled_records_serialize_from_encrypted_destinations(self):
-        migration = import_module("donations.migrations.0009_backfill_encrypted_pii")
+    def test_existing_encrypted_records_serialize_from_encrypted_fields(self):
         for model, url, pii, other in self.cases:
-            values = {**pii, **other}
+            values = {**{f"{field}_encrypted": value for field, value in pii.items()}, **other}
             if model is Donation:
                 values.update(donation_date=date(2026, 10, 21), reference_id="DON-00000001")
             record = model.objects.create(**values)
-            migration.backfill_encrypted_pii(apps, type("Editor", (), {"connection": connection})())
-            # Divergent legacy values prove that retrieval cannot read the old columns.
-            model.objects.filter(pk=record.pk).update(**{field: "stale" for field in pii})
             for endpoint in (url, f"{url}{record.pk}/"):
                 response = self.client.get(endpoint)
                 self.assertEqual(response.status_code, 200)
