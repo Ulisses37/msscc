@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from config.fields import EncryptedTextField
+
 
 class Donation(models.Model):
     """Donation record to store donation information."""
@@ -17,6 +19,9 @@ class Donation(models.Model):
     donor_first_name = models.CharField(max_length=255)
     donor_last_name = models.CharField(max_length=255)
     donor_email = models.EmailField()
+    donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_email_encrypted = EncryptedTextField(null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="usd")
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -68,6 +73,10 @@ class Membership(models.Model):
     last_name = models.CharField(max_length=255)
     email = models.EmailField()
     phone = models.CharField(max_length=255)
+    first_name_encrypted = EncryptedTextField(null=True, blank=True)
+    last_name_encrypted = EncryptedTextField(null=True, blank=True)
+    email_encrypted = EncryptedTextField(null=True, blank=True)
+    phone_encrypted = EncryptedTextField(null=True, blank=True)
     membership_type = models.CharField(max_length=255)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
     completed_at = models.DateTimeField(null=True, blank=True)
