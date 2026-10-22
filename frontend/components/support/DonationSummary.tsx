@@ -1,6 +1,8 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { isValidDonationAmount } from '@/constants/donationAmounts';
 
 interface DonationSummaryProps {
   donation: string;
@@ -30,20 +32,15 @@ export function DonationSummary({
   const t = useTranslations('SupportPage');
   const locale = useLocale();
 
-  const donationIsValid =
-    /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
+  // Use the same validity rule as checkout: the summary must not present an
+  // amount the API would reject as a payable total.
+  const donationIsValid = isValidDonationAmount(donation);
 
   const formattedDonation =
     donation === ''
       ? t('notProvided')
       : donationIsValid
-        ? new Intl.NumberFormat(
-            locale === 'ja' ? 'ja-JP' : 'en-US',
-            {
-              style: 'currency',
-              currency: 'USD',
-            },
-          ).format(Number(donation))
+        ? formatCurrency(Number(donation), locale === 'ja' ? 'ja-JP' : 'en-US')
         : t('invalidAmount');
 
   return (

@@ -9,6 +9,7 @@ import { StripePaymentElement } from '@/components/support/StripePaymentElement'
 import {
   DEFAULT_DONATION_AMOUNT,
   DONATION_PRESET_AMOUNTS,
+  isValidDonationAmount,
 } from '@/constants/donationAmounts';
 import { subscribeToUpdates } from '@/services/emailService';
 import { createPaymentSession } from '@/services/paymentService';
@@ -39,11 +40,11 @@ export function DonationForm() {
   const locale = useLocale();
 
   // Non-payment donation information remains in application state.
-  // The preset list is the single place to maintain suggested amounts. The
-  // separate selection tells us whether the text input represents a custom
-  // value, rather than inferring that from a coincidentally matching number.
-  const [selectedAmount, setSelectedAmount] = useState<string>(DEFAULT_DONATION_AMOUNT);
-  const [donation, setDonation] = useState(DEFAULT_DONATION_AMOUNT);
+  // The choice is the source of truth: a custom value is never inferred from
+  // its numeric similarity to a preset. Keep only the donor's custom entry in
+  // separate state so changing the preset catalog requires no form rewiring.
+  const [selectedAmount, setSelectedAmount] = useState<string | null>(DEFAULT_DONATION_AMOUNT);
+  const [customAmount, setCustomAmount] = useState('');
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -54,7 +55,6 @@ export function DonationForm() {
   const [wantsUpdates, setWantsUpdates] = useState(false);
 
   // Values displayed in the existing donation summary.
-  const [summaryDonation, setSummaryDonation] = useState(DEFAULT_DONATION_AMOUNT);
   const [summaryEmail, setSummaryEmail] = useState('');
   const [summaryFirstName, setSummaryFirstName] = useState('');
   const [summaryLastName, setSummaryLastName] = useState('');
@@ -79,6 +79,10 @@ export function DonationForm() {
 
   // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
+  // Snapshot the amount that was actually saved with the donation. If Stripe
+  // session creation fails, retry with this amount and the existing reference;
+  // changing either would cause the backend's amount comparison to reject it.
+  const [submittedAmount, setSubmittedAmount] = useState('');
 
   // Stripe uses this client secret to render the Payment Element.
   // This is not the Stripe account's secret API key.
@@ -100,6 +104,7 @@ export function DonationForm() {
     // late webhooks from the failed attempt cannot overwrite the new one.
     setClientSecret('');
     setSubmittedReference('');
+    setSubmittedAmount('');
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -110,6 +115,7 @@ export function DonationForm() {
   const handleStartNewAttempt = () => {
     setClientSecret('');
     setSubmittedReference('');
+    setSubmittedAmount('');
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -195,8 +201,15 @@ export function DonationForm() {
     email.trim(),
   );
 
-  const donationIsValid =
-    /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
+  // One effective amount feeds validation, the review summary, the donation
+  // record and Stripe session. A missing/unknown option cannot fall back to a
+  // previously entered amount, even if the UI normally starts with $5 selected.
+  const donation = selectedAmount === 'custom'
+    ? customAmount
+    : selectedAmount && DONATION_PRESET_AMOUNTS.some((amount) => amount === selectedAmount)
+      ? selectedAmount
+      : '';
+  const donationIsValid = isValidDonationAmount(donation);
 
   const formIsValid =
     emailIsValid &&
@@ -207,7 +220,9 @@ export function DonationForm() {
 
   // Lock the donation details after the database record is created.
   // This keeps the stored donation and Stripe session amounts consistent.
-  const fieldsAreLocked = submittedReference.length > 0;
+  // Freeze amount controls during the record request too: otherwise a click
+  // while awaiting POST could show a different amount from the submitted one.
+  const fieldsAreLocked = submittedReference.length > 0 || isSubmitting;
 
   /**
    * Create the donation record and prepare its Stripe Checkout Session.
@@ -233,6 +248,12 @@ export function DonationForm() {
 
     // If session creation previously failed, reuse the existing donation
     // reference instead of creating a duplicate donation record.
+    const amountForAttempt = submittedReference ? submittedAmount : donation;
+    if (!amountForAttempt) {
+      submissionInFlight.current = false;
+      setIsSubmitting(false);
+      return;
+    }
     let donationReference = submittedReference;
     let donationWasCreated = donationReference.length > 0;
 
@@ -249,7 +270,7 @@ export function DonationForm() {
               donor_first_name: firstName.trim(),
               donor_last_name: lastName.trim(),
               donor_email: email.trim().toLowerCase(),
-              amount: donation,
+              amount: amountForAttempt,
               is_anonymous: isAnonymous,
               message: message.trim(),
             }),
@@ -269,6 +290,7 @@ export function DonationForm() {
 
         donationReference = donationData.reference_id;
         donationWasCreated = true;
+        setSubmittedAmount(amountForAttempt);
         setSubmittedReference(donationReference);
       }
 
@@ -285,7 +307,7 @@ export function DonationForm() {
 
       // Use the reusable PR1 endpoint to create a Stripe Checkout Session.
       const paymentSession = await createPaymentSession({
-        amount: donation,
+        amount: amountForAttempt,
         currency: 'usd',
         paymentPurpose: 'Donation',
         internalReference: donationReference,
@@ -430,8 +452,6 @@ export function DonationForm() {
                       // Keep the existing summary and amount input synchronized
                       // until the flow integration is completed in SCRUM-738.
                       setSelectedAmount(amount);
-                      setDonation(amount);
-                      setSummaryDonation(amount);
                       setDonationTouched(false);
                     }}
                     disabled={fieldsAreLocked}
@@ -462,8 +482,7 @@ export function DonationForm() {
                   // field as if the donor had typed it. This also prevents an
                   // old preset from appearing in the review summary.
                   setSelectedAmount('custom');
-                  setDonation('');
-                  setSummaryDonation('');
+                  setCustomAmount('');
                   setDonationTouched(false);
                 }}
                 disabled={fieldsAreLocked}
@@ -483,14 +502,12 @@ export function DonationForm() {
                   type="text"
                   name="donationAmount"
                   inputMode="decimal"
-                  value={donation}
+                  value={customAmount}
                   onChange={(event) => {
-                    setDonation(event.target.value);
-                    setSummaryDonation(event.target.value);
+                    setCustomAmount(event.target.value);
                   }}
                   onBlur={() => {
                     setDonationTouched(true);
-                    setSummaryDonation(donation);
                   }}
                   placeholder={t('donationPlaceholder')}
                   disabled={fieldsAreLocked}
@@ -613,7 +630,7 @@ export function DonationForm() {
         </label>
 
         <DonationSummary
-          donation={summaryDonation}
+          donation={donation}
           email={summaryEmail}
           firstName={summaryFirstName}
           lastName={summaryLastName}
