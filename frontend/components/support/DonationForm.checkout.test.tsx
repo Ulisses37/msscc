@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
@@ -44,10 +44,21 @@ beforeEach(() => {
 afterEach(() => { global.fetch = originalFetch; });
 
 async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en.SupportPage) {
-  await user.type(screen.getByRole('textbox', { name: messages.email }), 'donor@example.com');
-  await user.type(screen.getByRole('textbox', { name: messages.firstName }), 'Ada');
-  await user.type(screen.getByRole('textbox', { name: messages.lastName }), 'Lovelace');
-  await user.type(screen.getByRole('textbox', { name: messages.address }), '123 Main St');
+  // Donor identity is a prerequisite, not the behavior under test here. One
+  // change per field avoids dozens of full-form renders for unrelated typing;
+  // the amount controls and checkout buttons still use real user events below.
+  fireEvent.change(screen.getByRole('textbox', { name: messages.email }), {
+    target: { value: 'donor@example.com' },
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: messages.firstName }), {
+    target: { value: 'Ada' },
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: messages.lastName }), {
+    target: { value: 'Lovelace' },
+  });
+  fireEvent.change(screen.getByRole('textbox', { name: messages.address }), {
+    target: { value: '123 Main St' },
+  });
 }
 
 function reviewAmount(messages = en.SupportPage) {
