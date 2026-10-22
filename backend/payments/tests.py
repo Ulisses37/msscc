@@ -29,8 +29,8 @@ class PaymentReceiptTests(TestCase):
         self.membership_reference = "MEM-" + "a" * 32
         self.completed_at = datetime(2026, 10, 10, 15, 30, tzinfo=UTC)
         self.donation = Donation.objects.create(
-            donor_first_name="Maya", donor_last_name="Chen",
-            donor_email="private@example.com", amount=Decimal("12.50"),
+            donor_first_name_encrypted="Maya", donor_last_name_encrypted="Chen",
+            donor_email_encrypted="private@example.com", amount=Decimal("12.50"),
             donation_date=date(2026, 10, 1), is_anonymous=False,
             message="private donor message is not a purpose",
             reference_id=self.donation_reference,
@@ -38,8 +38,9 @@ class PaymentReceiptTests(TestCase):
             completed_at=self.completed_at,
         )
         self.membership = Membership.objects.create(
-            first_name="Maya", last_name="Chen", email="member@example.com",
-            phone="private phone", membership_type="student",
+            first_name_encrypted="Maya", last_name_encrypted="Chen",
+            email_encrypted="member@example.com", phone_encrypted="private phone",
+            membership_type="student",
             membership_option_id="student", amount_paid=Decimal("20.00"),
             currency="usd", expected_amount=Decimal("20.00"),
             start_date=date(2026, 10, 10), end_date=date(2027, 10, 9),
@@ -148,7 +149,8 @@ class MembershipPaymentStatusSmokeTests(TestCase):
     def setUp(self):
         self.reference = "MEM-" + "a" * 32
         self.member = Membership.objects.create(
-            first_name="Maya", last_name="Chen", email="maya@example.com", phone="",
+            first_name_encrypted="Maya", last_name_encrypted="Chen",
+            email_encrypted="maya@example.com", phone_encrypted="",
             membership_type="student", amount_paid=0, start_date=date(2025, 1, 1),
             end_date=date(2025, 1, 1), renewal_date=date(2025, 1, 1),
             payment_status=Membership.PaymentStatus.PENDING, status="pending", notes="",
@@ -278,10 +280,10 @@ class MembershipPaymentSessionTests(TestCase):
                 self.assertEqual(membership.amount_paid, 0)
                 self.assertEqual(membership.expected_amount, Decimal(cents) / 100)
                 self.assertEqual(membership.currency, "usd")
-                self.assertEqual(membership.email, "maya@example.com")
-                self.assertEqual(membership.first_name, "Maya")
-                self.assertEqual(membership.last_name, "Chen")
-                self.assertEqual(membership.phone, "555-0100")
+                self.assertEqual(membership.email_encrypted, "maya@example.com")
+                self.assertEqual(membership.first_name_encrypted, "Maya")
+                self.assertEqual(membership.last_name_encrypted, "Chen")
+                self.assertEqual(membership.phone_encrypted, "555-0100")
                 self.assertEqual(membership.reference_id, membership.checkout_reference)
                 self.assertIsNotNone(membership.created_at)
                 self.assertIsNotNone(membership.updated_at)
@@ -418,8 +420,9 @@ class MembershipPaymentSessionTests(TestCase):
 
     def test_stripe_intent_identifier_has_database_uniqueness(self):
         # Manual records have no Stripe ID; multiple NULLs must remain valid.
-        base = dict(first_name="Maya", last_name="Chen", email="maya@example.com",
-                    phone="", membership_type="student", amount_paid=0,
+        base = dict(first_name_encrypted="Maya", last_name_encrypted="Chen",
+                    email_encrypted="maya@example.com", phone_encrypted="",
+                    membership_type="student", amount_paid=0,
                     start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
                     reference_id="manual", status="pending", notes="")
         Membership.objects.create(**base, stripe_payment_intent_id="pi_unique")
@@ -433,8 +436,9 @@ class MembershipPaymentSessionTests(TestCase):
     def test_checkout_reference_has_database_uniqueness(self):
         # Admin-entered reference_id remains non-unique for historical rows;
         # checkout_reference is the strict key used to find a paid member.
-        base = dict(first_name="Maya", last_name="Chen", email="maya@example.com",
-                    phone="", membership_type="student", amount_paid=0,
+        base = dict(first_name_encrypted="Maya", last_name_encrypted="Chen",
+                    email_encrypted="maya@example.com", phone_encrypted="",
+                    membership_type="student", amount_paid=0,
                     start_date=date.today(), end_date=date.today(), renewal_date=date.today(),
                     reference_id="manual", status="pending", notes="")
         Membership.objects.create(**base, checkout_reference="MEM-unique")
@@ -481,9 +485,9 @@ class SecurePaymentDatabaseTests(TestCase):
     def create_donation(self, **overrides):
         """Create a valid Donation while allowing one field to vary per test."""
         data = {
-            "donor_first_name": "Test",
-            "donor_last_name": "Donor",
-            "donor_email": "test@example.com",
+            "donor_first_name_encrypted": "Test",
+            "donor_last_name_encrypted": "Donor",
+            "donor_email_encrypted": "test@example.com",
             "amount": Decimal("10.00"),
             "donation_date": date.today(),
             "is_anonymous": False,
@@ -564,7 +568,7 @@ class SecurePaymentDatabaseTests(TestCase):
         self.assertEqual(donation.payment_status, Donation.PaymentStatus.FAILED)
         self.assertEqual(donation.amount, Decimal("10.00"))
         self.assertEqual(donation.message, "Keep this message")
-        self.assertEqual(donation.donor_email, "test@example.com")
+        self.assertEqual(donation.donor_email_encrypted, "test@example.com")
 
     def test_completed_donation_cannot_be_downgraded(self):
         """A late failure event cannot undo a confirmed successful payment."""
@@ -730,14 +734,14 @@ class PaymentSecurityRegressionTests(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.donation = Donation.objects.create(
-            donor_first_name="O'Connor", donor_last_name="Anne-Marie",
-            donor_email="member@example.com", amount=Decimal("10.00"),
+            donor_first_name_encrypted="O'Connor", donor_last_name_encrypted="Anne-Marie",
+            donor_email_encrypted="member@example.com", amount=Decimal("10.00"),
             donation_date=date.today(), is_anonymous=False, message="A normal message",
             reference_id="DON-00000001",
         )
         self.other = Donation.objects.create(
-            donor_first_name="Other", donor_last_name="Person",
-            donor_email="other@example.com", amount=Decimal("20.00"),
+            donor_first_name_encrypted="Other", donor_last_name_encrypted="Person",
+            donor_email_encrypted="other@example.com", amount=Decimal("20.00"),
             donation_date=date.today(), is_anonymous=False, message="Unrelated",
             reference_id="DON-00000002",
         )

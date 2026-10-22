@@ -38,7 +38,9 @@ def update_membership_from_payment_intent(
     with transaction.atomic():
         # Both keys must identify the same checkout; the unique reference is
         # locked so concurrent deliveries cannot each activate the member.
-        membership = Membership.objects.select_for_update().get(
+        membership = Membership.objects.select_for_update().defer(
+            "first_name_encrypted", "last_name_encrypted", "email_encrypted", "phone_encrypted"
+        ).get(
             checkout_reference=reference, stripe_payment_intent_id=intent_id
         )
         target = status_by_event[event_type]
@@ -104,7 +106,8 @@ def create_pending_membership(*, option_id, first_name, last_name, email, phone=
             # Historical records require dates; these are provisional and do not
             # confer membership time or activation until the verified webhook.
             membership = Membership.objects.create(
-                first_name=first_name, last_name=last_name, email=email, phone=phone,
+                first_name_encrypted=first_name, last_name_encrypted=last_name,
+                email_encrypted=email, phone_encrypted=phone,
                 membership_type=option_id, membership_option_id=option_id,
                 amount_paid=0, expected_amount=amount, currency="usd",
                 start_date=today, end_date=today, renewal_date=today,

@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+from config.fields import EncryptedTextField
+
 
 class Donation(models.Model):
     """Donation record to store donation information."""
@@ -14,9 +16,9 @@ class Donation(models.Model):
         CANCELED = "canceled", "Canceled"
 
     donation_id = models.AutoField(primary_key=True)
-    donor_first_name = models.CharField(max_length=255)
-    donor_last_name = models.CharField(max_length=255)
-    donor_email = models.EmailField()
+    donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_email_encrypted = EncryptedTextField(null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="usd")
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -50,8 +52,8 @@ class Donation(models.Model):
         ]
 
     def __str__(self):
-        """Return a readable donor summary for admin screens."""
-        return f"{self.donor_first_name} {self.donor_last_name} - {self.amount}"
+        """Identify the donation without exposing PII in incidental logging."""
+        return f"Donation {self.pk} - {self.amount}"
 
 
 class Membership(models.Model):
@@ -64,10 +66,10 @@ class Membership(models.Model):
         CANCELED = "canceled", "Canceled"
 
     membership_id = models.AutoField(primary_key=True)
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=255)
+    first_name_encrypted = EncryptedTextField(null=True, blank=True)
+    last_name_encrypted = EncryptedTextField(null=True, blank=True)
+    email_encrypted = EncryptedTextField(null=True, blank=True)
+    phone_encrypted = EncryptedTextField(null=True, blank=True)
     membership_type = models.CharField(max_length=255)
     amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -94,8 +96,8 @@ class Membership(models.Model):
         verbose_name_plural = "Memberships"
 
     def __str__(self):
-        """Return a readable member summary for admin screens."""
-        return f"{self.first_name} {self.last_name} - {self.membership_type}"
+        """Identify the membership without exposing PII in incidental logging."""
+        return f"Membership {self.pk} - {self.membership_type}"
 
 
 class AdminTableRevision(models.Model):

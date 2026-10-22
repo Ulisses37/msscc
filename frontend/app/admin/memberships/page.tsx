@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
@@ -18,20 +19,6 @@ type SortColumn =
   | "payment_status"
   | "start_date"
   | "end_date";
-
-// Only these record fields are included in the membership search. Keeping the
-// list separate makes it clear which API values can produce a table match.
-const searchableMembershipFields: (keyof MembershipEntry)[] = [
-  "first_name",
-  "last_name",
-  "email",
-  "phone",
-  "membership_type",
-  "payment_status",
-  "reference_id",
-  "status",
-  "notes",
-];
 
 // This ordered catalog supplies both the field checkboxes and the exported column headings.
 // keyof keeps every selectable field tied to an actual value returned by the membership API.
@@ -147,6 +134,7 @@ export default function AdminMembershipsPage() {
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
   // Controlled input state keeps the visible search value and table filter in sync.
   const [searchQuery, setSearchQuery] = useState("");
+  const requestVersion = useRef(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -185,45 +173,25 @@ export default function AdminMembershipsPage() {
   };
 
   const fetchMemberships = useCallback(async () => {
+    const version = ++requestVersion.current;
     setError(null);
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`);
-      if (!response.ok) {
-        throw new Error('Failed to load membership list.');
-      }
-      const items = (await response.json()) as MembershipEntry[];
-
-      setMembershipItems(items);
+      const items = await fetchFinancialRecords<MembershipEntry>('memberships', searchQuery);
+      if (version === requestVersion.current) setMembershipItems(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load membership list.');
+      if (version === requestVersion.current) {
+        setError(err instanceof Error ? err.message : 'Unable to load membership list.');
+      }
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
-  }, []);
+  }, [searchQuery]);
 
   useVisibleTableRevisionPolling('memberships', fetchMemberships, 3000);
 
-  // Filter before sorting and pagination so every page and export operates on
-  // the same case-insensitive set of matching membership records.
-  const filteredMembershipItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-
-    // An empty (or whitespace-only) search restores the complete table.
-    if (!normalizedQuery) {
-      return membershipItems;
-    }
-
-    return membershipItems.filter((membership) => {
-      const searchableValues = searchableMembershipFields.map((field) => membership[field]);
-      // Also support searches such as "Jane Doe" across the two name fields.
-      searchableValues.push(`${membership.first_name} ${membership.last_name}`);
-
-      return searchableValues.some((value) =>
-        String(value ?? "").toLocaleLowerCase().includes(normalizedQuery),
-      );
-    });
-  }, [membershipItems, searchQuery]);
+  // Matching happens only in the authorized backend; sorting and export use its results.
+  const filteredMembershipItems = membershipItems;
 
   const sortedMembershipItems = useMemo(() => {
     if (sortColumn === null) {
@@ -355,7 +323,11 @@ export default function AdminMembershipsPage() {
   }, []);
 
   useEffect(() => {
-    void fetchMemberships();
+    const timer = setTimeout(() => void fetchMemberships(), 300);
+    return () => {
+      clearTimeout(timer);
+      requestVersion.current += 1;
+    };
   }, [fetchMemberships]);
 
   useEffect(() => {
@@ -367,7 +339,7 @@ export default function AdminMembershipsPage() {
     }
   }, [currentPage, totalPages]);
 
-  const hasMemberships = membershipItems.length > 0;
+  const hasMemberships = membershipItems.length > 0 || Boolean(searchQuery);
   const hasSearchResults = sortedMembershipItems.length > 0;
 
   return(
@@ -380,7 +352,7 @@ export default function AdminMembershipsPage() {
         {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
         {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}
-        {!isLoading && hasMemberships && (
+        {hasMemberships && (
           <>
             {/* Stack search and export controls on small screens, then align them on wider screens. */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -403,6 +375,9 @@ export default function AdminMembershipsPage() {
                     className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
                   />
                 </div>
+                <p className="mt-1 text-body-sm text-msscc-gray-mid">
+                  Search by name, email, or phone. Up to 100 matches are shown and exported.
+                </p>
               </div>
               {/* The shared menu connects format/field controls to this page's membership export handler. */}
               <DataExportMenu

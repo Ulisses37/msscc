@@ -21,7 +21,8 @@ class MembershipWebhookTests(TestCase):
         self.factory = APIRequestFactory()
         # These dates satisfy legacy required fields; they are not paid time.
         self.member = Membership.objects.create(
-            first_name="Maya", last_name="Chen", email="maya@example.com", phone="",
+            first_name_encrypted="Maya", last_name_encrypted="Chen",
+            email_encrypted="maya@example.com", phone_encrypted="",
             membership_type="student", membership_option_id="student", amount_paid=0,
             expected_amount=Decimal("20.00"), currency="usd", start_date=date(2025, 1, 1),
             end_date=date(2025, 1, 1), renewal_date=date(2025, 1, 1),

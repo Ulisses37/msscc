@@ -8,6 +8,10 @@ from .models import Donation, Membership
 class DonationSerializer(serializers.ModelSerializer):
     """Serializer for donation records."""
 
+    donor_first_name = serializers.CharField(source="donor_first_name_encrypted", max_length=255)
+    donor_last_name = serializers.CharField(source="donor_last_name_encrypted", max_length=255)
+    donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
+
     class Meta:
         model = Donation
         fields = [
@@ -83,6 +87,11 @@ class DonationSerializer(serializers.ModelSerializer):
 class MembershipSerializer(serializers.ModelSerializer):
     """Serializer for membership records."""
 
+    first_name = serializers.CharField(source="first_name_encrypted", max_length=255)
+    last_name = serializers.CharField(source="last_name_encrypted", max_length=255)
+    email = serializers.EmailField(source="email_encrypted", max_length=254)
+    phone = serializers.CharField(source="phone_encrypted", max_length=255)
+
     class Meta:
         model = Membership
         fields = [
@@ -106,7 +115,7 @@ class MembershipSerializer(serializers.ModelSerializer):
         # This serializer is for authorized manual records; public checkout
         # must use the separate membership payment-session endpoint.
         # Keep Stripe linkage and server pricing outside the manual-record API,
-        # including its public list response; only the checkout service writes them.
+        # including its admin list response; only the checkout service writes them.
         read_only_fields = ["membership_id", "created_at", "updated_at"]
         # The model defaults pending for checkout-created rows; manual admin
         # submissions retain their existing explicit-status API contract.
