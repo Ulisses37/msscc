@@ -123,6 +123,41 @@ it('discards an older custom amount when switching back to a preset', async () =
   await expectCheckout(user, '25');
 });
 
+it('clears an invalid custom error when a preset replaces it and submits only the preset', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
+  const customInput = screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount });
+  await user.type(customInput, '1.234');
+  await user.click(screen.getByRole('textbox', { name: en.SupportPage.firstName }));
+  expect(customInput).toHaveAttribute('aria-invalid', 'true');
+  expect(screen.getByText(en.SupportPage.donationAmountError)).toBeInTheDocument();
+  expect(reviewAmount()).toHaveTextContent(en.SupportPage.invalidAmount);
+
+  // Leaving a rejected custom entry must not poison the next choice: the
+  // summary and both independent payment requests now belong to the preset.
+  await user.click(screen.getByRole('radio', { name: formatCurrency(10) }));
+  expect(screen.queryByText(en.SupportPage.donationAmountError)).not.toBeInTheDocument();
+  expect(screen.queryByRole('textbox', { name: en.SupportPage.customDonationAmount })).not.toBeInTheDocument();
+  await expectCheckout(user, '10');
+});
+
+it('clears a previously valid custom value when custom is selected again', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
+  await user.type(screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount }), '17.25');
+  await user.click(screen.getByRole('radio', { name: formatCurrency(25) }));
+  await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
+  expect(screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount })).toHaveValue('');
+  expect(reviewAmount()).toHaveTextContent(en.SupportPage.notProvided);
+  expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeDisabled();
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(createPaymentSession).not.toHaveBeenCalled();
+});
+
 it.each(['', '0', '-1', '1.234', 'abc', '100000000']) (
   'blocks empty or invalid custom amount %j before either request', async (amount) => {
     const user = userEvent.setup();
@@ -181,6 +216,30 @@ it('freezes the amount during record creation and reuses the same amount and ref
     amount: '25', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
   });
   expect(reviewAmount()).toHaveTextContent(formatCurrency(25));
+});
+
+it('keeps an entered custom amount locked when payment-session creation fails', async () => {
+  const user = userEvent.setup();
+  jest.mocked(createPaymentSession).mockRejectedValueOnce(new Error('Payment unavailable'));
+  render(<DonationForm />);
+  await fillDonor(user);
+  await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
+  const customInput = screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount });
+  await user.type(customInput, '32.75');
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await screen.findByText(en.SupportPage.paymentSessionError);
+  expect(customInput).toBeDisabled();
+  expect(customInput).toHaveValue('32.75');
+  expect(screen.getAllByRole('radio').every((radio) => (radio as HTMLInputElement).disabled)).toBe(true);
+  expect(reviewAmount()).toHaveTextContent(formatCurrency(32.75));
+  // The retry creates a session for the existing record, not a new record
+  // using some other selection or an edited custom field.
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(2));
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  expect(createPaymentSession).toHaveBeenNthCalledWith(2, {
+    amount: '32.75', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
+  });
 });
 
 it('unlocks amount controls only when editing details with a new donation attempt', async () => {

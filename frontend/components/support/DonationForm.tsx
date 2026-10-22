@@ -449,8 +449,9 @@ export function DonationForm() {
                     checked={isSelected}
                     onChange={() => {
                       if (fieldsAreLocked) return;
-                      // Keep the existing summary and amount input synchronized
-                      // until the flow integration is completed in SCRUM-738.
+                      // The chosen preset is the effective amount; deriving
+                      // the summary and both requests from it prevents a stale
+                      // custom entry from reaching checkout.
                       setSelectedAmount(amount);
                       setDonationTouched(false);
                     }}
