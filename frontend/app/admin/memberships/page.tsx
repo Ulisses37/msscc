@@ -374,12 +374,10 @@ export default function AdminMembershipsPage() {
                     placeholder="Search memberships..."
                     className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
                   />
-                  {searchQuery.trim() && (
-                    <p className="text-body-sm text-msscc-gray-mid">
-                      Search by name, email, or phone. Up to 100 matches are shown and exported.
-                    </p>
-                  )}
                 </div>
+                <p className="mt-1 text-body-sm text-msscc-gray-mid">
+                  Search by name, email, or phone. Up to 100 matches are shown and exported.
+                </p>
               </div>
               {/* The shared menu connects format/field controls to this page's membership export handler. */}
               <DataExportMenu
