@@ -7,7 +7,10 @@ import { NextIntlClientProvider } from 'next-intl';
 
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
-import { FallBack } from '@/components/content/ContentFallBack';
+import {
+  ContentLoading,
+  FallBack,
+} from '@/components/content/ContentFallBack';
 
 type Locale = 'en' | 'ja';
 type FallbackSource = 'home' | 'about' | 'partners' | 'membership' | 'events' | 'support';
@@ -78,5 +81,21 @@ describe('ContentFallBack localization', () => {
     expect(screen.getByText(getMessageValue(jaMessages.ContentFallback, headingKey))).toBeInTheDocument();
     expect(screen.getByText(jaMessages.ContentFallback.noticeHeading)).toBeInTheDocument();
     expect(screen.getByAltText(jaMessages.ContentFallback.illustrationAlt)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['en', enMessages.ContentFallback.loading],
+    ['ja', jaMessages.ContentFallback.loading],
+  ] as const)('renders the localized loading message in %s', (locale, loadingMessage) => {
+    render(
+      <NextIntlClientProvider
+        locale={locale}
+        messages={messagesByLocale[locale]}
+      >
+        <ContentLoading />
+      </NextIntlClientProvider>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(loadingMessage);
   });
 });

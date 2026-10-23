@@ -356,6 +356,7 @@
   },
 
   "ContentFallback": {
+    "loading": "Loading...",
     "noticeHeading": "Our MSSCC website is currently being updated.",
     "noticeBody": "This is the MSSCC website! Thank you for visiting, and we ask for your patience while we work to update our content.",
     "illustrationAlt": "placeholder",

@@ -3,8 +3,10 @@
 import Image from 'next/image';
 import img from '@/assets/Placeholder.png';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
+import type { ContentDisplayState } from '@/hooks/useDelayedFallback';
 
-type FallbackSource = "home" | "about" | "partners" | "membership" | "events" | "support";
+export type FallbackSource = "home" | "about" | "partners" | "membership" | "events" | "support";
 
 function FallbackContent({ source }: { source: FallbackSource }) {
   const t = useTranslations('ContentFallback');
@@ -87,6 +89,44 @@ export function FallBack({ source }: { source: FallbackSource }) {
         <FallbackContent source={source} />
       </div>
     </section>
+  );
+}
+
+export function ContentLoading() {
+  const t = useTranslations('ContentFallback');
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="py-10 text-center font-body text-body text-msscc-gray-mid"
+    >
+      {t('loading')}
+    </div>
+  );
+}
+
+interface ContentStateTransitionProps {
+  state: ContentDisplayState;
+  source: FallbackSource;
+  children: ReactNode;
+}
+
+export function ContentStateTransition({
+  state,
+  source,
+  children,
+}: ContentStateTransitionProps) {
+  return (
+    <div key={state} className="content-state-fade-in">
+      {state === 'loading' ? (
+        <ContentLoading />
+      ) : state === 'fallback' ? (
+        <FallBack source={source} />
+      ) : (
+        children
+      )}
+    </div>
   );
 }
 

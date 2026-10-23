@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { NextIntlClientProvider, useMessages, useTranslations } from 'next-intl';
 
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
-import { FallBack } from '@/components/content/ContentFallBack';
+import { ContentStateTransition } from '@/components/content/ContentFallBack';
 import { MembershipForm } from '@/components/membership/MembershipForm';
 import { MembershipOptions } from '@/components/membership/MembershipOptions';
 import { MembershipPaymentElement } from '@/components/membership/MembershipPaymentElement';
@@ -67,7 +67,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const sessionRequestVersion = useRef(0);
 
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
-  const showFallback = useDelayedFallback(contentBlocks.length);
+  const contentDisplayState = useDelayedFallback(contentBlocks.length);
 
   const selectedOption =
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
@@ -190,15 +190,15 @@ function MembershipPageContent({ locale }: { locale: string }) {
           [&_h2]:text-[clamp(2rem,10vw,4rem)]
         "
       >
-        {contentBlocks.map((block) => (
-          <ContentBlockRenderer
-            key={block.content_id}
-            block={block}
-            locale={locale}
-          />
-        ))}
-
-        {showFallback && <FallBack source="membership" />}
+        <ContentStateTransition state={contentDisplayState} source="membership">
+          {contentBlocks.map((block) => (
+            <ContentBlockRenderer
+              key={block.content_id}
+              block={block}
+              locale={locale}
+            />
+          ))}
+        </ContentStateTransition>
       </section>
 
       {/* Printable membership form */}

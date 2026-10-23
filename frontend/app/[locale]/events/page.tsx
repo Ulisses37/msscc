@@ -10,7 +10,7 @@ import { EventCard } from '../../../components/events/EventCard';
 import Button from '@/components/ui/Button';
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import EventsCalendarView from '@/components/events/EventsCalendarView';
-import { FallBack } from '@/components/content/ContentFallBack';
+import { ContentStateTransition } from '@/components/content/ContentFallBack';
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
@@ -33,7 +33,7 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('events'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
-  const showFallback = useDelayedFallback(contentBlocks.length);
+  const contentDisplayState = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;
@@ -94,14 +94,15 @@ export default function EventsPage() {
 
     {/* Display Staff-Editable Content Blocks */}
     <section className="mb-10 space-y-6">
-      {contentBlocks.map((block) => (
-        <ContentBlockRenderer
-          key={block.content_id}
-          block={block}
-          locale={String(locale)}
-        />
-      ))}
-      {showFallback && <FallBack source="events" />}
+      <ContentStateTransition state={contentDisplayState} source="events">
+        {contentBlocks.map((block) => (
+          <ContentBlockRenderer
+            key={block.content_id}
+            block={block}
+            locale={String(locale)}
+          />
+        ))}
+      </ContentStateTransition>
     </section>
 
     {/* Events calendar, above the card list */}

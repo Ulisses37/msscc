@@ -12,6 +12,10 @@ interface DelayedFallbackOptions {
   fallbackThreshold?: number;
 }
 
+export type ContentDisplayState = 'loading' | 'fallback' | 'content';
+
+export const DEFAULT_CONTENT_FALLBACK_MIN_DISPLAY_TIME = 1000;
+
 /**
  * Delay a public page's static fallback while its content blocks have time to
  * arrive from the API or the preview channel.
@@ -22,26 +26,62 @@ export function useDelayedFallback(
     pollingInterval = DEFAULT_CONTENT_FALLBACK_POLL_INTERVAL,
     fallbackThreshold = DEFAULT_CONTENT_FALLBACK_THRESHOLD,
   }: DelayedFallbackOptions = {},
-): boolean {
+): ContentDisplayState {
   const contentReadyRef = useRef(contentBlockCount > 0);
-  const [showFallback, setShowFallback] = useState(false);
+  const fallbackShownAtRef = useRef<number | null>(null);
+  const [displayState, setDisplayState] = useState<ContentDisplayState>(
+    contentBlockCount > 0 ? 'content' : 'loading',
+  );
 
   contentReadyRef.current = contentBlockCount > 0;
 
   useEffect(() => {
-    setShowFallback(false);
+    if (contentReadyRef.current) {
+      const fallbackShownAt = fallbackShownAtRef.current;
 
-    if (contentReadyRef.current) return;
+      if (fallbackShownAt === null) {
+        setDisplayState('content');
+        return;
+      }
+
+      const remainingDisplayTime =
+        DEFAULT_CONTENT_FALLBACK_MIN_DISPLAY_TIME - (Date.now() - fallbackShownAt);
+
+      if (remainingDisplayTime <= 0) {
+        fallbackShownAtRef.current = null;
+        setDisplayState('content');
+        return;
+      }
+
+      const revealTimeout = setTimeout(() => {
+        if (!contentReadyRef.current) return;
+
+        fallbackShownAtRef.current = null;
+        setDisplayState('content');
+      }, remainingDisplayTime);
+
+      return () => clearTimeout(revealTimeout);
+    }
+
+    // If content disappears while the minimum fallback duration is still in
+    // progress, keep the fallback visible and do not restart the threshold.
+    if (fallbackShownAtRef.current !== null) {
+      setDisplayState('fallback');
+      return;
+    }
+
+    setDisplayState('loading');
 
     return startContentFallbackPolling({
       isContentReady: () => contentReadyRef.current,
-      onFallback: () => setShowFallback(true),
+      onFallback: () => {
+        fallbackShownAtRef.current = Date.now();
+        setDisplayState('fallback');
+      },
       pollingInterval,
       fallbackThreshold,
     });
   }, [fallbackThreshold, pollingInterval, contentBlockCount > 0]);
 
-  // Do not let a previously initialized fallback remain visible during the
-  // render that receives content blocks; the content render always wins.
-  return showFallback && contentBlockCount === 0;
+  return displayState;
 }

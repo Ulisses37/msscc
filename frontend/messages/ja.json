@@ -357,6 +357,7 @@
   },
 
   "ContentFallback": {
+    "loading": "読み込み中...",
     "noticeHeading": "MSSCCのウェブサイトは現在更新中です。",
     "noticeBody": "MSSCCのウェブサイトをご覧いただきありがとうございます。コンテンツを更新しておりますので、しばらくお待ちください。",
     "illustrationAlt": "MSSCCウェブサイトのイラスト",
