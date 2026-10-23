@@ -18,6 +18,10 @@ interface RawEvent {
   reminder_sent_at: string | null;
   calendar_link: string | null;
   media_asset: number | null;
+  thumbnail_crop_x: number;
+  thumbnail_crop_y: number;
+  thumbnail_crop_width: number;
+  thumbnail_crop_height: number;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +88,12 @@ function mapEvent(raw: RawEvent): Event {
     reminderSentAt: raw.reminder_sent_at,
     calendarLink:   raw.calendar_link ?? undefined,
     mediaAssetId: raw.media_asset,
+    thumbnailCrop: {
+      x: raw.thumbnail_crop_x,
+      y: raw.thumbnail_crop_y,
+      width: raw.thumbnail_crop_width,
+      height: raw.thumbnail_crop_height,
+    },
     createdAt:      raw.created_at,
     updatedAt:      raw.updated_at,
   };
@@ -123,6 +133,31 @@ export async function getEvents(): Promise<Event[]> {
         : undefined,
     };
   });
+}
+
+/**
+ * Fetch every published event, upcoming and past, for the events calendar.
+ * Unlike the events page, no end-date filter is applied. Media assets are skipped
+ * because the calendar only shows start times and titles.
+ */
+export async function getCalendarEvents(): Promise<Event[]> {
+  const response = await fetch(`${API_BASE_URL}/api/events/`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch calendar events: ${response.status}`);
+  }
+
+  const events: RawEvent[] = await response.json();
+
+  return events
+    // The API also returns unpublished events, which visitors should not see.
+    .filter((event) => event.is_published)
+    .map(mapEvent)
+    .sort(
+      (firstEvent, secondEvent) =>
+        new Date(firstEvent.startDatetime).getTime()
+        - new Date(secondEvent.startDatetime).getTime(),
+    );
 }
 
 export async function getEventById(id: number): Promise<Event | undefined> {

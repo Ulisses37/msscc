@@ -2,6 +2,7 @@ import base64
 import os
 
 os.environ["DJANGO_SECRET_KEY"] = "test-secret-key-for-pytest-only"
+os.environ["FIELD_ENCRYPTION_KEYS"] = "mCz0qNSJS2G3LzI4SXfTWaU0JwBkzY0lG9_29s1mHdA="
 os.environ["STRIPE_SECRET_KEY"] = "sk_test_dummy"
 os.environ["S3_ENDPOINT_URL"] = "http://127.0.0.1:1"
 os.environ["S3_ACCESS_KEY"] = "test"

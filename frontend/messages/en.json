@@ -60,7 +60,10 @@
     "historyLink": "Click here to see past events!",
     "volunteerPrompt": "Interested in helping out? We have positions available!",
     "volunteerButton": "View Volunteer Opportunities",
-    "noVolunteerOpportunities": "No volunteer opportunities exist at this time."
+    "noVolunteerOpportunities": "No volunteer opportunities exist at this time.",
+    "calendarLoading": "Loading calendar...",
+    "calendarError": "The calendar couldn't be loaded. Please try again later.",
+    "calendarLabel": "Events calendar"
   },
 
   "EventDetailPage": {
@@ -132,7 +135,6 @@
     "finish": "Finish & Return",
     "backToShifts": "Back to Shifts",
     "heading": "Volunteer Signup",
-    "positionOptional": "Position (Optional)",
     "generalVolunteer": "General Volunteer",
     "firstName": "First Name",
     "lastName": "Last Name",
@@ -142,7 +144,13 @@
     "phoneError": "Please enter a valid phone number (e.g., 123-456-7890).",
     "processing": "Processing...",
     "register": "Register Now",
-    "submitError": "Unable to complete the volunteer registration. Please try again."
+    "submitError": "Unable to complete the volunteer registration. Please try again.",
+    "commentsLabel": "Comments (optional)",
+    "commentsPlaceholder": "Anything the organizers should know? For example, questions or when you're available.",
+    "commentsCount": "{count} / {max} characters",
+    "shiftHeading": "Your shift",
+    "shiftNotFound": "We couldn't find that shift. Please go back and choose a shift to volunteer for.",
+    "shiftFull": "This shift is full. Please go back and choose another shift."
   },
 
   "VolunteerEditPage": {
@@ -179,6 +187,14 @@
     "searchLabel": "Search past events",
     "searchPlaceholder": "Search by event title...",
     "noResults": "No past events match your search."
+  },
+
+  "EventsCalendar": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "eventCount": "{count, plural, one {# event} other {# events}}",
+    "pastEvent": "Past event",
+    "continued": "Continued"
   },
 
   "VolunteerCancellationPage": {

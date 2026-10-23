@@ -7,19 +7,21 @@ import { useParams, useRouter } from 'next/navigation';
 // Components
 import { getEvents } from '@/services/eventService';
 import { EventCard } from '../../../components/events/EventCard';
-import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button';
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
+import EventsCalendarView from '@/components/events/EventsCalendarView';
+import { FallBack } from '@/components/content/ContentFallBack';
 
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 
 // Types
 import type { DbContentBlock } from '@/types/content';
-import { FallBack } from '@/components/content/ContentFallBack';
+import type { Event } from '@/types/event';
 
 /**
  * EventsPage Component
@@ -35,6 +37,8 @@ export default function EventsPage() {
   const params = useParams();
   const router = useRouter();
   const locale = params?.locale;
+  // The calendar needs past events too, so it loads its own list
+  const calendar = useCalendarEvents();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -99,6 +103,34 @@ export default function EventsPage() {
       ))}
       {showFallback && <FallBack source="events" />}
     </section>
+
+    {/* Events calendar, above the card list */}
+      <section aria-label={t('calendarLabel')} className="mb-10">
+        {calendar.isLoading ? (
+          <p
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-gray-mid)',
+              fontSize: 'var(--fs-body)',
+            }}
+          >
+            {t('calendarLoading')}
+          </p>
+        ) : calendar.hasError ? (
+          <p
+            role="alert"
+            style={{
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-gray-mid)',
+              fontSize: 'var(--fs-body)',
+            }}
+          >
+            {t('calendarError')}
+          </p>
+        ) : (
+          <EventsCalendarView events={calendar.events} />
+        )}
+      </section>
 
       {/* Header */}
       <header style={{
@@ -167,7 +199,7 @@ export default function EventsPage() {
       <div style={{
         marginTop: 'var(--space-10)',
         borderTop: '1px solid var(--color-gray-light)',
-        paddingTop: 'var(--space-8)',
+        paddingTop: 'var(--space-10)',
       }}>
         {hasVolunteerOpportunities ? (
           <div style={{ textAlign: 'center' }}>

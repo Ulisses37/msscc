@@ -125,7 +125,7 @@ export default function EventsPage() {
     if (showForm && mainRef.current) {
       mainRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [showForm, selectedEvent]);
+  }, [showForm, selectedEvent?.id]);
 
   // Auto-dismiss save feedback so it doesn't linger in the sticky save bar
   useEffect(() => {
@@ -227,6 +227,10 @@ export default function EventsPage() {
             media_asset: mediaAssetId,
             is_published: true,
             send_volunteer_reminders: data.sendVolunteerReminders,
+            thumbnail_crop_x: data.thumbnailCrop.x,
+            thumbnail_crop_y: data.thumbnailCrop.y,
+            thumbnail_crop_width: data.thumbnailCrop.width,
+            thumbnail_crop_height: data.thumbnailCrop.height,
           }),
         },
       );
@@ -244,6 +248,21 @@ export default function EventsPage() {
         eventPhotos,
         deletedEventPhotoIds,
       );
+
+      // Reload the list, then open the new event in the edit form so the admin can keep
+      // working on it. This has its own try/catch so a failed reload doesn't report the
+      // create as failed.
+      try {
+        const refreshedEvents = await getEvents();
+        setEvents(refreshedEvents);
+
+        const newEvent = refreshedEvents.find(
+          (event) => event.id === createdEvent.event_id,
+        );
+        if (newEvent) await handleEditEvent(newEvent);
+      } catch (refreshError) {
+        console.error('Failed to refresh event list:', refreshError);
+      }
 
       setSaveMessage('Event created successfully.');
     } catch (error) {
@@ -292,6 +311,10 @@ export default function EventsPage() {
             end_datetime: data.endDatetime,
             media_asset: mediaAssetId,
             send_volunteer_reminders: data.sendVolunteerReminders,
+            thumbnail_crop_x: data.thumbnailCrop.x,
+            thumbnail_crop_y: data.thumbnailCrop.y,
+            thumbnail_crop_width: data.thumbnailCrop.width,
+            thumbnail_crop_height: data.thumbnailCrop.height,
           }),
         },
       );
@@ -310,6 +333,11 @@ export default function EventsPage() {
       const refreshedEventImages = await getEventImages(selectedEvent.id);
       setSelectedEventImages(refreshedEventImages);
 
+      // Reload the primary image so the form shows the one that was just saved.
+      const refreshedMedia = mediaAssetId
+        ? await getMediaAssetById(mediaAssetId).catch(() => undefined)
+        : undefined;
+
       // Update the list of events in the display after a save occurs
       setEvents((prevEvents) =>
         prevEvents.map((event) =>
@@ -326,6 +354,7 @@ export default function EventsPage() {
                 endDatetime: data.endDatetime,
                 mediaAssetId,
                 sendVolunteerReminders: data.sendVolunteerReminders,
+                thumbnailCrop: data.thumbnailCrop,
               }
             : event,
         ),
@@ -344,7 +373,14 @@ export default function EventsPage() {
               startDatetime: data.startDatetime,
               endDatetime: data.endDatetime,
               mediaAssetId,
+              media: refreshedMedia?.file_url
+                ? {
+                    fileUrl: refreshedMedia.file_url,
+                    altText: refreshedMedia.alt_text_en,
+                  }
+                : currentEvent.media,
               sendVolunteerReminders: data.sendVolunteerReminders,
+              thumbnailCrop: data.thumbnailCrop,
             }
           : currentEvent,
       );
@@ -591,6 +627,7 @@ export default function EventsPage() {
                 startDatetime: formatDatetimeLocal(selectedEvent.startDatetime),
                 endDatetime: formatDatetimeLocal(selectedEvent.endDatetime),
                 sendVolunteerReminders: selectedEvent.sendVolunteerReminders,
+                thumbnailCrop: selectedEvent.thumbnailCrop,
               }}
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
               initialEventPhotos={selectedEventImages}

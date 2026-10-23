@@ -211,6 +211,50 @@ copy .env.example .env
 
 Open `.env` in VS Code and fill in the values. Active team members: see the shared OneDrive for development credentials. External replicators: supply your own database, storage, and API credentials.
 
+`FIELD_ENCRYPTION_KEYS` is required for encrypted database fields. Set it to a comma-separated
+Fernet keyring, with the active key first and prior keys after it. Generate and distribute keys
+through the team's approved secret-management process. Never reuse `DJANGO_SECRET_KEY`, commit
+an encryption key, or remove an old key until all stored values have been rotated.
+
+#### Controlled donation and membership PII key rotation
+
+This operation writes to the configured database. For shared development, obtain explicit
+deployment approval and notify the team before running it. Do not target production from a
+development machine. Apply the approved encrypted-PII migrations through `0010` first.
+
+1. Schedule a maintenance window and pause donation/membership writes, including payment
+   webhooks, admin edits, background workers, and any older application instances. Arrange
+   webhook retries rather than discarding payment events.
+2. Through approved secret management, put the new key first in `FIELD_ENCRYPTION_KEYS` and
+   retain every previous key. Restart all application processes with that ordered keyring.
+   Never pass keys as command-line arguments or put them in logs.
+3. From the repository root, run the command on the approved environment:
+
+   **PowerShell:**
+   ```powershell
+   backend\venv\Scripts\python.exe backend/manage.py rotate_financial_pii --batch-size 100 --confirm
+   ```
+
+   **bash:**
+   ```bash
+   backend/venv/bin/python backend/manage.py rotate_financial_pii --batch-size 100 --confirm
+   ```
+
+   `--confirm` is required. Batch size must be 1 to 1000 (default 100). Each batch locks its
+   rows and commits independently. Only the seven encrypted donation/membership PII columns
+   are rewritten. Record timestamps, payment metadata, references, and other record fields
+   remain unchanged. PostgreSQL admin-table revision triggers still advance refresh counters.
+   Rows inserted above each table's starting maximum ID are not scanned by that run, so all
+   writers must already use the new primary key. Run only one rotation process at a time.
+4. Require a zero exit status and `Rotation complete` with expected aggregate counts before
+   retiring any key. On failure, the current batch is rolled back but earlier batches remain
+   committed. Keep the full keyring, investigate through approved access without printing
+   PII/ciphertext, resolve the cause, and rerun. Retries safely re-encrypt already-rotated rows.
+5. Verify reads in the approved environment with only the primary key configured, then retire
+   previous keys from active configuration and restart all processes before resuming writes.
+   Retain secure access to older keys for encrypted backups until those backups expire or
+   are replaced. Never destroy a key still required by a backup or another encrypted store.
+
 Run migrations and start the development server:
 
 ```powershell

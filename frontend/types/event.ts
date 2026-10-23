@@ -1,4 +1,5 @@
 import type { ImageAlignment, ImageWidth } from '@/types/content';
+import type { ThumbnailCrop } from '@/utils/thumbnailCrop';
 
 export interface MediaAsset {
   fileUrl: string;
@@ -36,4 +37,6 @@ export interface Event {
   calendarLink?: string;
   media?: MediaAsset;
   mediaAssetId: number | null;
+  // Which part of the image shows on the event card (percentages of the image)
+  thumbnailCrop: ThumbnailCrop;
 }

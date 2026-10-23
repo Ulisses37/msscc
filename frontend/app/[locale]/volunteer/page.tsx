@@ -7,6 +7,7 @@ import { getEvents } from '@/services/eventService';
 import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button'; // Using your Button component
 import { formatLocalizedDate } from '@/utils/dateLocalization';
+import Link from 'next/link';
 
 export default function VolunteerPage() {
   const t = useTranslations('VolunteerPage');
@@ -19,7 +20,13 @@ export default function VolunteerPage() {
   useEffect(() => {
     const fetchVolunteerEvents = async () => {
       const data = await getEvents();
-      const needsVolunteers = data.filter(e => e.volunteerSlots > 0 && e.isPublished);
+      // Hide events that have already ended, matching the events page
+      const needsVolunteers = data.filter(
+        (e) =>
+          e.volunteerSlots > 0
+          && e.isPublished
+          && new Date(e.endDatetime).getTime() >= Date.now(),
+      );
       setEvents(needsVolunteers);
       setLoading(false);
     };
@@ -28,6 +35,17 @@ export default function VolunteerPage() {
 
   return (
     <main style={{ maxWidth: '75rem', margin: '0 auto', padding: 'var(--space-10) var(--space-6)' }}>
+      <Link
+        href={`/${locale}/events`}
+        style={{
+          display: 'inline-block',
+          marginBottom: 'var(--space-6)',
+          color: 'var(--color-teal)',
+          textDecoration: 'none',
+        }}
+      >
+        ← Back to Events
+      </Link>
       <header style={{ borderBottom: '0.5px solid var(--color-gray-light)', marginBottom: 'var(--space-10)', paddingBottom: 'var(--space-6)' }}>
         <h2 style={{ color: '#dc2626', fontSize: 'var(--fs-heading-2)' }}>
           {t('heading')}

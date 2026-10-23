@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -15,17 +16,6 @@ type SortColumn =
   | "amount"
   | "donation_date"
   | "payment_status";
-
-// Only these record fields are included in the donation search. Keeping the
-// list separate makes it clear which API values can produce a table match.
-const searchableDonationFields: (keyof DonationEntry)[] = [
-  "donor_first_name",
-  "donor_last_name",
-  "donor_email",
-  "payment_status",
-  "reference_id",
-  "message",
-];
 
 // This ordered catalog supplies both the field checkboxes and the exported column headings.
 // keyof keeps every selectable field tied to an actual value returned by the donation API.
@@ -132,6 +122,7 @@ export default function AdminDonationsPage() {
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
   // Controlled input state keeps the visible search value and table filter in sync.
   const [searchQuery, setSearchQuery] = useState("");
+  const requestVersion = useRef(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -160,44 +151,22 @@ export default function AdminDonationsPage() {
     };
 
     const fetchDonations = useCallback(async () => {
+      const version = ++requestVersion.current;
       setError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/`);
-        if (!response.ok) {
-          throw new Error('Failed to load donation list.');
-        }
-        const items = (await response.json()) as DonationEntry[];
-
-        setDonationItems(items);
+        const items = await fetchFinancialRecords<DonationEntry>('donations', searchQuery);
+        if (version === requestVersion.current) setDonationItems(items);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load donation list.');
-      } finally {
-
+        if (version === requestVersion.current) {
+          setError(err instanceof Error ? err.message : 'Unable to load donation list.');
+        }
       }
-    }, []);
+    }, [searchQuery]);
 
     useVisibleTableRevisionPolling('donations', fetchDonations, 3000);
 
-    // Filter before sorting and pagination so every page and export operates on
-    // the same case-insensitive set of matching donation records.
-    const filteredDonationItems = useMemo(() => {
-      const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-
-      // An empty (or whitespace-only) search restores the complete table.
-      if (!normalizedQuery) {
-        return donationItems;
-      }
-
-      return donationItems.filter((donation) => {
-        const searchableValues = searchableDonationFields.map((field) => donation[field]);
-        // Also support searches such as "Jane Doe" across the two name fields.
-        searchableValues.push(`${donation.donor_first_name} ${donation.donor_last_name}`);
-
-        return searchableValues.some((value) =>
-          String(value ?? "").toLocaleLowerCase().includes(normalizedQuery),
-        );
-      });
-    }, [donationItems, searchQuery]);
+    // Matching happens only in the authorized backend; sorting and export use its results.
+    const filteredDonationItems = donationItems;
 
     const sortedDonationItems = useMemo(() => {
       if (sortColumn === null) {
@@ -316,7 +285,11 @@ export default function AdminDonationsPage() {
     }, []);
 
     useEffect(() => {
-      void fetchDonations();
+      const timer = setTimeout(() => void fetchDonations(), 300);
+      return () => {
+        clearTimeout(timer);
+        requestVersion.current += 1;
+      };
     }, [fetchDonations]);
 
     useEffect(() => {
@@ -332,7 +305,7 @@ export default function AdminDonationsPage() {
       }
     }, [currentPage, totalPages]);
 
-    const hasDonations = donationItems.length > 0;
+    const hasDonations = donationItems.length > 0 || Boolean(searchQuery);
     const hasSearchResults = sortedDonationItems.length > 0;
 
   return(
@@ -368,6 +341,9 @@ export default function AdminDonationsPage() {
                             className="w-full rounded-md border border-msscc-gray-light bg-msscc-white py-2.5 pl-9 pr-3 text-body-sm text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin"
                           />
                         </div>
+                        <p className="mt-1 text-body-sm text-msscc-gray-mid">
+                          Search by name or email. Up to 100 matches are shown and exported.
+                        </p>
                       </div>
                       {/* The shared menu connects format/field controls to this page's donation export handler. */}
                       <DataExportMenu
