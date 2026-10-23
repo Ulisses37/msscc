@@ -306,6 +306,8 @@
     "card": "Credit or Debit Card",
     "paypal": "PayPal",
     "donationAmount": "Donation Amount",
+    "processingCostContribution": "Contribute toward payment processing costs",
+    "processingCostContributionDetail": "If selected, a calculated contribution toward processing costs will be added to your total payment.",
     "donationOptionsDescription": "Choose a suggested amount or enter your own.",
     "customDonationOption": "Other / Custom",
     "customDonationAmount": "Enter your donation amount",

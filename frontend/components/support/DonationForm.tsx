@@ -50,6 +50,9 @@ export function DonationForm() {
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  // This is a choice, not a browser-calculated fee. The donation API will
+  // persist it and calculate money on the server in the following subtasks.
+  const [contributeToProcessingCosts, setContributeToProcessingCosts] = useState(false);
   const [message, setMessage] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
@@ -271,6 +274,9 @@ export function DonationForm() {
               donor_last_name: lastName.trim(),
               donor_email: email.trim().toLowerCase(),
               amount: amountForAttempt,
+              // Send only the payer's choice; never let the browser specify
+              // the contribution or the total charged by checkout.
+              contribute_to_processing_costs: contributeToProcessingCosts,
               is_anonymous: isAnonymous,
               message: message.trim(),
             }),
@@ -533,6 +539,30 @@ export function DonationForm() {
             </div>
           )}
         </fieldset>
+
+        {/* A native checkbox supports pointer, touch and keyboard interaction.
+            Keep the explanation visible rather than hiding a price change in
+            a hover-only tooltip; the description is also announced on focus. */}
+        <div>
+          <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              name="contributeToProcessingCosts"
+              checked={contributeToProcessingCosts}
+              onChange={(event) => setContributeToProcessingCosts(event.target.checked)}
+              disabled={!emailIsValid || fieldsAreLocked}
+              aria-describedby="processing-cost-contribution-description"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="min-w-0">{t('processingCostContribution')}</span>
+          </label>
+          <p
+            id="processing-cost-contribution-description"
+            className="mt-1 pl-7 text-caption text-msscc-gray-mid"
+          >
+            {t('processingCostContributionDetail')}
+          </p>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
