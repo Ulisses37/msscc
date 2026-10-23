@@ -37,6 +37,78 @@ class DonationPaymentDataTests(TestCase):
         donation = self.create_donation()
 
         self.assertEqual(donation.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertFalse(donation.contribute_to_processing_costs)
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+        self.assertEqual(donation.total_amount, donation.amount)
+
+    def test_direct_model_creation_initializes_total_from_its_base(self):
+        """Legacy and internal callers should not need a constant total default."""
+        donation = self.create_donation(amount=Decimal("27.45"))
+        donation.refresh_from_db()
+        self.assertEqual(donation.total_amount, Decimal("27.45"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+
+    def test_public_donation_api_persists_selected_and_omitted_choices(self):
+        """Exercise the actual endpoint without requiring the development server."""
+        data = {
+            "donor_first_name": "Test", "donor_last_name": "Donor",
+            "donor_email": "test@example.com", "amount": "12.50",
+        }
+        for choice in (True, False, None):
+            with self.subTest(choice=choice):
+                payload = data | (
+                    {"contribute_to_processing_costs": choice} if choice is not None else {}
+                )
+                response = APIClient().post("/api/donations/", payload, format="json")
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                donation = Donation.objects.get(pk=response.data["donation_id"])
+                self.assertEqual(donation.contribute_to_processing_costs, choice is True)
+                self.assertEqual(donation.amount, Decimal("12.50"))
+                self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+                self.assertEqual(donation.total_amount, Decimal("12.50"))
+                self.assertEqual(response.data["contribute_to_processing_costs"], choice is True)
+                self.assertEqual(response.data["processing_cost_contribution"], "0.00")
+                self.assertEqual(response.data["total_amount"], "12.50")
+
+    def test_client_cannot_override_calculated_amounts_on_create_or_update(self):
+        payload = {
+            "donor_first_name": "Test", "donor_last_name": "Donor",
+            "donor_email": "test@example.com", "amount": "10.00",
+            "contribute_to_processing_costs": True,
+            "processing_cost_contribution": "999.00", "total_amount": "1009.00",
+        }
+        client = APIClient()
+        response = client.post("/api/donations/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        donation = Donation.objects.get(pk=response.data["donation_id"])
+        self.assertEqual(donation.total_amount, Decimal("10.00"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+
+        user = User.objects.create_user(
+            email="finance@example.test", permissions_data={"Finances": True},
+        )
+        client.force_authenticate(user=user)
+        url = f"/api/donations/{donation.pk}/"
+        response = client.patch(url, {
+            "amount": "14.25", "processing_cost_contribution": "900.00",
+            "total_amount": "914.25",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        donation.refresh_from_db()
+        self.assertEqual(donation.amount, Decimal("14.25"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+        self.assertEqual(donation.total_amount, Decimal("14.25"))
+
+    def test_choice_requires_a_boolean_not_a_fee_amount(self):
+        for choice in ("yes", 1, [True], {"value": True}):
+            with self.subTest(choice=choice):
+                response = APIClient().post("/api/donations/", {
+                    "donor_first_name": "Test", "donor_last_name": "Donor",
+                    "donor_email": "test@example.com", "amount": "10.00",
+                    "contribute_to_processing_costs": choice,
+                }, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Donation.objects.count(), 0)
 
     def test_serializer_ignores_client_controlled_payment_fields(self):
         serializer = DonationSerializer(

@@ -5,12 +5,22 @@ from rest_framework import serializers
 from .models import Donation, Membership
 
 
+class StrictContributionChoiceField(serializers.BooleanField):
+    """Require the form's actual JSON boolean, not DRF's string/number coercions."""
+
+    def to_internal_value(self, data):
+        if type(data) is not bool:
+            raise serializers.ValidationError("Expected a boolean.")
+        return data
+
+
 class DonationSerializer(serializers.ModelSerializer):
     """Serializer for donation records."""
 
     donor_first_name = serializers.CharField(source="donor_first_name_encrypted", max_length=255)
     donor_last_name = serializers.CharField(source="donor_last_name_encrypted", max_length=255)
     donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
+    contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
     class Meta:
         model = Donation
@@ -20,6 +30,9 @@ class DonationSerializer(serializers.ModelSerializer):
             "donor_last_name",
             "donor_email",
             "amount",
+            "contribute_to_processing_costs",
+            "processing_cost_contribution",
+            "total_amount",
             "donation_date",
             "is_anonymous",
             "message",
@@ -29,6 +42,8 @@ class DonationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "donation_id",
+            "processing_cost_contribution",
+            "total_amount",
             "donation_date",
             "payment_status",
             "reference_id",
@@ -70,10 +85,14 @@ class DonationSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def create(self, validated_data):
-        """Create a donation with server-controlled payment fields."""
+        """Persist the opt-in, while monetary extras remain server-controlled."""
         with transaction.atomic():
             donation = Donation.objects.create(
                 **validated_data,
+                # SCRUM-744 will replace this zero with the agreed server fee.
+                # Until then, the opt-in cannot change the amount charged.
+                processing_cost_contribution=0,
+                total_amount=validated_data["amount"],
                 donation_date=timezone.localdate(),
                 payment_status=Donation.PaymentStatus.PENDING,
                 reference_id="pending",
@@ -82,6 +101,14 @@ class DonationSerializer(serializers.ModelSerializer):
             donation.save(update_fields=["reference_id"])
 
         return donation
+
+    def update(self, instance, validated_data):
+        """Keep a zero-contribution total aligned with an edited base amount."""
+        # Admin updates can change the existing writable base amount. Do not
+        # leave a stale total behind while no contribution has been calculated.
+        if "amount" in validated_data and instance.processing_cost_contribution == 0:
+            validated_data["total_amount"] = validated_data["amount"]
+        return super().update(instance, validated_data)
 
 
 class MembershipSerializer(serializers.ModelSerializer):
