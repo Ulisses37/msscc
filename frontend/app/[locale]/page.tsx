@@ -3,7 +3,7 @@
 // React and Next Imports
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { FallBack } from '@/components/content/ContentFallBack';
+import { ContentStateTransition } from '@/components/content/ContentFallBack';
 
 // Components
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
@@ -14,6 +14,7 @@ import type { DbContentBlock } from '@/types/content';
 // Project Utilities
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 
 /**
  * This is the general view home page
@@ -23,6 +24,7 @@ import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 export default function HomePage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('home'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const contentDisplayState = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const locale = params?.locale;
 
@@ -38,21 +40,22 @@ export default function HomePage() {
       }
     };
 
-    loadPageContent();
+   loadPageContent();
   }, []);
 
   return (
     <main>
       {/* Display Staff-Editable Content Blocks */}
       <section className="mx-auto max-w-content px-6 py-10">
-        {contentBlocks.map((block) => (
-          <ContentBlockRenderer
-            key={block.content_id}
-            block={block}
-            locale={String(locale)}
-          />
-        ))}
-        {!contentBlocks.length && <FallBack source="home" />}
+        <ContentStateTransition state={contentDisplayState} source="home">
+          {contentBlocks.map((block) => (
+            <ContentBlockRenderer
+              key={block.content_id}
+              block={block}
+              locale={String(locale)}
+            />
+          ))}
+        </ContentStateTransition>
       </section>
     </main>
   );
