@@ -26,6 +26,15 @@
   animation: gallery-fade-out 1000ms ease-in-out both;
 }
 
+@keyframes content-state-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.content-state-fade-in {
+  animation: content-state-fade-in 300ms ease-in-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-gallery-fade-in {
     animation: none;

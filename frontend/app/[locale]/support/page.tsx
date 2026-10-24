@@ -10,11 +10,13 @@ import type { DbContentBlock } from '@/types/content';
 
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
-import { FallBack } from '@/components/content/ContentFallBack';
+import { useDelayedFallback } from '@/hooks/useDelayedFallback';
+import { ContentStateTransition } from '@/components/content/ContentFallBack';
 
 export default function SupportPage() {
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
+  const contentDisplayState = useDelayedFallback(contentBlocks.length);
   const params = useParams();
   const locale = params?.locale;
 
@@ -35,14 +37,15 @@ export default function SupportPage() {
   return (
     <main className="mx-auto max-w-content px-6 py-10">
       <section className="mb-10 w-full max-w-[1200px] space-y-6">
-        {contentBlocks.map((block) => (
-          <ContentBlockRenderer
-            key={block.content_id}
-            block={block}
-            locale={String(locale)}
-          />
-        ))}
-        {!contentBlocks.length && <FallBack source="support" />}
+        <ContentStateTransition state={contentDisplayState} source="support">
+          {contentBlocks.map((block) => (
+            <ContentBlockRenderer
+              key={block.content_id}
+              block={block}
+              locale={String(locale)}
+            />
+          ))}
+        </ContentStateTransition>
       </section>
 
       <DonationForm />
