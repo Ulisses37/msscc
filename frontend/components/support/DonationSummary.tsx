@@ -1,9 +1,14 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { isValidDonationAmount } from '@/constants/donationAmounts';
+import { PaymentCostSummary } from '@/components/payments/PaymentCostSummary';
+import type { DonationQuote } from '@/services/paymentService';
 
 interface DonationSummaryProps {
   donation: string;
+  quote?: DonationQuote | null;
   email: string;
   firstName: string;
   lastName: string;
@@ -20,6 +25,7 @@ interface DonationSummaryProps {
  */
 export function DonationSummary({
   donation,
+  quote,
   email,
   firstName,
   lastName,
@@ -30,20 +36,15 @@ export function DonationSummary({
   const t = useTranslations('SupportPage');
   const locale = useLocale();
 
-  const donationIsValid =
-    /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
+  // Use the same validity rule as checkout: the summary must not present an
+  // amount the API would reject as a payable total.
+  const donationIsValid = isValidDonationAmount(donation);
 
   const formattedDonation =
     donation === ''
       ? t('notProvided')
       : donationIsValid
-        ? new Intl.NumberFormat(
-            locale === 'ja' ? 'ja-JP' : 'en-US',
-            {
-              style: 'currency',
-              currency: 'USD',
-            },
-          ).format(Number(donation))
+        ? formatCurrency(Number(donation), locale === 'ja' ? 'ja-JP' : 'en-US')
         : t('invalidAmount');
 
   return (
@@ -114,6 +115,26 @@ export function DonationSummary({
           </dd>
         </div>
       </dl>
+      {/* Only a quote matched to the current form (or the saved record) may
+          be passed in; do not reconstruct a fee from the amount in React. */}
+      {quote && donationIsValid && (
+        <div className="mt-4">
+          <PaymentCostSummary
+            summaryId="donation-cost-breakdown"
+            heading={t('costBreakdown')}
+            headingLevel="h3"
+            emptyMessage={t('notProvided')}
+            lines={[
+              { id: 'base', label: t('baseDonation'), amountInCents: Math.round(Number(quote.amount) * 100) },
+              { id: 'processing', label: t('processingCostAmount'), amountInCents: Math.round(Number(quote.processingCostContribution) * 100) },
+            ]}
+            totalLabel={t('paymentTotal')}
+            totalAmountInCents={Math.round(Number(quote.totalAmount) * 100)}
+            currency="USD"
+            locale={locale === 'ja' ? 'ja-JP' : 'en-US'}
+          />
+        </div>
+      )}
     </section>
   );
 }

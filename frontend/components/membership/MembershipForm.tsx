@@ -12,6 +12,9 @@ interface MembershipFormProps {
   // Selection remains page-owned so this form cannot drift from the options
   // or summary by maintaining a second membership value.
   selectedOptionId: MembershipOptionId | null;
+  contributeToProcessingCosts: boolean;
+  onContributionChange: (value: boolean) => void;
+  isQuoteReady: boolean;
   onValidityChange: (valid: boolean) => void;
   onContinueToPayment: () => void;
   onInformationChange: (information: MembershipIdentity | null) => void;
@@ -28,6 +31,9 @@ const inputClassName =
 
 export function MembershipForm({
   selectedOptionId,
+  contributeToProcessingCosts,
+  onContributionChange,
+  isQuoteReady,
   onValidityChange,
   onContinueToPayment,
   onInformationChange,
@@ -251,6 +257,14 @@ export function MembershipForm({
           </span>
         </label>
 
+        <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+          <input type="checkbox" checked={contributeToProcessingCosts}
+            onChange={(event) => onContributionChange(event.target.checked)}
+            disabled={isInformationLocked} aria-describedby="membership-processing-description"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed" />
+          <span>{t('processingCostContribution')}</span>
+        </label>
+        <p id="membership-processing-description" className="pl-7 text-caption text-msscc-gray-mid">{t('processingCostContributionDetail')}</p>
         <div className="pt-2">{children}</div>
 
         {/* Keep the existing form validation as the gate for session creation;
@@ -258,7 +272,7 @@ export function MembershipForm({
         <button
           type="button"
           onClick={() => {
-            if (formIsValid && !isPreparingPayment && !isPaymentSessionReady) {
+            if (formIsValid && isQuoteReady && !isPreparingPayment && !isPaymentSessionReady) {
               // Mailing list first, but never in the way of payment: a signup
               // failure is logged and the payment flow proceeds regardless.
               if (wantsUpdates) {
@@ -271,7 +285,7 @@ export function MembershipForm({
               onContinueToPayment();
             }
           }}
-          disabled={!formIsValid || isPreparingPayment || isPaymentSessionReady}
+          disabled={!formIsValid || !isQuoteReady || isPreparingPayment || isPaymentSessionReady}
           className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
         >
           {isPreparingPayment

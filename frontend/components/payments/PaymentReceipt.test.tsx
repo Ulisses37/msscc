@@ -38,8 +38,11 @@ it('shows a loading state then only safe donation fields, and an optional purpos
   jest.mocked(getPaymentReceipt).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
   render(<PaymentReceipt reference={donationReference} locale="en" />);
   expect(screen.getByRole('status')).toHaveTextContent(en.PaymentReceipt.loading);
-  await act(async () => finish({ ...donation, donationPurpose: 'Community programs' }));
+  await act(async () => finish({ ...donation, amount: '13.18', baseAmount: '12.50',
+    processingCostContribution: '0.68', totalAmount: '13.18', donationPurpose: 'Community programs' }));
   expect(screen.getByText('$12.50')).toBeInTheDocument();
+  expect(screen.getByText('$0.68')).toBeInTheDocument();
+  expect(screen.getByText('$13.18')).toBeInTheDocument();
   expect(screen.getByText('October 10, 2026')).toBeInTheDocument();
   expect(screen.getByText(donationReference)).toBeInTheDocument();
   expect(screen.getByText('Community programs')).toBeInTheDocument();
@@ -59,6 +62,18 @@ it('formats the membership option, currency, and date in Japanese', async () => 
   expect(screen.getByText(new Intl.NumberFormat('ja', { style: 'currency', currency: 'USD' }).format(12.5))).toBeInTheDocument();
   expect(screen.getByText(new Intl.DateTimeFormat('ja', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(donation.completedAt)))).toBeInTheDocument();
   expect(screen.queryByText(ja.PaymentReceipt.donationPurpose)).not.toBeInTheDocument();
+});
+
+it('shows a completed membership’s saved processing contribution', async () => {
+  jest.mocked(getPaymentReceipt).mockResolvedValue({
+    ...donation, paymentPurpose: 'membership', confirmationReference: membershipReference,
+    membershipOption: 'student', amount: '20.91', baseAmount: '20.00',
+    processingCostContribution: '0.91', totalAmount: '20.91',
+  });
+  render(<PaymentReceipt reference={membershipReference} locale="en" />);
+  expect(await screen.findByText('$20.91')).toBeInTheDocument();
+  expect(screen.getByText('$20.00')).toBeInTheDocument();
+  expect(screen.getByText('$0.91')).toBeInTheDocument();
 });
 
 it('shows a safe message when receipt data is unavailable', async () => {

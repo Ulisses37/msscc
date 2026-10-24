@@ -3,6 +3,16 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Donation, Membership
+from .processing_costs import calculate_donation_amounts
+
+
+class StrictContributionChoiceField(serializers.BooleanField):
+    """Require the form's actual JSON boolean, not DRF's string/number coercions."""
+
+    def to_internal_value(self, data):
+        if type(data) is not bool:
+            raise serializers.ValidationError("Expected a boolean.")
+        return data
 
 
 class DonationSerializer(serializers.ModelSerializer):
@@ -11,6 +21,7 @@ class DonationSerializer(serializers.ModelSerializer):
     donor_first_name = serializers.CharField(source="donor_first_name_encrypted", max_length=255)
     donor_last_name = serializers.CharField(source="donor_last_name_encrypted", max_length=255)
     donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
+    contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
     class Meta:
         model = Donation
@@ -20,6 +31,9 @@ class DonationSerializer(serializers.ModelSerializer):
             "donor_last_name",
             "donor_email",
             "amount",
+            "contribute_to_processing_costs",
+            "processing_cost_contribution",
+            "total_amount",
             "donation_date",
             "is_anonymous",
             "message",
@@ -29,6 +43,8 @@ class DonationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "donation_id",
+            "processing_cost_contribution",
+            "total_amount",
             "donation_date",
             "payment_status",
             "reference_id",
@@ -69,11 +85,39 @@ class DonationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Message cannot exceed 500 characters.")
         return value.strip()
 
+    def validate(self, attrs):
+        """Reject any resulting total too large to store, including admin edits."""
+        base = attrs.get("amount", getattr(self.instance, "amount", None))
+        choice = attrs.get(
+            "contribute_to_processing_costs",
+            getattr(self.instance, "contribute_to_processing_costs", False),
+        )
+        if (self.instance is not None
+                and self.instance.payment_status == Donation.PaymentStatus.COMPLETED
+                and (base != self.instance.amount
+                     or choice != self.instance.contribute_to_processing_costs)):
+            raise serializers.ValidationError({
+                "amount": "A completed payment's amounts cannot be changed."
+            })
+        if base is not None:
+            try:
+                calculate_donation_amounts(base, choice)
+            except ValueError as exc:
+                raise serializers.ValidationError({"amount": str(exc)}) from None
+        return attrs
+
     def create(self, validated_data):
-        """Create a donation with server-controlled payment fields."""
+        """Persist the opt-in, while monetary extras remain server-controlled."""
+        # The preview quote is not payment authorization: calculate again from
+        # validated inputs so a changed or forged browser total cannot persist.
+        contribution, total = calculate_donation_amounts(
+            validated_data["amount"], validated_data["contribute_to_processing_costs"]
+        )
         with transaction.atomic():
             donation = Donation.objects.create(
                 **validated_data,
+                processing_cost_contribution=contribution,
+                total_amount=total,
                 donation_date=timezone.localdate(),
                 payment_status=Donation.PaymentStatus.PENDING,
                 reference_id="pending",
@@ -82,6 +126,25 @@ class DonationSerializer(serializers.ModelSerializer):
             donation.save(update_fields=["reference_id"])
 
         return donation
+
+    def update(self, instance, validated_data):
+        """Recalculate authorized changes, never accept supplied monetary extras."""
+        # Finance-admin changes to either input must not leave the stored
+        # breakdown out of sync; read-only client totals are ignored.
+        if (validated_data.get("amount", instance.amount) != instance.amount
+                or validated_data.get(
+                    "contribute_to_processing_costs", instance.contribute_to_processing_costs
+                )
+                != instance.contribute_to_processing_costs):
+            contribution, total = calculate_donation_amounts(
+                validated_data.get("amount", instance.amount),
+                validated_data.get(
+                    "contribute_to_processing_costs", instance.contribute_to_processing_costs
+                ),
+            )
+            validated_data["processing_cost_contribution"] = contribution
+            validated_data["total_amount"] = total
+        return super().update(instance, validated_data)
 
 
 class MembershipSerializer(serializers.ModelSerializer):

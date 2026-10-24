@@ -16,7 +16,7 @@ import {
   MEMBERSHIP_OPTIONS,
   type MembershipOptionId,
 } from '@/constants/membershipOptions';
-import { createMembershipPaymentSession } from '@/services/paymentService';
+import { createMembershipPaymentSession, getMembershipQuote, type DonationQuote } from '@/services/paymentService';
 import type { DbContentBlock } from '@/types/content';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
@@ -57,6 +57,13 @@ function MembershipPageContent({ locale }: { locale: string }) {
   // form validation all use it, so membership details are never duplicated.
   const [selectedOptionId, setSelectedOptionId] =
     useState<MembershipOptionId | null>(null);
+  // The checkbox starts off. A quote is a preview for one option AND one
+  // choice; it is not an authorization to charge or a client-provided price.
+  const [contributeToProcessingCosts, setContributeToProcessingCosts] = useState(false);
+  const [quote, setQuote] = useState<DonationQuote | null>(null);
+  const [quotedOption, setQuotedOption] = useState<MembershipOptionId | null>(null);
+  const [quotedChoice, setQuotedChoice] = useState(false);
+  const [quoteError, setQuoteError] = useState(false);
   const [paymentSession, setPaymentSession] = useState<MembershipPaymentSession | null>(null);
   const [isPreparingPayment, setIsPreparingPayment] = useState(false);
   const [paymentSessionError, setPaymentSessionError] = useState(false);
@@ -71,6 +78,27 @@ function MembershipPageContent({ locale }: { locale: string }) {
 
   const selectedOption =
     MEMBERSHIP_OPTIONS.find((option) => option.id === selectedOptionId) ?? null;
+  // Discard results after the option/choice changes or the page unmounts.
+  // Otherwise a slow request could show a price for the previous selection.
+  useEffect(() => {
+    if (!selectedOptionId) return;
+    let active = true;
+    void getMembershipQuote(selectedOptionId, contributeToProcessingCosts).then(
+      (result) => {
+        if (active) { setQuote(result); setQuotedOption(selectedOptionId); setQuotedChoice(contributeToProcessingCosts); setQuoteError(false); }
+      },
+      () => { if (active) { setQuote(null); setQuoteError(true); } },
+    );
+    return () => { active = false; };
+  }, [selectedOptionId, contributeToProcessingCosts]);
+  // React may render before the next request resolves: only a quote matching
+  // both current inputs can appear in the summary or enable checkout.
+  const currentQuote = paymentSession
+    ? { amount: paymentSession.amount,
+        processingCostContribution: paymentSession.processingCostContribution,
+        totalAmount: paymentSession.totalAmount }
+    : quotedOption === selectedOptionId && quotedChoice === contributeToProcessingCosts && !quoteError
+      ? quote : null;
 
   const handleOptionChange = (optionId: MembershipOptionId) => {
     // An in-flight confirmation may already be charging this option. Do not
@@ -89,7 +117,9 @@ function MembershipPageContent({ locale }: { locale: string }) {
   };
 
   const handleContinueToPayment = async () => {
-    if (!selectedOptionId || !membershipIdentity || sessionRequestInFlight.current || paymentSession) {
+    // The preview gates the UI, but checkout sends only the option and choice.
+    // The backend recalculates and saves the actual amount charged by Stripe.
+    if (!selectedOptionId || !membershipIdentity || !currentQuote || sessionRequestInFlight.current || paymentSession) {
       return;
     }
 
@@ -101,10 +131,12 @@ function MembershipPageContent({ locale }: { locale: string }) {
     try {
       const session = await createMembershipPaymentSession({
         membershipOptionId: selectedOptionId,
+        contributeToProcessingCosts,
         ...membershipIdentity,
       });
       if (sessionRequestVersion.current === requestVersion) {
-        // SCRUM-508 will mount Stripe Elements using this client secret.
+        // The saved amounts supersede the preview if pricing changed between
+        // quote and checkout. Stripe Elements receives this intent's secret.
         setPaymentSession(session);
       }
     } catch {
@@ -223,6 +255,9 @@ function MembershipPageContent({ locale }: { locale: string }) {
         {/* Lock identity after requesting an intent so its member cannot change. */}
         <MembershipForm
           selectedOptionId={selectedOptionId}
+          contributeToProcessingCosts={contributeToProcessingCosts}
+          onContributionChange={setContributeToProcessingCosts}
+          isQuoteReady={currentQuote !== null}
           onValidityChange={setMembershipInformationValid}
           onInformationChange={setMembershipIdentity}
           isInformationLocked={isPreparingPayment || paymentSession !== null || paymentState !== 'ready'}
@@ -233,8 +268,12 @@ function MembershipPageContent({ locale }: { locale: string }) {
           <MembershipSummary
             selectedOption={selectedOption}
             locale={locale}
+            quote={currentQuote}
           />
         </MembershipForm>
+        {quoteError && selectedOptionId && !paymentSession && (
+          <p role="alert" className="mt-3 text-sm text-red-600">{t('quoteUnavailable')}</p>
+        )}
         {paymentSessionError && (
           <p role="alert" className="mt-3 text-sm text-red-600">
             {t('paymentSessionError')}

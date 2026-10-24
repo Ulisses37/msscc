@@ -4,11 +4,15 @@ from donations.views import (
     AdminTableRevisionView,
     DonationDetailView,
     DonationListCreateView,
+    DonationQuoteView,
     MembershipDetailView,
     MembershipListCreateView,
 )
 
 urlpatterns = [
+    # Put the public price preview alongside donation creation; it does not
+    # create a record or accept client-supplied contribution/total fields.
+    path("quote/", DonationQuoteView.as_view(), name="donation-quote"),
     path(
         "table-revisions/",
         AdminTableRevisionView.as_view(),

@@ -19,7 +19,17 @@ class Donation(models.Model):
     donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_email_encrypted = EncryptedTextField(null=True, blank=True)
+    # Keep amount as the original/base donation so existing admin and receipt
+    # data do not silently change meaning when contribution totals are added.
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    contribute_to_processing_costs = models.BooleanField(default=False)
+    processing_cost_contribution = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0
+    )
+    # No constant default can represent an arbitrary donation amount. New
+    # records initialize this from amount in save(); the migration backfills
+    # historical records from their own original amount instead.
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="usd")
     completed_at = models.DateTimeField(null=True, blank=True)
     donation_date = models.DateField()
@@ -55,6 +65,12 @@ class Donation(models.Model):
         """Identify the donation without exposing PII in incidental logging."""
         return f"Donation {self.pk} - {self.amount}"
 
+    def save(self, *args, **kwargs):
+        """Initialize the total on direct model creation as well as API creation."""
+        if self._state.adding and self.total_amount is None:
+            self.total_amount = self.amount
+        return super().save(*args, **kwargs)
+
 
 class Membership(models.Model):
     """Membership record to store membership information."""
@@ -84,6 +100,10 @@ class Membership(models.Model):
     stripe_payment_intent_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     membership_option_id = models.CharField(max_length=32, null=True, blank=True)
     expected_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    contribute_to_processing_costs = models.BooleanField(default=False)
+    processing_cost_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Only checkout-issued memberships have a base; legacy admin rows remain null.
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, null=True, blank=True)
     status = models.CharField(max_length=255)
     notes = models.TextField()

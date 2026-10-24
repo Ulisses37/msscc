@@ -10,6 +10,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
 from .models import AdminTableRevision, Donation, Membership
+from .processing_costs import calculate_donation_amounts
 from .serializers import DonationSerializer
 from .views import DonationListCreateView
 
@@ -37,6 +38,176 @@ class DonationPaymentDataTests(TestCase):
         donation = self.create_donation()
 
         self.assertEqual(donation.payment_status, Donation.PaymentStatus.PENDING)
+        self.assertFalse(donation.contribute_to_processing_costs)
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+        self.assertEqual(donation.total_amount, donation.amount)
+
+    def test_direct_model_creation_initializes_total_from_its_base(self):
+        """Legacy and internal callers should not need a constant total default."""
+        donation = self.create_donation(amount=Decimal("27.45"))
+        donation.refresh_from_db()
+        self.assertEqual(donation.total_amount, Decimal("27.45"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.00"))
+
+    def test_public_donation_api_persists_selected_and_omitted_choices(self):
+        """Exercise the actual endpoint without requiring the development server."""
+        data = {
+            "donor_first_name": "Test", "donor_last_name": "Donor",
+            "donor_email": "test@example.com", "amount": "12.50",
+        }
+        for choice in (True, False, None):
+            with self.subTest(choice=choice):
+                payload = data | (
+                    {"contribute_to_processing_costs": choice} if choice is not None else {}
+                )
+                response = APIClient().post("/api/donations/", payload, format="json")
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                donation = Donation.objects.get(pk=response.data["donation_id"])
+                self.assertEqual(donation.contribute_to_processing_costs, choice is True)
+                self.assertEqual(donation.amount, Decimal("12.50"))
+                self.assertEqual(
+                    donation.processing_cost_contribution,
+                    Decimal("0.68") if choice else Decimal("0.00"),
+                )
+                self.assertEqual(
+                    donation.total_amount, Decimal("13.18") if choice else Decimal("12.50")
+                )
+                self.assertEqual(response.data["contribute_to_processing_costs"], choice is True)
+                self.assertEqual(
+                    response.data["processing_cost_contribution"], "0.68" if choice else "0.00"
+                )
+                self.assertEqual(response.data["total_amount"], "13.18" if choice else "12.50")
+
+    def test_client_cannot_override_calculated_amounts_on_create_or_update(self):
+        payload = {
+            "donor_first_name": "Test", "donor_last_name": "Donor",
+            "donor_email": "test@example.com", "amount": "10.00",
+            "contribute_to_processing_costs": True,
+            "processing_cost_contribution": "999.00", "total_amount": "1009.00",
+        }
+        client = APIClient()
+        response = client.post("/api/donations/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        donation = Donation.objects.get(pk=response.data["donation_id"])
+        self.assertEqual(donation.total_amount, Decimal("10.61"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.61"))
+
+        user = User.objects.create_user(
+            email="finance@example.test", permissions_data={"Finances": True},
+        )
+        client.force_authenticate(user=user)
+        url = f"/api/donations/{donation.pk}/"
+        response = client.patch(url, {
+            "amount": "14.25", "processing_cost_contribution": "900.00",
+            "total_amount": "914.25",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        donation.refresh_from_db()
+        self.assertEqual(donation.amount, Decimal("14.25"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.73"))
+        self.assertEqual(donation.total_amount, Decimal("14.98"))
+
+    def test_completed_donation_keeps_paid_breakdown_after_admin_edits(self):
+        donation = self.create_donation(
+            amount=Decimal("10.00"), contribute_to_processing_costs=True,
+            processing_cost_contribution=Decimal("0.61"), total_amount=Decimal("10.61"),
+            payment_status=Donation.PaymentStatus.COMPLETED,
+        )
+        user = User.objects.create_user(
+            email="finance-paid@example.test", permissions_data={"Finances": True},
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        url = f"/api/donations/{donation.pk}/"
+        for change in ({"amount": "20.00"}, {"contribute_to_processing_costs": False}):
+            with self.subTest(change=change):
+                response = client.patch(url, change, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        # Even repeating the same input after pricing changes must not rewrite
+        # what the payer paid or what their receipt will display.
+        with patch("donations.serializers.calculate_donation_amounts", return_value=(
+            Decimal("1.00"), Decimal("11.00")
+        )) as calculate:
+            response = client.patch(url, {"amount": "10.00"}, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            calculate.assert_called_once()  # Validation, but no persistence recalculation.
+        response = client.patch(url, {"message": "Thank you"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        donation.refresh_from_db()
+        self.assertEqual(donation.amount, Decimal("10.00"))
+        self.assertEqual(donation.processing_cost_contribution, Decimal("0.61"))
+        self.assertEqual(donation.total_amount, Decimal("10.61"))
+        self.assertEqual(donation.message, "Thank you")
+
+    def test_public_quote_matches_saved_donation_and_rejects_supplied_totals(self):
+        """The preview cannot be a second pricing rule or accept a forged total."""
+        client = APIClient()
+        for amount, choice in (("0.01", True), ("12.50", True), ("12.50", False)):
+            with self.subTest(amount=amount, choice=choice):
+                data = {"amount": amount, "contribute_to_processing_costs": choice}
+                quote = client.post("/api/donations/quote/", data, format="json")
+                self.assertEqual(quote.status_code, 200)
+                saved = client.post("/api/donations/", {
+                    **data, "donor_first_name": "Test", "donor_last_name": "Donor",
+                    "donor_email": "test@example.com",
+                }, format="json")
+                self.assertEqual(saved.status_code, 201)
+                for key in ("amount", "processing_cost_contribution", "total_amount"):
+                    self.assertEqual(quote.data[key], saved.data[key])
+        for forged in ({"total_amount": "0.01"}, {"processing_cost_contribution": "0.00"},
+                       {"contribute_to_processing_costs": "true"}):
+            response = client.post(
+                "/api/donations/quote/", {"amount": "5.00", **forged}, format="json"
+            )
+            self.assertEqual(response.status_code, 400)
+
+    def test_gross_up_is_minimal_and_never_exceeds_decimal_field(self):
+        """One cent less must fail to cover the estimated fee on the full charge."""
+        for cents in (1, 2, 5, 30, 33, 100, 500, 1250, 10000, 9700000000):
+            with self.subTest(cents=cents):
+                base = Decimal(cents) / 100
+                extra, total = calculate_donation_amounts(base, True)
+                self.assertEqual(total, base + extra)
+                def fee(value):
+                    return (value * Decimal("0.029") + Decimal("0.30")).quantize(
+                        Decimal("0.01"), rounding="ROUND_HALF_UP"
+                    )
+                self.assertGreaterEqual(total - fee(total), base)
+                self.assertLess(total - Decimal("0.01") - fee(total - Decimal("0.01")), base)
+        with self.assertRaises(ValueError):
+            calculate_donation_amounts(Decimal("99999999.99"), True)
+
+    def test_gross_up_rounding_examples(self):
+        """Protect exact-cent behavior under the currently configured rate."""
+        # These are regression examples for the current 2.9% + $0.30 estimate,
+        # not confirmation that it matches the account's contracted Stripe rate.
+        for base, contribution, total in (
+            ("0.01", "0.31", "0.32"),
+            ("0.33", "0.32", "0.65"),
+            ("1.00", "0.34", "1.34"),
+            ("5.00", "0.46", "5.46"),
+            ("12.50", "0.68", "13.18"),
+        ):
+            with self.subTest(base=base):
+                self.assertEqual(
+                    calculate_donation_amounts(Decimal(base), True),
+                    (Decimal(contribution), Decimal(total)),
+                )
+                self.assertEqual(
+                    calculate_donation_amounts(Decimal(base), False),
+                    (Decimal("0.00"), Decimal(base)),
+                )
+
+    def test_choice_requires_a_boolean_not_a_fee_amount(self):
+        for choice in ("yes", 1, [True], {"value": True}):
+            with self.subTest(choice=choice):
+                response = APIClient().post("/api/donations/", {
+                    "donor_first_name": "Test", "donor_last_name": "Donor",
+                    "donor_email": "test@example.com", "amount": "10.00",
+                    "contribute_to_processing_costs": choice,
+                }, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Donation.objects.count(), 0)
 
     def test_serializer_ignores_client_controlled_payment_fields(self):
         serializer = DonationSerializer(

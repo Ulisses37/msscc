@@ -6,14 +6,23 @@ import { useLocale, useTranslations } from 'next-intl';
 import { DonationSummary } from '@/components/support/DonationSummary';
 import { PaymentReceipt } from '@/components/payments/PaymentReceipt';
 import { StripePaymentElement } from '@/components/support/StripePaymentElement';
+import {
+  DEFAULT_DONATION_AMOUNT,
+  DONATION_PRESET_AMOUNTS,
+  isValidDonationAmount,
+} from '@/constants/donationAmounts';
 import { subscribeToUpdates } from '@/services/emailService';
-import { createPaymentSession } from '@/services/paymentService';
+import { createPaymentSession, getDonationQuote, readDonationQuote, type DonationQuote } from '@/services/paymentService';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 const inputClassName =
   'mt-1 block w-full rounded-sm border border-msscc-gray-light px-3 py-2 text-sm text-msscc-gray-dark shadow-sm outline-none transition focus:border-msscc-teal focus:ring-2 focus:ring-msscc-teal/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60';
 
 interface DonationResponse {
   reference_id: string;
+  amount: string;
+  processing_cost_contribution: string;
+  total_amount: string;
 }
 
 type PaymentStatus = 'pending' | 'completed' | 'failed' | 'canceled';
@@ -34,18 +43,32 @@ export function DonationForm() {
   const locale = useLocale();
 
   // Non-payment donation information remains in application state.
-  const [donation, setDonation] = useState('');
+  // The choice is the source of truth: a custom value is never inferred from
+  // its numeric similarity to a preset. Keep only the donor's custom entry in
+  // separate state so changing the preset catalog requires no form rewiring.
+  const [selectedAmount, setSelectedAmount] = useState<string | null>(DEFAULT_DONATION_AMOUNT);
+  const [customAmount, setCustomAmount] = useState('');
+  // A quote is a pre-creation preview; after saving, display the persisted
+  // breakdown instead because the server may have changed its pricing since
+  // the preview was requested. Track inputs to reject out-of-order replies.
+  const [quote, setQuote] = useState<DonationQuote | null>(null);
+  const [quoteChoice, setQuoteChoice] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState('');
+  const [savedQuote, setSavedQuote] = useState<DonationQuote | null>(null);
+  const [quoteError, setQuoteError] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  // This is a choice, not a browser-calculated fee. The donation API saves
+  // the choice and computes its contribution and total on the server.
+  const [contributeToProcessingCosts, setContributeToProcessingCosts] = useState(false);
   const [message, setMessage] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
 
   // Values displayed in the existing donation summary.
-  const [summaryDonation, setSummaryDonation] = useState('');
   const [summaryEmail, setSummaryEmail] = useState('');
   const [summaryFirstName, setSummaryFirstName] = useState('');
   const [summaryLastName, setSummaryLastName] = useState('');
@@ -70,6 +93,10 @@ export function DonationForm() {
 
   // The donation reference associates the database record with Stripe.
   const [submittedReference, setSubmittedReference] = useState('');
+  // Snapshot the amount that was actually saved with the donation. If Stripe
+  // session creation fails, retry with this amount and the existing reference;
+  // changing either would cause the backend's amount comparison to reject it.
+  const [submittedAmount, setSubmittedAmount] = useState('');
 
   // Stripe uses this client secret to render the Payment Element.
   // This is not the Stripe account's secret API key.
@@ -91,6 +118,8 @@ export function DonationForm() {
     // late webhooks from the failed attempt cannot overwrite the new one.
     setClientSecret('');
     setSubmittedReference('');
+    setSubmittedAmount('');
+    setSavedQuote(null);
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -101,6 +130,8 @@ export function DonationForm() {
   const handleStartNewAttempt = () => {
     setClientSecret('');
     setSubmittedReference('');
+    setSubmittedAmount('');
+    setSavedQuote(null);
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -186,8 +217,42 @@ export function DonationForm() {
     email.trim(),
   );
 
-  const donationIsValid =
-    /^\d+(\.\d{1,2})?$/.test(donation) && Number(donation) > 0;
+  // One effective amount feeds validation, the review summary, the donation
+  // record and Stripe session. A missing/unknown option cannot fall back to a
+  // previously entered amount, even if the UI normally starts with $5 selected.
+  const donation = selectedAmount === 'custom'
+    ? customAmount
+    : selectedAmount && DONATION_PRESET_AMOUNTS.some((amount) => amount === selectedAmount)
+      ? selectedAmount
+      : '';
+  const donationIsValid = isValidDonationAmount(donation);
+
+  useEffect(() => {
+    // Once the record exists, do not overwrite its saved price with a new
+    // estimate. Invalid inputs cannot produce a payable quote either.
+    if (!donationIsValid || submittedReference) return;
+    let active = true;
+    // A late reply for an earlier choice must never appear as the current
+    // payable total or enable submission of a stale quote.
+    void getDonationQuote(donation, contributeToProcessingCosts).then(
+      (result) => {
+        if (active) { setQuote(result); setQuoteAmount(donation); setQuoteChoice(contributeToProcessingCosts); setQuoteError(false); }
+      },
+      () => {
+        if (active) { setQuote(null); setQuoteError(true); }
+      },
+    );
+    return () => { active = false; };
+  }, [donation, donationIsValid, contributeToProcessingCosts, submittedReference]);
+
+  const currentQuote = submittedReference ? savedQuote : quote;
+  // The button and displayed breakdown must refer to the same base and
+  // opt-in choice currently visible, not a prior asynchronous request.
+  const quoteMatchesChoice = Boolean(
+    currentQuote && currentQuote.amount === Number(donation).toFixed(2) &&
+    (submittedReference || quoteAmount === donation &&
+      quoteChoice === contributeToProcessingCosts && !quoteError),
+  );
 
   const formIsValid =
     emailIsValid &&
@@ -198,7 +263,9 @@ export function DonationForm() {
 
   // Lock the donation details after the database record is created.
   // This keeps the stored donation and Stripe session amounts consistent.
-  const fieldsAreLocked = submittedReference.length > 0;
+  // Freeze amount controls during the record request too: otherwise a click
+  // while awaiting POST could show a different amount from the submitted one.
+  const fieldsAreLocked = submittedReference.length > 0 || isSubmitting;
 
   /**
    * Create the donation record and prepare its Stripe Checkout Session.
@@ -210,7 +277,7 @@ export function DonationForm() {
     event.preventDefault();
 
     if (
-      !formIsValid ||
+      !formIsValid || !quoteMatchesChoice ||
       clientSecret ||
       isSubmitting ||
       submissionInFlight.current
@@ -224,6 +291,12 @@ export function DonationForm() {
 
     // If session creation previously failed, reuse the existing donation
     // reference instead of creating a duplicate donation record.
+    const amountForAttempt = submittedReference ? submittedAmount : donation;
+    if (!amountForAttempt) {
+      submissionInFlight.current = false;
+      setIsSubmitting(false);
+      return;
+    }
     let donationReference = submittedReference;
     let donationWasCreated = donationReference.length > 0;
 
@@ -240,7 +313,10 @@ export function DonationForm() {
               donor_first_name: firstName.trim(),
               donor_last_name: lastName.trim(),
               donor_email: email.trim().toLowerCase(),
-              amount: donation,
+              amount: amountForAttempt,
+              // Send only the payer's choice; never let the browser specify
+              // the contribution or the total charged by checkout.
+              contribute_to_processing_costs: contributeToProcessingCosts,
               is_anonymous: isAnonymous,
               message: message.trim(),
             }),
@@ -253,13 +329,23 @@ export function DonationForm() {
 
         if (
           !donationResponse.ok ||
-          typeof donationData?.reference_id !== 'string'
+          typeof donationData?.reference_id !== 'string' ||
+          typeof donationData.amount !== 'string' ||
+          typeof donationData.processing_cost_contribution !== 'string' ||
+          typeof donationData.total_amount !== 'string' ||
+          donationData.amount !== Number(amountForAttempt).toFixed(2) ||
+          (!contributeToProcessingCosts && donationData.processing_cost_contribution !== '0.00')
         ) {
           throw new Error('Donation request failed.');
         }
 
+        // Checkout still sends the base as a guard; the display now switches
+        // to server-persisted amounts, which may differ from the preview.
+        const savedBreakdown = readDonationQuote(donationData);
         donationReference = donationData.reference_id;
         donationWasCreated = true;
+        setSubmittedAmount(amountForAttempt);
+        setSavedQuote(savedBreakdown);
         setSubmittedReference(donationReference);
       }
 
@@ -274,9 +360,10 @@ export function DonationForm() {
         );
       }
 
-      // Use the reusable PR1 endpoint to create a Stripe Checkout Session.
+      // The checkout API validates this base against the saved record and
+      // charges the record's total, not this request value or the quote.
       const paymentSession = await createPaymentSession({
-        amount: donation,
+        amount: amountForAttempt,
         currency: 'usd',
         paymentPurpose: 'Donation',
         internalReference: donationReference,
@@ -387,39 +474,145 @@ export function DonationForm() {
           )}
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
-          {t('donationAmount')}
-          <input
-            type="text"
-            name="donationAmount"
-            inputMode="decimal"
-            value={donation}
-            onChange={(event) => setDonation(event.target.value)}
-            onBlur={() => {
-              setDonationTouched(true);
-              setSummaryDonation(donation);
-            }}
-            placeholder={t('donationPlaceholder')}
-            disabled={!emailIsValid || fieldsAreLocked}
-            required
-            className={inputClassName}
-            aria-invalid={donationTouched && !donationIsValid}
-            aria-describedby={
-              donationTouched && !donationIsValid
-                ? 'donation-amount-error'
-                : undefined
-            }
-          />
+        <fieldset className="min-w-0" aria-describedby="donation-options-description">
+          <legend className="text-sm font-medium text-slate-700">
+            {t('donationAmount')}
+          </legend>
+          <p id="donation-options-description" className="mt-1 text-sm text-slate-600">
+            {t('donationOptionsDescription')}
+          </p>
 
-          {donationTouched && !donationIsValid && (
-            <p
-              id="donation-amount-error"
-              className="mt-1 text-sm text-red-600"
+          {/* Native radios share a name for arrow-key navigation and expose the
+              current choice to screen readers. Match the membership card grid,
+              including a single column on narrow screens. */}
+          <div className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2">
+            {DONATION_PRESET_AMOUNTS.map((amount) => {
+              const isSelected = selectedAmount === amount;
+
+              return (
+                <label
+                  key={amount}
+                  className={`flex min-w-0 max-w-full items-center gap-2 rounded-md border px-3 py-2.5 transition-colors ${
+                    isSelected
+                      ? 'border-pink-700 bg-pink-50 ring-1 ring-pink-700'
+                      : 'border-slate-300 bg-white hover:border-pink-500'
+                  } ${fieldsAreLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                >
+                  <input
+                    type="radio"
+                    name="donationOption"
+                    value={amount}
+                    checked={isSelected}
+                    onChange={() => {
+                      if (fieldsAreLocked) return;
+                      // The chosen preset is the effective amount; deriving
+                      // the summary and both requests from it prevents a stale
+                      // custom entry from reaching checkout.
+                      setSelectedAmount(amount);
+                      setDonationTouched(false);
+                    }}
+                    disabled={fieldsAreLocked}
+                    className="h-4 w-4 shrink-0 accent-pink-700"
+                  />
+                  <span className="min-w-0 break-words text-sm font-medium text-slate-800">
+                    {formatCurrency(Number(amount), locale === 'ja' ? 'ja-JP' : 'en-US')}
+                  </span>
+                </label>
+              );
+            })}
+
+            <label
+              className={`flex min-w-0 max-w-full items-center gap-2 rounded-md border px-3 py-2.5 transition-colors ${
+                selectedAmount === 'custom'
+                  ? 'border-pink-700 bg-pink-50 ring-1 ring-pink-700'
+                  : 'border-slate-300 bg-white hover:border-pink-500'
+              } ${fieldsAreLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
             >
-              {t('donationAmountError')}
-            </p>
+              <input
+                type="radio"
+                name="donationOption"
+                value="custom"
+                checked={selectedAmount === 'custom'}
+                onChange={() => {
+                  if (fieldsAreLocked) return;
+                  // Do not carry a previously selected preset into the custom
+                  // field as if the donor had typed it. This also prevents an
+                  // old preset from appearing in the review summary.
+                  setSelectedAmount('custom');
+                  setCustomAmount('');
+                  setDonationTouched(false);
+                }}
+                disabled={fieldsAreLocked}
+                className="h-4 w-4 shrink-0 accent-pink-700"
+              />
+              <span className="min-w-0 break-words text-sm font-medium text-slate-800">
+                {t('customDonationOption')}
+              </span>
+            </label>
+          </div>
+
+          {selectedAmount === 'custom' && (
+            <div className="mt-3 min-w-0">
+              <label className="block text-sm font-medium text-slate-700">
+                {t('customDonationAmount')}
+                <input
+                  type="text"
+                  name="donationAmount"
+                  inputMode="decimal"
+                  value={customAmount}
+                  onChange={(event) => {
+                    setCustomAmount(event.target.value);
+                  }}
+                  onBlur={() => {
+                    setDonationTouched(true);
+                  }}
+                  placeholder={t('donationPlaceholder')}
+                  disabled={fieldsAreLocked}
+                  required
+                  className={inputClassName}
+                  aria-invalid={donationTouched && !donationIsValid}
+                  aria-describedby={
+                    donationTouched && !donationIsValid
+                      ? 'donation-amount-error'
+                      : undefined
+                  }
+                />
+              </label>
+
+              {/* Keep the error out of the label: assistive technology should
+                  announce it as a description, not rename the amount field. */}
+              {donationTouched && !donationIsValid && (
+                <p id="donation-amount-error" className="mt-1 text-sm text-red-600">
+                  {t('donationAmountError')}
+                </p>
+              )}
+            </div>
           )}
-        </label>
+        </fieldset>
+
+        {/* A native checkbox supports pointer, touch and keyboard interaction.
+            Keep the explanation visible rather than hiding a price change in
+            a hover-only tooltip; the description is also announced on focus. */}
+        <div>
+          <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              name="contributeToProcessingCosts"
+              checked={contributeToProcessingCosts}
+              onChange={(event) => setContributeToProcessingCosts(event.target.checked)}
+              disabled={!emailIsValid || fieldsAreLocked}
+              aria-describedby="processing-cost-contribution-description"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="min-w-0">{t('processingCostContribution')}</span>
+          </label>
+          <p
+            id="processing-cost-contribution-description"
+            className="mt-1 pl-7 text-caption text-msscc-gray-mid"
+          >
+            {t('processingCostContributionDetail')}
+          </p>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
@@ -518,7 +711,8 @@ export function DonationForm() {
         </label>
 
         <DonationSummary
-          donation={summaryDonation}
+          donation={donation}
+          quote={quoteMatchesChoice ? currentQuote : null}
           email={summaryEmail}
           firstName={summaryFirstName}
           lastName={summaryLastName}
@@ -527,11 +721,15 @@ export function DonationForm() {
           message={summaryMessage}
         />
 
+        {quoteError && !submittedReference && donationIsValid && (
+          <p role="alert" className="text-sm text-red-600">{t('quoteUnavailable')}</p>
+        )}
+
         {/* The first button records the donation and prepares Stripe. */}
         {!clientSecret && (
           <button
             type="submit"
-            disabled={!formIsValid || isSubmitting}
+            disabled={!formIsValid || !quoteMatchesChoice || isSubmitting}
             className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
           >
             {isSubmitting

@@ -11,6 +11,7 @@ export interface MembershipIdentity {
 /** A membership session is priced by the backend, never by this request. */
 export interface CreateMembershipPaymentSessionRequest extends MembershipIdentity {
   membershipOptionId: MembershipOptionId;
+  contributeToProcessingCosts?: boolean;
 }
 
 /** The session ID identifies a PaymentIntent for membership payments. */
@@ -22,4 +23,8 @@ export interface PaymentSession {
 export interface MembershipPaymentSession extends PaymentSession {
   /** Opaque database checkout reference, never the Stripe PaymentIntent secret. */
   confirmationReference: string;
+  /** Saved server-calculated amounts for this PaymentIntent, not the earlier preview. */
+  amount: string;
+  processingCostContribution: string;
+  totalAmount: string;
 }

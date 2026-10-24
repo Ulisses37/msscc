@@ -3,6 +3,7 @@ import type {
   MembershipPaymentSession,
   PaymentSession,
 } from '@/types/payment';
+import type { MembershipOptionId } from '@/constants/membershipOptions';
 
 export type { PaymentSession } from '@/types/payment';
 
@@ -15,12 +16,84 @@ export type PaymentReceipt = {
   // or a raw Stripe response.
   paymentPurpose: 'donation' | 'membership';
   amount: string;
+  baseAmount?: string;
+  processingCostContribution?: string;
+  totalAmount?: string;
   currency: string;
   completedAt: string;
   confirmationReference: string;
   membershipOption?: 'student' | 'individual' | 'family' | 'corporate';
   donationPurpose?: string;
 };
+
+export type DonationQuote = {
+  amount: string;
+  processingCostContribution: string;
+  totalAmount: string;
+};
+
+/** Parse API money into integer cents solely to validate/display it, never to price checkout. */
+function decimalCents(value: unknown): number | null {
+  if (typeof value !== 'string' || !/^\d{1,8}\.\d{2}$/.test(value)) return null;
+  const [whole, fraction] = value.split('.');
+  const cents = Number(whole) * 100 + Number(fraction);
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+/** Reject malformed or inconsistent money before it becomes a payable UI summary. */
+export function readDonationQuote(data: unknown): DonationQuote {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid quote.');
+  const fields = data as Record<string, unknown>;
+  const base = decimalCents(fields.amount);
+  const contribution = decimalCents(fields.processing_cost_contribution);
+  const total = decimalCents(fields.total_amount);
+  if (base === null || base <= 0 || contribution === null || total === null ||
+      base + contribution !== total) throw new Error('Invalid quote.');
+  return {
+    amount: fields.amount as string,
+    processingCostContribution: fields.processing_cost_contribution as string,
+    totalAmount: fields.total_amount as string,
+  };
+}
+
+/** Ask the server for the current choice's price without creating a payment. */
+export async function getDonationQuote(amount: string, contribute: boolean): Promise<DonationQuote> {
+  const unavailable = () => new Error('Unable to calculate donation total.');
+  if (!API_BASE_URL || !/^\d{1,8}(?:\.\d{1,2})?$/.test(amount) ||
+      decimalCents(Number(amount).toFixed(2)) === null) {
+    throw unavailable();
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/donations/quote/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, contribute_to_processing_costs: contribute }),
+    });
+    if (!response.ok) throw unavailable();
+    const quote = readDonationQuote(await response.json());
+    // A slow response must not display an amount/opt-in combination different
+    // from the request, even if its fields are individually well formed.
+    if (quote.amount !== Number(amount).toFixed(2) ||
+        (!contribute && quote.processingCostContribution !== '0.00')) throw unavailable();
+    return quote;
+  } catch {
+    throw unavailable();
+  }
+}
+
+export async function getMembershipQuote(optionId: MembershipOptionId, contribute: boolean): Promise<DonationQuote> {
+  const unavailable = () => new Error('Unable to calculate membership total.');
+  if (!API_BASE_URL) throw unavailable();
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/payments/membership/quote/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ membership_option_id: optionId, contribute_to_processing_costs: contribute }),
+    });
+    if (!response.ok) throw unavailable();
+    const quote = readDonationQuote(await response.json());
+    if (!contribute && quote.processingCostContribution !== '0.00') throw unavailable();
+    return quote;
+  } catch { throw unavailable(); }
+}
 
 /** Accept only a completed payment's public receipt, never pass raw API objects to UI. */
 export async function getPaymentReceipt(reference: string): Promise<PaymentReceipt> {
@@ -43,6 +116,14 @@ export async function getPaymentReceipt(reference: string): Promise<PaymentRecei
     const purpose = fields.payment_purpose;
     const option = fields.membership_option;
     const donationPurpose = fields.donation_purpose;
+    // Reuse structural validation for the saved breakdown, never the pricing
+    // formula: a completed donation retains its original amounts if rates change.
+    const hasBreakdown = purpose === 'donation' || (purpose === 'membership' && fields.base_amount !== undefined);
+    const breakdown = hasBreakdown ? readDonationQuote({
+      amount: fields.base_amount,
+      processing_cost_contribution: fields.processing_cost_contribution,
+      total_amount: fields.total_amount,
+    }) : null;
     if (
       (purpose !== 'donation' && purpose !== 'membership') ||
       (purpose === 'donation' && !reference.startsWith('DON-')) ||
@@ -54,12 +135,20 @@ export async function getPaymentReceipt(reference: string): Promise<PaymentRecei
       !/^\d{4}-\d{2}-\d{2}T/.test(fields.completed_at) ||
       !Number.isFinite(Date.parse(fields.completed_at)) ||
       (purpose === 'membership' && !['student', 'individual', 'family', 'corporate'].includes(option as string)) ||
+      (purpose === 'membership' && !hasBreakdown &&
+        (fields.processing_cost_contribution !== undefined || fields.total_amount !== undefined)) ||
       (donationPurpose !== undefined && (purpose !== 'donation' || typeof donationPurpose !== 'string' || donationPurpose.length > 200))
+      || (breakdown !== null && fields.amount !== breakdown.totalAmount)
     ) throw unavailable();
     // Map explicitly: never retain IDs, Stripe values or future backend fields.
     return {
       paymentPurpose: purpose,
       amount: fields.amount,
+      ...(breakdown ? {
+        baseAmount: breakdown.amount,
+        processingCostContribution: breakdown.processingCostContribution,
+        totalAmount: breakdown.totalAmount,
+      } : {}),
       currency: fields.currency,
       completedAt: fields.completed_at,
       confirmationReference: reference,
@@ -129,6 +218,7 @@ export async function createPaymentSession({
 /** Request a membership PaymentIntent without sending a price or card data. */
 export async function createMembershipPaymentSession({
   membershipOptionId,
+  contributeToProcessingCosts = false,
   firstName,
   lastName,
   email,
@@ -147,6 +237,7 @@ export async function createMembershipPaymentSession({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         membership_option_id: membershipOptionId,
+        contribute_to_processing_costs: contributeToProcessingCosts,
         payment_purpose: 'membership',
         first_name: firstName,
         last_name: lastName,
@@ -182,8 +273,8 @@ export async function createMembershipPaymentSession({
     ) {
       throw unavailable();
     }
-
-    return { sessionId, clientSecret, confirmationReference };
+    const saved = readDonationQuote(data);
+    return { sessionId, clientSecret, confirmationReference, ...saved };
   } catch {
     throw unavailable();
   }
