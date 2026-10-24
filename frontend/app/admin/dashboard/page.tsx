@@ -13,6 +13,7 @@ type LocalAdminInfo = {
   firstName: string;
   lastName: string;
   permissionData: Record<string, boolean>;
+  isExecutive: boolean;
 };
 
 export default function Dashboard() {
@@ -44,7 +45,7 @@ export default function Dashboard() {
           Your Pages
         </h1>
         {Object.entries(localAdmin.permissionData)
-          .filter(([, allowed]) => allowed)
+          .filter(([, allowed]) => allowed || localAdmin.isExecutive)
           .map(([page]) => (
             <AvailablePages key={page} CategoryTitle={page} />
           ))}
