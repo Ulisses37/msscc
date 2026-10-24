@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
@@ -39,8 +39,9 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/en/support');
 });
 
-it('renders configured presets with the agreed initial choice and formatted review amount', () => {
-  render(<DonationForm />);
+it('renders configured presets with the agreed initial choice and formatted review amount', async () => {
+  // The initial server quote resolves asynchronously even in this render-only test.
+  await act(async () => { render(<DonationForm />); });
 
   // These values are the agreed PR requirement; do not merely mirror the
   // configuration or an accidental edit to it could make this test pass.
@@ -60,8 +61,9 @@ it('renders configured presets with the agreed initial choice and formatted revi
   })).toBeChecked();
   expect(screen.getByRole('radio', { name: en.SupportPage.customDonationOption })).not.toBeChecked();
   expect(screen.queryByRole('textbox', { name: en.SupportPage.customDonationAmount })).not.toBeInTheDocument();
-  expect(within(screen.getByRole('region', { name: en.SupportPage.summaryHeading }))
-    .getByText(formatCurrency(Number(DEFAULT_DONATION_AMOUNT)))).toBeInTheDocument();
+  const summary = screen.getByRole('region', { name: en.SupportPage.summaryHeading });
+  expect(within(summary).getByText(en.SupportPage.donationAmount).nextElementSibling)
+    .toHaveTextContent(formatCurrency(Number(DEFAULT_DONATION_AMOUNT)));
 });
 
 it('lets the donor switch presets and enter a custom amount without retaining the prior preset', async () => {

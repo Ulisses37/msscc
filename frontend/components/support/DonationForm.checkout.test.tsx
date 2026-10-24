@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
@@ -45,13 +45,17 @@ it('shows the quoted total before checkout and disables stale choices', async ()
   await fillDonor(user);
   const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
   expect(button).toBeDisabled();
-  finish({ amount: '5.00', processingCostContribution: '0.00', totalAmount: '5.00' });
+  await act(async () => {
+    finish({ amount: '5.00', processingCostContribution: '0.00', totalAmount: '5.00' });
+  });
   await waitFor(() => expect(button).toBeEnabled());
   let finishSelected!: (quote: { amount: string; processingCostContribution: string; totalAmount: string }) => void;
   jest.mocked(getDonationQuote).mockReturnValueOnce(new Promise((resolve) => { finishSelected = resolve; }));
   await user.click(screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution }));
   expect(button).toBeDisabled();
-  finishSelected({ amount: '5.00', processingCostContribution: '0.61', totalAmount: '5.61' });
+  await act(async () => {
+    finishSelected({ amount: '5.00', processingCostContribution: '0.61', totalAmount: '5.61' });
+  });
   await waitFor(() => expect(button).toBeEnabled());
   const breakdown = screen.getByRole('region', { name: en.SupportPage.costBreakdown });
   expect(within(breakdown).getByText('$0.61')).toBeInTheDocument();
@@ -114,17 +118,19 @@ async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en
   // Donor identity is a prerequisite, not the behavior under test here. One
   // change per field avoids dozens of full-form renders for unrelated typing;
   // the amount controls and checkout buttons still use real user events below.
-  fireEvent.change(screen.getByRole('textbox', { name: messages.email }), {
-    target: { value: 'donor@example.com' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.firstName }), {
-    target: { value: 'Ada' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.lastName }), {
-    target: { value: 'Lovelace' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.address }), {
-    target: { value: '123 Main St' },
+  await act(async () => {
+    fireEvent.change(screen.getByRole('textbox', { name: messages.email }), {
+      target: { value: 'donor@example.com' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.firstName }), {
+      target: { value: 'Ada' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.lastName }), {
+      target: { value: 'Lovelace' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.address }), {
+      target: { value: '123 Main St' },
+    });
   });
 }
 
