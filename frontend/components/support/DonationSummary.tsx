@@ -3,9 +3,12 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { isValidDonationAmount } from '@/constants/donationAmounts';
+import { PaymentCostSummary } from '@/components/payments/PaymentCostSummary';
+import type { DonationQuote } from '@/services/paymentService';
 
 interface DonationSummaryProps {
   donation: string;
+  quote?: DonationQuote | null;
   email: string;
   firstName: string;
   lastName: string;
@@ -22,6 +25,7 @@ interface DonationSummaryProps {
  */
 export function DonationSummary({
   donation,
+  quote,
   email,
   firstName,
   lastName,
@@ -111,6 +115,26 @@ export function DonationSummary({
           </dd>
         </div>
       </dl>
+      {/* Only a quote matched to the current form (or the saved record) may
+          be passed in; do not reconstruct a fee from the amount in React. */}
+      {quote && donationIsValid && (
+        <div className="mt-4">
+          <PaymentCostSummary
+            summaryId="donation-cost-breakdown"
+            heading={t('costBreakdown')}
+            headingLevel="h3"
+            emptyMessage={t('notProvided')}
+            lines={[
+              { id: 'base', label: t('baseDonation'), amountInCents: Math.round(Number(quote.amount) * 100) },
+              { id: 'processing', label: t('processingCostAmount'), amountInCents: Math.round(Number(quote.processingCostContribution) * 100) },
+            ]}
+            totalLabel={t('paymentTotal')}
+            totalAmountInCents={Math.round(Number(quote.totalAmount) * 100)}
+            currency="USD"
+            locale={locale === 'ja' ? 'ja-JP' : 'en-US'}
+          />
+        </div>
+      )}
     </section>
   );
 }

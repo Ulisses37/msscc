@@ -10,10 +10,12 @@ from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
 from donations.models import Donation, Membership
+from payments.serializers import MEMBERSHIP_PRICES
 
 from .views import (
     MembershipPaymentSessionCreateView,
     MembershipPaymentStatusView,
+    MembershipQuoteView,
     PaymentReceiptView,
     PaymentSessionCreateView,
     PaymentStatusView,
@@ -64,6 +66,8 @@ class PaymentReceiptTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {
             "payment_purpose": "donation", "amount": "12.50",
+            "base_amount": "12.50", "processing_cost_contribution": "0.00",
+            "total_amount": "12.50",
             "currency": "usd", "completed_at": "2026-10-10T15:30:00Z",
             "confirmation_reference": self.donation_reference,
         })
@@ -240,6 +244,66 @@ class MembershipPaymentSessionTests(TestCase):
         data.update(overrides)
         return self.factory.post("/api/payments/membership/session/", data, format="json")
 
+    def test_quote_is_server_priced_and_rejects_forged_totals(self):
+        self.assertEqual(reverse("membership-quote"), "/api/payments/membership/quote/")
+        # Derive the no-fee base from the server catalog. Keep the opted-in
+        # exact values independent of the pricing function to detect drift.
+        base = MEMBERSHIP_PRICES["student"]
+        for choice, expected_contribution, expected_total in (
+            (False, Decimal("0.00"), base),
+            (True, Decimal("0.91"), Decimal("20.91")),
+        ):
+            with self.subTest(choice=choice):
+                response = MembershipQuoteView.as_view()(self.factory.post(
+                    reverse("membership-quote"),
+                    {"membership_option_id": "student", "contribute_to_processing_costs": choice},
+                    format="json",
+                ))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.data, {
+                    "amount": f"{base:.2f}",
+                    "processing_cost_contribution": f"{expected_contribution:.2f}",
+                    "total_amount": f"{expected_total:.2f}",
+                })
+        for extra in ({"total_amount": "0.01"}, {"contribute_to_processing_costs": "true"}):
+            response = MembershipQuoteView.as_view()(self.factory.post(
+                reverse("membership-quote"),
+                {"membership_option_id": "student", **extra}, format="json",
+            ))
+            self.assertEqual(response.status_code, 400)
+        self.assertFalse(Membership.objects.exists())
+
+    @patch("payments.services.stripe_service.StripeClient")
+    def test_opt_in_charges_saved_total_and_receipt_uses_saved_amounts(self, stripe_client):
+        intent = stripe_client.return_value.v1.payment_intents.create.return_value
+        intent.id = "pi_test_opt_in"
+        intent.client_secret = "pi_test_opt_in_secret"
+        response = MembershipPaymentSessionCreateView.as_view()(
+            self.request(contribute_to_processing_costs=True)
+        )
+        self.assertEqual(response.status_code, 201)
+        member = Membership.objects.get(stripe_payment_intent_id=intent.id)
+        self.assertEqual(member.base_amount, Decimal("20.00"))
+        self.assertTrue(member.contribute_to_processing_costs)
+        self.assertEqual(member.processing_cost_contribution, Decimal("0.91"))
+        self.assertEqual(member.expected_amount, Decimal("20.91"))
+        self.assertEqual(response.data["amount"], "20.00")
+        self.assertEqual(response.data["processing_cost_contribution"], "0.91")
+        self.assertEqual(response.data["total_amount"], "20.91")
+        params = stripe_client.return_value.v1.payment_intents.create.call_args.args[0]
+        self.assertEqual(params["amount"], 2091)
+        member.payment_status = Membership.PaymentStatus.COMPLETED
+        member.amount_paid = member.expected_amount
+        member.completed_at = datetime(2026, 10, 10, 15, 30, tzinfo=UTC)
+        member.save(update_fields=["payment_status", "amount_paid", "completed_at"])
+        receipt = PaymentReceiptView.as_view()(self.factory.get(reverse("payment-receipt"), {
+            "confirmation_reference": member.checkout_reference,
+        }))
+        self.assertEqual(receipt.status_code, 200)
+        self.assertEqual(receipt.data["base_amount"], "20.00")
+        self.assertEqual(receipt.data["processing_cost_contribution"], "0.91")
+        self.assertEqual(receipt.data["total_amount"], "20.91")
+
     @patch("payments.services.stripe_service.StripeClient")
     def test_each_option_uses_the_server_price_in_cents(self, stripe_client):
         """Mock only the Stripe boundary so the view and conversion run for real."""
@@ -265,6 +329,9 @@ class MembershipPaymentSessionTests(TestCase):
                         "session_id": f"pi_test_{option_id}",
                         "client_secret": "pi_test_secret_membership",
                         "confirmation_reference": membership.checkout_reference,
+                        "amount": f"{Decimal(cents) / 100:.2f}",
+                        "processing_cost_contribution": "0.00",
+                        "total_amount": f"{Decimal(cents) / 100:.2f}",
                     },
                 )
                 params = stripe_client.return_value.v1.payment_intents.create.call_args.args[0]
@@ -526,6 +593,22 @@ class SecurePaymentDatabaseTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(create_session.call_args.kwargs["amount"], donation.amount)
+
+    @patch("payments.views.create_payment_session")
+    def test_opted_in_session_charges_saved_total_not_base_or_browser_total(self, create_session):
+        """The request's base is only a guard; the database controls Stripe's price."""
+        donation = self.create_donation(
+            contribute_to_processing_costs=True,
+            processing_cost_contribution=Decimal("0.61"),
+            total_amount=Decimal("10.61"),
+        )
+        create_session.return_value = {"session_id": "cs_test", "client_secret": "safe"}
+        response = PaymentSessionCreateView.as_view()(self.session_request())
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(create_session.call_args.kwargs["amount"], donation.total_amount)
+        response = PaymentSessionCreateView.as_view()(self.session_request(amount="10.61"))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(create_session.call_count, 1)
 
     @patch("payments.views.create_payment_session")
     def test_session_rejects_an_amount_that_does_not_match(self, create_session):

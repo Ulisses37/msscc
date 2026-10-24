@@ -10,6 +10,7 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.utils import timezone
 
 from donations.models import Membership
+from donations.processing_costs import calculate_donation_amounts
 from payments.serializers import MEMBERSHIP_PRICES
 from payments.services.stripe_service import (
     cancel_membership_payment_intent,
@@ -94,10 +95,13 @@ def update_membership_from_payment_intent(
         return True
 
 
-def create_pending_membership(*, option_id, first_name, last_name, email, phone=""):
+def create_pending_membership(
+    *, option_id, first_name, last_name, email, phone="", contribute_to_processing_costs=False
+):
     """Save an inactive member and link an unconfirmed, server-priced intent."""
     # Do not trust a caller's price, currency, reference, or payment state.
-    amount = MEMBERSHIP_PRICES[option_id]
+    base = MEMBERSHIP_PRICES[option_id]
+    contribution, amount = calculate_donation_amounts(base, contribute_to_processing_costs)
     reference = f"MEM-{uuid4().hex}"
     today = timezone.localdate()
     intent_id = None
@@ -109,7 +113,9 @@ def create_pending_membership(*, option_id, first_name, last_name, email, phone=
                 first_name_encrypted=first_name, last_name_encrypted=last_name,
                 email_encrypted=email, phone_encrypted=phone,
                 membership_type=option_id, membership_option_id=option_id,
-                amount_paid=0, expected_amount=amount, currency="usd",
+                amount_paid=0, expected_amount=amount, base_amount=base,
+                contribute_to_processing_costs=contribute_to_processing_costs,
+                processing_cost_contribution=contribution, currency="usd",
                 start_date=today, end_date=today, renewal_date=today,
                 payment_status=Membership.PaymentStatus.PENDING,
                 status="pending", reference_id=reference, checkout_reference=reference,
@@ -126,7 +132,13 @@ def create_pending_membership(*, option_id, first_name, last_name, email, phone=
             membership.save(update_fields=["stripe_payment_intent_id", "updated_at"])
         # Only the opaque checkout reference is needed to read the eventual
         # result. Never use a Stripe secret or the database ID as the lookup key.
-        return {**session, "confirmation_reference": reference}
+        return {
+            **session,
+            "confirmation_reference": reference,
+            "amount": f"{base:.2f}",
+            "processing_cost_contribution": f"{contribution:.2f}",
+            "total_amount": f"{amount:.2f}",
+        }
     except (DatabaseError, stripe.StripeError, RuntimeError, ValueError) as exc:
         # Stripe cannot join a database transaction. If persistence fails after
         # intent creation, do not return its secret; attempt to cancel it.

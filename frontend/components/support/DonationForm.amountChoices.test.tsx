@@ -1,9 +1,10 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
+import { getDonationQuote } from '@/services/paymentService';
 import {
   DEFAULT_DONATION_AMOUNT,
   DONATION_PRESET_AMOUNTS,
@@ -25,8 +26,15 @@ jest.mock('next-intl', () => ({
 jest.mock('@/components/support/StripePaymentElement', () => ({
   StripePaymentElement: () => null,
 }));
+jest.mock('@/services/paymentService', () => ({
+  getDonationQuote: jest.fn(), createPaymentSession: jest.fn(), readDonationQuote: jest.fn(),
+}));
 
 beforeEach(() => {
+  jest.mocked(getDonationQuote).mockImplementation(async (amount) => ({
+    amount: Number(amount).toFixed(2), processingCostContribution: '0.00',
+    totalAmount: Number(amount).toFixed(2),
+  }));
   mockLocale = 'en';
   window.history.replaceState({}, '', '/en/support');
 });
@@ -65,7 +73,7 @@ it('lets the donor switch presets and enter a custom amount without retaining th
   expect(secondPreset).toBeChecked();
   expect(screen.getByRole('radio', { name: formatCurrency(5) })).not.toBeChecked();
   const summary = screen.getByRole('region', { name: en.SupportPage.summaryHeading });
-  expect(within(summary).getByText(formatCurrency(10))).toBeInTheDocument();
+  expect(within(summary).getAllByText(formatCurrency(10)).length).toBeGreaterThan(0);
 
   const custom = screen.getByRole('radio', { name: en.SupportPage.customDonationOption });
   await user.click(custom);
@@ -77,11 +85,11 @@ it('lets the donor switch presets and enter a custom amount without retaining th
   const input = screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount });
   expect(input).toHaveValue('');
   await user.type(input, '12.50');
-  expect(within(summary).getByText(formatCurrency(12.5))).toBeInTheDocument();
+  expect(within(summary).getAllByText(formatCurrency(12.5)).length).toBeGreaterThan(0);
 
   await user.click(screen.getByRole('radio', { name: formatCurrency(25) }));
   expect(screen.queryByRole('textbox', { name: en.SupportPage.customDonationAmount })).not.toBeInTheDocument();
-  expect(within(summary).getByText(formatCurrency(25))).toBeInTheDocument();
+  expect(within(summary).getAllByText(formatCurrency(25)).length).toBeGreaterThan(0);
 });
 
 it('clears the default preset when custom is chosen and shows the existing amount error on blur', async () => {
@@ -95,7 +103,7 @@ it('clears the default preset when custom is chosen and shows the existing amoun
   await user.type(screen.getByRole('textbox', { name: en.SupportPage.lastName }), 'Lovelace');
   await user.type(screen.getByRole('textbox', { name: en.SupportPage.address }), '123 Main St');
   const continueButton = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
-  expect(continueButton).toBeEnabled();
+  await waitFor(() => expect(continueButton).toBeEnabled());
 
   await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
   const customInput = screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount });

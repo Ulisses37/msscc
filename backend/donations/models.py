@@ -100,6 +100,10 @@ class Membership(models.Model):
     stripe_payment_intent_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     membership_option_id = models.CharField(max_length=32, null=True, blank=True)
     expected_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    contribute_to_processing_costs = models.BooleanField(default=False)
+    processing_cost_contribution = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Only checkout-issued memberships have a base; legacy admin rows remain null.
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, null=True, blank=True)
     status = models.CharField(max_length=255)
     notes = models.TextField()

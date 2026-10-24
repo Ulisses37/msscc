@@ -14,6 +14,7 @@ afterEach(() => { global.fetch = originalFetch; jest.clearAllMocks(); });
 
 const valid = {
   payment_purpose: 'donation', amount: '12.50', currency: 'usd',
+  base_amount: '12.50', processing_cost_contribution: '0.00', total_amount: '12.50',
   completed_at: '2026-10-10T15:30:00Z', confirmation_reference: reference,
 };
 
@@ -25,6 +26,7 @@ it('reads only safe receipt fields from a no-cache request', async () => {
   }) } as Response);
   await expect(getPaymentReceipt(reference)).resolves.toEqual({
     paymentPurpose: 'donation', amount: '12.50', currency: 'usd',
+    baseAmount: '12.50', processingCostContribution: '0.00', totalAmount: '12.50',
     completedAt: valid.completed_at, confirmationReference: reference,
   });
   expect(global.fetch).toHaveBeenCalledWith(
@@ -45,6 +47,18 @@ it('accepts a safe membership option and optional backend donation purpose', asy
   await expect(getPaymentReceipt(reference)).resolves.toMatchObject({ donationPurpose: 'Community programs' });
 });
 
+it('reads a completed membership breakdown without recalculating its price', async () => {
+  const memberReference = `MEM-${'b'.repeat(32)}`;
+  jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+    ...valid, payment_purpose: 'membership', confirmation_reference: memberReference,
+    membership_option: 'student', amount: '20.91', base_amount: '20.00',
+    processing_cost_contribution: '0.91', total_amount: '20.91',
+  }) } as Response);
+  await expect(getPaymentReceipt(memberReference)).resolves.toMatchObject({
+    amount: '20.91', baseAmount: '20.00', processingCostContribution: '0.91', totalAmount: '20.91',
+  });
+});
+
 it.each(['pi_secret', 'DON-1', 'MEM-incorrect'])('rejects malformed %s without a request', async (value) => {
   await expect(getPaymentReceipt(value)).rejects.toThrow('Unable to retrieve receipt.');
   expect(global.fetch).not.toHaveBeenCalled();
@@ -63,5 +77,24 @@ it('hides HTTP and network errors', async () => {
   jest.mocked(global.fetch).mockResolvedValueOnce({ ok: false } as Response)
     .mockRejectedValueOnce(new Error('private backend detail'));
   await expect(getPaymentReceipt(reference)).rejects.toThrow('Unable to retrieve receipt.');
+  await expect(getPaymentReceipt(reference)).rejects.toThrow('Unable to retrieve receipt.');
+});
+
+it('accepts a completed donation with the saved cost breakdown, not a recalculated fee', async () => {
+  // A later price change cannot rewrite what the donor actually paid.
+  jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+    ...valid, amount: '13.18', total_amount: '13.18',
+    processing_cost_contribution: '0.68', client_secret: 'hidden',
+  }) } as Response);
+  await expect(getPaymentReceipt(reference)).resolves.toMatchObject({
+    amount: '13.18', baseAmount: '12.50', processingCostContribution: '0.68',
+    totalAmount: '13.18',
+  });
+});
+
+it('rejects inconsistent stored receipt totals', async () => {
+  jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+    ...valid, amount: '13.18', total_amount: '12.50',
+  }) } as Response);
   await expect(getPaymentReceipt(reference)).rejects.toThrow('Unable to retrieve receipt.');
 });

@@ -88,6 +88,24 @@ class MembershipWebhookTests(TestCase):
         self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
         self.assertEqual(Membership.objects.count(), 1)
 
+    def test_opted_in_payment_requires_the_full_saved_total(self):
+        self.member.base_amount = Decimal("20.00")
+        self.member.contribute_to_processing_costs = True
+        self.member.processing_cost_contribution = Decimal("0.91")
+        self.member.expected_amount = Decimal("20.91")
+        self.member.save(update_fields=[
+            "base_amount", "contribute_to_processing_costs",
+            "processing_cost_contribution", "expected_amount",
+        ])
+        self.assertEqual(self.send(amount_received=2000).status_code, 200)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.payment_status, Membership.PaymentStatus.PENDING)
+        response = self.send(amount_received=2091, event_id="evt_full_total")
+        self.assertEqual(response.status_code, 200)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.payment_status, Membership.PaymentStatus.COMPLETED)
+        self.assertEqual(self.member.amount_paid, Decimal("20.91"))
+
     @patch("payments.services.stripe_service.StripeClient")
     def test_checkout_record_becomes_active_only_after_verified_payment(self, stripe_client):
         # Exercise the real session view and persistence, mocking only Stripe's

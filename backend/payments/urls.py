@@ -3,6 +3,7 @@ from django.urls import path
 from payments.views import (
     MembershipPaymentSessionCreateView,
     MembershipPaymentStatusView,
+    MembershipQuoteView,
     PaymentReceiptView,
     PaymentSessionCreateView,
     PaymentStatusView,
@@ -10,6 +11,7 @@ from payments.views import (
 )
 
 urlpatterns = [
+    path("membership/quote/", MembershipQuoteView.as_view(), name="membership-quote"),
     path("receipt/", PaymentReceiptView.as_view(), name="payment-receipt"),
     # PaymentIntent-based membership checkout is separate from donation Checkout.
     path(

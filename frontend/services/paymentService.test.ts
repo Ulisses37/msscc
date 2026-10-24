@@ -4,6 +4,8 @@ const confirmationReference = `MEM-${'a'.repeat(32)}`;
 const identity = { firstName: 'Maya', lastName: 'Chen', email: 'maya@example.com', phone: '' };
 let createMembershipPaymentSession: typeof import('@/services/paymentService').createMembershipPaymentSession;
 let getMembershipPaymentStatus: typeof import('@/services/paymentService').getMembershipPaymentStatus;
+let getDonationQuote: typeof import('@/services/paymentService').getDonationQuote;
+let getMembershipQuote: typeof import('@/services/paymentService').getMembershipQuote;
 
 describe('createMembershipPaymentSession', () => {
   beforeAll(async () => {
@@ -14,6 +16,7 @@ describe('createMembershipPaymentSession', () => {
     jest.resetModules();
     ({ createMembershipPaymentSession } = await import('@/services/paymentService'));
     ({ getMembershipPaymentStatus } = await import('@/services/paymentService'));
+    ({ getDonationQuote, getMembershipQuote } = await import('@/services/paymentService'));
   });
 
   beforeEach(() => {
@@ -32,12 +35,14 @@ describe('createMembershipPaymentSession', () => {
         session_id: 'pi_test_membership',
         client_secret: 'pi_test_secret',
         confirmation_reference: confirmationReference,
+        amount: '50.00', processing_cost_contribution: '0.00', total_amount: '50.00',
       }),
     } as unknown as Response);
 
     await expect(
       createMembershipPaymentSession({ membershipOptionId: 'family', ...identity }),
-    ).resolves.toEqual({ sessionId: 'pi_test_membership', clientSecret: 'pi_test_secret', confirmationReference });
+    ).resolves.toEqual({ sessionId: 'pi_test_membership', clientSecret: 'pi_test_secret', confirmationReference,
+      amount: '50.00', processingCostContribution: '0.00', totalAmount: '50.00' });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const [url, options] = jest.mocked(global.fetch).mock.calls[0];
@@ -48,6 +53,7 @@ describe('createMembershipPaymentSession', () => {
     // secret is silently added to application requests.
     expect(JSON.parse(options?.body as string)).toEqual({
       membership_option_id: 'family',
+      contribute_to_processing_costs: false,
       payment_purpose: 'membership',
       first_name: 'Maya', last_name: 'Chen', email: 'maya@example.com', phone: '',
     });
@@ -64,6 +70,9 @@ describe('createMembershipPaymentSession', () => {
     { session_id: 'pi_valid', client_secret: null },
     { session_id: 'pi_valid', client_secret: ' ' },
     { session_id: 'pi_valid', client_secret: 'pi_secret', confirmation_reference: 'MEM-invalid' },
+    { session_id: 'pi_valid', client_secret: 'pi_secret', confirmation_reference: confirmationReference },
+    { session_id: 'pi_valid', client_secret: 'pi_secret', confirmation_reference: confirmationReference,
+      amount: '20.00', processing_cost_contribution: '0.91', total_amount: '20.00' },
   ])('rejects malformed session data safely: %p', async (data) => {
     jest.mocked(global.fetch).mockResolvedValue({
       ok: true,
@@ -89,6 +98,75 @@ describe('createMembershipPaymentSession', () => {
     await expect(
       createMembershipPaymentSession({ membershipOptionId: 'individual', ...identity }),
     ).rejects.toThrow(safeError);
+  });
+});
+
+describe('server-priced checkout quotes', () => {
+  beforeEach(() => { global.fetch = jest.fn(); });
+  afterEach(() => { global.fetch = originalFetch; jest.clearAllMocks(); });
+
+  const donationQuote = {
+    amount: '12.50', processing_cost_contribution: '0.68', total_amount: '13.18',
+  };
+
+  it('requests the donation quote with only the base and choice', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => donationQuote } as Response);
+    await expect(getDonationQuote('12.50', true)).resolves.toEqual({
+      amount: '12.50', processingCostContribution: '0.68', totalAmount: '13.18',
+    });
+    const [url, options] = jest.mocked(global.fetch).mock.calls[0];
+    expect(url).toBe('https://api.example.test/api/donations/quote/');
+    expect(JSON.parse((options as RequestInit).body as string)).toEqual({
+      amount: '12.50', contribute_to_processing_costs: true,
+    });
+  });
+
+  it.each([
+    { ...donationQuote, total_amount: '12.50' },
+    { ...donationQuote, amount: '10.00' },
+    { ...donationQuote, processing_cost_contribution: 'secret' },
+    { ...donationQuote, total_amount: '100000000.00' },
+  ])('rejects malformed or stale donation quote %p', async (payload) => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => payload } as Response);
+    await expect(getDonationQuote('12.50', true)).rejects.toThrow('Unable to calculate donation total.');
+  });
+
+  it('rejects an unexpected contribution when the donor did not opt in', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => donationQuote } as Response);
+    await expect(getDonationQuote('12.50', false)).rejects.toThrow('Unable to calculate donation total.');
+  });
+
+  it('quotes the membership catalog option and choice without browser prices', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+      amount: '20.00', processing_cost_contribution: '0.91', total_amount: '20.91',
+    }) } as Response);
+    await expect(getMembershipQuote('student', true)).resolves.toEqual({
+      amount: '20.00', processingCostContribution: '0.91', totalAmount: '20.91',
+    });
+    expect(jest.mocked(global.fetch).mock.calls[0][0]).toBe('https://api.example.test/api/payments/membership/quote/');
+    expect(JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string)).toEqual({
+      membership_option_id: 'student', contribute_to_processing_costs: true,
+    });
+  });
+
+  it('rejects a membership contribution when the payer did not opt in', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+      amount: '20.00', processing_cost_contribution: '0.91', total_amount: '20.91',
+    }) } as Response);
+    await expect(getMembershipQuote('student', false)).rejects.toThrow();
+  });
+
+  it('sends the membership choice, not client totals, to checkout', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+      session_id: 'pi_test', client_secret: 'pi_secret', confirmation_reference: confirmationReference,
+      amount: '20.00', processing_cost_contribution: '0.91', total_amount: '20.91',
+    }) } as Response);
+    await expect(createMembershipPaymentSession({ membershipOptionId: 'student', contributeToProcessingCosts: true,
+      ...identity })).resolves.toMatchObject({ amount: '20.00', processingCostContribution: '0.91', totalAmount: '20.91' });
+    const body = JSON.parse(jest.mocked(global.fetch).mock.calls[0][1]?.body as string);
+    expect(body.contribute_to_processing_costs).toBe(true);
+    expect(body).not.toHaveProperty('amount');
+    expect(body).not.toHaveProperty('total_amount');
   });
 });
 

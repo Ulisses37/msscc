@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Donation, Membership
+from .processing_costs import calculate_donation_amounts
 
 
 class StrictContributionChoiceField(serializers.BooleanField):
@@ -84,15 +85,39 @@ class DonationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Message cannot exceed 500 characters.")
         return value.strip()
 
+    def validate(self, attrs):
+        """Reject any resulting total too large to store, including admin edits."""
+        base = attrs.get("amount", getattr(self.instance, "amount", None))
+        choice = attrs.get(
+            "contribute_to_processing_costs",
+            getattr(self.instance, "contribute_to_processing_costs", False),
+        )
+        if (self.instance is not None
+                and self.instance.payment_status == Donation.PaymentStatus.COMPLETED
+                and (base != self.instance.amount
+                     or choice != self.instance.contribute_to_processing_costs)):
+            raise serializers.ValidationError({
+                "amount": "A completed payment's amounts cannot be changed."
+            })
+        if base is not None:
+            try:
+                calculate_donation_amounts(base, choice)
+            except ValueError as exc:
+                raise serializers.ValidationError({"amount": str(exc)}) from None
+        return attrs
+
     def create(self, validated_data):
         """Persist the opt-in, while monetary extras remain server-controlled."""
+        # The preview quote is not payment authorization: calculate again from
+        # validated inputs so a changed or forged browser total cannot persist.
+        contribution, total = calculate_donation_amounts(
+            validated_data["amount"], validated_data["contribute_to_processing_costs"]
+        )
         with transaction.atomic():
             donation = Donation.objects.create(
                 **validated_data,
-                # SCRUM-744 will replace this zero with the agreed server fee.
-                # Until then, the opt-in cannot change the amount charged.
-                processing_cost_contribution=0,
-                total_amount=validated_data["amount"],
+                processing_cost_contribution=contribution,
+                total_amount=total,
                 donation_date=timezone.localdate(),
                 payment_status=Donation.PaymentStatus.PENDING,
                 reference_id="pending",
@@ -103,11 +128,22 @@ class DonationSerializer(serializers.ModelSerializer):
         return donation
 
     def update(self, instance, validated_data):
-        """Keep a zero-contribution total aligned with an edited base amount."""
-        # Admin updates can change the existing writable base amount. Do not
-        # leave a stale total behind while no contribution has been calculated.
-        if "amount" in validated_data and instance.processing_cost_contribution == 0:
-            validated_data["total_amount"] = validated_data["amount"]
+        """Recalculate authorized changes, never accept supplied monetary extras."""
+        # Finance-admin changes to either input must not leave the stored
+        # breakdown out of sync; read-only client totals are ignored.
+        if (validated_data.get("amount", instance.amount) != instance.amount
+                or validated_data.get(
+                    "contribute_to_processing_costs", instance.contribute_to_processing_costs
+                )
+                != instance.contribute_to_processing_costs):
+            contribution, total = calculate_donation_amounts(
+                validated_data.get("amount", instance.amount),
+                validated_data.get(
+                    "contribute_to_processing_costs", instance.contribute_to_processing_costs
+                ),
+            )
+            validated_data["processing_cost_contribution"] = contribution
+            validated_data["total_amount"] = total
         return super().update(instance, validated_data)
 
 

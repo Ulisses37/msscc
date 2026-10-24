@@ -76,3 +76,19 @@ it('uses Japanese messages and locale-formatted USD for valid and invalid amount
   rerender(summary(''));
   expect(amountRow(ja.SupportPage)).toHaveTextContent(ja.SupportPage.notProvided);
 });
+
+it.each(['en', 'ja'] as const)('shows the server-quoted breakdown in %s', (language) => {
+  mockLocale = language;
+  const messages = (language === 'ja' ? ja : en).SupportPage;
+  const view = render(<DonationSummary
+    donation="12.50"
+    quote={{ amount: '12.50', processingCostContribution: '0.68', totalAmount: '13.18' }}
+    email="donor@example.com" firstName="Ada" lastName="Lovelace"
+    address="123 Main St" isAnonymous={false} message=""
+  />);
+  expect(screen.getByRole('region', { name: messages.costBreakdown })).toHaveTextContent(
+    formatCurrency(13.18, language === 'ja' ? 'ja-JP' : 'en-US'),
+  );
+  expect(screen.getByText(messages.processingCostAmount)).toBeInTheDocument();
+  view.unmount();
+});
