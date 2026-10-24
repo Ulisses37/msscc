@@ -44,18 +44,20 @@ function PageCard(
   const description = pageDescriptions[PageTitle];
 
   return(
-    <div className="">
+    <div>
       {link ? (
-          <Link href={link.href} className="text-xl underline !text-black">
-            {PageTitle}
-          </Link>
-        ) : (
-          <div className="text-xl text-gray-800">{PageTitle}</div>
-        )}
-      <div className="pl-4">
+        <Link
+          href={link.href}
+          className="font-heading text-heading-2 text-msscc-teal underline transition-colors hover:text-msscc-pink"
+        >
+          {PageTitle}
+        </Link>
+      ) : (
+        <div className="font-heading text-heading-2 text-msscc-teal-light">{PageTitle}</div>
+      )}
+      <div className="pl-4 text-body-sm text-msscc-gray-mid">
         {description}
       </div>
-
     </div>
   )
 }
