@@ -21,7 +21,7 @@ export default function AdminPermissionPage(){
   return(
     <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 w-full">
-        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
+        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Admin Permissions</h1>
       </header>
 
       {/* Stacked on phones and tablets, side by side from lg up */}
@@ -65,7 +65,7 @@ export default function AdminPermissionPage(){
     {logInType === "Developer Admin" && (
       <button
         type="button"
-        className="w-16 rounded-md bg-green-500 py-1 text-center text-sm text-white hover:bg-green-600 sm:w-24 sm:py-2 sm:text-base"
+        className="w-12 rounded-md bg-green-500 py-1 text-center text-xs text-white hover:bg-green-600 sm:w-24 sm:py-2 sm:text-base"
         onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
       >
         Add
@@ -73,7 +73,7 @@ export default function AdminPermissionPage(){
     )}
     <button
       type="button"
-      className="w-16 rounded-md bg-blue-400 py-1 text-center text-sm text-white hover:bg-blue-600 sm:w-24 sm:py-2 sm:text-base"
+      className="w-12 rounded-md bg-blue-400 py-1 text-center text-xs text-white hover:bg-blue-600 sm:w-24 sm:py-2 sm:text-base"
       onClick={() => updateDatabase()}
     >
       Update
