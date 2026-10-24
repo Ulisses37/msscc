@@ -11,11 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from donations.models import Donation, Membership
+from donations.processing_costs import calculate_donation_amounts
 from donations.services import create_pending_membership, update_membership_from_payment_intent
 from payments.serializers import (
     MEMBERSHIP_PRICES,
     MembershipPaymentSessionRequestSerializer,
     MembershipPaymentStatusSerializer,
+    MembershipQuoteRequestSerializer,
     PaymentReceiptSerializer,
     PaymentSessionRequestSerializer,
 )
@@ -88,7 +90,7 @@ class PaymentSessionCreateView(APIView):
         # Only an existing pending donation can use this checkout route. A
         # client-controlled price must never reach Stripe for other references.
         try:
-            donation = Donation.objects.only("amount", "payment_status").get(
+            donation = Donation.objects.only("amount", "total_amount", "payment_status").get(
                 reference_id=internal_reference
             )
         except Donation.DoesNotExist:
@@ -114,14 +116,16 @@ class PaymentSessionCreateView(APIView):
                 {"detail": "This donation cannot start another payment."},
                 status=status.HTTP_409_CONFLICT,
             )
-        # The legacy donation frontend sends its stored amount back here.
-        # Compare it, but use the database amount for the actual Stripe call.
+        # The donation form still sends its base amount as a stale-record
+        # guard. It must not choose the price charged by Stripe.
         if donation.amount != validated_data["amount"]:
             return Response(
                 {"detail": "Payment amount does not match the donation."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        payment_amount = donation.amount
+        # Stripe receives the saved server-calculated total, never either the
+        # preview quote or a browser-provided contribution/total.
+        payment_amount = donation.total_amount
 
         # Construct the return URL on the server. Accepting a complete return
         # URL from the browser could allow an attacker to redirect a user to
@@ -196,6 +200,7 @@ class MembershipPaymentSessionCreateView(APIView):
             # display price is not authoritative even when it happens to match.
             payment_session = create_pending_membership(
                 option_id=option_id,
+                contribute_to_processing_costs=serializer.validated_data["contribute_to_processing_costs"],
                 first_name=serializer.validated_data["first_name"],
                 last_name=serializer.validated_data["last_name"],
                 email=serializer.validated_data["email"],
@@ -216,6 +221,23 @@ class MembershipPaymentSessionCreateView(APIView):
             )
 
         return Response(payment_session, status=status.HTTP_201_CREATED)
+
+
+class MembershipQuoteView(APIView):
+    """Preview the server catalog price and optional processing contribution."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = MembershipQuoteRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        base = MEMBERSHIP_PRICES[serializer.validated_data["membership_option_id"]]
+        contribution, total = calculate_donation_amounts(
+            base, serializer.validated_data["contribute_to_processing_costs"]
+        )
+        return Response({"amount": f"{base:.2f}",
+                         "processing_cost_contribution": f"{contribution:.2f}",
+                         "total_amount": f"{total:.2f}"})
 
 
 # Maps Stripe events to the lowercase values stored in Donation.payment_status.
@@ -352,6 +374,12 @@ class PaymentReceiptView(APIView):
                     "confirmation_reference": payment.checkout_reference,
                     "membership_option": payment.membership_option_id,
                 }
+                if payment.base_amount is not None:
+                    receipt.update({
+                        "base_amount": payment.base_amount,
+                        "processing_cost_contribution": payment.processing_cost_contribution,
+                        "total_amount": payment.amount_paid,
+                    })
             elif DONATION_REFERENCE_PATTERN.fullmatch(reference):
                 payment = Donation.objects.defer(
                     "donor_first_name_encrypted", "donor_last_name_encrypted",
@@ -363,9 +391,14 @@ class PaymentReceiptView(APIView):
                 )
                 # A donor message is not a donation purpose; omit optional
                 # purpose until a dedicated backend field is available.
+                # Use the stored breakdown, not today's pricing constants:
+                # rates may change after a donation was paid.
                 receipt = {
                     "payment_purpose": "donation",
-                    "amount": payment.amount,
+                    "amount": payment.total_amount,
+                    "base_amount": payment.amount,
+                    "processing_cost_contribution": payment.processing_cost_contribution,
+                    "total_amount": payment.total_amount,
                     "currency": payment.currency,
                     "completed_at": payment.completed_at,
                     "confirmation_reference": payment.reference_id,

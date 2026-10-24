@@ -7,7 +7,8 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 
 import { MembershipSummary } from '@/components/membership/MembershipSummary';
-import { MEMBERSHIP_OPTIONS } from '@/constants/membershipOptions';
+import { MEMBERSHIP_OPTIONS, type MembershipOption } from '@/constants/membershipOptions';
+import type { DonationQuote } from '@/services/paymentService';
 import enMessages from '@/messages/en.json';
 import jaMessages from '@/messages/ja.json';
 
@@ -16,6 +17,14 @@ type MembershipMessages = typeof enMessages;
 // Each test can switch locales without requiring a shared provider or changing
 // the repository-wide Jest configuration.
 let mockMessages: MembershipMessages = enMessages;
+
+// Most tests only need a structurally valid, fee-free server quote. Derive
+// that fixture from the selected display option, while keeping the opt-in
+// example below explicit so it can catch incorrect amount rendering.
+function quoteWithoutContribution(option: MembershipOption): DonationQuote {
+  const amount = (option.displayPriceInCents / 100).toFixed(2);
+  return { amount, processingCostContribution: '0.00', totalAmount: amount };
+}
 
 // Keep translation lookup strict: a locale render should fail immediately if
 // the component requests a missing nested key or a non-string message.
@@ -68,7 +77,7 @@ describe('MembershipSummary', () => {
     const student = MEMBERSHIP_OPTIONS[0];
     const family = MEMBERSHIP_OPTIONS[2];
     const { rerender } = render(
-      <MembershipSummary selectedOption={student} locale="en" />,
+      <MembershipSummary selectedOption={student} locale="en" quote={quoteWithoutContribution(student)} />,
     );
     const studentPrice = new Intl.NumberFormat('en', {
       style: 'currency',
@@ -84,7 +93,7 @@ describe('MembershipSummary', () => {
     // Supply a new page-owned selection and confirm the summary derives its
     // content from current props rather than retaining stale internal state.
     rerender(
-      <MembershipSummary selectedOption={family} locale="en" />,
+      <MembershipSummary selectedOption={family} locale="en" quote={quoteWithoutContribution(family)} />,
     );
     const familyPrice = new Intl.NumberFormat('en', {
       style: 'currency',
@@ -110,7 +119,7 @@ describe('MembershipSummary', () => {
       currency: corporate.currency,
     }).format(corporate.displayPriceInCents / 100);
 
-    render(<MembershipSummary selectedOption={corporate} locale="ja" />);
+    render(<MembershipSummary selectedOption={corporate} locale="ja" quote={quoteWithoutContribution(corporate)} />);
 
     expect(
       screen.getByRole('region', {
@@ -124,5 +133,18 @@ describe('MembershipSummary', () => {
       screen.getByText(jaMessages.MembershipPage.totalDue),
     ).toBeInTheDocument();
     expect(screen.getAllByText(expectedPrice)).toHaveLength(2);
+  });
+
+  it('uses the server quote for the optional contribution and total', () => {
+    const student = MEMBERSHIP_OPTIONS[0];
+    const optedInQuote: DonationQuote = {
+      amount: '20.00', processingCostContribution: '0.91', totalAmount: '20.91',
+    };
+    const { rerender } = render(<MembershipSummary selectedOption={student} locale="en"
+      quote={optedInQuote} />);
+    expect(screen.getByText('$0.91')).toBeInTheDocument();
+    expect(screen.getByText('$20.91')).toBeInTheDocument();
+    rerender(<MembershipSummary selectedOption={student} locale="en" quote={null} />);
+    expect(screen.queryByText('$20.91')).not.toBeInTheDocument();
   });
 });

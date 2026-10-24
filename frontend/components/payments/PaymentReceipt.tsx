@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { getPaymentReceipt, type PaymentReceipt as Receipt } from '@/services/paymentService';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 /** View-only details loaded after a result page confirms a completed payment. */
 export function PaymentReceipt({ reference, locale }: { reference: string; locale: string }) {
@@ -50,6 +51,16 @@ export function PaymentReceipt({ reference, locale }: { reference: string; local
       <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <dt className="font-medium">{t('type')}</dt>
         <dd>{t(receipt.paymentPurpose)}</dd>
+        {/* Show saved breakdowns only; legacy memberships have no base amount. */}
+        {receipt.baseAmount &&
+          receipt.processingCostContribution && (
+          <>
+            <dt className="font-medium">{t('baseAmount')}</dt>
+            <dd>{formatCurrency(Number(receipt.baseAmount), locale, receipt.currency.toUpperCase())}</dd>
+            <dt className="font-medium">{t('processingCostAmount')}</dt>
+            <dd>{formatCurrency(Number(receipt.processingCostContribution), locale, receipt.currency.toUpperCase())}</dd>
+          </>
+        )}
         <dt className="font-medium">{t('amount')}</dt>
         <dd>{amount}</dd>
         <dt className="font-medium">{t('date')}</dt>

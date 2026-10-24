@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from donations.serializers import StrictContributionChoiceField
+
 
 class StrictPaymentSerializer(serializers.Serializer):
     """Do not silently discard card details, prices, or other extra input."""
@@ -114,6 +116,7 @@ class MembershipPaymentSessionRequestSerializer(StrictPaymentSerializer):
     # The key is a catalog ID (not a database ID or a price); DRF's default
     # numeric-to-string coercion would hide a mistyped client payload.
     membership_option_id = StrictChoiceField(choices=tuple(MEMBERSHIP_PRICES))
+    contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
     payment_purpose = StrictChoiceField(choices=["membership"])
     first_name = StrictCharField(max_length=255, trim_whitespace=True)
     last_name = StrictCharField(max_length=255, trim_whitespace=True)
@@ -122,6 +125,11 @@ class MembershipPaymentSessionRequestSerializer(StrictPaymentSerializer):
 
     def validate_email(self, value):
         return value.strip().lower()
+
+
+class MembershipQuoteRequestSerializer(StrictPaymentSerializer):
+    membership_option_id = StrictChoiceField(choices=tuple(MEMBERSHIP_PRICES))
+    contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
 
 class MembershipPaymentStatusSerializer(serializers.Serializer):
@@ -138,6 +146,13 @@ class PaymentReceiptSerializer(serializers.Serializer):
 
     payment_purpose = serializers.ChoiceField(choices=["donation", "membership"])
     amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    # Donation-only breakdown: optional so membership receipts keep the same
+    # public shape while donation receipts explain the amount actually paid.
+    base_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    processing_cost_contribution = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False
+    )
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     currency = serializers.CharField(max_length=3)
     completed_at = serializers.DateTimeField()
     confirmation_reference = serializers.CharField()

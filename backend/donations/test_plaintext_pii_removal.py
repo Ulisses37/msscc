@@ -111,6 +111,9 @@ class PlaintextPIIRemovalTests(TransactionTestCase):
             for record, (_, pairs) in zip(records, self.backfill.PII_FIELDS, strict=True)
         ]
         MigrationExecutor(connection).migrate(MIGRATE_TO)
+        # Test the PII migration at 0010, then advance before using current
+        # model and API code that expects the newer donation amount columns.
+        MigrationExecutor(connection).migrate(self.latest)
         user = get_user_model().objects.create_user(
             email="removal-admin@example.test", permissions_data={"Finances": True},
         )
@@ -190,6 +193,8 @@ class PlaintextPIIRemovalTests(TransactionTestCase):
                 **{destination: "Updated authoritative value" for _, destination in pairs},
             )
         MigrationExecutor(connection).migrate(MIGRATE_TO)
+        # Current models must query the current schema, not historical 0010.
+        MigrationExecutor(connection).migrate(self.latest)
         for model in (Donation, Membership):
             record = model.objects.get()
             for _, destination in dict(self.backfill.PII_FIELDS)[model.__name__]:
@@ -203,6 +208,8 @@ class PlaintextPIIRemovalTests(TransactionTestCase):
                    for index, (source, _) in enumerate(pairs)},
             )
         MigrationExecutor(connection).migrate(MIGRATE_TO)
+        # Keep the historical migration assertion separate from current-model reads.
+        MigrationExecutor(connection).migrate(self.latest)
         for model in (Donation, Membership):
             record = model.objects.get()
             pairs = dict(self.backfill.PII_FIELDS)[model.__name__]

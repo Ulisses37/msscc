@@ -1,10 +1,10 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
-import { createPaymentSession } from '@/services/paymentService';
+import { createPaymentSession, getDonationQuote } from '@/services/paymentService';
 import en from '@/messages/en.json';
 import ja from '@/messages/ja.json';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -15,7 +15,12 @@ jest.mock('next-intl', () => ({
   useTranslations: (namespace: 'SupportPage') => (key: keyof typeof en.SupportPage) =>
     (mockLocale === 'ja' ? ja : en)[namespace][key],
 }));
-jest.mock('@/services/paymentService', () => ({ createPaymentSession: jest.fn() }));
+jest.mock('@/services/paymentService', () => ({ createPaymentSession: jest.fn(), getDonationQuote: jest.fn(),
+  readDonationQuote: jest.fn((data: { amount: string; processing_cost_contribution: string; total_amount: string }) => ({
+    amount: data.amount, processingCostContribution: data.processing_cost_contribution,
+    totalAmount: data.total_amount,
+  })),
+}));
 // Keep the real form and summary, but do not initialize Stripe inside DOM tests.
 jest.mock('@/components/support/StripePaymentElement', () => ({
   StripePaymentElement: ({ clientSecret, onEditDonationDetails }: {
@@ -29,6 +34,67 @@ jest.mock('@/components/support/StripePaymentElement', () => ({
 }));
 
 const reference = 'DON-00000042';
+
+it('shows the quoted total before checkout and disables stale choices', async () => {
+  // Hold the first response to show that checkout cannot start without a
+  // quote, then hold the next one so a changed choice cannot reuse the old fee.
+  const user = userEvent.setup();
+  let finish!: (quote: { amount: string; processingCostContribution: string; totalAmount: string }) => void;
+  jest.mocked(getDonationQuote).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  render(<DonationForm />);
+  await fillDonor(user);
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  expect(button).toBeDisabled();
+  await act(async () => {
+    finish({ amount: '5.00', processingCostContribution: '0.00', totalAmount: '5.00' });
+  });
+  await waitFor(() => expect(button).toBeEnabled());
+  let finishSelected!: (quote: { amount: string; processingCostContribution: string; totalAmount: string }) => void;
+  jest.mocked(getDonationQuote).mockReturnValueOnce(new Promise((resolve) => { finishSelected = resolve; }));
+  await user.click(screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution }));
+  expect(button).toBeDisabled();
+  await act(async () => {
+    finishSelected({ amount: '5.00', processingCostContribution: '0.61', totalAmount: '5.61' });
+  });
+  await waitFor(() => expect(button).toBeEnabled());
+  const breakdown = screen.getByRole('region', { name: en.SupportPage.costBreakdown });
+  expect(within(breakdown).getByText('$0.61')).toBeInTheDocument();
+  expect(within(breakdown).getByText('$5.61')).toBeInTheDocument();
+});
+
+it('replaces an opted-in preview with the saved breakdown before checkout', async () => {
+  const user = userEvent.setup();
+  // Intentionally disagree with the $5.61 preview below: the saved donation
+  // response is authoritative, even if the earlier quote becomes stale.
+  jest.mocked(global.fetch).mockResolvedValueOnce({ ok: true, json: async () => ({
+    reference_id: reference, amount: '5.00', processing_cost_contribution: '0.62',
+    total_amount: '5.62',
+  }) } as Response);
+  render(<DonationForm />);
+  await fillDonor(user);
+  const checkbox = screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution });
+  await user.click(checkbox);
+  const breakdown = await screen.findByRole('region', { name: en.SupportPage.costBreakdown });
+  expect(within(breakdown).getByText('$5.61')).toBeInTheDocument();
+  const continueButton = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await waitFor(() => expect(continueButton).toBeEnabled());
+  await user.click(continueButton);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  expect(within(breakdown).getByText('$5.62')).toBeInTheDocument();
+  expect(within(breakdown).getByText('$0.62')).toBeInTheDocument();
+  expect(within(breakdown).queryByText('$5.61')).not.toBeInTheDocument();
+  // The browser submits the opt-in choice, never its own fee or total;
+  // checkout identifies the saved donation by reference.
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const body = JSON.parse((request as RequestInit).body as string) as Record<string, unknown>;
+  expect(body.contribute_to_processing_costs).toBe(true);
+  expect(body).not.toHaveProperty('processing_cost_contribution');
+  expect(body).not.toHaveProperty('total_amount');
+  expect(createPaymentSession).toHaveBeenCalledWith({
+    amount: '5', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
+  });
+  expect(checkbox).toBeDisabled();
+});
 const originalFetch = global.fetch;
 
 beforeEach(() => {
@@ -36,8 +102,13 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/en/support');
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
-    json: async () => ({ reference_id: reference }),
+    json: async () => ({ reference_id: reference, amount: '5.00', processing_cost_contribution: '0.00', total_amount: '5.00' }),
   });
+  jest.mocked(getDonationQuote).mockReset();
+  jest.mocked(getDonationQuote).mockImplementation(async (amount, choice) => ({
+    amount: Number(amount).toFixed(2), processingCostContribution: choice ? '0.61' : '0.00',
+    totalAmount: (Number(amount) + (choice ? 0.61 : 0)).toFixed(2),
+  }));
   jest.mocked(createPaymentSession).mockReset();
   jest.mocked(createPaymentSession).mockResolvedValue({ sessionId: 'cs_test', clientSecret: 'secret_test' });
 });
@@ -47,17 +118,19 @@ async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en
   // Donor identity is a prerequisite, not the behavior under test here. One
   // change per field avoids dozens of full-form renders for unrelated typing;
   // the amount controls and checkout buttons still use real user events below.
-  fireEvent.change(screen.getByRole('textbox', { name: messages.email }), {
-    target: { value: 'donor@example.com' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.firstName }), {
-    target: { value: 'Ada' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.lastName }), {
-    target: { value: 'Lovelace' },
-  });
-  fireEvent.change(screen.getByRole('textbox', { name: messages.address }), {
-    target: { value: '123 Main St' },
+  await act(async () => {
+    fireEvent.change(screen.getByRole('textbox', { name: messages.email }), {
+      target: { value: 'donor@example.com' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.firstName }), {
+      target: { value: 'Ada' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.lastName }), {
+      target: { value: 'Lovelace' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: messages.address }), {
+      target: { value: '123 Main St' },
+    });
   });
 }
 
@@ -70,6 +143,11 @@ function reviewAmount(messages = en.SupportPage) {
 
 async function expectCheckout(user: ReturnType<typeof userEvent.setup>, amount: string) {
   expect(reviewAmount()).toHaveTextContent(formatCurrency(Number(amount)));
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  jest.mocked(global.fetch).mockResolvedValueOnce({ ok: true, json: async () => ({
+    reference_id: reference, amount: Number(amount).toFixed(2),
+    processing_cost_contribution: '0.00', total_amount: Number(amount).toFixed(2),
+  }) } as Response);
   await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
   await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
   expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -215,9 +293,11 @@ it('freezes the amount during record creation and reuses the same amount and ref
   render(<DonationForm />);
   await fillDonor(user);
   await user.click(screen.getByRole('radio', { name: formatCurrency(25) }));
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
   expect(screen.getAllByRole('radio').every((radio) => (radio as HTMLInputElement).disabled)).toBe(true);
-  completeRecord({ ok: true, json: async () => ({ reference_id: reference }) } as Response);
+  completeRecord({ ok: true, json: async () => ({ reference_id: reference, amount: '25.00',
+    processing_cost_contribution: '0.00', total_amount: '25.00' }) } as Response);
   await screen.findByText(en.SupportPage.paymentSessionError);
   expect(screen.getAllByRole('radio').every((radio) => (radio as HTMLInputElement).disabled)).toBe(true);
   await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
@@ -237,6 +317,11 @@ it('keeps an entered custom amount locked when payment-session creation fails', 
   await user.click(screen.getByRole('radio', { name: en.SupportPage.customDonationOption }));
   const customInput = screen.getByRole('textbox', { name: en.SupportPage.customDonationAmount });
   await user.type(customInput, '32.75');
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  jest.mocked(global.fetch).mockResolvedValueOnce({ ok: true, json: async () => ({
+    reference_id: reference, amount: '32.75', processing_cost_contribution: '0.00',
+    total_amount: '32.75',
+  }) } as Response);
   await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
   await screen.findByText(en.SupportPage.paymentSessionError);
   expect(customInput).toBeDisabled();
@@ -258,9 +343,6 @@ it('unlocks amount controls only when editing details with a new donation attemp
   const nextReference = 'DON-00000043';
   // Editing after Stripe session creation must create a fresh record: the new
   // amount cannot be paired with the original donation's saved reference.
-  jest.mocked(global.fetch)
-    .mockResolvedValueOnce({ ok: true, json: async () => ({ reference_id: reference }) } as Response)
-    .mockResolvedValueOnce({ ok: true, json: async () => ({ reference_id: nextReference }) } as Response);
   render(<DonationForm />);
   await fillDonor(user);
   await expectCheckout(user, '5');
@@ -269,6 +351,11 @@ it('unlocks amount controls only when editing details with a new donation attemp
   expect(amount).toBeEnabled();
   await user.click(amount);
   expect(reviewAmount()).toHaveTextContent(formatCurrency(25));
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  jest.mocked(global.fetch).mockResolvedValueOnce({ ok: true, json: async () => ({
+    reference_id: nextReference, amount: '25.00', processing_cost_contribution: '0.00',
+    total_amount: '25.00',
+  }) } as Response);
   await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
   await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(2));
   expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -279,4 +366,87 @@ it('unlocks amount controls only when editing details with a new donation attemp
   expect(createPaymentSession).toHaveBeenNthCalledWith(2, {
     amount: '25', currency: 'usd', paymentPurpose: 'Donation', internalReference: nextReference,
   });
+});
+
+it.each([
+  ['unchecked by default', false, false],
+  ['selected', true, true],
+  ['cleared again', true, false],
+] as const)('submits the processing-cost choice when %s', async (_case, select, finalChoice) => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  const checkbox = screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution });
+  if (select) await user.click(checkbox);
+  if (select && !finalChoice) await user.click(checkbox);
+  expect(checkbox).toHaveProperty('checked', finalChoice);
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const body = JSON.parse((request as RequestInit).body as string) as Record<string, unknown>;
+  expect(body).toMatchObject({ amount: '5', contribute_to_processing_costs: finalChoice });
+  // Checkout sends only the choice; contribution and total stay server-controlled.
+  expect(body).not.toHaveProperty('processing_cost_contribution');
+  expect(body).not.toHaveProperty('total_amount');
+  expect(createPaymentSession).toHaveBeenCalledWith({
+    amount: '5', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
+  });
+  expect(checkbox).toBeDisabled();
+});
+
+it('locks the choice during donation creation and after session failure, then keeps it on retry', async () => {
+  const user = userEvent.setup();
+  let completeRecord!: (response: Response) => void;
+  jest.mocked(global.fetch).mockReturnValueOnce(new Promise((resolve) => { completeRecord = resolve; }));
+  jest.mocked(createPaymentSession).mockRejectedValueOnce(new Error('Payment unavailable'));
+  render(<DonationForm />);
+  await fillDonor(user);
+  const checkbox = screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution });
+  await user.click(checkbox);
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  expect(checkbox).toBeDisabled();
+  expect(checkbox).toBeChecked();
+  completeRecord({ ok: true, json: async () => ({ reference_id: reference, amount: '5.00',
+    processing_cost_contribution: '0.61', total_amount: '5.61' }) } as Response);
+  await screen.findByText(en.SupportPage.paymentSessionError);
+  expect(checkbox).toBeDisabled();
+  expect(checkbox).toBeChecked();
+
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(2));
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  expect(JSON.parse((request as RequestInit).body as string).contribute_to_processing_costs).toBe(true);
+  expect(checkbox).toBeDisabled();
+});
+
+it('unlocks the choice on edit and submits the new choice with a fresh donation', async () => {
+  const user = userEvent.setup();
+  jest.mocked(global.fetch)
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ reference_id: reference,
+      amount: '5.00', processing_cost_contribution: '0.61', total_amount: '5.61' }) } as Response)
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ reference_id: 'DON-00000043',
+      amount: '5.00', processing_cost_contribution: '0.00', total_amount: '5.00' }) } as Response);
+  render(<DonationForm />);
+  await fillDonor(user);
+  const checkbox = screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution });
+  await user.click(checkbox);
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  expect(checkbox).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: 'Edit donation details' }));
+  expect(checkbox).toBeEnabled();
+  expect(checkbox).toBeChecked();
+  await user.click(checkbox);
+  await waitFor(() => expect(screen.getByRole('button', { name: en.SupportPage.continueToPayment })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(2));
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  const [, request] = jest.mocked(global.fetch).mock.calls[1];
+  expect(JSON.parse((request as RequestInit).body as string).contribute_to_processing_costs).toBe(false);
+  expect(checkbox).toBeDisabled();
 });

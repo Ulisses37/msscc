@@ -1,19 +1,69 @@
 import logging
+from decimal import Decimal
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from config.encryption import EncryptedTextError
 from donations.models import AdminTableRevision, Donation, Membership
 from donations.permissions import HasFinancialRecordPermission
+from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
-from donations.serializers import DonationSerializer, MembershipSerializer
+from donations.serializers import (
+    DonationSerializer,
+    MembershipSerializer,
+    StrictContributionChoiceField,
+)
 
 logger = logging.getLogger(__name__)
+
+
+class DonationQuoteSerializer(serializers.Serializer):
+    """Accept only pricing inputs; supplied totals must not shape a public quote."""
+
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal("0.01")
+    )
+    contribute_to_processing_costs = StrictContributionChoiceField(default=False)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict) or set(data) - set(self.fields):
+            raise serializers.ValidationError({"detail": "Unsupported quote information."})
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        # Match donation creation's field limits before the donor enters
+        # payment details, including cases where gross-up exceeds the DB limit.
+        try:
+            calculate_donation_amounts(attrs["amount"], attrs["contribute_to_processing_costs"])
+        except ValueError as exc:
+            raise serializers.ValidationError({"amount": str(exc)}) from None
+        return attrs
+
+
+class DonationQuoteView(APIView):
+    """Preview the same server calculation used at donation creation."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        # No record or Stripe session is created here: changing the checkbox
+        # can refresh the displayed price before the payer commits to checkout.
+        serializer = DonationQuoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        base = serializer.validated_data["amount"]
+        contribution, total = calculate_donation_amounts(
+            base, serializer.validated_data["contribute_to_processing_costs"]
+        )
+        return Response({
+            "amount": f"{base:.2f}",
+            "processing_cost_contribution": f"{contribution:.2f}",
+            "total_amount": f"{total:.2f}",
+        })
 
 
 class AdminTableRevisionView(APIView):

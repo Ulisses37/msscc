@@ -10,6 +10,8 @@ export type DonationEntry = {
   donor_last_name: string;
   donor_email: string;
   amount: number | string;
+  processing_cost_contribution: number | string;
+  total_amount: number | string;
   donation_date: string;
   is_anonymous: boolean;
   message: string;
@@ -190,11 +192,15 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
 
           <DetailSection title="Donation">
             <DetailField label="Date" value={formatDate(donation.donation_date)} />
-            <DetailField label="Amount" value={formatCurrency(Number(donation.amount))} />
+            <DetailField label="Base donation" value={formatCurrency(Number(donation.amount))} />
             <DetailField label="Message" value={donation.message} preserveWhitespace />
           </DetailSection>
 
+          {/* The existing amount means the base donation, not the Stripe
+              charge; show the saved contribution and total for reconciliation. */}
           <DetailSection title="Payment">
+            <DetailField label="Processing-cost contribution" value={formatCurrency(Number(donation.processing_cost_contribution))} />
+            <DetailField label="Total payment" value={formatCurrency(Number(donation.total_amount))} />
             <DetailField label="Payment status" value={donation.payment_status} />
             <DetailField label="Reference ID" value={donation.reference_id} />
           </DetailSection>

@@ -12,7 +12,7 @@ import {
   isValidDonationAmount,
 } from '@/constants/donationAmounts';
 import { subscribeToUpdates } from '@/services/emailService';
-import { createPaymentSession } from '@/services/paymentService';
+import { createPaymentSession, getDonationQuote, readDonationQuote, type DonationQuote } from '@/services/paymentService';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 const inputClassName =
@@ -20,6 +20,9 @@ const inputClassName =
 
 interface DonationResponse {
   reference_id: string;
+  amount: string;
+  processing_cost_contribution: string;
+  total_amount: string;
 }
 
 type PaymentStatus = 'pending' | 'completed' | 'failed' | 'canceled';
@@ -45,11 +48,22 @@ export function DonationForm() {
   // separate state so changing the preset catalog requires no form rewiring.
   const [selectedAmount, setSelectedAmount] = useState<string | null>(DEFAULT_DONATION_AMOUNT);
   const [customAmount, setCustomAmount] = useState('');
+  // A quote is a pre-creation preview; after saving, display the persisted
+  // breakdown instead because the server may have changed its pricing since
+  // the preview was requested. Track inputs to reject out-of-order replies.
+  const [quote, setQuote] = useState<DonationQuote | null>(null);
+  const [quoteChoice, setQuoteChoice] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState('');
+  const [savedQuote, setSavedQuote] = useState<DonationQuote | null>(null);
+  const [quoteError, setQuoteError] = useState(false);
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [address, setAddress] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  // This is a choice, not a browser-calculated fee. The donation API saves
+  // the choice and computes its contribution and total on the server.
+  const [contributeToProcessingCosts, setContributeToProcessingCosts] = useState(false);
   const [message, setMessage] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
@@ -105,6 +119,7 @@ export function DonationForm() {
     setClientSecret('');
     setSubmittedReference('');
     setSubmittedAmount('');
+    setSavedQuote(null);
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -116,6 +131,7 @@ export function DonationForm() {
     setClientSecret('');
     setSubmittedReference('');
     setSubmittedAmount('');
+    setSavedQuote(null);
     setPaymentStatus(null);
     setReceiptReference('');
     setPaymentStatusError(false);
@@ -211,6 +227,33 @@ export function DonationForm() {
       : '';
   const donationIsValid = isValidDonationAmount(donation);
 
+  useEffect(() => {
+    // Once the record exists, do not overwrite its saved price with a new
+    // estimate. Invalid inputs cannot produce a payable quote either.
+    if (!donationIsValid || submittedReference) return;
+    let active = true;
+    // A late reply for an earlier choice must never appear as the current
+    // payable total or enable submission of a stale quote.
+    void getDonationQuote(donation, contributeToProcessingCosts).then(
+      (result) => {
+        if (active) { setQuote(result); setQuoteAmount(donation); setQuoteChoice(contributeToProcessingCosts); setQuoteError(false); }
+      },
+      () => {
+        if (active) { setQuote(null); setQuoteError(true); }
+      },
+    );
+    return () => { active = false; };
+  }, [donation, donationIsValid, contributeToProcessingCosts, submittedReference]);
+
+  const currentQuote = submittedReference ? savedQuote : quote;
+  // The button and displayed breakdown must refer to the same base and
+  // opt-in choice currently visible, not a prior asynchronous request.
+  const quoteMatchesChoice = Boolean(
+    currentQuote && currentQuote.amount === Number(donation).toFixed(2) &&
+    (submittedReference || quoteAmount === donation &&
+      quoteChoice === contributeToProcessingCosts && !quoteError),
+  );
+
   const formIsValid =
     emailIsValid &&
     donationIsValid &&
@@ -234,7 +277,7 @@ export function DonationForm() {
     event.preventDefault();
 
     if (
-      !formIsValid ||
+      !formIsValid || !quoteMatchesChoice ||
       clientSecret ||
       isSubmitting ||
       submissionInFlight.current
@@ -271,6 +314,9 @@ export function DonationForm() {
               donor_last_name: lastName.trim(),
               donor_email: email.trim().toLowerCase(),
               amount: amountForAttempt,
+              // Send only the payer's choice; never let the browser specify
+              // the contribution or the total charged by checkout.
+              contribute_to_processing_costs: contributeToProcessingCosts,
               is_anonymous: isAnonymous,
               message: message.trim(),
             }),
@@ -283,14 +329,23 @@ export function DonationForm() {
 
         if (
           !donationResponse.ok ||
-          typeof donationData?.reference_id !== 'string'
+          typeof donationData?.reference_id !== 'string' ||
+          typeof donationData.amount !== 'string' ||
+          typeof donationData.processing_cost_contribution !== 'string' ||
+          typeof donationData.total_amount !== 'string' ||
+          donationData.amount !== Number(amountForAttempt).toFixed(2) ||
+          (!contributeToProcessingCosts && donationData.processing_cost_contribution !== '0.00')
         ) {
           throw new Error('Donation request failed.');
         }
 
+        // Checkout still sends the base as a guard; the display now switches
+        // to server-persisted amounts, which may differ from the preview.
+        const savedBreakdown = readDonationQuote(donationData);
         donationReference = donationData.reference_id;
         donationWasCreated = true;
         setSubmittedAmount(amountForAttempt);
+        setSavedQuote(savedBreakdown);
         setSubmittedReference(donationReference);
       }
 
@@ -305,7 +360,8 @@ export function DonationForm() {
         );
       }
 
-      // Use the reusable PR1 endpoint to create a Stripe Checkout Session.
+      // The checkout API validates this base against the saved record and
+      // charges the record's total, not this request value or the quote.
       const paymentSession = await createPaymentSession({
         amount: amountForAttempt,
         currency: 'usd',
@@ -534,6 +590,30 @@ export function DonationForm() {
           )}
         </fieldset>
 
+        {/* A native checkbox supports pointer, touch and keyboard interaction.
+            Keep the explanation visible rather than hiding a price change in
+            a hover-only tooltip; the description is also announced on focus. */}
+        <div>
+          <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              name="contributeToProcessingCosts"
+              checked={contributeToProcessingCosts}
+              onChange={(event) => setContributeToProcessingCosts(event.target.checked)}
+              disabled={!emailIsValid || fieldsAreLocked}
+              aria-describedby="processing-cost-contribution-description"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="min-w-0">{t('processingCostContribution')}</span>
+          </label>
+          <p
+            id="processing-cost-contribution-description"
+            className="mt-1 pl-7 text-caption text-msscc-gray-mid"
+          >
+            {t('processingCostContributionDetail')}
+          </p>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-slate-700">
             {t('firstName')}
@@ -632,6 +712,7 @@ export function DonationForm() {
 
         <DonationSummary
           donation={donation}
+          quote={quoteMatchesChoice ? currentQuote : null}
           email={summaryEmail}
           firstName={summaryFirstName}
           lastName={summaryLastName}
@@ -640,11 +721,15 @@ export function DonationForm() {
           message={summaryMessage}
         />
 
+        {quoteError && !submittedReference && donationIsValid && (
+          <p role="alert" className="text-sm text-red-600">{t('quoteUnavailable')}</p>
+        )}
+
         {/* The first button records the donation and prepares Stripe. */}
         {!clientSecret && (
           <button
             type="submit"
-            disabled={!formIsValid || isSubmitting}
+            disabled={!formIsValid || !quoteMatchesChoice || isSubmitting}
             className="rounded-sm bg-msscc-pink px-5 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-60"
           >
             {isSubmitting

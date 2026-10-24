@@ -24,7 +24,9 @@ const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "donor_first_name", label: "First name" },
   { key: "donor_last_name", label: "Last name" },
   { key: "donor_email", label: "Email" },
-  { key: "amount", label: "Amount" },
+  { key: "amount", label: "Base donation" },
+  { key: "processing_cost_contribution", label: "Processing-cost contribution" },
+  { key: "total_amount", label: "Total payment" },
   { key: "donation_date", label: "Donation date" },
   { key: "is_anonymous", label: "Anonymous" },
   { key: "message", label: "Message" },
@@ -33,7 +35,8 @@ const donationExportFields: ExportFieldOption<keyof DonationEntry>[] = [
   { key: "created_at", label: "Created at" },
 ];
 
-// Start with the same high-value fields shown in the summary table; admins can add detail fields.
+// Preserve the existing default export columns for downstream consumers;
+// admins can explicitly select contribution and total when reconciling payments.
 const defaultDonationExportFields: (keyof DonationEntry)[] = [
   "donation_date",
   "donor_first_name",
@@ -49,6 +52,8 @@ const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
   donor_last_name: 18,
   donor_email: 30,
   amount: 16,
+  processing_cost_contribution: 22,
+  total_amount: 18,
   donation_date: 16,
   is_anonymous: 14,
   message: 40,
@@ -79,7 +84,9 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
     return { value: Number(value), type: Number, format: "0" };
   }
 
-  if (field === "amount") {
+  // Preserve numeric currency cells for all three saved amounts; exporting
+  // fees as text would prevent spreadsheet reconciliation and summation.
+  if (field === "amount" || field === "processing_cost_contribution" || field === "total_amount") {
     const amount = Number(value);
 
     return Number.isFinite(amount)
