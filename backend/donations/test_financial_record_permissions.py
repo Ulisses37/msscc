@@ -207,8 +207,14 @@ class FinancialRecordPermissionTests(TestCase):
         }, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
-            set(response.data), {"session_id", "client_secret", "confirmation_reference"},
+            set(response.data), {
+                "session_id", "client_secret", "confirmation_reference",
+                "amount", "processing_cost_contribution", "total_amount",
+            },
         )
+        self.assertEqual(response.data["amount"], "20.00")
+        self.assertEqual(response.data["processing_cost_contribution"], "0.00")
+        self.assertEqual(response.data["total_amount"], "20.00")
         self.assertNotIn("msscc:enc:", str(response.data))
         for field in ("first_name", "last_name", "email", "phone"):
             self.assertNotIn(self.membership_data[field], str(response.data))
