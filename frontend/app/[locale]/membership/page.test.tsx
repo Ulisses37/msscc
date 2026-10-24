@@ -220,6 +220,19 @@ describe('MembershipPage review flow', () => {
     await user.click(checkbox);
     expect(checkbox).not.toBeChecked();
     expect(getMembershipQuote).toHaveBeenLastCalledWith('student', false);
+    // A cleared checkbox must reach the checkout request as false, not just
+    // look unchecked on screen after an earlier opt-in.
+    await waitFor(() => expect(continueButton).toBeEnabled());
+    jest.mocked(createMembershipPaymentSession).mockResolvedValue({
+      sessionId: 'pi_cleared', clientSecret: 'pi_secret_cleared',
+      confirmationReference: `MEM-${'a'.repeat(32)}`,
+      ...feeFreeQuote('student'),
+    });
+    await user.click(continueButton);
+    expect(createMembershipPaymentSession).toHaveBeenCalledWith(expect.objectContaining({
+      membershipOptionId: 'student', contributeToProcessingCosts: false,
+    }));
+    expect(await screen.findByTestId('membership-stripe-element')).toBeInTheDocument();
   });
 
   it('waits for the new server quote before enabling checkout after opt-in', async () => {

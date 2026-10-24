@@ -7,7 +7,7 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIClient, APIRequestFactory
 
 from donations.models import Donation, Membership
 from payments.serializers import MEMBERSHIP_PRICES
@@ -609,6 +609,55 @@ class SecurePaymentDatabaseTests(TestCase):
         response = PaymentSessionCreateView.as_view()(self.session_request(amount="10.61"))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(create_session.call_count, 1)
+
+    @patch("payments.views.create_payment_session")
+    def test_donation_quote_creation_checkout_and_receipt_agree(self, create_session):
+        """Quote, saved donation, checkout charge, and receipt must agree."""
+        client = APIClient()
+        choice = {"amount": "12.50", "contribute_to_processing_costs": True}
+        quote = client.post("/api/donations/quote/", choice, format="json")
+        self.assertEqual(quote.status_code, 200)
+        # Deliberately forge fee and total in the request: the server must
+        # calculate and save its own values, not trust browser-supplied prices.
+        created = client.post("/api/donations/", {
+            **choice, "donor_first_name": "Test", "donor_last_name": "Donor",
+            "donor_email": "donor@example.test",
+            "processing_cost_contribution": "0.00", "total_amount": "0.01",
+        }, format="json")
+        self.assertEqual(created.status_code, 201)
+        donation = Donation.objects.get(pk=created.data["donation_id"])
+        self.assertTrue(donation.contribute_to_processing_costs)
+        for field in ("amount", "processing_cost_contribution", "total_amount"):
+            self.assertEqual(created.data[field], quote.data[field])
+            stored = donation.amount if field == "amount" else getattr(donation, field)
+            self.assertEqual(stored, Decimal(quote.data[field]))
+
+        # Stripe is mocked; inspect the amount handed to it, not a real charge.
+        create_session.return_value = {"session_id": "cs_test", "client_secret": "safe"}
+        checkout = client.post("/api/payments/session/", {
+            "amount": choice["amount"], "currency": "usd",
+            "payment_purpose": "Donation", "internal_reference": donation.reference_id,
+        }, format="json")
+        self.assertEqual(checkout.status_code, 201)
+        self.assertEqual(create_session.call_args.kwargs["amount"], donation.total_amount)
+        self.assertEqual(donation.total_amount, Decimal("13.18"))
+
+        # A receipt requires a completed record. Simulate that state here;
+        # webhook verification and actual payment are outside this test.
+        donation.payment_status = Donation.PaymentStatus.COMPLETED
+        donation.completed_at = datetime(2026, 10, 10, 15, 30, tzinfo=UTC)
+        donation.save(update_fields=["payment_status", "completed_at"])
+        receipt = client.get("/api/payments/receipt/", {
+            "confirmation_reference": donation.reference_id,
+        })
+        self.assertEqual(receipt.status_code, 200)
+        self.assertEqual(receipt.data["amount"], quote.data["total_amount"])
+        self.assertEqual(receipt.data["base_amount"], quote.data["amount"])
+        self.assertEqual(
+            receipt.data["processing_cost_contribution"],
+            quote.data["processing_cost_contribution"],
+        )
+        self.assertEqual(receipt.data["total_amount"], quote.data["total_amount"])
 
     @patch("payments.views.create_payment_session")
     def test_session_rejects_an_amount_that_does_not_match(self, create_session):

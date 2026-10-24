@@ -177,6 +177,27 @@ class DonationPaymentDataTests(TestCase):
         with self.assertRaises(ValueError):
             calculate_donation_amounts(Decimal("99999999.99"), True)
 
+    def test_gross_up_rounding_examples(self):
+        """Protect exact-cent behavior under the currently configured rate."""
+        # These are regression examples for the current 2.9% + $0.30 estimate,
+        # not confirmation that it matches the account's contracted Stripe rate.
+        for base, contribution, total in (
+            ("0.01", "0.31", "0.32"),
+            ("0.33", "0.32", "0.65"),
+            ("1.00", "0.34", "1.34"),
+            ("5.00", "0.46", "5.46"),
+            ("12.50", "0.68", "13.18"),
+        ):
+            with self.subTest(base=base):
+                self.assertEqual(
+                    calculate_donation_amounts(Decimal(base), True),
+                    (Decimal(contribution), Decimal(total)),
+                )
+                self.assertEqual(
+                    calculate_donation_amounts(Decimal(base), False),
+                    (Decimal("0.00"), Decimal(base)),
+                )
+
     def test_choice_requires_a_boolean_not_a_fee_amount(self):
         for choice in ("yes", 1, [True], {"value": True}):
             with self.subTest(choice=choice):

@@ -57,6 +57,40 @@ it('shows the quoted total before checkout and disables stale choices', async ()
   expect(within(breakdown).getByText('$0.61')).toBeInTheDocument();
   expect(within(breakdown).getByText('$5.61')).toBeInTheDocument();
 });
+
+it('replaces an opted-in preview with the saved breakdown before checkout', async () => {
+  const user = userEvent.setup();
+  // Intentionally disagree with the $5.61 preview below: the saved donation
+  // response is authoritative, even if the earlier quote becomes stale.
+  jest.mocked(global.fetch).mockResolvedValueOnce({ ok: true, json: async () => ({
+    reference_id: reference, amount: '5.00', processing_cost_contribution: '0.62',
+    total_amount: '5.62',
+  }) } as Response);
+  render(<DonationForm />);
+  await fillDonor(user);
+  const checkbox = screen.getByRole('checkbox', { name: en.SupportPage.processingCostContribution });
+  await user.click(checkbox);
+  const breakdown = await screen.findByRole('region', { name: en.SupportPage.costBreakdown });
+  expect(within(breakdown).getByText('$5.61')).toBeInTheDocument();
+  const continueButton = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await waitFor(() => expect(continueButton).toBeEnabled());
+  await user.click(continueButton);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  expect(within(breakdown).getByText('$5.62')).toBeInTheDocument();
+  expect(within(breakdown).getByText('$0.62')).toBeInTheDocument();
+  expect(within(breakdown).queryByText('$5.61')).not.toBeInTheDocument();
+  // The browser submits the opt-in choice, never its own fee or total;
+  // checkout identifies the saved donation by reference.
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const body = JSON.parse((request as RequestInit).body as string) as Record<string, unknown>;
+  expect(body.contribute_to_processing_costs).toBe(true);
+  expect(body).not.toHaveProperty('processing_cost_contribution');
+  expect(body).not.toHaveProperty('total_amount');
+  expect(createPaymentSession).toHaveBeenCalledWith({
+    amount: '5', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
+  });
+  expect(checkbox).toBeDisabled();
+});
 const originalFetch = global.fetch;
 
 beforeEach(() => {
@@ -347,8 +381,7 @@ it.each([
   const [, request] = jest.mocked(global.fetch).mock.calls[0];
   const body = JSON.parse((request as RequestInit).body as string) as Record<string, unknown>;
   expect(body).toMatchObject({ amount: '5', contribute_to_processing_costs: finalChoice });
-  // This first commit sends only the boolean; no browser-controlled fee or
-  // total may be accidentally introduced before server-side calculation.
+  // Checkout sends only the choice; contribution and total stay server-controlled.
   expect(body).not.toHaveProperty('processing_cost_contribution');
   expect(body).not.toHaveProperty('total_amount');
   expect(createPaymentSession).toHaveBeenCalledWith({
