@@ -53,5 +53,25 @@ export const pageList: AdminPageInfo[] = [
       "The Donation and Membership carousels show recent financial contribution Names, Amounts, and Dates.",
       "By clicking on the arrows on the sides of the carousels, they can be scrolled through.",
     ]
+  },
+  {
+    ...getPage("Permissions Page"),
+    pageInstructions: [
+      "The admin Permissions Page is where Executive Admins can limit the access that Normal Admins have throughout the site.",
+      "The left sidebox shows the Name, and Email of the currently logged in Executive Admin.",
+      "The Admin List section contains a list of all Normal Admins and their permissions.",
+      "Executive Admin accounts have access to all pages, regardless of their set permissions",
+      "Within each Admin entry, there are toggleable permissions that control what that Admin has access too (Colored Buttons).",
+      "To learn more about a permission, hovering over it will display a tooltip with a short explanation and its related pages.",
+      "Clicking on a permission will flip its toggle state and pressing the Update button at the top of the table will save that information to the database.",
+      "Clicking anywhere else within the Admin entry will open a menu for editing the Admins Name and Email.",
+      "Within this edit menu, there is also the ability to delete an Admin which removes it from the database. (This action cannot be undone)",
+      "To create a new Admin, press the Add button at the top of the table and enter their Name and Email.",
+      "Pressing Create will send a 'Forgot Password' email to the provided email where the new Admin can reset their password and then log in after.",
+      "When logged in with the pre-determined 'Developer' account, both Executive and Normal Admins will populate the table.",
+      "The 'Developer' admin is capable of editing both Executive and Normal admins.",
+      "The 'Developer' admin is also given special permission for promoting and demoting Executive Admins.",
+      "The 'Developer' admin feature is intended to be used during transfers of leadership and to prevent misuse of the Executive rank.",
+    ]
   }
 ];
