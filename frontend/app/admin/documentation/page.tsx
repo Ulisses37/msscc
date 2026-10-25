@@ -1,73 +1,84 @@
 // app/admin/documentation/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import SupportForm from '@/components/ui/SupportForm';
 
 import { pageList } from './pageDocumentation';
+import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
+import PageAccordion from './PageAccordion';
+
+type LocalAdminInfo = {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  permissionData: Record<string, boolean>;
+  isExecutive: boolean;
+};
+
 
 export default function AdminDocumentationPage() {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
-  //list of permisons with breif description of each
-  const permissions = [
-  { name: 'Page Edit', desc: 'Change contents on public pages.' },
-  { name: 'Send Emails', desc: 'Manage and send to the mailing list.' },
-  { name: 'Translation Edit', desc: 'Modify Japanese translations.' },
-  { name: 'Event Manipulation', desc: 'Add, delete, and modify events.' },
-  { name: 'View Member Records', desc: 'Access the member database.' },
-  ];
-  console.log(pageList);
+  const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
+
+  useEffect(() => {
+    setLocalAdmin(fetchLocalStorageAdmin() ?? null);
+  }, []);
 
   return (
+    <div className="max-w-5xl mx-auto p-6 space-y-5 ">
+      <header className="mb-6 w-full border-b border-msscc-gray-light pb-4">
+        <h1 className="font-heading text-display text-msscc-teal">Documentation & Help</h1>
+      </header>
 
-    <div className="max-w-5xl mx-auto p-6 space-y-10">
-      <h1>Documentation Page</h1>
-
-      {/* Section 1: Roles & Permissions */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-4">Admin Roles & Permissions</h2>
-        <div className="prose text-gray-700">
-          <p>
-            Administrative access is restricted to authorized personnel. Certain permisions may be restricted to certain admins.
-
-            <br />For permision assignments there are two main kinds of admins
-            <br />Executive Admin: Full access to all system settings and user management.
-            <br />General Admin: Access to the Dashboard and Media library.
-
-            <br />Here is a explinaiton of each of the permissions that an admin can have, and what they do.
-          </p>
+      {/* General Site Knowledge */}
+      <div className="bg-msscc-gray-faint rounded-md p-4 border-2 border-msscc-pink-light">
+        <div className="text-heading-2">General Site Information</div>
+        <div className="pb-1">When referring to MSSCC site, there are two different sides:</div>
+        <div className="pl-4">
+          The User-Side is the public facing part of the websites that clients, visitors and donators will see.
+          <br />
+          This is where visitors can see the MSSCC programs, events, donation options, and supporters.
         </div>
+        <div className="pl-4 pb-2">&ensp;-&ensp;It is primarily made up of the <p className="inline text-msscc-teal font-bold text-lg">Teal</p> color scheme.</div>
+        <div className="pl-4">
+          The Admin-Side is the MSSCC member only side that requires an email and password to access.
+          <br />
+          This side is where MSSCC members can manage important information like page contents, financial records, and events and their volunteers.
+        </div>
+        <div className="pl-4">&ensp;-&ensp;It is primarily made up of the <p className="inline text-msscc-pink font-bold text-lg">Pink </p> color scheme.</div>
+      </div>
 
-        {/* show description of each permission */}
-        {permissions.map((p) => (
-          <div key={p.name} className="p-4 border rounded-lg bg-white shadow-sm">
-            <h4 className="font-bold text-[#d72638]">{p.name}</h4>
-            <p className="text-sm text-gray-600">{p.desc}</p>
-          </div>
+      {/* User-Side Information */}
+      <div className="bg-msscc-gray-faint rounded-md p-4 border-2 border-msscc-pink-light">
+        <div className="text-heading-2">User-Side Information</div>
+        More text to come.
+      </div>
+
+      {/* Admin-Side Information */}
+      <div className="bg-msscc-gray-faint rounded-md p-4 border-2 border-msscc-pink-light">
+        <div className="text-heading-2">Admin-Side Information</div>
+          {localAdmin &&
+            pageList
+              .filter(
+                (page) => localAdmin.permissionData[page.pageName] || localAdmin.isExecutive
+              )
+              .map((page) => (
+              <PageAccordion
+                key={page.pageName}
+                pageName={page.pageName}
+                pageDescription={page.pageDescription}
+                pageInstructions={page.pageInstructions}
+              />
         ))}
-      </section>
+      </div>
 
 
-      {/* common admin tasks , temporary for explinations*/}
 
-      {/* edit events */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-4">Editing Events</h2>
-        <p className="text-gray-700">
-          temp info, not yet implimented
 
-        </p>
-      </section>
-
-      {/* sending emails */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-4">Sending Emails</h2>
-        <p className="text-gray-700">
-          this is to be implimented
-        </p>
-      </section>
 
 
 

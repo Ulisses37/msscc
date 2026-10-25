@@ -55,7 +55,7 @@ export const pageList: AdminPageInfo[] = [
     ]
   },
   {
-    ...getPage("Permissions Page"),
+    ...getPage("Permissions Pages"),
     pageInstructions: [
       "The admin Permissions Page is where Executive Admins can limit the access that Normal Admins have throughout the site.",
       "The left sidebox shows the Name, and Email of the currently logged in Executive Admin.",
