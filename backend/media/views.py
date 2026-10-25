@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from .classification import classify_media
 from .models import MediaAsset, StaticImage
 from .serializers import MediaFileSerializer, StaticImageSerializer
+from .validation import validate_media
 
 
 #The file goes to MinIO automatically via django-storages + boto3.
@@ -43,6 +44,22 @@ class MediaUploadView(APIView):
                         "detected_mime_type": classification.detected_mime_type,
                         "supplied_extension": classification.supplied_extension,
                         "supplied_mime_type": classification.supplied_mime_type,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        validation = validate_media(file, classification)
+        if not validation.is_valid:
+            return Response(
+                {
+                    "error": "Media content failed validation.",
+                    "code": "invalid_media",
+                    "details": {
+                        "reasons": list(validation.reasons),
+                        "size_bytes": validation.size_bytes,
+                        "image_width": validation.image_width,
+                        "image_height": validation.image_height,
                     },
                 },
                 status=status.HTTP_400_BAD_REQUEST,

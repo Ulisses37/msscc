@@ -83,6 +83,13 @@ REST_FRAMEWORK = {
     },
 }
 
+# Media uploads are checked before storage. These limits are intentionally
+# configurable so deployments can tune them without changing application code.
+MEDIA_MAX_UPLOAD_SIZE_BYTES = int(
+    os.getenv("MEDIA_MAX_UPLOAD_SIZE_BYTES", 20 * 2048 * 2048)
+)
+MEDIA_MAX_IMAGE_PIXELS = int(os.getenv("MEDIA_MAX_IMAGE_PIXELS", 40_000_000))
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
