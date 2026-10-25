@@ -663,17 +663,26 @@ export function DonationForm() {
           />
         </label>
 
-        <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-          <input
-            type="checkbox"
-            name="isAnonymous"
-            checked={isAnonymous}
-            onChange={(event) => setIsAnonymous(event.target.checked)}
-            disabled={!emailIsValid || fieldsAreLocked}
-            className="h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
-          />
-          {t('anonymousDonation')}
-        </label>
+        {/* Keep the privacy explanation visible on touch screens as well as
+            desktop. Associating it with the native checkbox also lets a
+            keyboard or screen-reader user hear the same details on focus. */}
+        <div>
+          <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              name="isAnonymous"
+              checked={isAnonymous}
+              onChange={(event) => setIsAnonymous(event.target.checked)}
+              disabled={!emailIsValid || fieldsAreLocked}
+              aria-describedby="anonymous-donation-description"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="min-w-0">{t('anonymousDonation')}</span>
+          </label>
+          <p id="anonymous-donation-description" className="mt-1 pl-7 text-caption text-msscc-gray-mid">
+            {t('anonymousDonationDetail')}
+          </p>
+        </div>
 
         <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
           <input
