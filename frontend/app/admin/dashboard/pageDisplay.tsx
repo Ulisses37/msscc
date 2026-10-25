@@ -10,8 +10,7 @@ import type { Event } from '@/types/event';
 
 import { useRef } from "react";
 
-const CARD_WIDTH = 256; // w-64 = 16rem = 256px
-const GAP = 16;         // gap-4 = 1rem = 16px
+const GAP = 16; // gap-4 = 1rem = 16px
 
 const pageDescriptions: Record<string, string>={
   Events: "Manage MSSCC events.",
@@ -86,8 +85,14 @@ export function CardCarousel({
   if (!data || data.length === 0) return null;
 
   function scroll(direction: "left" | "right") {
-    scrollRef.current?.scrollBy({
-      left: direction === "left" ? -(CARD_WIDTH + GAP) : CARD_WIDTH + GAP,
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const card = el.firstElementChild as HTMLElement | null;
+    const step = (card?.offsetWidth ?? 192) + GAP;
+
+    el.scrollBy({
+      left: direction === "left" ? -step : step,
       behavior: "smooth",
     });
   }
@@ -99,7 +104,7 @@ export function CardCarousel({
         <button
           onClick={() => scroll("left")}
           aria-label="Scroll left"
-          className="rounded-l-md flex-shrink-0 w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
+          className="rounded-l-md flex-shrink-0 w-8 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
         >
         ‹
         </button>
@@ -116,7 +121,7 @@ export function CardCarousel({
         <button
           onClick={() => scroll("right")}
           aria-label="Scroll right"
-          className="rounded-r-md flex-shrink-0 w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
+          className="rounded-r-md flex-shrink-0 w-8 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
         >
           ›
         </button>
@@ -131,20 +136,21 @@ function EventCard({ event }: { event: Event }) {
   const isPastEvent = new Date(event.endDatetime).getTime() < Date.now();
 
   return (
-    <div className="snap-start flex-shrink-0 w-64 border border-msscc-pink rounded-sm">
+    <div className="snap-start flex-shrink-0 w-48 sm:w-64 border border-msscc-pink rounded-sm">
       <Link href={eventUrl} className="relative block">
         {event.media?.fileUrl ? (
           <Image
             src={event.media.fileUrl}
             alt={event.media.altText ?? title}
-            width={400}
-            height={300}
-            className="w-full h-[130px] object-cover"
+            width={200}
+            height={132}
+            sizes="(min-width: 640px) 256px, 192px"
+            className="w-full aspect-[200/132] object-cover"
           />
         ) : (
           <div
-            className="w-full h-[130px] flex items-center justify-center"
-            style={{ backgroundColor: "var(--color-gray-faint)" }}
+          className="w-full aspect-[200/132] flex items-center justify-center"
+          style={{ backgroundColor: "var(--color-gray-faint)" }}
           >
             {/* placeholder svg unchanged */}
           </div>
