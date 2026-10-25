@@ -127,6 +127,7 @@ function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
+
 async function fetchEvents(){
   try {
     const data = await getEvents();
