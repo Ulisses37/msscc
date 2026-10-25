@@ -7,6 +7,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .classification import classify_media
 from .models import MediaAsset, StaticImage
 from .serializers import MediaFileSerializer, StaticImageSerializer
 
@@ -29,6 +30,24 @@ class MediaUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        classification = classify_media(file)
+        if not classification.is_valid:
+            return Response(
+                {
+                    "error": "Unsupported or invalid media file.",
+                    "code": "invalid_media",
+                    "details": {
+                        "reasons": list(classification.reasons),
+                        "detected_kind": classification.detected_kind,
+                        "detected_format": classification.detected_format,
+                        "detected_mime_type": classification.detected_mime_type,
+                        "supplied_extension": classification.supplied_extension,
+                        "supplied_mime_type": classification.supplied_mime_type,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         import os
         import re
 
@@ -40,7 +59,7 @@ class MediaUploadView(APIView):
         media = MediaAsset.objects.create(
             file=file,
             file_name=file.name,
-            file_type=file.content_type or "",
+            file_type=classification.detected_mime_type or "",
             alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
             alt_text_ja=request.data.get("alt_text_ja", ""),
         )
