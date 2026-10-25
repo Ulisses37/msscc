@@ -1,3 +1,8 @@
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -7,22 +12,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from accounts.models import AdminUser
-from emails.messages import send_password_reset_email
 from accounts.serializers import (
     AdminCreateSerializer,
     AdminTokenObtainPairSerializer,
+    AdminUpdateSerializer,
     AdminUserSerializer,
     PasswordResetConfirmSerializer,
-    AdminUpdateSerializer,
 )
-
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
-from django.conf import settings
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
-from django.shortcuts import get_object_or_404
+from emails.messages import send_password_reset_email
 
 
 class AdminTokenObtainPairView(TokenObtainPairView):

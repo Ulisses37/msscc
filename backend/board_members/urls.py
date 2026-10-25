@@ -1,10 +1,10 @@
 from django.urls import path
 
 from board_members.views import (
-    BoardMemberListView,
-    BoardMemberDetailView,
     BoardMemberCreateView,
     BoardMemberDeleteView,
+    BoardMemberDetailView,
+    BoardMemberListView,
     BoardMemberUpdateView,
 )
 

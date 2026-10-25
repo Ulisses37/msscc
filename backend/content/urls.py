@@ -1,5 +1,12 @@
 from django.urls import path
-from content.views import get_content, get_content_for_page, update_content, create_content, delete_content
+
+from content.views import (
+    create_content,
+    delete_content,
+    get_content,
+    get_content_for_page,
+    update_content,
+)
 
 urlpatterns = [
     path("get/<int:content_id>/", get_content, name="get_content"),

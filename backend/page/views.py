@@ -1,12 +1,11 @@
-from page.models import Page
-from page.serializers import PageSerializer
-
+from django.db.models import Prefetch
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
 
-from django.db.models import Prefetch
 from content.models import Content
+from page.models import Page
+from page.serializers import PageSerializer
 
 
 @api_view(["GET"])
