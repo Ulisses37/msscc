@@ -75,6 +75,22 @@ class PaymentReceiptTests(TestCase):
         self.assertNotIn("donation_id", response.data)
         self.assertNotIn("donation_purpose", response.data)
 
+    def test_anonymous_donation_receipt_omits_identity_and_address(self):
+        """A public receipt exposes payment facts, not the retained donor email."""
+        self.donation.is_anonymous = True
+        self.donation.donor_first_name_encrypted = "Anonymous"
+        self.donation.donor_last_name_encrypted = ""
+        self.donation.save(update_fields=[
+            "is_anonymous", "donor_first_name_encrypted", "donor_last_name_encrypted",
+        ])
+        response = self.receipt(self.donation_reference)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["confirmation_reference"], self.donation_reference)
+        for field in ("donor_first_name", "donor_last_name", "donor_email", "address"):
+            self.assertNotIn(field, response.data)
+        for value in ("Anonymous", "private@example.com", "Maya", "Chen"):
+            self.assertNotIn(value, str(response.data))
+
     def test_membership_receipt_excludes_profile_and_stripe_fields(self):
         response = self.receipt(self.membership_reference, amount="999")
         self.assertEqual(response.status_code, 200)

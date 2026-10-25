@@ -205,6 +205,36 @@ it('omits previously entered names when anonymous and restores ordinary requirem
   expect(payload).not.toHaveProperty('address');
 });
 
+it('reviews anonymous details before sending the anonymous request', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  // The summary copies email on blur; the shared fill helper only changes fields.
+  await user.tab();
+  const summary = screen.getByRole('region', { name: en.SupportPage.summaryHeading });
+  const valueFor = (label: string) => within(summary).getByText(label).nextElementSibling;
+  const choice = screen.getByRole('checkbox', { name: en.SupportPage.anonymousDonation });
+
+  await user.click(choice);
+  expect(valueFor(en.SupportPage.name)).toHaveTextContent(en.SupportPage.anonymousName);
+  expect(valueFor(en.SupportPage.name)).not.toHaveTextContent('Ada');
+  expect(valueFor(en.SupportPage.address)).toHaveTextContent(en.SupportPage.addressOmitted);
+  expect(valueFor(en.SupportPage.address)).not.toHaveTextContent('123 Main St');
+  expect(valueFor(en.SupportPage.email)).toHaveTextContent('donor@example.com');
+  expect(valueFor(en.SupportPage.anonymousDonation)).toHaveTextContent(en.SupportPage.yes);
+
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload).toMatchObject({ is_anonymous: true, donor_email: 'donor@example.com' });
+  expect(payload).not.toHaveProperty('donor_first_name');
+  expect(payload).not.toHaveProperty('donor_last_name');
+  expect(payload).not.toHaveProperty('address');
+});
+
 function reviewAmount(messages = en.SupportPage) {
   // Read only the donation row; other empty summary fields can share the same
   // placeholder and should never determine whether checkout is consistent.
