@@ -13,12 +13,13 @@ interface AdminPageInfo{
   pageInstructions: string[]; // an array so you can have multiple lines
 }
 
-// description pulled from frontend\app\admin\dashboard\pageDisplay.tsx for consistency
+// Name and Description pulled from frontend\app\admin\dashboard\pageDisplay.tsx for consistency
+// Array of pageInstructions allows for easy multi line explanations
 const pageList: AdminPageInfo[] = [
   {
     ...getPage("Partners"),
     pageInstructions: [
-      "The partners page stores a list of Partners, Donors, and Sponsors.",
+      "The Partners page stores a list of Partners, Donors, and Sponsors.",
       "To create a new entry, click the green + in the top right corner of the table.",
       "To edit an existing entry, hover over the entry and click.",
       "When creating or editing a entry in any table, you have the ability to fill in their Name (EN/JP), Website URL, Display Order, Image, and Contribution Amount.",
@@ -28,6 +29,18 @@ const pageList: AdminPageInfo[] = [
       "To delete an entry, click to edit it and press the 'Delete' button and press 'ok' on the window pop-up. (This action cannot be undone.)"
     ]
   },
+  {
+    ...getPage("Board of Directors"),
+    pageInstructions: [
+      "The Board of Directors page features the MSSCC Officers and Directors.",
+      "It's user-side related page is the About|Board page.",
+      "The admin-side page allows admins to edit the list of Officers and Directors.",
+      "By clicking on an existing Officer, you are able to update their Name (EN/JP), Role (EN/JP), Caption (EN/JP), and their image.",
+      "By clicking on an existing Director, you are able to update their Name (EN/JP), change their picturem or delete them from the list.",
+      "To create a new Director, click on the Green + button on the top right of the table and input their Name (EN/JP) and image, then press Add.",
+      "Any updates made to this page will be reflected on the user-side page."
+    ]
+  }
 ];
 
 export default function AdminDocumentationPage() {
