@@ -18,8 +18,14 @@ class StrictContributionChoiceField(serializers.BooleanField):
 class DonationSerializer(serializers.ModelSerializer):
     """Serializer for donation records."""
 
-    donor_first_name = serializers.CharField(source="donor_first_name_encrypted", max_length=255)
-    donor_last_name = serializers.CharField(source="donor_last_name_encrypted", max_length=255)
+    # The anonymous path does not submit names. Validate their presence for
+    # ordinary donations below, after the anonymity choice is known.
+    donor_first_name = serializers.CharField(
+        source="donor_first_name_encrypted", max_length=255, required=False, allow_blank=True,
+    )
+    donor_last_name = serializers.CharField(
+        source="donor_last_name_encrypted", max_length=255, required=False, allow_blank=True,
+    )
     donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
     contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
@@ -62,18 +68,11 @@ class DonationSerializer(serializers.ModelSerializer):
         return value
 
     def validate_donor_first_name(self, value):
-        """Remove surrounding whitespace and reject an empty first name."""
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("First name is required.")
-        return value
+        """Normalize input; anonymity-dependent requirements run in validate()."""
+        return value.strip()
 
     def validate_donor_last_name(self, value):
-        """Remove surrounding whitespace and reject an empty last name."""
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Last name is required.")
-        return value
+        return value.strip()
 
     def validate_donor_email(self, value):
         """Normalize email before storing it."""
@@ -86,7 +85,28 @@ class DonationSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate(self, attrs):
-        """Reject any resulting total too large to store, including admin edits."""
+        """Enforce record privacy and validate amounts, including admin edits."""
+        anonymous = attrs.get("is_anonymous", getattr(self.instance, "is_anonymous", False))
+        if anonymous:
+            # Never trust the browser to substitute names: direct public POSTs
+            # and authorized updates must not retain a supplied personal name.
+            attrs["donor_first_name_encrypted"] = "Anonymous"
+            attrs["donor_last_name_encrypted"] = ""
+        else:
+            # Partial admin edits may reuse existing ordinary names, but a
+            # formerly anonymous record needs real names before being unmarked.
+            errors = {}
+            for public_name, stored_name, message in (
+                ("donor_first_name", "donor_first_name_encrypted", "First name is required."),
+                ("donor_last_name", "donor_last_name_encrypted", "Last name is required."),
+            ):
+                if not (
+                    attrs.get(stored_name, getattr(self.instance, stored_name, None)) or ""
+                ).strip():
+                    errors[public_name] = message
+            if errors:
+                raise serializers.ValidationError(errors)
+
         base = attrs.get("amount", getattr(self.instance, "amount", None))
         choice = attrs.get(
             "contribute_to_processing_costs",

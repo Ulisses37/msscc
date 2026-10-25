@@ -257,9 +257,10 @@ export function DonationForm() {
   const formIsValid =
     emailIsValid &&
     donationIsValid &&
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    address.trim().length > 0;
+    // Names and the form-only address are required for an ordinary donation;
+    // Stripe collects any billing information it needs separately at checkout.
+    (isAnonymous || (firstName.trim().length > 0 &&
+      lastName.trim().length > 0 && address.trim().length > 0));
 
   // Lock the donation details after the database record is created.
   // This keeps the stored donation and Stripe session amounts consistent.
@@ -310,8 +311,12 @@ export function DonationForm() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              donor_first_name: firstName.trim(),
-              donor_last_name: lastName.trim(),
+              // Do not transmit previously entered names when the donor opts
+              // out of identifying themselves in the application record.
+              ...(!isAnonymous ? {
+                donor_first_name: firstName.trim(),
+                donor_last_name: lastName.trim(),
+              } : {}),
               donor_email: email.trim().toLowerCase(),
               amount: amountForAttempt,
               // Send only the payer's choice; never let the browser specify
@@ -626,7 +631,7 @@ export function DonationForm() {
               onChange={(event) => setFirstName(event.target.value)}
               onBlur={() => setSummaryFirstName(firstName)}
               disabled={!emailIsValid || fieldsAreLocked}
-              required
+              required={!isAnonymous}
               className={inputClassName}
             />
           </label>
@@ -642,7 +647,7 @@ export function DonationForm() {
               onChange={(event) => setLastName(event.target.value)}
               onBlur={() => setSummaryLastName(lastName)}
               disabled={!emailIsValid || fieldsAreLocked}
-              required
+              required={!isAnonymous}
               className={inputClassName}
             />
           </label>
@@ -658,22 +663,31 @@ export function DonationForm() {
             onChange={(event) => setAddress(event.target.value)}
             onBlur={() => setSummaryAddress(address)}
             disabled={!emailIsValid || fieldsAreLocked}
-            required
+            required={!isAnonymous}
             className={inputClassName}
           />
         </label>
 
-        <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-          <input
-            type="checkbox"
-            name="isAnonymous"
-            checked={isAnonymous}
-            onChange={(event) => setIsAnonymous(event.target.checked)}
-            disabled={!emailIsValid || fieldsAreLocked}
-            className="h-4 w-4 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
-          />
-          {t('anonymousDonation')}
-        </label>
+        {/* Keep the privacy explanation visible on touch screens as well as
+            desktop. Associating it with the native checkbox also lets a
+            keyboard or screen-reader user hear the same details on focus. */}
+        <div>
+          <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              name="isAnonymous"
+              checked={isAnonymous}
+              onChange={(event) => setIsAnonymous(event.target.checked)}
+              disabled={!emailIsValid || fieldsAreLocked}
+              aria-describedby="anonymous-donation-description"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded-sm border-msscc-gray-light text-msscc-teal disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <span className="min-w-0">{t('anonymousDonation')}</span>
+          </label>
+          <p id="anonymous-donation-description" className="mt-1 pl-7 text-caption text-msscc-gray-mid">
+            {t('anonymousDonationDetail')}
+          </p>
+        </div>
 
         <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
           <input

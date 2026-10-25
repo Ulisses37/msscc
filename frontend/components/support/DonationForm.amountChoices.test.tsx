@@ -183,3 +183,34 @@ it('allows keyboard selection and clearing without mouse hover', async () => {
   await user.keyboard(' ');
   expect(checkbox).not.toBeChecked();
 });
+
+it.each(['en', 'ja'] as const)(
+  'explains anonymous donation accessibly and previews its choice in %s', async (language) => {
+    mockLocale = language;
+    const messages = (language === 'ja' ? ja : en).SupportPage;
+    const user = userEvent.setup();
+    render(<DonationForm />);
+
+    const checkbox = screen.getByRole('checkbox', { name: messages.anonymousDonation });
+    const description = screen.getByText(messages.anonymousDonationDetail);
+    const summary = screen.getByRole('region', { name: messages.summaryHeading });
+    const valueFor = (label: string) => within(summary).getByText(label).nextElementSibling;
+    // The explanation is visible before selection and is announced on focus;
+    // neither touch nor keyboard users have to discover a hover-only tooltip.
+    expect(description).toBeVisible();
+    expect(checkbox).toHaveAccessibleDescription(messages.anonymousDonationDetail);
+    expect(checkbox).toHaveAttribute('aria-describedby', description.id);
+    expect(checkbox).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: messages.email }), 'donor@example.com');
+    expect(checkbox).toBeEnabled();
+    await act(async () => { checkbox.focus(); });
+    await user.keyboard(' ');
+    expect(checkbox).toBeChecked();
+    expect(valueFor(messages.name)).toHaveTextContent(messages.anonymousName);
+    expect(valueFor(messages.address)).toHaveTextContent(messages.addressOmitted);
+    expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.yes);
+    await user.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+    expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.no);
+  },
+);

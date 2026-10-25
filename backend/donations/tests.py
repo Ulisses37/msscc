@@ -34,6 +34,95 @@ class DonationPaymentDataTests(TestCase):
         data.update(overrides)
         return Donation.objects.create(**data)
 
+    def test_public_anonymous_donation_replaces_supplied_names_and_keeps_email(self):
+        """The public API must enforce anonymity even if the browser sends PII."""
+        response = APIClient().post("/api/donations/", {
+            "donor_first_name": "Ada", "donor_last_name": "Lovelace",
+            "donor_email": " Donor@Example.com ", "amount": "10.00",
+            "is_anonymous": True,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        donation = Donation.objects.get(pk=response.data["donation_id"])
+        self.assertTrue(donation.is_anonymous)
+        self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
+        self.assertEqual(donation.donor_last_name_encrypted, "")
+        self.assertEqual(donation.donor_email_encrypted, "donor@example.com")
+        self.assertEqual(response.data["donor_first_name"], "Anonymous")
+        self.assertEqual(response.data["donor_last_name"], "")
+        self.assertEqual(response.data["donor_email"], "donor@example.com")
+        self.assertNotIn("Ada", str(response.data))
+        self.assertNotIn("Lovelace", str(response.data))
+
+    def test_public_anonymous_donation_needs_only_email_not_names_or_address(self):
+        """No fabricated name, address, country or postcode is required."""
+        response = APIClient().post("/api/donations/", {
+            "donor_email": "donor@example.com", "amount": "5.00",
+            "is_anonymous": True,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        donation = Donation.objects.get(pk=response.data["donation_id"])
+        self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
+        self.assertEqual(donation.donor_last_name_encrypted, "")
+        self.assertEqual(donation.donor_email_encrypted, "donor@example.com")
+        self.assertFalse(any("address" in field.name for field in Donation._meta.fields))
+
+    def test_email_remains_required_and_valid_for_anonymous_donations(self):
+        for email in (None, "", "not-an-email"):
+            with self.subTest(email=email):
+                payload = {"amount": "5.00", "is_anonymous": True}
+                if email is not None:
+                    payload["donor_email"] = email
+                response = APIClient().post("/api/donations/", payload, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("donor_email", response.data)
+        self.assertEqual(Donation.objects.count(), 0)
+
+    def test_non_anonymous_creation_still_requires_and_saves_real_names(self):
+        data = {"donor_email": "donor@example.com", "amount": "5.00", "is_anonymous": False}
+        for payload in (data, {**data, "donor_first_name": "Ada", "donor_last_name": " "}):
+            response = APIClient().post("/api/donations/", payload, format="json")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("donor_last_name", response.data)
+        response = APIClient().post("/api/donations/", {
+            **data, "donor_first_name": " Ada ", "donor_last_name": " Lovelace ",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        donation = Donation.objects.get(pk=response.data["donation_id"])
+        self.assertFalse(donation.is_anonymous)
+        self.assertEqual(donation.donor_first_name_encrypted, "Ada")
+        self.assertEqual(donation.donor_last_name_encrypted, "Lovelace")
+
+    def test_authorized_edits_cannot_restore_a_name_while_anonymous(self):
+        user = User.objects.create_user(
+            email="finance-anonymity@example.test", permissions_data={"Finances": True},
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        donation = self.create_donation()
+        url = f"/api/donations/{donation.pk}/"
+        response = client.patch(url, {"is_anonymous": True}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        response = client.patch(url, {
+            "donor_first_name": "Reintroduced", "donor_last_name": "Person",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        donation.refresh_from_db()
+        self.assertTrue(donation.is_anonymous)
+        self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
+        self.assertEqual(donation.donor_last_name_encrypted, "")
+        self.assertEqual(donation.donor_email_encrypted, "test@example.com")
+        # Removing the flag must not silently leave a nameless ordinary row.
+        response = client.patch(url, {"is_anonymous": False}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = client.patch(url, {
+            "is_anonymous": False, "donor_first_name": "Ada", "donor_last_name": "Lovelace",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        donation.refresh_from_db()
+        self.assertFalse(donation.is_anonymous)
+        self.assertEqual(donation.donor_first_name_encrypted, "Ada")
+        self.assertEqual(donation.donor_last_name_encrypted, "Lovelace")
+
     def test_new_donation_defaults_to_pending(self):
         donation = self.create_donation()
 
