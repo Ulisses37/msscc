@@ -15,6 +15,7 @@ from .classification import MediaClassification
 @dataclass(frozen=True)
 class MediaValidation:
     """Content-validation results for one already-classified upload."""
+    ## Pass basic upload, check for file
 
     is_valid: bool
     reasons: tuple[str, ...]
