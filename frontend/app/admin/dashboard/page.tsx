@@ -8,7 +8,11 @@ import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
 import { getEvents } from '@/services/eventService';
 import type { Event } from '@/types/event';
 
-import { AvailablePages, CardCarousel } from './pageDisplay';
+
+import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
+import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+
+import { AvailablePages, EventCarousel, DonationCarousel } from './pageDisplay';
 
 type LocalAdminInfo = {
   userId: string;
@@ -20,11 +24,14 @@ type LocalAdminInfo = {
 
 export default function Dashboard() {
   const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
+
   const [events, setEvents] = useState<Event[]>([]);
+  const [donations, setDonations] = useState<DonationEntry[]>([]);
 
   useEffect(() => {
     setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
+    fetchFinancialRecords<DonationEntry>('donations', "").then(setDonations);
   }, []);
 
   if (!localAdmin) return null;
@@ -86,13 +93,9 @@ export default function Dashboard() {
 
         {/* Front end preview */}
         <div>
-          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16">
-            <div className="text-msscc-pink-dark text-2xl lg:text-3xl font-bold border-b-4 border-msscc-pink-light">
-              Recent Page Updates
-            </div>
-            <CardCarousel carouselType="Events" data={events} />
-            {/*<CardCarousel carouselType="Donations"/>
-            <CardCarousel carouselType="Memberships"/>*/}
+          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16 flex flex-col gap-4">
+            <EventCarousel data={events} />
+            <DonationCarousel data={donations}/>
           </div>
         </div>
     </div>
