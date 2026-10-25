@@ -180,11 +180,15 @@ class MembershipSerializer(serializers.ModelSerializer):
         # Keep Stripe linkage and server pricing outside the manual-record API,
         # including its admin list response; only the checkout service writes them.
         read_only_fields = ["membership_id", "created_at", "updated_at"]
-        # The model defaults pending for checkout-created rows; manual admin
-        # submissions retain their existing explicit-status API contract.
+        # Preserve manual input requirements until the legacy API work explicitly
+        # revises them; nullable storage must not silently relax this contract.
         extra_kwargs = {
             "notes": {"max_length": 500},
-            "payment_status": {"required": True},
+            "amount_paid": {"required": True, "allow_null": False},
+            "start_date": {"required": True, "allow_null": False},
+            "end_date": {"required": True, "allow_null": False},
+            "renewal_date": {"required": True, "allow_null": False},
+            "payment_status": {"required": True, "allow_null": False, "allow_blank": False},
         }
         # notes is a TextField without a model limit; bound API input even
         # though historical/admin-entered rows may contain longer notes.

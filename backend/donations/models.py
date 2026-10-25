@@ -81,19 +81,32 @@ class Membership(models.Model):
         FAILED = "failed", "Failed"
         CANCELED = "canceled", "Canceled"
 
+    class RecordSource(models.TextChoices):
+        """Identify the workflow that originally created the membership."""
+
+        CHECKOUT = "checkout", "Checkout"
+        MANUAL = "manual", "Manually created"
+        LEGACY_IMPORT = "legacy_import", "Legacy import"
+
     membership_id = models.AutoField(primary_key=True)
     first_name_encrypted = EncryptedTextField(null=True, blank=True)
     last_name_encrypted = EncryptedTextField(null=True, blank=True)
     email_encrypted = EncryptedTextField(null=True, blank=True)
     phone_encrypted = EncryptedTextField(null=True, blank=True)
+    address_encrypted = EncryptedTextField(null=True, blank=True)
     membership_type = models.CharField(max_length=255)
-    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    # Unknown historical dues and payments are distinct from a known zero amount.
+    membership_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    renewal_date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    renewal_date = models.DateField(null=True, blank=True)
     # Manual admin records predate checkout; retain their free-text statuses.
-    payment_status = models.CharField(max_length=255, default=PaymentStatus.PENDING)
+    payment_status = models.CharField(max_length=255, null=True, blank=True)
+    record_source = models.CharField(
+        max_length=20, choices=RecordSource.choices, default=RecordSource.MANUAL,
+    )
     reference_id = models.CharField(max_length=255)
     # Only checkout-issued references are unique; legacy admin references are editable.
     checkout_reference = models.CharField(max_length=64, unique=True, null=True, blank=True)
@@ -114,6 +127,12 @@ class Membership(models.Model):
         ordering = ["-start_date", "-created_at", "membership_id"]
         verbose_name = "Membership"
         verbose_name_plural = "Memberships"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(record_source__in=["checkout", "manual", "legacy_import"]),
+                name="membership_valid_record_source",
+            ),
+        ]
 
     def __str__(self):
         """Identify the membership without exposing PII in incidental logging."""
