@@ -81,8 +81,7 @@ class MembershipLegacyFieldsTests(TestCase):
         self.assertEqual(decrypt_text(ciphertext), address)
         member.refresh_from_db()
         self.assertEqual(member.address_encrypted, address)
-        # API exposure is deliberately deferred to the authorized legacy API work.
-        self.assertNotIn("address", MembershipSerializer(member).data)
+        self.assertEqual(MembershipSerializer(member).data["address"], address)
         self.assertNotIn("address_encrypted", MembershipSerializer(member).data)
 
     def test_default_source_is_manual_and_all_sources_validate(self):

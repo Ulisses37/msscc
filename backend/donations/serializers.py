@@ -147,13 +147,25 @@ class DonationSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class MembershipAddressField(serializers.CharField):
+    """Accept free-form address text without coercing non-string input."""
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            raise serializers.ValidationError("Expected a string.")
+        return super().to_internal_value(data)
+
+
 class MembershipSerializer(serializers.ModelSerializer):
     """Serializer for membership records."""
 
     first_name = serializers.CharField(source="first_name_encrypted", max_length=255)
     last_name = serializers.CharField(source="last_name_encrypted", max_length=255)
-    email = serializers.EmailField(source="email_encrypted", max_length=254)
-    phone = serializers.CharField(source="phone_encrypted", max_length=255)
+    email = serializers.EmailField(source="email_encrypted", max_length=254, allow_null=True)
+    phone = serializers.CharField(source="phone_encrypted", max_length=255, allow_null=True)
+    address = MembershipAddressField(
+        source="address_encrypted", required=False, allow_null=True, allow_blank=True,
+    )
 
     class Meta:
         model = Membership
@@ -163,7 +175,9 @@ class MembershipSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "phone",
+            "address",
             "membership_type",
+            "membership_price",
             "amount_paid",
             "start_date",
             "end_date",
@@ -172,23 +186,23 @@ class MembershipSerializer(serializers.ModelSerializer):
             "reference_id",
             "status",
             "notes",
+            "record_source",
             "created_at",
             "updated_at",
         ]
         # This serializer is for authorized manual records; public checkout
         # must use the separate membership payment-session endpoint.
-        # Keep Stripe linkage and server pricing outside the manual-record API,
+        # Keep Stripe linkage and checkout pricing outside the manual-record API,
         # including its admin list response; only the checkout service writes them.
-        read_only_fields = ["membership_id", "created_at", "updated_at"]
-        # Preserve manual input requirements until the legacy API work explicitly
-        # revises them; nullable storage must not silently relax this contract.
+        read_only_fields = ["membership_id", "record_source", "created_at", "updated_at"]
+        # Existing create inputs remain required, but unknown values can be explicit nulls.
         extra_kwargs = {
             "notes": {"max_length": 500},
-            "amount_paid": {"required": True, "allow_null": False},
-            "start_date": {"required": True, "allow_null": False},
-            "end_date": {"required": True, "allow_null": False},
-            "renewal_date": {"required": True, "allow_null": False},
-            "payment_status": {"required": True, "allow_null": False, "allow_blank": False},
+            "amount_paid": {"required": True, "allow_null": True},
+            "start_date": {"required": True, "allow_null": True},
+            "end_date": {"required": True, "allow_null": True},
+            "renewal_date": {"required": True, "allow_null": True},
+            "payment_status": {"required": True, "allow_null": True, "allow_blank": False},
         }
         # notes is a TextField without a model limit; bound API input even
         # though historical/admin-entered rows may contain longer notes.
@@ -199,3 +213,12 @@ class MembershipSerializer(serializers.ModelSerializer):
 
     def validate_last_name(self, value):
         return value.strip()
+
+    def validate_address(self, value):
+        """Store missing address text as null rather than encrypted empty strings."""
+        return value or None
+
+    def create(self, validated_data):
+        """Assign manual provenance unless trusted backend code supplies a source."""
+        validated_data.setdefault("record_source", Membership.RecordSource.MANUAL)
+        return super().create(validated_data)
