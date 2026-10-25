@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from donations.models import Membership
 from donations.processing_costs import calculate_donation_amounts
+from donations.receipts import send_membership_receipt
 from payments.serializers import MEMBERSHIP_PRICES
 from payments.services.stripe_service import (
     cancel_membership_payment_intent,
@@ -85,6 +86,7 @@ def update_membership_from_payment_intent(
                 "payment_status", "status", "amount_paid", "start_date",
                 "renewal_date", "end_date", "completed_at", "updated_at",
             ])
+            transaction.on_commit(lambda pk=membership.pk: send_membership_receipt(pk))
             return True
 
         if membership.payment_status == target:
