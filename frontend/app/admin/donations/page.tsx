@@ -10,6 +10,7 @@ import { PostTable, PostTableColumn, SortDirection } from "@/components/content/
 import { downloadCsv, type CsvColumn } from "@/utils/exportCsv";
 import { downloadXlsx, type XlsxCell, type XlsxColumn } from "@/utils/exportXlsx";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDonationName } from "@/utils/formatDonationName";
 
 type SortColumn =
   | "donor_last_name"
@@ -147,7 +148,8 @@ export default function AdminDonationsPage() {
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
   const columns: PostTableColumn<DonationEntry, SortColumn>[] = [
     { key: "donation_date", header: "Date", width: 150 },
-    { key: "donor_last_name", header: "Name", width: 220, render: (_value, donation) => `${donation.donor_last_name}, ${donation.donor_first_name}` },
+    // Anonymous rows have no last name; ordinary rows keep Last, First.
+    { key: "donor_last_name", header: "Name", width: 220, render: (_value, donation) => formatDonationName(donation) },
     { key: "payment_status", header: "Payment Status", width: 200 },
     { key: "amount", header: "Amount", width: 180, render: (value) => formatCurrency(Number(value)) },
   ];
