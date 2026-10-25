@@ -7,6 +7,8 @@ import { adminNavLinks } from '@/config/adminNavLinks';
 
 import Image from 'next/image';
 import type { Event } from '@/types/event';
+import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 import { useRef } from "react";
 
@@ -69,17 +71,7 @@ function PageCard(
   )
 }
 
-export function previewCards(){
-
-}
-
-export function CardCarousel({
-  carouselType,
-  data,
-}: {
-  carouselType: string;
-  data: Event[];
-}) {
+export function EventCarousel({ data }:{ data: Event[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!data || data.length === 0) return null;
@@ -98,16 +90,18 @@ export function CardCarousel({
   }
 
   return (
-    <div>
-      {carouselType}
-      <div className="flex items-stretch bg-msscc-pink-light rounded-md">
-        <button
-          onClick={() => scroll("left")}
-          aria-label="Scroll left"
-          className="rounded-l-md flex-shrink-0 w-8 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
-        >
-        ‹
-        </button>
+  <div>
+    <h2 className="font-heading text-heading-2 text-msscc-teal">
+      Events
+    </h2>
+    <div className="flex items-stretch bg-msscc-pink-light rounded-md">
+<button
+  onClick={() => scroll("left")}
+  aria-label="Scroll left"
+  className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+>
+  ‹
+</button>
 
         <div
           ref={scrollRef}
@@ -117,14 +111,13 @@ export function CardCarousel({
           <EventCard key={event.id} event={event} />
          ))}
         </div>
-
-        <button
-          onClick={() => scroll("right")}
-          aria-label="Scroll right"
-          className="rounded-r-md flex-shrink-0 w-8 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-2xl"
-        >
-          ›
-        </button>
+<button
+  onClick={() => scroll("right")}
+  aria-label="Scroll right"
+  className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+>
+  ›
+</button>
       </div>
     </div>
   );
@@ -136,7 +129,7 @@ function EventCard({ event }: { event: Event }) {
   const isPastEvent = new Date(event.endDatetime).getTime() < Date.now();
 
   return (
-    <div className="snap-start flex-shrink-0 w-48 sm:w-64 border border-msscc-pink rounded-sm">
+    <div className="snap-start flex-shrink-0 w-full sm:w-64 border border-msscc-pink rounded-sm">
       <Link href={eventUrl} className="relative block">
         {event.media?.fileUrl ? (
           <Image
@@ -158,45 +151,93 @@ function EventCard({ event }: { event: Event }) {
 
         {/* Title + date overlay */}
         <div
-          className="max-w-[90%] flex flex-col items-start gap-1"
-          style={{
-            position: "absolute",
-            bottom: "var(--space-2)",
-            left: "var(--space-2)",
-            fontFamily: "var(--font-body)",
-            fontSize: "var(--fs-caption)",
-            fontWeight: 700,
-            lineHeight: 1.4,
-            color: "var(--color-white)",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "rgba(38, 70, 83, 0.85)",
-              padding: "4px 8px",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
-            {title}
-          </div>
-          <div
-          className="whitespace-nowrap"
-            style={{
-              backgroundColor: "rgba(38, 70, 83, 0.85)",
-              padding: "4px 8px",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.7rem",
-            }}
-          >
-            {isPastEvent
-              ? `Event Ended: ${formatDate(event.endDatetime)}`
-              : formatDate(event.startDatetime)}
-          </div>
-        </div>
+  className="absolute bottom-[var(--space-2)] left-[var(--space-2)] max-w-[90%] flex flex-col items-start gap-1 font-body text-xs sm:text-body-sm font-bold text-white"
+>
+  <div className="bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1">
+    {title}
+  </div>
+  <div className="sm:whitespace-nowrap bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1 text-[0.65rem] sm:text-label sm:tracking-label">
+    {isPastEvent
+      ? `Event Ended: ${formatDate(event.endDatetime)}`
+      : formatDate(event.startDatetime)}
+  </div>
+</div>
       </Link>
     </div>
   );
 }
+
+export function DonationCarousel({ data }:{ data: DonationEntry[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  if (!data || data.length === 0) return null;
+
+  function scroll(direction: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const card = el.firstElementChild as HTMLElement | null;
+    const step = (card?.offsetWidth ?? 192) + GAP;
+
+    el.scrollBy({
+      left: direction === "left" ? -step : step,
+      behavior: "smooth",
+    });
+  }
+
+  return (
+    <div>
+    <h2 className="font-heading text-heading-2 text-msscc-teal">
+      Donations
+    </h2>
+    <div className="flex items-stretch bg-msscc-pink-light rounded-md">
+<button
+  onClick={() => scroll("left")}
+  aria-label="Scroll left"
+  className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+>
+  ‹
+</button>
+
+        <div
+          ref={scrollRef}
+          className="flex-1 min-w-0 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-1 scroll-pl-1"
+        >
+          {data.map((donation) => (
+          <DonationCard key={donation.donation_id} donation={donation} />
+         ))}
+        </div>
+<button
+  onClick={() => scroll("right")}
+  aria-label="Scroll right"
+  className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+>
+  ›
+</button>
+      </div>
+    </div>
+  );
+}
+
+
+function DonationCard({ donation}: {donation: DonationEntry}){
+  const name = `${donation.donor_first_name} ${donation.donor_last_name}`.trim();
+
+  return (
+<div className="snap-start flex-shrink-0 w-full sm:w-48 border border-msscc-pink rounded-sm bg-msscc-white px-3 py-2 sm:p-3 flex flex-col gap-0.5 sm:gap-2 sm:justify-between font-body">
+  <div className="font-heading text-body-sm sm:text-base text-msscc-teal break-words">
+    {name}
+  </div>
+  <div className="font-heading text-base sm:text-heading-2 text-msscc-teal">
+    {formatCurrency(Number(donation.total_amount))}
+  </div>
+  <div className="text-label sm:text-body-sm text-msscc-gray-mid">
+    {formatDate(donation.created_at)}
+  </div>
+</div>
+  );
+}
+
 
 // Formats ISO datetime string to readable date
 function formatDate(datetime: string): string {
