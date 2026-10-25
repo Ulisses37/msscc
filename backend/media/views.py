@@ -1,5 +1,6 @@
 # backend/media/views.py
 from django.db import transaction
+from django.db.models import Count, Sum
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
@@ -41,6 +42,7 @@ class MediaUploadView(APIView):
             file=file,
             file_name=file.name,
             file_type=file.content_type or "",
+            file_size=file.size,
             alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
             alt_text_ja=request.data.get("alt_text_ja", ""),
         )
@@ -159,3 +161,20 @@ class StaticImageDetailView(generics.RetrieveUpdateAPIView):
     queryset = StaticImage.objects.all()
     serializer_class = StaticImageSerializer
     lookup_field = "static_image_id"
+
+class MediaTotalSizeView(APIView):
+    """Return the combined size of all media assets, in bytes."""
+
+    def get(self, request):
+        result = MediaAsset.objects.aggregate(
+            total_size=Sum("file_size"),
+            file_count=Count("id"),
+            sized_count=Count("file_size"),  # Count ignores NULLs
+        )
+        return Response(
+            {
+                "total_size_bytes": result["total_size"] or 0,
+                "file_count": result["file_count"],
+                "files_with_size": result["sized_count"],
+            }
+        )
