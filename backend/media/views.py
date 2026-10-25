@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from .classification import classify_media
 from .models import MediaAsset, StaticImage
+from .persistence import MediaPersistenceError, persist_media_asset
 from .sanitization import MediaSanitizationError, sanitize_media
 from .serializers import MediaFileSerializer, StaticImageSerializer
 from .validation import validate_media
@@ -80,13 +81,20 @@ class MediaUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        media = MediaAsset.objects.create(
-            file=sanitized_media.file,
-            file_name=sanitized_media.file_name,
-            file_type=sanitized_media.file_type,
-            alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
-            alt_text_ja=request.data.get("alt_text_ja", ""),
-        )
+        try:
+            media = persist_media_asset(
+                sanitized_media,
+                alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
+                alt_text_ja=request.data.get("alt_text_ja", ""),
+            )
+        except MediaPersistenceError:
+            return Response(
+                {
+                    "error": "Media could not be saved.",
+                    "code": "media_persistence_failed",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         serializer = MediaFileSerializer(media)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

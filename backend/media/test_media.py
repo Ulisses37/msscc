@@ -1,5 +1,7 @@
 from io import BytesIO
+from unittest.mock import patch
 
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from PIL import Image
@@ -7,6 +9,7 @@ from rest_framework.test import APIClient
 
 from media.classification import classify_media
 from media.models import MediaAsset
+from media.persistence import MediaPersistenceError, persist_media_asset
 from media.sanitization import sanitize_media
 from media.validation import validate_media
 
@@ -288,7 +291,49 @@ class MediaUploadApiTests(TestCase):
         media = MediaAsset.objects.get()
         self.assertEqual(media.file_type, "image/png")
         self.assertTrue(media.file_name.endswith(".png"))
+        self.assertTrue(response.data["file_key"].endswith(".png"))
+        self.assertTrue(response.data["file_url"])
         self.assertEqual(response.data["media_asset_id"], media.pk)
+
+    @patch("media.views.persist_media_asset", side_effect=MediaPersistenceError)
+    def test_upload_returns_structured_error_when_persistence_fails(
+        self,
+        persist_media_asset_mock,
+    ) -> None:
+        upload = SimpleUploadedFile(
+            "photo.png",
+            image_bytes(),
+            content_type="image/png",
+        )
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.data["code"], "media_persistence_failed")
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        persist_media_asset_mock.assert_called_once()
+
+    def test_persistence_removes_storage_file_when_database_save_fails(self) -> None:
+        upload = SimpleUploadedFile(
+            "photo.png",
+            image_bytes(),
+            content_type="image/png",
+        )
+        classification = classify_media(upload)
+        sanitized_media = sanitize_media(upload, classification)
+        stored_key = f"public/{sanitized_media.file_name}"
+        real_save = MediaAsset.save
+
+        def save_then_fail(instance, *args, **kwargs):
+            real_save(instance, *args, **kwargs)
+            raise RuntimeError("database failure")
+
+        with patch.object(MediaAsset, "save", autospec=True, side_effect=save_then_fail):
+            with self.assertRaises(MediaPersistenceError):
+                persist_media_asset(sanitized_media)
+
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        self.assertFalse(default_storage.exists(stored_key))
 
     def test_upload_rejects_invalid_media_without_creating_asset(self) -> None:
         upload = SimpleUploadedFile("photo.jpg", b"not an image", content_type="image/jpeg")
