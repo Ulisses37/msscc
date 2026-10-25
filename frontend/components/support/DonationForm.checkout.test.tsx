@@ -134,6 +134,107 @@ async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en
   });
 }
 
+it('submits an anonymous donation with email only and no personal record fields', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  const firstName = screen.getByRole('textbox', { name: en.SupportPage.firstName });
+  const lastName = screen.getByRole('textbox', { name: en.SupportPage.lastName });
+  const address = screen.getByRole('textbox', { name: en.SupportPage.address });
+  await act(async () => {
+    fireEvent.change(screen.getByRole('textbox', { name: en.SupportPage.email }), {
+      target: { value: 'DONOR@EXAMPLE.COM' },
+    });
+  });
+  expect(button).toBeDisabled();
+  await user.click(screen.getByRole('checkbox', { name: en.SupportPage.anonymousDonation }));
+  expect(firstName).not.toBeRequired();
+  expect(lastName).not.toBeRequired();
+  expect(address).not.toBeRequired();
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload).toMatchObject({ is_anonymous: true, donor_email: 'donor@example.com' });
+  expect(payload).not.toHaveProperty('donor_first_name');
+  expect(payload).not.toHaveProperty('donor_last_name');
+  expect(payload).not.toHaveProperty('address');
+});
+
+it('omits previously entered names when anonymous and restores ordinary requirements on clearing', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  const choice = screen.getByRole('checkbox', { name: en.SupportPage.anonymousDonation });
+  const lastName = screen.getByRole('textbox', { name: en.SupportPage.lastName });
+  await user.click(choice);
+  // Previously entered names remain editable for an ordinary attempt but
+  // must never be sent in the anonymous request.
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  let [, request] = jest.mocked(global.fetch).mock.calls[0];
+  let payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload.is_anonymous).toBe(true);
+  expect(payload).not.toHaveProperty('donor_first_name');
+  expect(payload).not.toHaveProperty('donor_last_name');
+
+  await user.click(screen.getByRole('button', { name: 'Edit donation details' }));
+  // Editing remounts the continue button after the Stripe UI is removed.
+  const editButton = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await user.click(choice);
+  expect(lastName).toBeRequired();
+  await user.clear(lastName);
+  expect(editButton).toBeDisabled();
+  await user.type(lastName, 'Lovelace');
+  expect(screen.getByRole('textbox', { name: en.SupportPage.firstName })).toHaveValue('Ada');
+  expect(lastName).toHaveValue('Lovelace');
+  expect(screen.getByRole('textbox', { name: en.SupportPage.address })).toHaveValue('123 Main St');
+  expect(choice).not.toBeChecked();
+  await waitFor(() => expect(editButton).toBeEnabled());
+  await user.click(editButton);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(2));
+  [, request] = jest.mocked(global.fetch).mock.calls[1];
+  payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload).toMatchObject({
+    is_anonymous: false, donor_first_name: 'Ada', donor_last_name: 'Lovelace',
+    donor_email: 'donor@example.com',
+  });
+  expect(payload).not.toHaveProperty('address');
+});
+
+it('reviews anonymous details before sending the anonymous request', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  // The summary copies email on blur; the shared fill helper only changes fields.
+  await user.tab();
+  const summary = screen.getByRole('region', { name: en.SupportPage.summaryHeading });
+  const valueFor = (label: string) => within(summary).getByText(label).nextElementSibling;
+  const choice = screen.getByRole('checkbox', { name: en.SupportPage.anonymousDonation });
+
+  await user.click(choice);
+  expect(valueFor(en.SupportPage.name)).toHaveTextContent(en.SupportPage.anonymousName);
+  expect(valueFor(en.SupportPage.name)).not.toHaveTextContent('Ada');
+  expect(valueFor(en.SupportPage.address)).toHaveTextContent(en.SupportPage.addressOmitted);
+  expect(valueFor(en.SupportPage.address)).not.toHaveTextContent('123 Main St');
+  expect(valueFor(en.SupportPage.email)).toHaveTextContent('donor@example.com');
+  expect(valueFor(en.SupportPage.anonymousDonation)).toHaveTextContent(en.SupportPage.yes);
+
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload).toMatchObject({ is_anonymous: true, donor_email: 'donor@example.com' });
+  expect(payload).not.toHaveProperty('donor_first_name');
+  expect(payload).not.toHaveProperty('donor_last_name');
+  expect(payload).not.toHaveProperty('address');
+});
+
 function reviewAmount(messages = en.SupportPage) {
   // Read only the donation row; other empty summary fields can share the same
   // placeholder and should never determine whether checkout is consistent.

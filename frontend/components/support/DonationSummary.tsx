@@ -83,8 +83,11 @@ export function DonationSummary({
             {t('name')}
           </dt>
           <dd className="text-right text-msscc-gray-dark">
-            {[firstName, lastName].filter(Boolean).join(' ') ||
-              t('notProvided')}
+            {/* The review reflects the selected record privacy, not the
+                personal name still present in the editable form fields. */}
+            {isAnonymous
+              ? t('anonymousName')
+              : [firstName, lastName].filter(Boolean).join(' ') || t('notProvided')}
           </dd>
         </div>
 
@@ -93,7 +96,8 @@ export function DonationSummary({
             {t('address')}
           </dt>
           <dd className="text-right text-msscc-gray-dark">
-            {address || t('notProvided')}
+            {/* This is a display label, never a fabricated address value. */}
+            {isAnonymous ? t('addressOmitted') : address || t('notProvided')}
           </dd>
         </div>
 

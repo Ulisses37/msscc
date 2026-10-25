@@ -355,7 +355,7 @@ class PaymentReceiptView(APIView):
             if MEMBERSHIP_REFERENCE_PATTERN.fullmatch(reference):
                 payment = Membership.objects.defer(
                     "first_name_encrypted", "last_name_encrypted", "email_encrypted",
-                    "phone_encrypted",
+                    "phone_encrypted", "address_encrypted",
                 ).get(
                     checkout_reference=reference,
                     stripe_payment_intent_id__isnull=False,

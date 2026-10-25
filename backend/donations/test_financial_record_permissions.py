@@ -108,6 +108,48 @@ class FinancialRecordPermissionTests(TestCase):
     def test_staff_without_finances_is_denied_before_record_access(self):
         self.assert_denied_operations(self.denied_user, 403)
 
+    def test_anonymous_donation_email_is_only_available_to_financial_staff(self):
+        """An anonymous name must not make the retained email publicly searchable."""
+        self.client.force_authenticate(user=None)
+        created = self.client.post("/api/donations/", {
+            "donor_first_name": "Private", "donor_last_name": "Person",
+            "donor_email": "anonymous-private@example.test", "amount": "5.00",
+            "is_anonymous": True,
+        }, format="json")
+        self.assertEqual(created.status_code, 201)
+        donation = Donation.objects.get(pk=created.data["donation_id"])
+        self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
+        self.assertEqual(donation.donor_last_name_encrypted, "")
+        self.assertEqual(donation.donor_email_encrypted, "anonymous-private@example.test")
+        requests = (
+            ("/api/donations/", {}),
+            ("/api/donations/", {"donor_email": donation.donor_email_encrypted}),
+            ("/api/donations/", {"search": donation.donor_email_encrypted}),
+            ("/api/donations/", {"reference_id": donation.reference_id}),
+            (f"/api/donations/{donation.pk}/", {}),
+        )
+        for user, expected_status in ((None, 401), (self.denied_user, 403)):
+            self.client.force_authenticate(user=user)
+            for url, query in requests:
+                with self.subTest(user=user, url=url, query=query):
+                    with patch("donations.views.DonationListCreateView.get_queryset") as queryset:
+                        response = self.client.get(url, query)
+                    self.assertEqual(response.status_code, expected_status)
+                    queryset.assert_not_called()
+                    self.assertNotIn(donation.donor_email_encrypted, str(response.data))
+
+        self.client.force_authenticate(user=self.user)
+        for url, query in requests:
+            with self.subTest(url=url, query=query):
+                response = self.client.get(url, query)
+                self.assertEqual(response.status_code, 200)
+                row = response.data if url.endswith(f"{donation.pk}/") else response.data[0]
+                self.assertEqual(row["donation_id"], donation.pk)
+                self.assertEqual(row["donor_first_name"], "Anonymous")
+                self.assertEqual(row["donor_last_name"], "")
+                self.assertEqual(row["donor_email"], donation.donor_email_encrypted)
+                self.assertNotIn("Private Person", str(row))
+
     def test_financial_admin_can_list_retrieve_and_search_decrypted_records(self):
         self.assertFalse(self.user.is_staff)
         for record, url, email_field, data in self.cases:

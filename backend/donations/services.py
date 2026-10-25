@@ -40,7 +40,8 @@ def update_membership_from_payment_intent(
         # Both keys must identify the same checkout; the unique reference is
         # locked so concurrent deliveries cannot each activate the member.
         membership = Membership.objects.select_for_update().defer(
-            "first_name_encrypted", "last_name_encrypted", "email_encrypted", "phone_encrypted"
+            "first_name_encrypted", "last_name_encrypted", "email_encrypted", "phone_encrypted",
+            "address_encrypted",
         ).get(
             checkout_reference=reference, stripe_payment_intent_id=intent_id
         )
@@ -103,20 +104,18 @@ def create_pending_membership(
     base = MEMBERSHIP_PRICES[option_id]
     contribution, amount = calculate_donation_amounts(base, contribute_to_processing_costs)
     reference = f"MEM-{uuid4().hex}"
-    today = timezone.localdate()
     intent_id = None
     try:
         with transaction.atomic():
-            # Historical records require dates; these are provisional and do not
-            # confer membership time or activation until the verified webhook.
+            # Membership dates remain unknown until a verified payment starts the term.
             membership = Membership.objects.create(
                 first_name_encrypted=first_name, last_name_encrypted=last_name,
                 email_encrypted=email, phone_encrypted=phone,
                 membership_type=option_id, membership_option_id=option_id,
                 amount_paid=0, expected_amount=amount, base_amount=base,
+                membership_price=base, record_source=Membership.RecordSource.CHECKOUT,
                 contribute_to_processing_costs=contribute_to_processing_costs,
                 processing_cost_contribution=contribution, currency="usd",
-                start_date=today, end_date=today, renewal_date=today,
                 payment_status=Membership.PaymentStatus.PENDING,
                 status="pending", reference_id=reference, checkout_reference=reference,
                 notes="",

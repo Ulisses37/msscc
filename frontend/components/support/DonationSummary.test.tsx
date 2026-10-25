@@ -92,3 +92,35 @@ it.each(['en', 'ja'] as const)('shows the server-quoted breakdown in %s', (langu
   expect(screen.getByText(messages.processingCostAmount)).toBeInTheDocument();
   view.unmount();
 });
+
+it.each(['en', 'ja'] as const)(
+  'previews anonymous record details in %s and restores personal details when cleared', (language) => {
+    mockLocale = language;
+    const messages = (language === 'ja' ? ja : en).SupportPage;
+    const details = (isAnonymous: boolean) => <DonationSummary
+      donation="5" email="donor@example.com" firstName="Ada" lastName="Lovelace"
+      address="123 Main St" isAnonymous={isAnonymous} message=""
+    />;
+    const { rerender } = render(details(false));
+    const region = screen.getByRole('region', { name: messages.summaryHeading });
+    // Isolate rows: a localized placeholder or the checkbox label may appear
+    // elsewhere, but each donor detail must change with the privacy choice.
+    const valueFor = (label: string) => within(region).getByText(label).nextElementSibling;
+    expect(valueFor(messages.name)).toHaveTextContent('Ada Lovelace');
+    expect(valueFor(messages.address)).toHaveTextContent('123 Main St');
+    expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.no);
+
+    rerender(details(true));
+    expect(valueFor(messages.name)).toHaveTextContent(messages.anonymousName);
+    expect(valueFor(messages.name)).not.toHaveTextContent('Ada');
+    expect(valueFor(messages.address)).toHaveTextContent(messages.addressOmitted);
+    expect(valueFor(messages.address)).not.toHaveTextContent('123 Main St');
+    expect(valueFor(messages.email)).toHaveTextContent('donor@example.com');
+    expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.yes);
+
+    rerender(details(false));
+    expect(valueFor(messages.name)).toHaveTextContent('Ada Lovelace');
+    expect(valueFor(messages.address)).toHaveTextContent('123 Main St');
+    expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.no);
+  },
+);
