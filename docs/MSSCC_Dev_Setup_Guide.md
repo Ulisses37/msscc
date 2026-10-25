@@ -302,6 +302,27 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
+### Seed required page records
+
+After migrations, seed the page records used by the admin page editor and public content pages.
+Run this command from the repository root whenever setting up a fresh local database:
+
+**Windows:**
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_pages
+```
+
+**Mac:**
+
+```bash
+backend/venv/bin/python backend/manage.py seed_pages
+```
+
+The command creates the Home, Program|Events, Support, Membership, About|Board, and Partners
+records when they are missing. It can be run again safely and does not overwrite existing page
+records or page content.
+
 ---
 
 ## 7. Configure Storage Bucket
