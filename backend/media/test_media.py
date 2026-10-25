@@ -36,6 +36,10 @@ class MediaClassificationTests(TestCase):
             ("photo.jpeg", "image/jpeg", b"\xff\xd8\xff\xe0", "jpeg", "image"),
             ("photo.PNG", "image/png", b"\x89PNG\r\n\x1a\n", "png", "image"),
             ("photo.webp", "image/webp", b"RIFF0000WEBP", "webp", "image"),
+            ("photo.bmp", "image/bmp", b"BM", "bmp", "image"),
+            ("photo.jfif", "image/jpeg", b"\xff\xd8\xff", "jpeg", "image"),
+            ("photo.tiff", "image/tiff", b"II*\x00", "tiff", "image"),
+            ("photo.gif", "image/gif", b"GIF89a", "gif", "image"),
             ("document.pdf", "application/pdf", b"%PDF-1.7", "pdf", "pdf"),
         )
 
@@ -210,6 +214,76 @@ class MediaSanitizationTests(TestCase):
                 with Image.open(result.file) as image:
                     self.assertEqual(image.format, image_format)
                     self.assertEqual(image.size, (1, 1))
+
+    def test_converts_bmp_jfif_tiff_and_gif_to_webp(self) -> None:
+        cases = (
+            ("photo.bmp", "BMP", "image/bmp"),
+            ("photo.jfif", "JPEG", "image/jpeg"),
+            ("photo.tiff", "TIFF", "image/tiff"),
+            ("photo.gif", "GIF", "image/gif"),
+        )
+
+        for file_name, source_format, mime_type in cases:
+            with self.subTest(file_name=file_name):
+                upload = SimpleUploadedFile(
+                    file_name,
+                    image_bytes(source_format),
+                    content_type=mime_type,
+                )
+                classification = classify_media(upload)
+
+                result = sanitize_media(upload, classification)
+
+                self.assertEqual(result.file_name, "photo.webp")
+                self.assertEqual(result.file_type, "image/webp")
+                with Image.open(result.file) as image:
+                    self.assertEqual(image.format, "WEBP")
+
+    def test_animated_gif_is_sanitized_from_first_frame_only(self) -> None:
+        first_frame = Image.new("RGB", (2, 2), color=(255, 0, 0))
+        second_frame = Image.new("RGB", (2, 2), color=(0, 0, 255))
+        source_bytes = BytesIO()
+        first_frame.save(
+            source_bytes,
+            format="GIF",
+            save_all=True,
+            append_images=[second_frame],
+            loop=0,
+        )
+        upload = SimpleUploadedFile(
+            "animation.gif",
+            source_bytes.getvalue(),
+            content_type="image/gif",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        with Image.open(result.file) as image:
+            self.assertEqual(getattr(image, "n_frames", 1), 1)
+
+    def test_multipage_tiff_is_sanitized_from_first_page_only(self) -> None:
+        first_page = Image.new("RGB", (2, 2), color=(0, 0, 0))
+        second_page = Image.new("RGB", (2, 2), color=(255, 255, 255))
+        source_bytes = BytesIO()
+        first_page.save(
+            source_bytes,
+            format="TIFF",
+            save_all=True,
+            append_images=[second_page],
+        )
+        upload = SimpleUploadedFile(
+            "pages.tiff",
+            source_bytes.getvalue(),
+            content_type="image/tiff",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        with Image.open(result.file) as image:
+            self.assertEqual(getattr(image, "n_frames", 1), 1)
+            self.assertLess(max(image.convert("RGB").getpixel((0, 0))), 50)
 
     def test_strips_image_metadata(self) -> None:
         source = Image.new("RGB", (1, 1), color=(0, 128, 128))

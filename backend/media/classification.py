@@ -15,16 +15,18 @@ class SupportedMedia:
     extension: str
     extensions: tuple[str, ...]
     signature_length: int
+    accepted_mime_types: tuple[str, ...]
 
-
+#Media extensions for classification, processing, or conversion
 SUPPORTED_MEDIA = (
     SupportedMedia(
         format_name="jpeg",
         kind="image",
         mime_type="image/jpeg",
         extension=".jpg",
-        extensions=(".jpg", ".jpeg"),
+        extensions=(".jpg", ".jpeg", ".jfif"),
         signature_length=3,
+        accepted_mime_types=("image/jpeg", "image/jfif"),
     ),
     SupportedMedia(
         format_name="png",
@@ -33,6 +35,7 @@ SUPPORTED_MEDIA = (
         extension=".png",
         extensions=(".png",),
         signature_length=8,
+        accepted_mime_types=("image/png",),
     ),
     SupportedMedia(
         format_name="webp",
@@ -41,6 +44,34 @@ SUPPORTED_MEDIA = (
         extension=".webp",
         extensions=(".webp",),
         signature_length=12,
+        accepted_mime_types=("image/webp",),
+    ),
+    SupportedMedia(
+        format_name="bmp",
+        kind="image",
+        mime_type="image/bmp",
+        extension=".bmp",
+        extensions=(".bmp",),
+        signature_length=2,
+        accepted_mime_types=("image/bmp",),
+    ),
+    SupportedMedia(
+        format_name="tiff",
+        kind="image",
+        mime_type="image/tiff",
+        extension=".tif",
+        extensions=(".tif", ".tiff"),
+        signature_length=4,
+        accepted_mime_types=("image/tiff",),
+    ),
+    SupportedMedia(
+        format_name="gif",
+        kind="image",
+        mime_type="image/gif",
+        extension=".gif",
+        extensions=(".gif",),
+        signature_length=6,
+        accepted_mime_types=("image/gif",),
     ),
     SupportedMedia(
         format_name="pdf",
@@ -49,6 +80,7 @@ SUPPORTED_MEDIA = (
         extension=".pdf",
         extensions=(".pdf",),
         signature_length=5,
+        accepted_mime_types=("application/pdf",),
     ),
 )
 
@@ -85,6 +117,12 @@ def _matches_signature(data: bytes, media: SupportedMedia) -> bool:
         return data == b"\x89PNG\r\n\x1a\n"
     if media.format_name == "webp":
         return len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    if media.format_name == "bmp":
+        return data.startswith(b"BM")
+    if media.format_name == "tiff":
+        return data in (b"II*\x00", b"MM\x00*")
+    if media.format_name == "gif":
+        return data in (b"GIF87a", b"GIF89a")
     if media.format_name == "pdf":
         return data.startswith(b"%PDF-")
     return False
@@ -125,7 +163,7 @@ def classify_media(uploaded_file: BinaryIO) -> MediaClassification:
 
     if not supplied_mime_type:
         reasons.append("missing_mime_type")
-    elif supplied_mime_type != detected_media.mime_type:
+    elif supplied_mime_type not in detected_media.accepted_mime_types:
         reasons.append("mime_type_mismatch")
 
     return MediaClassification(

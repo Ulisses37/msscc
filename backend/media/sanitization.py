@@ -43,11 +43,15 @@ def _safe_base_name(file_name: str, output_extension: str) -> str:
 
 def _image_output_metadata(classification: MediaClassification) -> tuple[str, str, str]:
     if classification.detected_format == "jpeg":
+        if classification.supplied_extension == ".jfif":
+            return "WEBP", ".webp", "image/webp"
         extension = classification.supplied_extension or ".jpg"
         return "JPEG", extension, "image/jpeg"
     if classification.detected_format == "png":
         return "PNG", ".png", "image/png"
     if classification.detected_format == "webp":
+        return "WEBP", ".webp", "image/webp"
+    if classification.detected_format in {"bmp", "gif", "tiff"}:
         return "WEBP", ".webp", "image/webp"
     raise MediaSanitizationError("unsupported_image_format")
 
@@ -63,6 +67,11 @@ def _sanitize_image(
 
         #Resave: Cleans meta data
         with Image.open(uploaded_file) as image:
+
+            #Load first frame/image of Tiff and Gif
+            if getattr(image, "n_frames", 1) > 1:
+                image.seek(0)
+
             oriented_image = ImageOps.exif_transpose(image)
             max_dimension = settings.MEDIA_MAX_IMAGE_DIMENSION
             if max(oriented_image.size) > max_dimension:
