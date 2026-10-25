@@ -9,7 +9,7 @@ from rest_framework.decorators import (
     permission_classes,
     throttle_classes,
 )
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
@@ -28,7 +28,6 @@ def track_visit(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAdminUser])  # remove if the stats should be public
 def yearly_stats(request, year):
     rows = (
         DailyVisit.objects.filter(date__year=year)
@@ -43,15 +42,18 @@ def yearly_stats(request, year):
     return Response({"yearly_views": yearly_views})
 
 @api_view(["GET"])
-@permission_classes([IsAdminUser])  # see note below
 def visit_summary(request):
     today = timezone.localdate()
+    month_start = date(today.year, today.month, 1)
     year_start = date(today.year, 1, 1)
 
     totals = DailyVisit.objects.aggregate(
         today=Sum("count", filter=Q(date=today)),
+        this_month=Sum("count", filter=Q(date__gte=month_start)),
         this_year=Sum("count", filter=Q(date__gte=year_start)),
         all_time=Sum("count"),
     )
-    # Sum returns None when there are no rows, so default to 0
-    return Response({k: v or 0 for k, v in totals.items()})
+    data = {k: v or 0 for k, v in totals.items()}
+    data["year"] = today.year
+    data["month"] = today.month
+    return Response(data)

@@ -14,6 +14,7 @@ import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 
 import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
+import { SiteAnalytics } from './analytics';
 
 
 
@@ -32,6 +33,7 @@ type StorageInfo = {
   files_with_size: number;
 };
 
+
 export default function Dashboard() {
   const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
 
@@ -40,6 +42,7 @@ export default function Dashboard() {
   const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
 
   const [usedStorage, setUsedStorage] = useState<StorageInfo | null>();
+
 
   const STORAGE_CAPACITY_BYTES = 10 * 1024 ** 3; // 10 GB, change to your actual limit
 
@@ -56,7 +59,6 @@ export default function Dashboard() {
     fetchFinancialRecords<DonationEntry>('donations', "").then(setDonations);
     fetchFinancialRecords<MembershipEntry>('memberships', "").then(setMemberships);
     fetchStorage().then(setUsedStorage);
-
   }, []);
 
   const usedBytes = usedStorage?.total_size_bytes ?? 0;
@@ -95,11 +97,9 @@ export default function Dashboard() {
 
         {/* Right Panel */}
         <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:mr-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+
           {/* Visit Counter */}
-          <div className="rounded-sm bg-msscc-pink px-4 py-2 text-center text-white sm:flex-1 lg:flex-none">
-            <div className="text-4xl font-body">00</div>
-            <div className="text-label tracking-label text-msscc-gray-faint">Site Visits</div>
-          </div>
+          <SiteAnalytics/>
 
           {/* Cloud Storage Capacity */}
           <div className="flex flex-col items-center rounded-sm bg-msscc-pink py-4 sm:flex-1 lg:flex-none">
@@ -188,4 +188,5 @@ async function fetchStorage(): Promise<StorageInfo | null> {
     return null;
   }
 }
+
 
