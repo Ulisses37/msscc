@@ -10,9 +10,12 @@ import type { Event } from '@/types/event';
 
 
 import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
+import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 
-import { AvailablePages, EventCarousel, DonationCarousel } from './pageDisplay';
+import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
+
+
 
 type LocalAdminInfo = {
   userId: string;
@@ -27,11 +30,13 @@ export default function Dashboard() {
 
   const [events, setEvents] = useState<Event[]>([]);
   const [donations, setDonations] = useState<DonationEntry[]>([]);
+  const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
 
   useEffect(() => {
     setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
     fetchFinancialRecords<DonationEntry>('donations', "").then(setDonations);
+    fetchFinancialRecords<MembershipEntry>('memberships', "").then(setMemberships);
   }, []);
 
   if (!localAdmin) return null;
@@ -96,6 +101,7 @@ export default function Dashboard() {
           <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16 flex flex-col gap-4">
             <EventCarousel data={events} />
             <DonationCarousel data={donations}/>
+            <MembershipCarousel data={memberships}/>
           </div>
         </div>
     </div>
