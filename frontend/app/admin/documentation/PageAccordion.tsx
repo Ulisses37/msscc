@@ -21,15 +21,15 @@ export default function PageAccordion({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 rounded-md px-2 py-3 text-left transition-colors hover:bg-msscc-pink-light/40"
+        className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-msscc-pink-light/40 sm:gap-4 sm:py-4"
       >
-        <div>
-          <div className="font-semibold text-msscc-pink">{pageName}</div>
-          <div className="text-sm text-gray-600">{pageDescription}</div>
-        </div>
+      <div className="min-w-0">
+        <div className="break-words text-sm font-semibold text-msscc-pink sm:text-base">{pageName}</div>
+        <div className="break-words text-xs text-gray-600 sm:text-sm">{pageDescription}</div>
+      </div>
         <svg
           className={`h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ${
-          open ? 'rotate-0' : 'rotate-90'
+            open ? 'rotate-0' : 'rotate-90'
           }`}
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -44,7 +44,7 @@ export default function PageAccordion({
       </button>
 
       {open && (
-        <ul className="list-disc space-y-1 px-8 pb-4 pt-2 text-sm text-gray-700">
+        <ul className="list-disc space-y-2 break-words pb-4 pl-7 pr-2 pt-2 text-xs text-gray-700 sm:space-y-1 sm:pl-10 sm:text-sm">
           {pageInstructions.map((line, i) => (
             <li key={i}>{line}</li>
           ))}
