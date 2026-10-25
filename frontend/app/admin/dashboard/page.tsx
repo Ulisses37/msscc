@@ -26,6 +26,12 @@ type LocalAdminInfo = {
   isExecutive: boolean;
 };
 
+type StorageInfo = {
+  total_size_bytes: number;
+  file_count: number;
+  files_with_size: number;
+};
+
 export default function Dashboard() {
   const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
 
@@ -33,12 +39,30 @@ export default function Dashboard() {
   const [donations, setDonations] = useState<DonationEntry[]>([]);
   const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
 
+  const [usedStorage, setUsedStorage] = useState<StorageInfo | null>();
+
+  const STORAGE_CAPACITY_BYTES = 10 * 1024 ** 3; // 10 GB, change to your actual limit
+
+  const formatBytes = (bytes: number) => {
+    if (bytes <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
+  };
+
   useEffect(() => {
     setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
     fetchFinancialRecords<DonationEntry>('donations', "").then(setDonations);
     fetchFinancialRecords<MembershipEntry>('memberships', "").then(setMemberships);
+    fetchStorage().then(setUsedStorage);
+
   }, []);
+
+  const usedBytes = usedStorage?.total_size_bytes ?? 0;
+  const remainingBytes = Math.max(STORAGE_CAPACITY_BYTES - usedBytes, 0);
+  const usagePercentage = Math.min((usedBytes / STORAGE_CAPACITY_BYTES) * 100, 100);
+  const roundedPercentage = Math.round(usagePercentage);
 
   if (!localAdmin) return null;
 
@@ -80,14 +104,21 @@ export default function Dashboard() {
           {/* Cloud Storage Capacity */}
           <div className="flex flex-col items-center rounded-sm bg-msscc-pink py-4 sm:flex-1 lg:flex-none">
             <div className="mb-3 flex flex-row items-center justify-center gap-3">
-              <ProgressBar percent={72} />
-              <div className="flex flex-col items-center text-white">
-                <div className="text-4xl font-body">00</div>
-                <div className="text-body-sm">Gb Free</div>
+              <ProgressBar percent={usagePercentage} />
+              <div className="flex flex-col items-center">
+                <div className="text-2xl text-msscc-white">
+                  {usedStorage ? `${roundedPercentage}%` : "--"}
+                </div>
+                <div className="text-xs text-gray-200">
+                  {usedStorage ? `${formatBytes(remainingBytes)} left` : "Loading…"}
+                </div>
               </div>
             </div>
-            <div className="text-label tracking-label text-msscc-gray-faint">
-              Image Storage Capacity
+            <div className="text-center text-gray-200">Image Storage Usage</div>
+            <div className="mt-1 text-center text-xs text-gray-200">
+              {usedStorage
+                ? `${formatBytes(usedBytes)} / ${formatBytes(STORAGE_CAPACITY_BYTES)}`
+                : "--"}
             </div>
           </div>
 
@@ -143,3 +174,18 @@ async function fetchEvents(){
   }
   return [];
 }
+
+async function fetchStorage(): Promise<StorageInfo | null> {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/total-size/`);
+    if (!res.ok) {
+      throw new Error(`Request failed: ${res.status}`);
+    }
+    const data: StorageInfo = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Failed to fetch storage usage:", err);
+    return null;
+  }
+}
+
