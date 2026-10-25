@@ -13,7 +13,7 @@ const pageDescriptions: Record<string, string>={
   Partners: "Manage MSSCC partner data records.",
   'Edit Pages': "Manage public page text, translation, and images.",
   'Board of Directors': "Manage board member list.",
-  'Permissions Pages': "Manage the information and permissions of MSSC Admins.",
+  'Permissions Pages': "Manage the information and permissions of MSSCC Admins.",
   Media: "Manage media images across the website",
 }
 
@@ -25,7 +25,7 @@ export function AvailablePages(
 }){
   const pageList = getPageList(CategoryTitle);
   return(
-    <div className="flex flex-col mt-2 pl-1">
+    <div className="flex flex-col pl-1">
       {pageList && pageList.map((page) =>(
         <PageCard key={page} PageTitle={page}/>
       ))}
@@ -44,18 +44,20 @@ function PageCard(
   const description = pageDescriptions[PageTitle];
 
   return(
-    <div className="">
+    <div className="my-1">
       {link ? (
-          <Link href={link.href} className="text-xl underline !text-black">
-            {PageTitle}
-          </Link>
-        ) : (
-          <div className="text-xl text-gray-800">{PageTitle}</div>
-        )}
-      <div className="pl-4">
+        <Link
+          href={link.href}
+          className="font-heading text-heading-2 text-msscc-teal underline transition-colors hover:text-msscc-pink"
+        >
+          {PageTitle}
+        </Link>
+      ) : (
+        <div className="font-heading text-heading-2 text-msscc-teal-light">{PageTitle}</div>
+      )}
+      <div className="pl-4 text-body-sm text-msscc-gray-mid">
         {description}
       </div>
-
     </div>
   )
 }

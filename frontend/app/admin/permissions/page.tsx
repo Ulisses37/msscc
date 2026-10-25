@@ -20,8 +20,8 @@ export default function AdminPermissionPage(){
 
   return(
     <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
-      <header className="mb-6 border-b border-msscc-gray-light pb-4 w-full">
-        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
+      <header className="mb-6 w-full border-b border-msscc-gray-light pb-4">
+        <h1 className="font-heading text-display text-msscc-teal">Admin Permissions</h1>
       </header>
 
       {/* Stacked on phones and tablets, side by side from lg up */}
@@ -29,66 +29,69 @@ export default function AdminPermissionPage(){
         {/*Div for asides*/}
         <div className="flex w-full flex-col items-center gap-2 lg:w-auto lg:shrink-0">
           {/*Current Logged in Admin Info*/}
-          <aside className="mb-4 w-full rounded-sm border-msscc-gray-light bg-msscc-pink lg:mb-0 lg:mr-4 lg:w-64">
-            <div className="text-xl text-white pl-1 pt-2 border-b-2 border-msscc-gray-light mx-2 font-bold">
+          <aside className="mb-4 w-full rounded-sm bg-msscc-pink pb-3 lg:mb-0 lg:mr-4 lg:w-64">
+            <div className="mx-2 border-b-2 border-msscc-gray-light pl-1 pt-2 font-heading text-heading-2 text-white">
               {logInType}
             </div>
-            <div className="mt-2 ml-2 text-msscc-gray-faint">
-                Name:
-              </div>
-            <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
-              <div className="text-xl text-white break-words">
+
+            <div className="mb-1 ml-2 mt-2 text-label tracking-label text-msscc-gray-faint">
+              Name
+            </div>
+            <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
+              <div className="break-words text-body-sm text-white">
                 {logInAdmin?.firstName + " " + logInAdmin?.lastName}
               </div>
             </div>
-            <div className="mt-2 ml-2 text-msscc-gray-faint">
-                Email:
+
+            <div className="mb-1 ml-2 mt-2 text-label tracking-label text-msscc-gray-faint">
+              Email
             </div>
-            <div className="mx-2 bg-msscc-pink-light pl-1 rounded-sm">
-                <div
-                  className="text-base text-white mb-3 truncate"
-                  title={logInAdmin?.email}>
+            <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
+              <div
+                className="truncate text-body-sm text-white"
+                title={logInAdmin?.email}
+              >
                 {logInAdmin?.email}
               </div>
             </div>
           </aside>
         </div>
 
-        <div className="bg-msscc-gray-faint w-full min-w-0 flex flex-col rounded-md">
+        <div className="flex w-full min-w-0 flex-col rounded-md bg-msscc-gray-faint">
           {/* Toolbar: sticks to the top on phones/tablets, normal from lg up.
               If you have a fixed site header, change top-0 to its height (e.g. top-16). */}
           <div className="sticky top-0 z-20 flex items-center gap-2 rounded-t-md bg-msscc-gray-faint px-2 py-2 shadow-sm lg:static lg:shadow-none">
-  <div className="whitespace-nowrap text-lg text-msscc-teal-dark sm:text-2xl">
-    Admin List
-  </div>
-  <div className="flex flex-1 justify-end gap-2 sm:gap-4">
-    {logInType === "Developer Admin" && (
-      <button
-        type="button"
-        className="w-16 rounded-md bg-green-500 py-1 text-center text-sm text-white hover:bg-green-600 sm:w-24 sm:py-2 sm:text-base"
-        onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
-      >
-        Add
-      </button>
-    )}
+            <h2 className="font-heading text-heading-2 text-msscc-teal">
+              Admin List
+            </h2>
+<div className="flex flex-1 justify-end gap-2 sm:gap-4">
+  {logInType === "Developer Admin" && (
     <button
       type="button"
-      className="w-16 rounded-md bg-blue-400 py-1 text-center text-sm text-white hover:bg-blue-600 sm:w-24 sm:py-2 sm:text-base"
-      onClick={() => updateDatabase()}
+      className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+      onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
     >
-      Update
+      Add
     </button>
-  </div>
+  )}
+  <button
+    type="button"
+    className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+    onClick={() => updateDatabase()}
+  >
+    Update
+  </button>
 </div>
+          </div>
 
           {adminList.map((record) => (
             <PermissionCard
-            key={record.id}
-            adminInformation={record}
-            onPermissionToggle={handlePermissionToggle}
-            setSelectedAdmin={setSelectedAdmin}
-            setAdminPopUpType={setAdminPopUpType}
-            logInType={logInType}
+              key={record.id}
+              adminInformation={record}
+              onPermissionToggle={handlePermissionToggle}
+              setSelectedAdmin={setSelectedAdmin}
+              setAdminPopUpType={setAdminPopUpType}
+              logInType={logInType}
             />
           ))}
         </div>

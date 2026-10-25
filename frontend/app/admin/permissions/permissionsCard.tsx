@@ -5,7 +5,11 @@ import { isValidEmail } from '@/utils/emailValidation';
 import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
 
 // text-base keeps iOS Safari from zooming in when an input is focused
-const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+const inputClass =
+  "mt-1 w-full rounded-md border border-msscc-gray-light bg-msscc-white px-3 py-2 text-base font-normal text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin";
+
+const labelClass = "text-label tracking-label text-msscc-gray-mid";
+const errorClass = "mt-1 text-label text-msscc-danger";
 
 function formatPermissionKey(key: string): string {
     return key
@@ -34,7 +38,7 @@ export function PermissionCard(
   const canEdit = logInType !== "Admin";
   return(
   <div
-    className={`bg-white mx-2 my-2 flex flex-1 flex-col sm:flex-row border-2 border-msscc-gray-light ${
+    className={`mx-2 my-2 flex flex-1 flex-col rounded-sm border border-msscc-gray-light bg-msscc-white font-body text-msscc-gray-dark sm:flex-row ${
       canEdit ? "cursor-pointer hover:bg-msscc-pink-faint" : ""
     }`}
     onClick={
@@ -47,14 +51,14 @@ export function PermissionCard(
     }
   >
       {/* Name / email / rank: on top on phones, left column from sm up */}
-      <div className="flex flex-col px-2 pt-2 pb-0 sm:py-0 sm:my-2 w-full sm:w-64 sm:shrink-0 sm:border-r-2 border-msscc-gray-light">
-        <div className="text-xl break-words">
+      <div className="flex w-full flex-col border-msscc-gray-light px-2 pb-0 pt-2 sm:my-2 sm:w-64 sm:shrink-0 sm:border-r sm:py-0">
+        <div className="break-words font-heading text-heading-2 text-msscc-teal">
           {adminInformation.first_name + " " + adminInformation.last_name}
         </div>
-        <div className="text-sm text-gray-500 break-all">
+        <div className="break-all text-body-sm text-msscc-gray-mid">
           {adminInformation.email}
         </div>
-        <div className="text-right pt-1 sm:mt-auto">
+        <div className="pt-1 text-right sm:mt-auto">
           {adminInformation.is_executive ? (
             <button
               type="button"
@@ -65,7 +69,7 @@ export function PermissionCard(
                   moteType: "demote",
                 });
               }}
-              className="group min-w-28 rounded px-2 py-1 text-xs font-bold text-msscc-pink-dark hover:bg-red-500 hover:text-white"
+              className="group min-w-28 rounded-sm px-2 py-1 text-xs tracking-btn text-msscc-pink-dark transition-colors hover:bg-msscc-danger hover:text-white"
             >
               <span className="group-hover:hidden">Executive Admin</span>
               <span className="hidden group-hover:inline">Demote Admin</span>
@@ -81,7 +85,7 @@ export function PermissionCard(
                     moteType: "promote",
                   });
                 }}
-                className="min-w-28 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white hover:bg-green-600"
+                className="min-w-28 rounded-sm bg-msscc-pink px-2 py-1 text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
               >
                 Promote Admin
               </button>
@@ -90,10 +94,10 @@ export function PermissionCard(
         </div>
       </div>
 
-      <div className="mx-4 border-t-2 border-msscc-gray-light sm:hidden" />
+      <div className="mx-4 border-t border-msscc-gray-light sm:hidden" />
 
       {/* Permission icons: 2 columns on phones, 3 from sm up */}
-      <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">
+      <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 p-2 sm:grid-cols-3">
         {visiblePermissions.map(([permissionName, hasPermission]) => (
           <div key={permissionName} className="min-w-0" onClick={(e) => e.stopPropagation()}>
             <PermissionIcon
@@ -114,9 +118,11 @@ function PermissionIcon({ currentPermission, onToggle }: {
     return (
       <div
       className={`
-        ${currentPermission.hasPermission ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-600"}
+        ${currentPermission.hasPermission
+          ? "bg-msscc-pink hover:bg-msscc-pink-dark"
+          : "bg-msscc-gray-mid hover:bg-msscc-gray-dark"}
         flex h-10 w-full cursor-pointer items-center justify-center overflow-hidden rounded-sm px-1
-        text-center text-sm leading-tight text-white break-words
+        text-center text-body-sm leading-tight text-white break-words transition-colors
         `}
       onClick={onToggle}
       title={getToolTip(currentPermission.permissionName)}
@@ -158,22 +164,24 @@ export function AdminPopup({
 }, [submissionError]);
   return(
     <div
-    className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     onClick={() => setPType("")}
     >
       <div
-      className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto"
+      className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-md bg-msscc-white p-4 font-body text-msscc-gray-dark sm:p-6"
       onClick={(e) => e.stopPropagation()}
       >
           {
           pType =="update" ?
-           <h2 className="text-xl font-bold mb-4 break-all">Update {email} </h2>
-            : <h2 className="text-xl font-bold mb-4"> Create New Admin </h2>
+           <h2 className="mb-4 break-all border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">Update
+           <span className="block break-all">{email}</span>
+           </h2>
+            : <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">Create New Admin</h2>
           }
         {/* Editable fields */}
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-sm font-semibold">First Name
+            <label className={labelClass}>First Name
             <input
               type="text"
               value={firstName || ""}
@@ -183,11 +191,11 @@ export function AdminPopup({
             />
             </label>
             {firstName == "" &&
-            <div className="text-red-500 text-xs"> First Name cannot be empty </div>
+            <div className={errorClass}>First Name cannot be empty</div>
             }
           </div>
           <div>
-            <label className="text-sm font-semibold">Last Name
+            <label className={labelClass}>Last Name
             <input
               type="text"
               value={lastName || ""}
@@ -197,11 +205,11 @@ export function AdminPopup({
             />
             </label>
             {lastName == "" &&
-            <div className="text-red-500 text-xs"> Last Name cannot be empty </div>
+            <div className={errorClass}>Last Name cannot be empty</div>
             }
           </div>
           <div className="gap-0">
-            <label className="text-sm font-semibold">Email
+            <label className={labelClass}>Email
             <input
               type="text"
               value={email|| ""}
@@ -211,10 +219,10 @@ export function AdminPopup({
             />
             </label>
             {email == "" &&
-            <div className="text-red-500 text-xs"> Email cannot be empty </div>
+            <div className={errorClass}>Email cannot be empty</div>
             }
             {(!isValidEmail(email || "") && email != null) &&
-            <div className="text-red-500 text-xs"> Email is invalid</div>
+            <div className={errorClass}>Email is invalid</div>
             }
           </div>
         </div>
@@ -234,19 +242,19 @@ export function AdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="w-full bg-blue-500 font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-200 disabled:cursor-not-allowed"
+          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
         >
-          {pType =="update" ? <p className="text-white"> Save </p> : <p className="text-white">Create</p>}
+          {pType =="update" ? "Save" : "Create"}
         </button>
         <button
           onClick={() => setPType("")}
-          className="w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+          className="w-full rounded-sm border border-msscc-gray-light bg-msscc-white px-4 py-2 text-btn tracking-btn text-msscc-gray-dark transition-colors hover:border-msscc-pink hover:text-msscc-pink"
         >
           Cancel
         </button>
         <button
           onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
-          className="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
+          className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
         >
           Delete
         </button>
