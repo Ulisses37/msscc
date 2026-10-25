@@ -16,6 +16,10 @@ import {
   updateEventImage,
 } from '@/services/eventService';
 import type { Event, EventImage } from '@/types/event';
+import {
+  MediaUploadError,
+  parseMediaUploadError,
+} from '@/utils/mediaUploadError';
 
 type EventFilter = 'upcoming' | 'past';
 
@@ -150,7 +154,11 @@ export default function EventsPage() {
     );
 
     if (!response.ok) {
-      throw new Error(`Image upload failed: ${response.status}`);
+      const errorBody: unknown = await response.json().catch(() => null);
+      throw parseMediaUploadError(
+        errorBody,
+        `Image upload failed: ${response.status}`,
+      );
     }
 
     const imageData = await response.json();
@@ -267,7 +275,11 @@ export default function EventsPage() {
       setSaveMessage('Event created successfully.');
     } catch (error) {
       console.error('Event creation failed:', error);
-      setSaveError('Failed to create event. Please try again.');
+      setSaveError(
+        error instanceof MediaUploadError
+          ? error.message
+          : 'Failed to create event. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -390,7 +402,11 @@ export default function EventsPage() {
       setSaveMessage('Event updated successfully.');
     } catch (error) {
       console.error('Event update failed:', error);
-      setSaveError('Failed to update event. Please try again.');
+      setSaveError(
+        error instanceof MediaUploadError
+          ? error.message
+          : 'Failed to update event. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }

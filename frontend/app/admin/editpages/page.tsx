@@ -18,6 +18,10 @@ import type {
 import BilingualInput from '@/components/admin/BilingualInput';
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { requestDeepLTranslation } from '@/services/deeplService';
+import {
+  MediaUploadError,
+  parseMediaUploadError,
+} from '@/utils/mediaUploadError';
 
 /**
  * Admin page for allowing client to dynamically add/edit content on their website
@@ -296,7 +300,11 @@ export default function EditPagesPage() {
           );
 
         if (!mediaResponse.ok) {
-          throw new Error(`Failed to upload image: ${mediaResponse.status}`);
+          const errorBody: unknown = await mediaResponse.json().catch(() => null);
+          throw parseMediaUploadError(
+            errorBody,
+            `Failed to upload image: ${mediaResponse.status}`,
+          );
         }
         // Retrieve the media record information after the POST is done
         const mediaData = await mediaResponse.json();
@@ -382,7 +390,11 @@ export default function EditPagesPage() {
 
     catch (error) {
       console.error('Failed to save page content:', error);
-      setSaveMessage('Failed to save changes.');
+      setSaveMessage(
+        error instanceof MediaUploadError
+          ? error.message
+          : 'Failed to save changes.',
+      );
     }
 
     // End saving process and proceed to show popup
