@@ -49,13 +49,5 @@ jobs:
           python-version: '3.12'
       - name: Install Ruff
         run: pip install ruff==0.16.9
-      - name: Lint changed backend files
-        run: |
-          BASE_REF="${GITHUB_BASE_REF:-main}"
-          git fetch origin "$BASE_REF" --quiet
-          CHANGED=$(git diff --name-only --diff-filter=ACMR "origin/${BASE_REF#origin/}"...HEAD -- 'backend/*.py')
-          if [ -z "$CHANGED" ]; then
-            echo "No changed backend files to lint."
-            exit 0
-          fi
-          echo "$CHANGED" | xargs ruff check --force-exclude
+      - name: Lint backend
+        run: ruff check backend

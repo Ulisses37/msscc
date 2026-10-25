@@ -347,9 +347,9 @@ backend/venv/bin/python -m pytest backend
 npm --prefix frontend test
 ```
 
-Checks to run before opening a PR, by hand: `npm --prefix frontend run lint`, `npx --prefix frontend tsc --noEmit -p frontend`, and Ruff on just the backend files you changed, `backend\venv\Scripts\python.exe -m ruff check --force-exclude <files you changed>` (macOS/Linux: `backend/venv/bin/python -m ruff check --force-exclude <files you changed>`). Linting all of `backend/` currently reports pre-existing violations in older files that nobody has cleaned up, which is why CI and the hook also lint changed files only. The `run-checks` Cline skill (`.cline/skills/run-checks/`) runs the same set and reports a table.
+Checks to run before opening a PR, by hand: `npm --prefix frontend run lint`, `npx --prefix frontend tsc --noEmit -p frontend`, and `backend\venv\Scripts\python.exe -m ruff check backend` (macOS/Linux: `backend/venv/bin/python -m ruff check backend`). Linting all of `backend/` is expected to pass. The `run-checks` Cline skill (`.cline/skills/run-checks/`) runs the same set and reports a table.
 
-At commit time the pre-commit hook runs Ruff (with `--fix`) on staged backend Python files, and ESLint on the whole frontend whenever any frontend file is staged. CI (`.github/workflows/ci.yml`) runs `lint-backend`, `lint-frontend`, and a placeholder `check` job on pull requests and on pushes to `main`, linting only the files changed against `main`. Tests and TypeScript are not yet in CI.
+At commit time the pre-commit hook runs Ruff (with `--fix`) on staged backend Python files, and ESLint on the whole frontend whenever any frontend file is staged. Before a push, the pre-push hook runs `ruff check backend` over the whole backend, so run `pre-commit install --hook-type pre-push` once per clone to enable it. CI (`.github/workflows/ci.yml`) runs `lint-backend`, `lint-frontend`, and a placeholder `check` job on pull requests and on pushes to `main`; `lint-backend` lints the whole backend and `lint-frontend` lints the frontend files changed against `main`. Tests and TypeScript are not yet in CI.
 
 ## Deployment
 
