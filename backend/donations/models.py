@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -137,6 +138,39 @@ class Membership(models.Model):
     def __str__(self):
         """Identify the membership without exposing PII in incidental logging."""
         return f"Membership {self.pk} - {self.membership_type}"
+
+
+class MembershipAnnualHistory(models.Model):
+    """Record an explicit annual membership state independently of payments."""
+
+    membership_annual_history_id = models.AutoField(primary_key=True)
+    membership = models.ForeignKey(
+        Membership, on_delete=models.CASCADE, related_name="annual_history",
+    )
+    year = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(9999)],
+    )
+    # Missing history is unknown; a stored state must be explicitly supplied.
+    is_active = models.BooleanField()
+
+    class Meta:
+        ordering = ["-year", "membership_annual_history_id"]
+        verbose_name = "Membership annual history"
+        verbose_name_plural = "Membership annual histories"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["membership", "year"], name="membership_history_unique_year",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(year__gte=1, year__lte=9999),
+                name="membership_history_valid_year",
+            ),
+        ]
+
+    def __str__(self):
+        """Identify the annual state without loading encrypted membership fields."""
+        state = "active" if self.is_active else "inactive"
+        return f"Membership {self.membership_id} - {self.year} - {state}"
 
 
 class AdminTableRevision(models.Model):
