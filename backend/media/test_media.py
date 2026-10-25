@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 
 from media.classification import classify_media
 from media.models import MediaAsset
+from media.sanitization import sanitize_media
 from media.validation import validate_media
 
 TEST_STORAGES = {
@@ -179,12 +180,102 @@ class MediaValidationTests(TestCase):
         self.assertEqual(result.reasons, ("pdf_content_invalid",))
 
 
+class MediaSanitizationTests(TestCase):
+    def test_preserves_image_extensions_and_formats(self) -> None:
+        cases = (
+            ("photo.jpg", "image/jpeg", "JPEG", "image/jpeg"),
+            ("photo.jpeg", "image/jpeg", "JPEG", "image/jpeg"),
+            ("photo.png", "image/png", "PNG", "image/png"),
+            ("photo.webp", "image/webp", "WEBP", "image/webp"),
+        )
+
+        for file_name, mime_type, image_format, output_mime_type in cases:
+            with self.subTest(file_name=file_name):
+                format_name = image_format
+                upload = SimpleUploadedFile(
+                    file_name,
+                    image_bytes(format_name),
+                    content_type=mime_type,
+                )
+                classification = classify_media(upload)
+
+                result = sanitize_media(upload, classification)
+
+                self.assertTrue(result.converted)
+                self.assertTrue(result.file_name.endswith(file_name.rsplit(".", 1)[1]))
+                self.assertEqual(result.file_type, output_mime_type)
+                with Image.open(result.file) as image:
+                    self.assertEqual(image.format, image_format)
+                    self.assertEqual(image.size, (1, 1))
+
+    def test_strips_image_metadata(self) -> None:
+        source = Image.new("RGB", (1, 1), color=(0, 128, 128))
+        exif = Image.Exif()
+        exif[270] = "private metadata"
+        source_bytes = BytesIO()
+        source.save(source_bytes, format="JPEG", exif=exif)
+        upload = SimpleUploadedFile(
+            "photo.jpg",
+            source_bytes.getvalue(),
+            content_type="image/jpeg",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        with Image.open(result.file) as image:
+            self.assertEqual(len(image.getexif()), 0)
+
+    @override_settings(MEDIA_MAX_IMAGE_DIMENSION=4)
+    def test_resizes_images_without_upscaling(self) -> None:
+        upload = SimpleUploadedFile(
+            "large.png",
+            image_bytes(size=(8, 4)),
+            content_type="image/png",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        with Image.open(result.file) as image:
+            self.assertEqual(image.size, (4, 2))
+
+    def test_normalizes_pdf_name_without_converting_contents(self) -> None:
+        upload = SimpleUploadedFile(
+            "document.PDF",
+            b"%PDF-1.7\nminimal document\n%%EOF\n",
+            content_type="application/pdf",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        self.assertFalse(result.converted)
+        self.assertEqual(result.file_name, "document.pdf")
+        self.assertEqual(result.file_type, "application/pdf")
+
+    @override_settings(MEDIA_MAX_FILENAME_LENGTH=20)
+    def test_sanitizes_special_characters_and_truncates_long_names(self) -> None:
+        upload = SimpleUploadedFile(
+            "a very long & special filename.png",
+            image_bytes(),
+            content_type="image/png",
+        )
+        classification = classify_media(upload)
+
+        result = sanitize_media(upload, classification)
+
+        self.assertEqual(len(result.file_name), 20)
+        self.assertEqual(result.file_name, "a_very_long___sp.png")
+        self.assertNotRegex(result.file_name, r"[^a-zA-Z0-9_.-]")
+
+
 @override_settings(STORAGES=TEST_STORAGES)
 class MediaUploadApiTests(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
 
-    def test_upload_stores_detected_mime_type(self) -> None:
+    def test_upload_stores_sanitized_png_mime_type(self) -> None:
         upload = SimpleUploadedFile(
             "photo.PNG",
             image_bytes(),
@@ -196,6 +287,7 @@ class MediaUploadApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         media = MediaAsset.objects.get()
         self.assertEqual(media.file_type, "image/png")
+        self.assertTrue(media.file_name.endswith(".png"))
         self.assertEqual(response.data["media_asset_id"], media.pk)
 
     def test_upload_rejects_invalid_media_without_creating_asset(self) -> None:

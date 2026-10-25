@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from .classification import classify_media
 from .models import MediaAsset, StaticImage
+from .sanitization import MediaSanitizationError, sanitize_media
 from .serializers import MediaFileSerializer, StaticImageSerializer
 from .validation import validate_media
 
@@ -65,18 +66,24 @@ class MediaUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        import os
-        import re
 
-        name, ext = os.path.splitext(file.name)
-        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
-
-        file.name = f"{safe_name}{ext}"
+        #Previous sanitization renaming moved to dedicated function
+        try:
+            sanitized_media = sanitize_media(file, classification)
+        except MediaSanitizationError as exc:
+            return Response(
+                {
+                    "error": "Media sanitization failed.",
+                    "code": "invalid_media",
+                    "details": {"reasons": [exc.reason]},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         media = MediaAsset.objects.create(
-            file=file,
-            file_name=file.name,
-            file_type=classification.detected_mime_type or "",
+            file=sanitized_media.file,
+            file_name=sanitized_media.file_name,
+            file_type=sanitized_media.file_type,
             alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
             alt_text_ja=request.data.get("alt_text_ja", ""),
         )
