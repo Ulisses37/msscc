@@ -1,4 +1,5 @@
 from django.urls import path
+
 from page.views import get_all_pages, get_page, get_page_by_slug
 
 urlpatterns = [

@@ -1,9 +1,10 @@
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
 from content.models import Content
 from content.serializers import ContentSerializer
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
 
 @api_view(["GET"])
 def get_content(request, content_id):

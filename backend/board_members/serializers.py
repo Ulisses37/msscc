@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from board_members.models import BoardMember
 
+
 # serializer allows for easy access to board member metadata
 class BoardMemberSerializer(serializers.ModelSerializer):
     """Serializer for board member records."""

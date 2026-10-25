@@ -185,10 +185,10 @@ TypeScript runs in `strict` mode. `npx tsc --noEmit` should be clean for files y
 | ESLint (frontend lint) | `frontend/.eslintrc.json` | `npm run lint` in `frontend/` |
 | TypeScript | `frontend/tsconfig.json` | `npx tsc --noEmit` in `frontend/` |
 | Jest (frontend tests) | `frontend/jest.config.js` | `npm test` in `frontend/` |
-| Pre-commit | `.pre-commit-config.yaml` | `pre-commit install` once per clone; runs Ruff (with `--fix`) and ESLint on staged files at commit time |
+| Pre-commit | `.pre-commit-config.yaml` | `pre-commit install` and `pre-commit install --hook-type pre-push` once per clone; runs Ruff (with `--fix`) and ESLint on staged files at commit time, and `ruff check backend` over the whole backend before a push |
 | Editor defaults | `.editorconfig` | applied by your editor |
 | Cline rules | `.clinerules/` | loaded by Cline |
 
-The pre-commit hook and CI only check files you changed. Existing files may still have Ruff violations. You only need to fix them in files you touch. To check your own changes, run `ruff check <the files you changed>`.
+The pre-commit hook checks the files you changed at commit time. The pre-push hook and CI check the whole backend, so `backend/` is kept at zero Ruff violations. Run `ruff check backend` from the repo root to check it yourself.
 
 Changing a rule means changing the config file and this guide in the same PR.

@@ -1,6 +1,5 @@
 from django.db import models
 
-
 # Restrict saved values so the editor and public renderer stay in sync.
 IMAGE_ALIGNMENT_CHOICES = [
     ("left", "Left"),

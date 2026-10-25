@@ -1,6 +1,6 @@
 from django.urls import path
 
-from partners.views import PartnerListView, PartnerDetailView, PartnerCreateView, PartnerDeleteView
+from partners.views import PartnerCreateView, PartnerDeleteView, PartnerDetailView, PartnerListView
 
 urlpatterns = [
     path("", PartnerListView.as_view(), name="partner-list"),

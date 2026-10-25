@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Page(models.Model):
     """Model representing a page on the MSSCC website."""
 

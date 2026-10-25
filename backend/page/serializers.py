@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from page.models import Page
+
 from content.serializers import ContentSerializer
+from page.models import Page
+
 
 class PageSerializer(serializers.ModelSerializer):
     content = ContentSerializer(many=True, read_only=True, source="content_set")

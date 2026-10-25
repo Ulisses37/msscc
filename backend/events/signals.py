@@ -1,8 +1,9 @@
 from django.db import models
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from events.models import VolunteerSlot, VolunteerSignup
+from events.models import VolunteerSignup, VolunteerSlot
+
 
 def update_event_volunteer_slots(event):
     """Recalculate and save the total capacity across all slots for this event."""

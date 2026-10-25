@@ -1,6 +1,14 @@
 from django.urls import path
 
-from accounts.views import get_admin, list_admins, update_permissions, create_admin, delete_admin, update_admin, set_executive
+from accounts.views import (
+    create_admin,
+    delete_admin,
+    get_admin,
+    list_admins,
+    set_executive,
+    update_admin,
+    update_permissions,
+)
 
 urlpatterns = [
     path("", list_admins),

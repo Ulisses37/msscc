@@ -4,8 +4,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import (
     AdminTokenObtainPairView,
     LogoutView,
-    password_reset_request,
     password_reset_confirm,
+    password_reset_request,
 )
 
 urlpatterns = [
