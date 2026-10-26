@@ -18,6 +18,7 @@ const config: Config = {
             dark:    "#1A3340", // Hover / active on teal elements
             light:   "#3A6070", // Subtle teal surfaces, icon fills
             sky:    "#87CEEB", // Sky blue for accents and highlights
+            faint:  "#e4edf1",
           },
           // Admin UI — Pink / Camellia family (admin-only, never public-facing)
           pink: {

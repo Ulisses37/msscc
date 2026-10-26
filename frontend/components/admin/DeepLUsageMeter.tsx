@@ -72,7 +72,7 @@ export function DeepLUsageMeter() {
           </div>
         </div>
       </div>
-      <div className="text-center text-gray-200">DeepL Translation Usage</div>
+      <div className="text-center text-gray-200">Monthly DeepL Translation Usage</div>
       <div className="mt-1 text-center text-xs text-gray-200">
         {usage.characterCount.toLocaleString()} / {usage.characterLimit.toLocaleString()}{' '}
         characters
