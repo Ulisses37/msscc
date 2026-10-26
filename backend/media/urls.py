@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     MediaDetailView,
     MediaListView,
+    MediaTotalSizeView,
     MediaUploadView,
     StaticImageDetailView,
     StaticImageListView,
@@ -18,4 +19,5 @@ urlpatterns = [
         name="static-image-detail",
     ),
     path("<int:pk>/", MediaDetailView.as_view()),
+    path("total-size/", MediaTotalSizeView.as_view(), name="media-total-size"),
 ]

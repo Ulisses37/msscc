@@ -38,4 +38,5 @@ urlpatterns = [
     path("api/donations/", include("donations.urls")),
     path("api/payments/", include("payments.urls")),
     path("api/emails/", include("emails.urls")),
+    path("api/visits/", include ("site_analytics.urls")),
 ]
