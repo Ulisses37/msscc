@@ -234,14 +234,29 @@ backend\venv\Scripts\python.exe scripts\compare_runs.py docs\testing\baseline do
 
 Both arguments are optional: the baseline directory and the newest run are the
 defaults. The comparison reports per-suite and total count changes, newly failing
-tests, newly passing tests, tests present on only one side, and tool version
-changes. Exit code 0 means no differences, 1 means differences were found, and 2
-means a run directory could not be read.
+tests, newly passing tests, tests present on only one side, tool version changes,
+per-check status and exit code changes, and per-check log content changes. Exit
+code 0 means no differences, 1 means differences were found, and 2 means a run
+directory could not be read.
 
-Ignored on purpose as informational rather than as differences: the run timestamp
-and run directory name, the commit hash, branch name, dirty flag, all durations,
-and any other volatile field. That is what makes a re-run on the same commit come
-back as "no differences".
+What counts as a difference, and what does not:
+
+| Counted | Ignored (recorded for information only) |
+|---|---|
+| Test results, per suite and overall | The run timestamp and run directory name |
+| Each check's `status` and `exit_code` | The commit hash, branch name and dirty flag |
+| `ruff.log` and `tsc.log` contents | Every duration, including per-step seconds |
+| Recorded tool versions | The platform and interpreter version |
+
+Ignoring the second column is what makes a re-run on the same commit come back as
+"No differences". Counting every item in the first column is what makes the
+verdict meaningful: a check that flipped from `passed` to `failed`, or a log that
+gained an error line, is reported even though no test changed.
+
+A check's status and exit code are expected to agree. When a single run records
+`passed` with a non-zero exit code, or `failed` with zero, the run is
+self-contradictory and the comparison prints a warning. Warnings never change the
+exit code; a difference does.
 
 ## 7. What the tests do not cover
 

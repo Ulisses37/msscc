@@ -3,11 +3,11 @@
 Compares a baseline run against a later run and reports what changed. See
 ``docs/testing/PROCEDURE.md``.
 
-**Only test results and tool versions count as differences.** Timestamps, run
-directory names, the commit hash, branch, dirty flag and all durations are
-recorded for information and ignored here. Without that rule a re-run on the same
-commit would always report differences, and the "empty diff" check would be
-useless.
+**Only results count as differences.** Compared: test results, per-check status and
+exit code, per-check log contents, and tool versions. Recorded but ignored:
+timestamps, run directory names, the commit hash, branch name, dirty flag and all
+durations. Without that rule a re-run on the same commit would always report
+differences, and the "empty diff" check would be useless.
 
 Results are keyed per failure, not per test. A pytest test using ``subTest()``
 renders as one ``<testcase>`` per test with one ``<failure>`` child per failing
@@ -206,7 +206,12 @@ def read_versions(run_dir: Path) -> dict:
 
 
 def read_steps(run_dir: Path) -> dict:
-    """Return each check's status from a run's meta.json."""
+    """Return each check's status and exit code from a run's meta.json.
+
+    Both fields are read because both are results. A status change alone and an
+    exit-code change alone are each a difference, so keeping only the status here
+    would hide half of what a reviewer needs to see.
+    """
     path = run_dir / "meta.json"
     if not path.is_file():
         return {}
@@ -214,7 +219,51 @@ def read_steps(run_dir: Path) -> dict:
         meta = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return {}
-    return {name: info.get("status", "") for name, info in meta.get("steps", {}).items()}
+    return {
+        name: {"status": info.get("status", ""), "exit_code": info.get("exit_code")}
+        for name, info in meta.get("steps", {}).items()
+    }
+
+
+def read_logs(run_dir: Path) -> dict:
+    """Return the contents of each check's log file, path-normalized.
+
+    ``ruff.log`` and ``tsc.log`` hold the output of a check, so a change in them
+    is a change in what that check reported even when the exit code stays 0. Only
+    line endings and trailing whitespace are normalized, so a real one-character
+    change in a message is still visible.
+    """
+    logs: dict[str, str] = {}
+    for name in ("ruff.log", "tsc.log"):
+        path = run_dir / name
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        logs[name] = "\n".join(line.rstrip() for line in text.replace("\r\n", "\n").split("\n"))
+    return logs
+
+
+def diff_logs(baseline: dict, current: dict) -> list[dict]:
+    """List log files whose contents differ between two runs."""
+    rows: list[dict] = []
+    for name in sorted(baseline.keys() | current.keys()):
+        before = baseline.get(name)
+        after = current.get(name)
+        if before == after:
+            continue
+        rows.append(
+            {
+                "file": name,
+                "present_in_baseline": before is not None,
+                "present_in_current": after is not None,
+                "baseline_lines": len(before.split("\n")) if before is not None else None,
+                "current_lines": len(after.split("\n")) if after is not None else None,
+            }
+        )
+    return rows
 
 
 def diff_results(baseline: dict | None, current: dict | None) -> dict:
@@ -279,8 +328,62 @@ def diff_versions(baseline: dict, current: dict) -> list[dict]:
     return rows
 
 
+def diff_steps(baseline: dict, current: dict) -> list[dict]:
+    """Compare each check's status and exit code between two runs.
+
+    Every step is compared by name rather than by position, and both fields count.
+    A step that changed only its exit code, or only its status, is a difference.
+    """
+    rows: list[dict] = []
+    for name in sorted(baseline.keys() | current.keys()):
+        before = baseline.get(name, {})
+        after = current.get(name, {})
+        changes = [
+            field
+            for field in ("status", "exit_code")
+            if before.get(field) != after.get(field)
+        ]
+        if changes:
+            rows.append(
+                {
+                    "step": name,
+                    "fields": changes,
+                    "baseline_status": before.get("status"),
+                    "current_status": after.get("status"),
+                    "baseline_exit_code": before.get("exit_code"),
+                    "current_exit_code": after.get("exit_code"),
+                }
+            )
+    return rows
+
+
+def inconsistent_steps(steps: dict) -> list[str]:
+    """List steps whose own status and exit code disagree within one run.
+
+    A run should never record ``passed`` with a non-zero exit code, or ``failed``
+    with a zero one. When it does, the recorded run is self-contradictory, which is
+    reported as a warning rather than silently trusted.
+    """
+    problems: list[str] = []
+    for name, step in sorted(steps.items()):
+        status = step.get("status")
+        code = step.get("exit_code")
+        if status == "skipped" or code is None:
+            continue
+        if status == "passed" and code != 0:
+            problems.append(f"{name}: status 'passed' but exit code {code}")
+        elif status == "failed" and code == 0:
+            problems.append(f"{name}: status 'failed' but exit code 0")
+    return problems
+
+
 def has_differences(report: dict) -> bool:
-    """Report whether anything counts as a difference between the two runs."""
+    """Report whether anything counts as a difference between the two runs.
+
+    Every category the report carries is consulted, step status included. What is
+    deliberately left out is what ``build_report`` never collects: timestamps, run
+    directory names, commit hashes, branch names, dirty flags and durations.
+    """
     for section in ("pytest", "jest"):
         results = report[section]["results"]
         if not results.get("available", False):
@@ -297,11 +400,12 @@ def has_differences(report: dict) -> bool:
 
     if report["versions"]:
         return True
+    if report["steps"]:
+        return True
+    if report["logs"]:
+        return True
 
-    return any(
-        left != right
-        for left, right in zip(report["steps"]["baseline"], report["steps"]["current"])
-    )
+    return False
 
 
 
@@ -311,6 +415,8 @@ def build_report(baseline_dir: Path, current_dir: Path) -> dict:
     base_jest = read_jest(baseline_dir)
     now_pytest = read_pytest(current_dir)
     now_jest = read_jest(current_dir)
+    base_steps = read_steps(baseline_dir)
+    now_steps = read_steps(current_dir)
 
     return {
         "baseline_dir": baseline_dir.name,
@@ -324,10 +430,12 @@ def build_report(baseline_dir: Path, current_dir: Path) -> dict:
             "results": diff_results(base_jest, now_jest),
         },
         "versions": diff_versions(read_versions(baseline_dir), read_versions(current_dir)),
-        "steps": {
-            "baseline": read_steps(baseline_dir),
-            "current": read_steps(current_dir),
-        },
+        "steps": diff_steps(base_steps, now_steps),
+        "logs": diff_logs(read_logs(baseline_dir), read_logs(current_dir)),
+        "step_table": {"baseline": base_steps, "current": now_steps},
+        "warnings": inconsistent_steps(base_steps) + [
+            f"compared run: {problem}" for problem in inconsistent_steps(now_steps)
+        ],
     }
 
 
@@ -339,9 +447,9 @@ def render_markdown(report: dict) -> str:
         f"Baseline: `{report['baseline_dir']}`",
         f"Compared against: `{report['current_dir']}`",
         "",
-        "Only test results and tool versions are compared. Timestamps, run directory "
-        "names, commit hashes, branch names, dirty flags and durations are informational "
-        "and are ignored on purpose.",
+        "Only test results, check status and exit codes, tool versions and check log "
+        "contents are compared. Timestamps, run directory names, commit hashes, branch "
+        "names, dirty flags and durations are informational and are ignored on purpose.",
         "",
     ]
 
@@ -403,15 +511,42 @@ def render_markdown(report: dict) -> str:
         lines.append("(none)")
     lines.append("")
 
-    lines.append("## Check status")
+    lines.append(f"## Check status changes ({len(report['steps'])})")
     lines.append("")
-    lines.append("| Check | Baseline | Current |")
-    lines.append("|---|---|---|")
-    for name in sorted(report["steps"]["baseline"] | report["steps"]["current"]):
-        before = report["steps"]["baseline"].get(name, "unknown")
-        after = report["steps"]["current"].get(name, "unknown")
-        lines.append(f"| {name} | {before} | {after} |")
+    if report["steps"]:
+        lines.append("| Check | Changed | Baseline | Current | Baseline exit | Current exit |")
+        lines.append("|---|---|---|---|---|---|")
+        for row in report["steps"]:
+            lines.append(
+                f"| {row['step']} | {', '.join(row['fields'])} | "
+                f"{row['baseline_status']} | {row['current_status']} | "
+                f"{row['baseline_exit_code']} | {row['current_exit_code']} |"
+            )
+    else:
+        lines.append("(none)")
     lines.append("")
+
+    lines.append(f"## Check log changes ({len(report['logs'])})")
+    lines.append("")
+    if report["logs"]:
+        lines.append("| File | In baseline | In current | Baseline lines | Current lines |")
+        lines.append("|---|---|---|---|---|")
+        for row in report["logs"]:
+            lines.append(
+                f"| `{row['file']}` | {row['present_in_baseline']} | "
+                f"{row['present_in_current']} | {row['baseline_lines']} | "
+                f"{row['current_lines']} |"
+            )
+    else:
+        lines.append("(none)")
+    lines.append("")
+
+    if report["warnings"]:
+        lines.append(f"## Warnings ({len(report['warnings'])})")
+        lines.append("")
+        for warning in report["warnings"]:
+            lines.append(f"- {warning}")
+        lines.append("")
 
     if not has_differences(report):
         lines.append("**No differences.** The two runs match.")
@@ -460,6 +595,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Comparison written to {out_path}")
     else:
         print(text)
+
+    for warning in report["warnings"]:
+        print(f"Warning: {warning}")
 
     return 1 if has_differences(report) else 0
 
