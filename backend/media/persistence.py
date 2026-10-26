@@ -26,6 +26,7 @@ def persist_media_asset(
         file=sanitized_media.file,
         file_name=sanitized_media.file_name,
         file_type=sanitized_media.file_type,
+        file_size=sanitized_media.file.size,
         alt_text_en=alt_text_en,
         alt_text_ja=alt_text_ja,
     )

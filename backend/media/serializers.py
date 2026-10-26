@@ -18,6 +18,7 @@ class MediaFileSerializer(serializers.ModelSerializer):
             "file_url",
             "file_name",
             "file_type",
+            "file_size",
             "alt_text_en",
             "alt_text_ja",
             "is_visible_to_gallery",
@@ -27,6 +28,7 @@ class MediaFileSerializer(serializers.ModelSerializer):
             "media_asset_id",
             "file_key",
             "file_url",
+            "file_type",
             "created_at"
         ]
 

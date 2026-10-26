@@ -15,6 +15,7 @@ import type { DbContentBlock } from '@/types/content';
 import { fetchPageContent, getCachedPageContent, } from '@/utils/content';
 import { usePreviewBlocks } from '@/hooks/usePreviewBlocks';
 import { useDelayedFallback } from '@/hooks/useDelayedFallback';
+import { useTrackVisit } from '@/utils/siteAnalytics';
 
 /**
  * This is the general view home page
@@ -42,6 +43,8 @@ export default function HomePage() {
 
    loadPageContent();
   }, []);
+
+  useTrackVisit(); // increment site visits
 
   return (
     <main>
