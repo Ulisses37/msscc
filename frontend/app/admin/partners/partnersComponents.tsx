@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ImportImage } from '@/components/ui/ImportImage'
 import PostImage from '@/components/ui/PostImage'
+import { parseMediaUploadError } from '@/utils/mediaUploadError'
 
 export interface PartnerProp{
   DisplayOrder: number;
@@ -686,8 +687,11 @@ async function uploadMediaAsset(file: File): Promise<number> {
   );
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.error || 'Image upload failed.');
+    const errorBody: unknown = await response.json().catch(() => null);
+    throw parseMediaUploadError(
+      errorBody,
+      `Image upload failed: ${response.status}`,
+    );
   }
 
   const data: { media_asset_id: number } = await response.json();
