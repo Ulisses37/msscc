@@ -277,6 +277,7 @@ msscc/
 │   ├── services/      # API service layer
 │   ├── types/         # TypeScript types
 │   └── config/        # Shared config
+├── scripts/           # Reproducible test-run capture and comparison
 └── backend/           # Django project
     ├── accounts/      # Auth app (JWT)
     └── ...
@@ -287,6 +288,7 @@ msscc/
 Full setup and onboarding guides live in the [`docs/`](./docs) directory:
 
 - [Local Development and Testing Setup](./docs/MSSCC_Dev_Setup_Guide.md)
+- [Test Procedure](./docs/testing/PROCEDURE.md) (how to record and compare a run)
 - Deployment Guide (To be added next semester)
 
 ### AI Assistant (Cline)

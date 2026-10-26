@@ -21,9 +21,15 @@ backend/**/*.pyc
 backend/**/__pycache__/
 backend/staticfiles/
 
+# Python bytecode from the scripts in scripts/
+scripts/__pycache__/
+
 # Temporary Files
 *.tmp
 tmp/
 backend/tmp/
 frontend/tmp/
 docs/sprint8.docx
+
+# Recorded test runs. Only docs/testing/baseline/ is committed.
+docs/testing/runs/
