@@ -6,6 +6,7 @@ from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
+from events import services
 from events.models import Event, VolunteerSignup, VolunteerSlot
 
 User = get_user_model()
@@ -294,3 +295,383 @@ class VolunteerCancellationLookupTests(TestCase):
         self.assertEqual(second_response.status_code, 404)
         slot.refresh_from_db()
         self.assertEqual(slot.filled_count, 0)
+
+
+class VolunteerChangeDetectionTests(TestCase):
+    """Only shift removal, movement and role changes reach the buffer.
+
+    Delivery is wired in a later subtask, so these tests inspect the coalesced
+    buffer instead of an outbound email.
+    """
+
+    def setUp(self):
+        # The buffer is per thread and survives between saves by design, so each
+        # test starts from an empty one.
+        services.take_pending_changes()
+        self.event = self.create_event()
+        self.slot = self.create_slot(self.event)
+        self.signup = self.create_signup(self.slot)
+
+    def create_event(self, **overrides):
+        data = {
+            "title_en": "Cultural Exchange",
+            "title_ja": "文化交流",
+            "location_en": "Community Center",
+            "start_datetime": datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            "end_datetime": datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        }
+        data.update(overrides)
+        return Event.objects.create(**data)
+
+    def create_slot(self, event, **overrides):
+        data = {
+            "event": event,
+            "position_name": "Greeter",
+            "start_datetime": event.start_datetime,
+            "end_datetime": event.end_datetime,
+        }
+        data.update(overrides)
+        return VolunteerSlot.objects.create(**data)
+
+    def create_signup(self, slot, **overrides):
+        data = {
+            "slot": slot,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.test",
+            "phone": "916-555-0100",
+        }
+        data.update(overrides)
+        return VolunteerSignup.objects.create(**data)
+
+    def pending_for(self, signup, event):
+        """Return the buffered change kinds for one (volunteer, event) pair."""
+        return services.take_pending_changes().get(
+            (signup.volunteer_signup_id, event.event_id),
+            {},
+        )
+
+    def test_creating_a_slot_and_signup_notifies_nobody(self):
+        self.assertEqual(services.take_pending_changes(), {})
+
+        self.create_signup(self.slot, email="kenji@example.test")
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_slot_capacity_change_is_not_collected(self):
+        self.slot.capacity = 4
+        self.slot.save()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_slot_description_change_is_not_collected(self):
+        self.slot.description = "Bring a jacket."
+        self.slot.save()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_plain_resave_of_a_slot_is_not_collected(self):
+        self.slot.save()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_event_bookkeeping_save_is_not_collected(self):
+        # update_event_volunteer_slots re-saves the event this way on every slot
+        # edit, so it must never look like an event change worth notifying about.
+        self.event.volunteer_slots = 3
+        self.event.save(update_fields=["volunteer_slots"])
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_event_publish_change_is_not_collected(self):
+        self.event.is_published = True
+        self.event.save(update_fields=["is_published", "updated_at"])
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_signup_deletion_collects_nothing(self):
+        # A volunteer cancelling their own signup does not need to hear about it.
+        self.signup.delete()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_slot_deletion_is_collected_as_a_removal(self):
+        slot_id = self.slot.volunteer_slot_id
+
+        self.slot.delete()
+
+        details = self.pending_for(self.signup, self.event)[services.REMOVED]
+
+        self.assertEqual(details["email"], "aiko@example.test")
+        self.assertEqual(details["first_name"], "Aiko")
+        self.assertEqual(details["event_name"], "Cultural Exchange")
+        self.assertEqual(details["role"], "Greeter")
+        self.assertEqual(details["slot_id"], slot_id)
+
+    def test_slot_deletion_without_signups_collects_nothing(self):
+        empty_slot = self.create_slot(self.event, position_name="Usher")
+        services.take_pending_changes()
+
+        empty_slot.delete()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+    def test_slot_time_change_is_collected_as_a_move(self):
+        self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+        self.slot.end_datetime = datetime(2026, 12, 25, 16, 0, tzinfo=UTC)
+        self.slot.save()
+
+        details = self.pending_for(self.signup, self.event)[services.MOVED]
+
+        self.assertEqual(details["new_start_datetime"], self.slot.start_datetime)
+        self.assertEqual(details["new_end_datetime"], self.slot.end_datetime)
+        self.assertEqual(details["new_location"], "Community Center")
+
+    def test_slot_role_change_is_collected_as_a_role_change(self):
+        self.slot.position_name = "Ticket Table"
+        self.slot.save()
+
+        details = self.pending_for(self.signup, self.event)[services.ROLE_CHANGED]
+
+        self.assertEqual(details["new_role"], "Ticket Table")
+        self.assertEqual(details["old_role"], "Greeter")
+
+    def test_event_location_change_is_collected_as_a_move(self):
+        self.event.location_en = "Memorial Auditorium"
+        self.event.save(update_fields=["location_en", "updated_at"])
+
+        details = self.pending_for(self.signup, self.event)[services.MOVED]
+
+        self.assertEqual(details["new_location"], "Memorial Auditorium")
+
+    def test_event_time_change_is_collected_as_a_move(self):
+        self.event.start_datetime = datetime(2026, 12, 26, 10, 0, tzinfo=UTC)
+        self.event.save(update_fields=["start_datetime", "updated_at"])
+
+        details = self.pending_for(self.signup, self.event)[services.MOVED]
+
+        self.assertEqual(details["new_start_datetime"], self.event.start_datetime)
+
+    def test_several_changes_in_one_save_coalesce_into_one_entry(self):
+        self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+        self.slot.end_datetime = datetime(2026, 12, 25, 16, 0, tzinfo=UTC)
+        self.slot.position_name = "Ticket Table"
+        self.slot.save()
+
+        pending = services.take_pending_changes()
+
+        self.assertEqual(len(pending), 1)
+        details_by_kind = pending[(self.signup.volunteer_signup_id, self.event.event_id)]
+        self.assertEqual(
+            set(details_by_kind),
+            {services.MOVED, services.ROLE_CHANGED},
+        )
+
+    def test_repeated_edits_keep_only_the_final_values(self):
+        self.slot.position_name = "Ticket Table"
+        self.slot.save()
+        self.slot.position_name = "Greeter"
+        self.slot.save()
+
+        pending = services.take_pending_changes()
+
+        self.assertEqual(len(pending), 1)
+        details_by_kind = pending[(self.signup.volunteer_signup_id, self.event.event_id)]
+        self.assertEqual(details_by_kind[services.ROLE_CHANGED]["new_role"], "Greeter")
+
+    def test_every_signup_on_the_slot_is_collected_separately(self):
+        kenji = self.create_signup(self.slot, email="kenji@example.test")
+
+        self.slot.position_name = "Ticket Table"
+        self.slot.save()
+
+        pending = services.take_pending_changes()
+
+        self.assertEqual(
+            set(pending),
+            {
+                (self.signup.volunteer_signup_id, self.event.event_id),
+                (kenji.volunteer_signup_id, self.event.event_id),
+            },
+        )
+
+    def test_signup_moved_to_a_later_slot_is_collected_as_a_move(self):
+        later_slot = self.create_slot(
+            self.event,
+            position_name="Ticket Table",
+            start_datetime=datetime(2026, 12, 25, 14, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 16, 0, tzinfo=UTC),
+        )
+        self.signup.slot = later_slot
+        self.signup.save()
+
+        details = self.pending_for(self.signup, self.event)
+
+        self.assertIn(services.MOVED, details)
+        self.assertNotIn(services.REMOVED, details)
+        self.assertEqual(details[services.MOVED]["new_start_datetime"], later_slot.start_datetime)
+
+    def test_signup_moved_to_an_identical_shift_is_not_collected(self):
+        # Same date and time, so the volunteer has nothing new to know.
+        identical_slot = self.create_slot(self.event, position_name="Ticket Table")
+        self.signup.slot = identical_slot
+        self.signup.save()
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+
+class VolunteerChangeSnapshotTests(TestCase):
+    """Snapshots are plain values and are only read when they can matter."""
+
+    def setUp(self):
+        services.take_pending_changes()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            location_en="Community Center",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=self.event.start_datetime,
+            end_datetime=self.event.end_datetime,
+        )
+        self.signup = VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.test",
+            phone="916-555-0100",
+        )
+
+    def test_removal_snapshot_holds_plain_values_only(self):
+        signups, event = services.capture_slot_removal(self.slot)
+
+        # Nothing in the snapshot may be a model instance: the cascade deletes the
+        # rows before the removal is recorded.
+        self.assertEqual(event, {"event_id": self.event.event_id, "title_en": "Cultural Exchange"})
+        self.assertEqual(len(signups), 1)
+        self.assertEqual(
+            set(signups[0]),
+            {
+                "volunteer_signup_id",
+                "first_name",
+                "email",
+                "slot_id",
+                "position_name",
+                "start_datetime",
+                "end_datetime",
+            },
+        )
+        self.assertIsInstance(signups[0]["start_datetime"], datetime)
+        self.assertEqual(signups[0]["volunteer_signup_id"], self.signup.volunteer_signup_id)
+
+    def test_snapshot_skips_the_query_when_update_fields_cannot_matter(self):
+        before = services.snapshot(
+            self.slot,
+            services.SLOT_TRACKED_FIELDS,
+            update_fields=["filled_count"],
+        )
+
+        # None means "unknown, so do not compare", which is how a filled-count
+        # recount avoids both the query and a false positive.
+        self.assertIsNone(before)
+
+    def test_snapshot_reads_the_stored_values_for_a_new_instance(self):
+        self.assertEqual(
+            services.snapshot(self.slot, services.SLOT_TRACKED_FIELDS),
+            {
+                "start_datetime": self.slot.start_datetime,
+                "end_datetime": self.slot.end_datetime,
+                "position_name": "Greeter",
+            },
+        )
+
+    def test_snapshot_of_an_unsaved_instance_is_empty(self):
+        self.assertEqual(
+            services.snapshot(VolunteerSlot(event=self.event), services.SLOT_TRACKED_FIELDS),
+            {},
+        )
+
+    def test_filled_count_recount_does_not_reach_the_buffer(self):
+        # The signal helpers re-save the slot with update_fields, and those saves
+        # must stay invisible to volunteers.
+        self.assertEqual(self.slot.filled_count, 1)
+
+        services.take_pending_changes()
+        self.slot.save(update_fields=["filled_count"])
+
+        self.assertEqual(services.take_pending_changes(), {})
+
+
+class VolunteerDeleteCascadeTests(TestCase):
+    """Deleting a shift that has signups must not fail on its own bookkeeping.
+
+    Regression coverage: the filled-count recount used to resolve the cached
+    foreign key of an already-deleted slot and raise DoesNotExist, which aborted
+    the delete.
+    """
+
+    def setUp(self):
+        services.take_pending_changes()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            location_en="Community Center",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=self.event.start_datetime,
+            end_datetime=self.event.end_datetime,
+        )
+        VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.test",
+            phone="916-555-0100",
+        )
+
+    def test_deleting_a_slot_with_signups_succeeds(self):
+        self.slot.delete()
+
+        self.assertEqual(VolunteerSlot.objects.count(), 0)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_deleting_a_slot_recounts_its_event(self):
+        self.assertEqual(self.event.volunteer_slots, 1)
+        self.slot.delete()
+
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.volunteer_slots, 0)
+
+    def test_deleting_an_event_cascades_through_slots_and_signups(self):
+        # Deleting the event removes its slots and their signups, and the slot
+        # bookkeeping must survive having no event left to recount.
+        self.event.delete()
+
+        self.assertEqual(Event.objects.count(), 0)
+        self.assertEqual(VolunteerSlot.objects.count(), 0)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+
+    def test_cancelling_one_signup_still_recounts_the_slot(self):
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.filled_count, 1)
+
+        VolunteerSignup.objects.get().delete()
+
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.filled_count, 0)
+        self.assertEqual(VolunteerSlot.objects.count(), 1)
+
+
+
+
+
+
