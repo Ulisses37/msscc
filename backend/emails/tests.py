@@ -197,7 +197,13 @@ class SubscribeConfirmEndpointTests(TestCase):
         )
 
     def test_expired_token_is_rejected_and_leaves_the_row_pending(self):
-        self.create_pending(confirmation_expires_at=timezone.now() - timedelta(minutes=1))
+        original_hash = hash_confirmation_token("a" * 32)
+        original_sent_at = timezone.now() - timedelta(hours=49)
+        original_expires_at = timezone.now() - timedelta(minutes=1)
+        self.create_pending(
+            confirmation_sent_at=original_sent_at,
+            confirmation_expires_at=original_expires_at,
+        )
 
         with patch("emails.subscribers.get_provider") as get_provider_mock:
             response = self.post()
@@ -206,6 +212,11 @@ class SubscribeConfirmEndpointTests(TestCase):
         subscriber = Subscriber.objects.get(email="member@example.test")
         self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
         self.assertFalse(subscriber.provider_synced)
+        # The rejected confirm must not touch the row at all, so an expired token
+        # stays expired and a later re-issue is the only way forward.
+        self.assertEqual(subscriber.confirmation_token_hash, original_hash)
+        self.assertEqual(subscriber.confirmation_sent_at, original_sent_at)
+        self.assertEqual(subscriber.confirmation_expires_at, original_expires_at)
         get_provider_mock.assert_not_called()
 
     def test_unknown_token_is_rejected(self):
@@ -603,6 +614,68 @@ class SubscriberModelTests(TestCase):
             subscriber.full_clean()
 
         self.assertIn("source", caught.exception.message_dict)
+
+    def test_pending_is_a_valid_status_for_full_clean(self):
+        subscriber = Subscriber(
+            email="waiting@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.PENDING,
+        )
+
+        # full_clean does not enforce database CheckConstraints, so this only
+        # shows that "pending" is an accepted choice for the field.
+        subscriber.full_clean()
+
+    def test_unsupported_status_is_rejected_by_full_clean(self):
+        subscriber = Subscriber(
+            email="member@example.test",
+            source=Subscriber.Source.FOOTER,
+            status="bogus",
+        )
+
+        with self.assertRaises(ValidationError) as caught:
+            subscriber.full_clean()
+
+        self.assertIn("status", caught.exception.message_dict)
+
+    def test_widened_constraint_allows_a_pending_row(self):
+        # A pending row saves and reloads, which is what the widened
+        # subscriber_valid_status constraint has to permit. The rejection half,
+        # that an out-of-range status still fails, is covered by
+        # test_database_rejects_an_unsupported_status.
+        subscriber = self.create_subscriber(status=Subscriber.Status.PENDING)
+
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+
+    def test_confirmation_token_hashes_are_unique_across_rows(self):
+        first = self.create_subscriber(email="one@example.test")
+        second = self.create_subscriber(email="two@example.test")
+
+        first_raw = first.issue_confirmation_token()
+        second_raw = second.issue_confirmation_token()
+
+        self.assertNotEqual(first_raw, second_raw)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertNotEqual(
+            first.confirmation_token_hash, second.confirmation_token_hash
+        )
+        self.assertEqual(len(first.confirmation_token_hash), 64)
+        self.assertEqual(len(second.confirmation_token_hash), 64)
+
+    def test_clearing_a_token_empties_the_hash_and_both_timestamps(self):
+        subscriber = self.create_subscriber()
+        subscriber.issue_confirmation_token()
+        subscriber.refresh_from_db()
+        self.assertNotEqual(subscriber.confirmation_token_hash, "")
+
+        subscriber.clear_confirmation_token()
+        subscriber.refresh_from_db()
+
+        self.assertEqual(subscriber.confirmation_token_hash, "")
+        self.assertIsNone(subscriber.confirmation_sent_at)
+        self.assertIsNone(subscriber.confirmation_expires_at)
 
     def test_str_reports_address_and_status(self):
         subscriber = self.create_subscriber(email="member@example.test")
@@ -1006,6 +1079,43 @@ class SubscribeEndpointTests(TestCase):
         self.assertEqual(response.json(), SUBSCRIBE_RESPONSE)
         subscribe.assert_called_once_with("gone@example.test", "footer")
 
+    def test_four_address_states_return_the_same_response(self):
+        # A caller must not be able to tell the four states apart, so the status
+        # and the body are compared across all of them in one place.
+        Subscriber.objects.create(
+            email="pending@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.PENDING,
+            confirmation_sent_at=timezone.now(),
+        )
+        Subscriber.objects.create(
+            email="known@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.SUBSCRIBED,
+        )
+        Subscriber.objects.create(
+            email="gone@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=timezone.now(),
+        )
+
+        with patch("emails.views.subscribe_contact"):
+            responses = [
+                self.post(email=address)
+                for address in (
+                    "brand-new@example.test",
+                    "pending@example.test",
+                    "known@example.test",
+                    "gone@example.test",
+                )
+            ]
+
+        statuses = {response.status_code for response in responses}
+        bodies = {json.dumps(response.json(), sort_keys=True) for response in responses}
+        self.assertEqual(statuses, {200})
+        self.assertEqual(bodies, {json.dumps(SUBSCRIBE_RESPONSE, sort_keys=True)})
+
     def test_invalid_email_is_rejected(self):
         response = self.post(email="not-an-email")
 
@@ -1179,6 +1289,45 @@ class ResendWebhookTests(TestCase):
         self.assertEqual(response.status_code, 200)
         subscriber = Subscriber.objects.get(email="resub@example.test")
         self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+
+    def test_unsubscribed_false_never_resubscribes_a_pending_row(self):
+        # A pending row is waiting on its own inbox, so an echo of our own
+        # create or segment-remove call must not confirm it.
+        self.create_subscriber(
+            "waiting@example.test",
+            status=Subscriber.Status.PENDING,
+            confirmation_token_hash=hash_confirmation_token("f" * 32),
+            confirmation_sent_at=timezone.now(),
+            confirmation_expires_at=timezone.now() + CONFIRMATION_TOKEN_TTL,
+        )
+
+        response = self.deliver(self.contact_payload("waiting@example.test", False))
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="waiting@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        self.assertEqual(
+            subscriber.confirmation_token_hash, hash_confirmation_token("f" * 32)
+        )
+
+    def test_contact_deleted_leaves_a_pending_row_alone(self):
+        # A deleted contact is an opt-out signal for someone who was subscribed.
+        # A pending row never consented, so recording an unsubscribe for it would
+        # invent a departure that never happened.
+        self.create_subscriber(
+            "waiting@example.test",
+            status=Subscriber.Status.PENDING,
+            confirmation_sent_at=timezone.now(),
+        )
+
+        response = self.deliver(
+            {"type": "contact.deleted", "data": {"email": "waiting@example.test"}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="waiting@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        self.assertIsNone(subscriber.unsubscribed_at)
 
     def test_unknown_email_is_quietly_ignored(self):
         response = self.deliver(self.contact_payload("nobody@example.test", True))
