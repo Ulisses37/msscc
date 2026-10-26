@@ -37,7 +37,7 @@ export default function AdminDocumentationPage() {
   </header>
 
   {/* General Site Knowledge */}
-  <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-gray-faint p-3 sm:p-4">
+  <div className="rounded-md border-2 border-msscc-gray-mid bg-msscc-gray-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">General Site Information</div>
     <div className="pb-1">When referring to MSSCC site, there are two different sides:</div>
 
@@ -59,13 +59,13 @@ export default function AdminDocumentationPage() {
   </div>
 
   {/* User-Side Information */}
-  <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-gray-faint p-3 sm:p-4">
+  <div className="rounded-md border-2 border-msscc-teal-light bg-msscc-teal-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">User-Side Information</div>
     More text to come.
   </div>
 
   {/* Admin-Side Information */}
-  <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-gray-faint p-3 sm:p-4">
+  <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-pink-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">Admin-Side Information</div>
           {localAdmin &&
             pageList
