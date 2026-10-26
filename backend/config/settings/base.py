@@ -68,6 +68,8 @@ INSTALLED_APPS = [
     "static_image",
     "donations",
 
+    'site_analytics',
+
     "volunteer_signup",
     "volunteer_slots",
 ]
@@ -80,6 +82,7 @@ REST_FRAMEWORK = {
     # changes behavior. The public signup endpoint is per-IP limited.
     "DEFAULT_THROTTLE_RATES": {
         "email_subscribe": "30/hour",
+        "anon": "60/min",
     },
 }
 
