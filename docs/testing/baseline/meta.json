@@ -1,10 +1,10 @@
 {
   "schema": "msscc-test-run/1",
-  "timestamp": "2026-10-26T01:14:03+00:00",
+  "timestamp": "2026-10-26T02:11:31+00:00",
   "label": "baseline",
   "git": {
-    "commit": "1152f87b7ae2c82934902498beb18d560c2dd575",
-    "short": "1152f87",
+    "commit": "2262bd52ea70fb575d40d72a9dbd9beb375bc09c",
+    "short": "2262bd5",
     "branch": "feature/SCRUM-786-testing-report",
     "dirty": false
   },
@@ -60,22 +60,22 @@
     "pytest": {
       "status": "passed",
       "exit_code": 0,
-      "duration_seconds": 18.496
+      "duration_seconds": 18.73
     },
     "jest": {
       "status": "failed",
       "exit_code": 1,
-      "duration_seconds": 9.105
+      "duration_seconds": 8.456
     },
     "tsc": {
       "status": "passed",
       "exit_code": 0,
-      "duration_seconds": 1.823
+      "duration_seconds": 1.848
     },
     "ruff": {
       "status": "passed",
       "exit_code": 0,
-      "duration_seconds": 0.084
+      "duration_seconds": 0.087
     }
   }
 }
