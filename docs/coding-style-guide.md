@@ -185,7 +185,7 @@ TypeScript runs in `strict` mode. `npx tsc --noEmit` should be clean for files y
 | ESLint (frontend lint) | `frontend/.eslintrc.json` | `npm run lint` in `frontend/` |
 | TypeScript | `frontend/tsconfig.json` | `npx tsc --noEmit` in `frontend/` |
 | Jest (frontend tests) | `frontend/jest.config.js` | `npm test` in `frontend/` |
-| Pre-commit | `.pre-commit-config.yaml` | `pre-commit install` and `pre-commit install --hook-type pre-push` once per clone; runs Ruff (with `--fix`) and ESLint on staged files at commit time, and `ruff check backend` over the whole backend before a push |
+| Pre-commit | `.pre-commit-config.yaml` | `pre-commit install` and `pre-commit install --hook-type pre-push` once per clone; runs Ruff (with `--fix`) and ESLint on staged files at commit time, and `ruff check backend` plus `makemigrations --check` before a push |
 | Editor defaults | `.editorconfig` | applied by your editor |
 | Cline rules | `.clinerules/` | loaded by Cline |
 

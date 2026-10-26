@@ -1,0 +1,36 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Confirm your subscription — MSSCC{% endblock %}
+
+{% block content %}
+  <h2 style="margin:0 0 12px 0;font-family:'Libre Baskerville',Georgia,serif;font-size:20px;line-height:1.3;font-weight:600;color:#264653;">
+    Confirm your subscription
+  </h2>
+  <p style="margin:0 0 24px 0;">
+    Please confirm that you would like to join the Matsuyama-Sacramento Sister City
+    Corporation mailing list. This link expires in 48 hours.
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding:8px 0 24px 0;">
+        <a href="{{ confirmation_url }}"
+           style="display:inline-block;padding:12px 24px;background-color:#264653;color:#FFFFFF;text-decoration:none;border-radius:3px;font-family:Almarai,'Segoe UI',sans-serif;font-size:14px;font-weight:600;">
+          Confirm my subscription
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#6B6B68;">
+    If the button does not work, copy this link into your browser:
+  </p>
+  <p style="margin:0;font-size:14px;line-height:1.6;color:#6B6B68;word-break:break-all;">
+    {{ confirmation_url }}
+  </p>
+
+  <p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#6B6B68;">
+    If you did not ask to join the mailing list, you can ignore this email. You
+    will not be subscribed unless you use the link above.
+  </p>
+{% endblock %}

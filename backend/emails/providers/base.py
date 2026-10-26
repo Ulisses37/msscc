@@ -58,5 +58,16 @@ class EmailProvider(ABC):
         """Stop sending broadcasts to a contact. Idempotent."""
 
     @abstractmethod
+    def reactivate_contact(self, email: str) -> ContactState:
+        """Create or refresh the contact and clear a provider-side opt-out.
+
+        Separate from ``upsert_contact`` on purpose: that one protects an
+        existing opt-out because it is reachable from a public endpoint, while
+        this one is only called after an address proved control of its own inbox
+        by following its confirmation link. Returns the provider's view of the
+        contact after the call.
+        """
+
+    @abstractmethod
     def send_broadcast(self, *, subject: str, html: str) -> None:
         """Send a marketing email to every contact in the configured segment."""

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from django.conf import settings
 
 from emails.services import send_email
@@ -10,6 +12,27 @@ def send_password_reset_email(to_email: str, reset_link: str) -> None:
         subject="MSSCC Admin Password Reset",
         template_name="emails/password_reset.html",
         context={"reset_link": reset_link},
+    )
+
+
+def send_subscription_confirmation_email(to_email: str, raw_token: str) -> None:
+    """Send the double opt-in confirmation link to a new mailing-list signup.
+
+    Goes out through the shared ``send_email`` entry point, so provider
+    selection, dev interception and failure handling stay in one place. The raw
+    token is passed in because it is never stored; only its hash is, so this is
+    the one moment it can be put in a link.
+    """
+    confirmation_url = (
+        f"{settings.FRONTEND_URL.rstrip('/')}/subscribe/confirm"
+        f"?token={quote(raw_token)}"
+    )
+
+    send_email(
+        to=to_email,
+        subject="Confirm your MSSCC mailing list subscription",
+        template_name="emails/subscribe_confirm.html",
+        context={"confirmation_url": confirmation_url},
     )
 
 
