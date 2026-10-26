@@ -56,6 +56,52 @@
       ]
     },
     {
+      "name": "frontend/app/[locale]/about/page.test.tsx",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "AboutPage CMS and board sections"
+          ],
+          "fullName": "AboutPage CMS and board sections keeps CMS content visible while board requests are unresolved",
+          "status": "passed",
+          "title": "keeps CMS content visible while board requests are unresolved"
+        },
+        {
+          "ancestorTitles": [
+            "AboutPage CMS and board sections"
+          ],
+          "fullName": "AboutPage CMS and board sections keeps the CMS fallback visible while board requests are unresolved",
+          "status": "passed",
+          "title": "keeps the CMS fallback visible while board requests are unresolved"
+        },
+        {
+          "ancestorTitles": [
+            "AboutPage CMS and board sections"
+          ],
+          "fullName": "AboutPage CMS and board sections keeps CMS content visible when board loading fails",
+          "status": "passed",
+          "title": "keeps CMS content visible when board loading fails"
+        },
+        {
+          "ancestorTitles": [
+            "AboutPage CMS and board sections"
+          ],
+          "fullName": "AboutPage CMS and board sections renders the board below CMS content for en",
+          "status": "passed",
+          "title": "renders the board below CMS content for en"
+        },
+        {
+          "ancestorTitles": [
+            "AboutPage CMS and board sections"
+          ],
+          "fullName": "AboutPage CMS and board sections renders the board below CMS content for ja",
+          "status": "passed",
+          "title": "renders the board below CMS content for ja"
+        }
+      ]
+    },
+    {
       "name": "frontend/components/membership/MembershipSummary.test.tsx",
       "status": "passed",
       "assertionResults": [
@@ -130,52 +176,6 @@
       ]
     },
     {
-      "name": "frontend/app/[locale]/about/page.test.tsx",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "AboutPage CMS and board sections"
-          ],
-          "fullName": "AboutPage CMS and board sections keeps CMS content visible while board requests are unresolved",
-          "status": "passed",
-          "title": "keeps CMS content visible while board requests are unresolved"
-        },
-        {
-          "ancestorTitles": [
-            "AboutPage CMS and board sections"
-          ],
-          "fullName": "AboutPage CMS and board sections keeps the CMS fallback visible while board requests are unresolved",
-          "status": "passed",
-          "title": "keeps the CMS fallback visible while board requests are unresolved"
-        },
-        {
-          "ancestorTitles": [
-            "AboutPage CMS and board sections"
-          ],
-          "fullName": "AboutPage CMS and board sections keeps CMS content visible when board loading fails",
-          "status": "passed",
-          "title": "keeps CMS content visible when board loading fails"
-        },
-        {
-          "ancestorTitles": [
-            "AboutPage CMS and board sections"
-          ],
-          "fullName": "AboutPage CMS and board sections renders the board below CMS content for en",
-          "status": "passed",
-          "title": "renders the board below CMS content for en"
-        },
-        {
-          "ancestorTitles": [
-            "AboutPage CMS and board sections"
-          ],
-          "fullName": "AboutPage CMS and board sections renders the board below CMS content for ja",
-          "status": "passed",
-          "title": "renders the board below CMS content for ja"
-        }
-      ]
-    },
-    {
       "name": "frontend/app/[locale]/membership/translations.test.tsx",
       "status": "failed",
       "assertionResults": [
@@ -194,6 +194,84 @@
           "fullName": "membership page translations with an older layout payload renders ja labels when the parent provider has no membership messages",
           "status": "failed",
           "title": "renders ja labels when the parent provider has no membership messages"
+        }
+      ]
+    },
+    {
+      "name": "frontend/components/support/DonationSummary.test.tsx",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "shows an unselected amount without implying a zero-dollar donation",
+          "status": "passed",
+          "title": "shows an unselected amount without implying a zero-dollar donation"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "derives the displayed amount from the latest prop for preset and custom values",
+          "status": "passed",
+          "title": "derives the displayed amount from the latest prop for preset and custom values"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not show an invalid custom amount 0 as payable",
+          "status": "passed",
+          "title": "does not show an invalid custom amount 0 as payable"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not show an invalid custom amount -1 as payable",
+          "status": "passed",
+          "title": "does not show an invalid custom amount -1 as payable"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not show an invalid custom amount abc as payable",
+          "status": "passed",
+          "title": "does not show an invalid custom amount abc as payable"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not show an invalid custom amount 1.234 as payable",
+          "status": "passed",
+          "title": "does not show an invalid custom amount 1.234 as payable"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not show an invalid custom amount 100000000 as payable",
+          "status": "passed",
+          "title": "does not show an invalid custom amount 100000000 as payable"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "uses Japanese messages and locale-formatted USD for valid and invalid amounts",
+          "status": "passed",
+          "title": "uses Japanese messages and locale-formatted USD for valid and invalid amounts"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "shows the server-quoted breakdown in en",
+          "status": "passed",
+          "title": "shows the server-quoted breakdown in en"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "shows the server-quoted breakdown in ja",
+          "status": "passed",
+          "title": "shows the server-quoted breakdown in ja"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "previews anonymous record details in en and restores personal details when cleared",
+          "status": "passed",
+          "title": "previews anonymous record details in en and restores personal details when cleared"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "previews anonymous record details in ja and restores personal details when cleared",
+          "status": "passed",
+          "title": "previews anonymous record details in ja and restores personal details when cleared"
         }
       ]
     },
@@ -224,6 +302,274 @@
           "fullName": "keeps the success message when the completed status has no safe receipt reference",
           "status": "passed",
           "title": "keeps the success message when the completed status has no safe receipt reference"
+        }
+      ]
+    },
+    {
+      "name": "frontend/components/admin/BilingualInput.test.tsx",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "BilingualInput translation review notice"
+          ],
+          "fullName": "BilingualInput translation review notice shows, dismisses, and redisplays the notice after manual English edits",
+          "status": "passed",
+          "title": "shows, dismisses, and redisplays the notice after manual English edits"
+        },
+        {
+          "ancestorTitles": [
+            "BilingualInput translation review notice"
+          ],
+          "fullName": "BilingualInput translation review notice does not show the notice when focus leaves without changing English text",
+          "status": "passed",
+          "title": "does not show the notice when focus leaves without changing English text"
+        },
+        {
+          "ancestorTitles": [
+            "BilingualInput translation review notice"
+          ],
+          "fullName": "BilingualInput translation review notice renders the notice before both language fields",
+          "status": "passed",
+          "title": "renders the notice before both language fields"
+        }
+      ]
+    },
+    {
+      "name": "frontend/hooks/useDelayedFallback.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "useDelayedFallback"
+          ],
+          "fullName": "useDelayedFallback starts directly in content when cached blocks are available",
+          "status": "passed",
+          "title": "starts directly in content when cached blocks are available"
+        },
+        {
+          "ancestorTitles": [
+            "useDelayedFallback"
+          ],
+          "fullName": "useDelayedFallback starts in loading and only shows fallback after the threshold",
+          "status": "passed",
+          "title": "starts in loading and only shows fallback after the threshold"
+        },
+        {
+          "ancestorTitles": [
+            "useDelayedFallback"
+          ],
+          "fullName": "useDelayedFallback switches to content without showing fallback when content arrives early",
+          "status": "passed",
+          "title": "switches to content without showing fallback when content arrives early"
+        },
+        {
+          "ancestorTitles": [
+            "useDelayedFallback"
+          ],
+          "fullName": "useDelayedFallback keeps fallback visible for the minimum display time after content arrives",
+          "status": "passed",
+          "title": "keeps fallback visible for the minimum display time after content arrives"
+        },
+        {
+          "ancestorTitles": [
+            "useDelayedFallback"
+          ],
+          "fullName": "useDelayedFallback cleans up polling and reveal timers when unmounted",
+          "status": "passed",
+          "title": "cleans up polling and reveal timers when unmounted"
+        }
+      ]
+    },
+    {
+      "name": "frontend/services/financialRecordSearch.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords encodes trimmed Unicode search and sends the JWT without caching",
+          "status": "passed",
+          "title": "encodes trimmed Unicode search and sends the JWT without caching"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords omits search for whitespace-only input and selects the membership endpoint",
+          "status": "passed",
+          "title": "omits search for whitespace-only input and selects the membership endpoint"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords returns backend matches without filtering them in the browser",
+          "status": "passed",
+          "title": "returns backend matches without filtering them in the browser"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords does not send a request without the existing token",
+          "status": "passed",
+          "title": "does not send a request without the existing token"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords sanitizes http failures in messages and logs",
+          "status": "passed",
+          "title": "sanitizes http failures in messages and logs"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords sanitizes network failures in messages and logs",
+          "status": "passed",
+          "title": "sanitizes network failures in messages and logs"
+        },
+        {
+          "ancestorTitles": [
+            "fetchFinancialRecords"
+          ],
+          "fullName": "fetchFinancialRecords sanitizes json failures in messages and logs",
+          "status": "passed",
+          "title": "sanitizes json failures in messages and logs"
+        }
+      ]
+    },
+    {
+      "name": "frontend/services/paymentReceipt.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "reads only safe receipt fields from a no-cache request",
+          "status": "passed",
+          "title": "reads only safe receipt fields from a no-cache request"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "accepts a safe membership option and optional backend donation purpose",
+          "status": "passed",
+          "title": "accepts a safe membership option and optional backend donation purpose"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "reads a completed membership breakdown without recalculating its price",
+          "status": "passed",
+          "title": "reads a completed membership breakdown without recalculating its price"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects malformed pi_secret without a request",
+          "status": "passed",
+          "title": "rejects malformed pi_secret without a request"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects malformed DON-1 without a request",
+          "status": "passed",
+          "title": "rejects malformed DON-1 without a request"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects malformed MEM-incorrect without a request",
+          "status": "passed",
+          "title": "rejects malformed MEM-incorrect without a request"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload null without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload null without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": 12.5, \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": 12.5, \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000043\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000043\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"membership\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"membership\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"invalid\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"invalid\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"secret\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"secret\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"donation_purpose\": [Object], \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
+          "status": "passed",
+          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"donation_purpose\": [Object], \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "hides HTTP and network errors",
+          "status": "passed",
+          "title": "hides HTTP and network errors"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "accepts a completed donation with the saved cost breakdown, not a recalculated fee",
+          "status": "passed",
+          "title": "accepts a completed donation with the saved cost breakdown, not a recalculated fee"
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects inconsistent stored receipt totals",
+          "status": "passed",
+          "title": "rejects inconsistent stored receipt totals"
+        }
+      ]
+    },
+    {
+      "name": "frontend/components/support/StripePaymentElement.test.tsx",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "StripePaymentElement localization"
+          ],
+          "fullName": "StripePaymentElement localization initializes Stripe with the en page locale",
+          "status": "passed",
+          "title": "initializes Stripe with the en page locale"
+        },
+        {
+          "ancestorTitles": [
+            "StripePaymentElement localization"
+          ],
+          "fullName": "StripePaymentElement localization initializes Stripe with the ja page locale",
+          "status": "passed",
+          "title": "initializes Stripe with the ja page locale"
         }
       ]
     },
@@ -530,338 +876,40 @@
       ]
     },
     {
-      "name": "frontend/components/admin/DeepLUsageMeter.test.tsx",
+      "name": "frontend/utils/deeplServer.test.ts",
       "status": "passed",
       "assertionResults": [
         {
           "ancestorTitles": [
-            "DeepLUsageMeter"
+            "DeepL server usage helper"
           ],
-          "fullName": "DeepLUsageMeter shows loading before rendering provider usage and limits",
+          "fullName": "DeepL server usage helper selects the provider host from the DeepL API key type",
           "status": "passed",
-          "title": "shows loading before rendering provider usage and limits"
+          "title": "selects the provider host from the DeepL API key type"
         },
         {
           "ancestorTitles": [
-            "DeepLUsageMeter"
+            "DeepL server usage helper"
           ],
-          "fullName": "DeepLUsageMeter hides the meter and shows an error when usage is unavailable",
+          "fullName": "DeepL server usage helper normalizes the character totals returned by DeepL",
           "status": "passed",
-          "title": "hides the meter and shows an error when usage is unavailable"
-        }
-      ]
-    },
-    {
-      "name": "frontend/components/support/DonationSummary.test.tsx",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [],
-          "fullName": "shows an unselected amount without implying a zero-dollar donation",
-          "status": "passed",
-          "title": "shows an unselected amount without implying a zero-dollar donation"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "derives the displayed amount from the latest prop for preset and custom values",
-          "status": "passed",
-          "title": "derives the displayed amount from the latest prop for preset and custom values"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "does not show an invalid custom amount 0 as payable",
-          "status": "passed",
-          "title": "does not show an invalid custom amount 0 as payable"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "does not show an invalid custom amount -1 as payable",
-          "status": "passed",
-          "title": "does not show an invalid custom amount -1 as payable"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "does not show an invalid custom amount abc as payable",
-          "status": "passed",
-          "title": "does not show an invalid custom amount abc as payable"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "does not show an invalid custom amount 1.234 as payable",
-          "status": "passed",
-          "title": "does not show an invalid custom amount 1.234 as payable"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "does not show an invalid custom amount 100000000 as payable",
-          "status": "passed",
-          "title": "does not show an invalid custom amount 100000000 as payable"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "uses Japanese messages and locale-formatted USD for valid and invalid amounts",
-          "status": "passed",
-          "title": "uses Japanese messages and locale-formatted USD for valid and invalid amounts"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "shows the server-quoted breakdown in en",
-          "status": "passed",
-          "title": "shows the server-quoted breakdown in en"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "shows the server-quoted breakdown in ja",
-          "status": "passed",
-          "title": "shows the server-quoted breakdown in ja"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "previews anonymous record details in en and restores personal details when cleared",
-          "status": "passed",
-          "title": "previews anonymous record details in en and restores personal details when cleared"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "previews anonymous record details in ja and restores personal details when cleared",
-          "status": "passed",
-          "title": "previews anonymous record details in ja and restores personal details when cleared"
-        }
-      ]
-    },
-    {
-      "name": "frontend/services/financialRecordSearch.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "fetchFinancialRecords"
-          ],
-          "fullName": "fetchFinancialRecords encodes trimmed Unicode search and sends the JWT without caching",
-          "status": "passed",
-          "title": "encodes trimmed Unicode search and sends the JWT without caching"
+          "title": "normalizes the character totals returned by DeepL"
         },
         {
           "ancestorTitles": [
-            "fetchFinancialRecords"
+            "DeepL server usage helper"
           ],
-          "fullName": "fetchFinancialRecords omits search for whitespace-only input and selects the membership endpoint",
+          "fullName": "DeepL server usage helper returns deterministic development usage without calling DeepL",
           "status": "passed",
-          "title": "omits search for whitespace-only input and selects the membership endpoint"
+          "title": "returns deterministic development usage without calling DeepL"
         },
         {
           "ancestorTitles": [
-            "fetchFinancialRecords"
+            "DeepL server usage helper"
           ],
-          "fullName": "fetchFinancialRecords returns backend matches without filtering them in the browser",
+          "fullName": "DeepL server usage helper rejects an invalid provider response",
           "status": "passed",
-          "title": "returns backend matches without filtering them in the browser"
-        },
-        {
-          "ancestorTitles": [
-            "fetchFinancialRecords"
-          ],
-          "fullName": "fetchFinancialRecords does not send a request without the existing token",
-          "status": "passed",
-          "title": "does not send a request without the existing token"
-        },
-        {
-          "ancestorTitles": [
-            "fetchFinancialRecords"
-          ],
-          "fullName": "fetchFinancialRecords sanitizes http failures in messages and logs",
-          "status": "passed",
-          "title": "sanitizes http failures in messages and logs"
-        },
-        {
-          "ancestorTitles": [
-            "fetchFinancialRecords"
-          ],
-          "fullName": "fetchFinancialRecords sanitizes network failures in messages and logs",
-          "status": "passed",
-          "title": "sanitizes network failures in messages and logs"
-        },
-        {
-          "ancestorTitles": [
-            "fetchFinancialRecords"
-          ],
-          "fullName": "fetchFinancialRecords sanitizes json failures in messages and logs",
-          "status": "passed",
-          "title": "sanitizes json failures in messages and logs"
-        }
-      ]
-    },
-    {
-      "name": "frontend/utils/dateLocalization.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "public date localization"
-          ],
-          "fullName": "public date localization maps supported route locales to browser date locales",
-          "status": "passed",
-          "title": "maps supported route locales to browser date locales"
-        },
-        {
-          "ancestorTitles": [
-            "public date localization"
-          ],
-          "fullName": "public date localization falls back to English for an unavailable route locale",
-          "status": "passed",
-          "title": "falls back to English for an unavailable route locale"
-        },
-        {
-          "ancestorTitles": [
-            "public date localization"
-          ],
-          "fullName": "public date localization formats the same event date for English and Japanese displays",
-          "status": "passed",
-          "title": "formats the same event date for English and Japanese displays"
-        }
-      ]
-    },
-    {
-      "name": "frontend/hooks/useDelayedFallback.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "useDelayedFallback"
-          ],
-          "fullName": "useDelayedFallback starts directly in content when cached blocks are available",
-          "status": "passed",
-          "title": "starts directly in content when cached blocks are available"
-        },
-        {
-          "ancestorTitles": [
-            "useDelayedFallback"
-          ],
-          "fullName": "useDelayedFallback starts in loading and only shows fallback after the threshold",
-          "status": "passed",
-          "title": "starts in loading and only shows fallback after the threshold"
-        },
-        {
-          "ancestorTitles": [
-            "useDelayedFallback"
-          ],
-          "fullName": "useDelayedFallback switches to content without showing fallback when content arrives early",
-          "status": "passed",
-          "title": "switches to content without showing fallback when content arrives early"
-        },
-        {
-          "ancestorTitles": [
-            "useDelayedFallback"
-          ],
-          "fullName": "useDelayedFallback keeps fallback visible for the minimum display time after content arrives",
-          "status": "passed",
-          "title": "keeps fallback visible for the minimum display time after content arrives"
-        },
-        {
-          "ancestorTitles": [
-            "useDelayedFallback"
-          ],
-          "fullName": "useDelayedFallback cleans up polling and reveal timers when unmounted",
-          "status": "passed",
-          "title": "cleans up polling and reveal timers when unmounted"
-        }
-      ]
-    },
-    {
-      "name": "frontend/components/admin/BilingualInput.test.tsx",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "BilingualInput translation review notice"
-          ],
-          "fullName": "BilingualInput translation review notice shows, dismisses, and redisplays the notice after manual English edits",
-          "status": "passed",
-          "title": "shows, dismisses, and redisplays the notice after manual English edits"
-        },
-        {
-          "ancestorTitles": [
-            "BilingualInput translation review notice"
-          ],
-          "fullName": "BilingualInput translation review notice does not show the notice when focus leaves without changing English text",
-          "status": "passed",
-          "title": "does not show the notice when focus leaves without changing English text"
-        },
-        {
-          "ancestorTitles": [
-            "BilingualInput translation review notice"
-          ],
-          "fullName": "BilingualInput translation review notice renders the notice before both language fields",
-          "status": "passed",
-          "title": "renders the notice before both language fields"
-        }
-      ]
-    },
-    {
-      "name": "frontend/components/support/StripePaymentElement.test.tsx",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "StripePaymentElement localization"
-          ],
-          "fullName": "StripePaymentElement localization initializes Stripe with the en page locale",
-          "status": "passed",
-          "title": "initializes Stripe with the en page locale"
-        },
-        {
-          "ancestorTitles": [
-            "StripePaymentElement localization"
-          ],
-          "fullName": "StripePaymentElement localization initializes Stripe with the ja page locale",
-          "status": "passed",
-          "title": "initializes Stripe with the ja page locale"
-        }
-      ]
-    },
-    {
-      "name": "frontend/utils/mediaUploadError.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "parseMediaUploadError"
-          ],
-          "fullName": "parseMediaUploadError returns an unsupported-format message for invalid media",
-          "status": "passed",
-          "title": "returns an unsupported-format message for invalid media"
-        },
-        {
-          "ancestorTitles": [
-            "parseMediaUploadError"
-          ],
-          "fullName": "parseMediaUploadError returns a size-specific media message",
-          "status": "passed",
-          "title": "returns a size-specific media message"
-        },
-        {
-          "ancestorTitles": [
-            "parseMediaUploadError"
-          ],
-          "fullName": "parseMediaUploadError returns an image-integrity message",
-          "status": "passed",
-          "title": "returns an image-integrity message"
-        },
-        {
-          "ancestorTitles": [
-            "parseMediaUploadError"
-          ],
-          "fullName": "parseMediaUploadError returns the caller fallback for non-media errors",
-          "status": "passed",
-          "title": "returns the caller fallback for non-media errors"
-        },
-        {
-          "ancestorTitles": [
-            "parseMediaUploadError"
-          ],
-          "fullName": "parseMediaUploadError handles non-object errors with the caller fallback",
-          "status": "passed",
-          "title": "handles non-object errors with the caller fallback"
+          "title": "rejects an invalid provider response"
         }
       ]
     },
@@ -900,138 +948,6 @@
           "fullName": "getVolunteerCancellationDetails rejects when the volunteer signup cannot be cancelled",
           "status": "passed",
           "title": "rejects when the volunteer signup cannot be cancelled"
-        }
-      ]
-    },
-    {
-      "name": "frontend/utils/emailValidation.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns true for valid email addresses",
-          "status": "passed",
-          "title": "returns true for valid email addresses"
-        },
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns false for an empty string",
-          "status": "passed",
-          "title": "returns false for an empty string"
-        },
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns false when the @ symbol is missing",
-          "status": "passed",
-          "title": "returns false when the @ symbol is missing"
-        },
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns false when the domain is missing",
-          "status": "passed",
-          "title": "returns false when the domain is missing"
-        },
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns false when the TLD is missing",
-          "status": "passed",
-          "title": "returns false when the TLD is missing"
-        },
-        {
-          "ancestorTitles": [
-            "isValidEmail"
-          ],
-          "fullName": "isValidEmail returns false when the value contains whitespace",
-          "status": "passed",
-          "title": "returns false when the value contains whitespace"
-        }
-      ]
-    },
-    {
-      "name": "frontend/app/[locale]/membership/page.test.tsx",
-      "status": "failed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow shares selection state with the summary and enables continue after valid information",
-          "status": "failed",
-          "title": "shares selection state with the summary and enables continue after valid information"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow exposes the optional checkbox description and blocks checkout while its new quote loads",
-          "status": "failed",
-          "title": "exposes the optional checkbox description and blocks checkout while its new quote loads"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow waits for the new server quote before enabling checkout after opt-in",
-          "status": "failed",
-          "title": "waits for the new server quote before enabling checkout after opt-in"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow shows saved checkout amounts instead of a stale preview after session creation",
-          "status": "failed",
-          "title": "shows saved checkout amounts instead of a stale preview after session creation"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow ignores a late quote for the previous membership option",
-          "status": "failed",
-          "title": "ignores a late quote for the previous membership option"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow ignores an old session after selection changes",
-          "status": "failed",
-          "title": "ignores an old session after selection changes"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow shows a translated safe error and allows retry when a session fails",
-          "status": "failed",
-          "title": "shows a translated safe error and allows retry when a session fails"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow keeps continue disabled until invalid information is corrected",
-          "status": "failed",
-          "title": "keeps continue disabled until invalid information is corrected"
-        },
-        {
-          "ancestorTitles": [
-            "MembershipPage review flow"
-          ],
-          "fullName": "MembershipPage review flow keeps matching locale keys and renders the Japanese review flow",
-          "status": "failed",
-          "title": "keeps matching locale keys and renders the Japanese review flow"
         }
       ]
     },
@@ -1114,40 +1030,102 @@
       ]
     },
     {
-      "name": "frontend/utils/deeplServer.test.ts",
+      "name": "frontend/app/[locale]/membership/page.test.tsx",
+      "status": "failed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow shares selection state with the summary and enables continue after valid information",
+          "status": "failed",
+          "title": "shares selection state with the summary and enables continue after valid information"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow exposes the optional checkbox description and blocks checkout while its new quote loads",
+          "status": "failed",
+          "title": "exposes the optional checkbox description and blocks checkout while its new quote loads"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow waits for the new server quote before enabling checkout after opt-in",
+          "status": "failed",
+          "title": "waits for the new server quote before enabling checkout after opt-in"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow shows saved checkout amounts instead of a stale preview after session creation",
+          "status": "failed",
+          "title": "shows saved checkout amounts instead of a stale preview after session creation"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow ignores a late quote for the previous membership option",
+          "status": "failed",
+          "title": "ignores a late quote for the previous membership option"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow ignores an old session after selection changes",
+          "status": "failed",
+          "title": "ignores an old session after selection changes"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow shows a translated safe error and allows retry when a session fails",
+          "status": "failed",
+          "title": "shows a translated safe error and allows retry when a session fails"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow keeps continue disabled until invalid information is corrected",
+          "status": "failed",
+          "title": "keeps continue disabled until invalid information is corrected"
+        },
+        {
+          "ancestorTitles": [
+            "MembershipPage review flow"
+          ],
+          "fullName": "MembershipPage review flow keeps matching locale keys and renders the Japanese review flow",
+          "status": "failed",
+          "title": "keeps matching locale keys and renders the Japanese review flow"
+        }
+      ]
+    },
+    {
+      "name": "frontend/components/admin/DeepLUsageMeter.test.tsx",
       "status": "passed",
       "assertionResults": [
         {
           "ancestorTitles": [
-            "DeepL server usage helper"
+            "DeepLUsageMeter"
           ],
-          "fullName": "DeepL server usage helper selects the provider host from the DeepL API key type",
+          "fullName": "DeepLUsageMeter shows loading before rendering provider usage and limits",
           "status": "passed",
-          "title": "selects the provider host from the DeepL API key type"
+          "title": "shows loading before rendering provider usage and limits"
         },
         {
           "ancestorTitles": [
-            "DeepL server usage helper"
+            "DeepLUsageMeter"
           ],
-          "fullName": "DeepL server usage helper normalizes the character totals returned by DeepL",
+          "fullName": "DeepLUsageMeter hides the meter and shows an error when usage is unavailable",
           "status": "passed",
-          "title": "normalizes the character totals returned by DeepL"
-        },
-        {
-          "ancestorTitles": [
-            "DeepL server usage helper"
-          ],
-          "fullName": "DeepL server usage helper returns deterministic development usage without calling DeepL",
-          "status": "passed",
-          "title": "returns deterministic development usage without calling DeepL"
-        },
-        {
-          "ancestorTitles": [
-            "DeepL server usage helper"
-          ],
-          "fullName": "DeepL server usage helper rejects an invalid provider response",
-          "status": "passed",
-          "title": "rejects an invalid provider response"
+          "title": "hides the meter and shows an error when usage is unavailable"
         }
       ]
     },
@@ -1190,6 +1168,36 @@
       ]
     },
     {
+      "name": "frontend/components/admin/EventForm.test.tsx",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "EventForm translation buttons"
+          ],
+          "fullName": "EventForm translation buttons translates the selected event field and event-photo caption separately",
+          "status": "passed",
+          "title": "translates the selected event field and event-photo caption separately"
+        },
+        {
+          "ancestorTitles": [
+            "EventForm translation buttons"
+          ],
+          "fullName": "EventForm translation buttons shows independent notices for manual English edits and redisplays after dismissal",
+          "status": "passed",
+          "title": "shows independent notices for manual English edits and redisplays after dismissal"
+        },
+        {
+          "ancestorTitles": [
+            "EventForm translation buttons"
+          ],
+          "fullName": "EventForm translation buttons does not show a notice when an English field loses focus without a change",
+          "status": "passed",
+          "title": "does not show a notice when an English field loses focus without a change"
+        }
+      ]
+    },
+    {
       "name": "frontend/services/adminRequestHeaders.test.ts",
       "status": "passed",
       "assertionResults": [
@@ -1208,6 +1216,28 @@
           "fullName": "getAdminRequestHeaders fails before a private request can be sent without a token",
           "status": "passed",
           "title": "fails before a private request can be sent without a token"
+        }
+      ]
+    },
+    {
+      "name": "frontend/app/admin/donations/page.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "donation admin name column"
+          ],
+          "fullName": "donation admin name column shows an anonymous record without a leading comma or doubled name",
+          "status": "passed",
+          "title": "shows an anonymous record without a leading comma or doubled name"
+        },
+        {
+          "ancestorTitles": [
+            "donation admin name column"
+          ],
+          "fullName": "donation admin name column preserves the existing Last, First format for an ordinary donation",
+          "status": "passed",
+          "title": "preserves the existing Last, First format for an ordinary donation"
         }
       ]
     },
@@ -1362,66 +1392,6 @@
       ]
     },
     {
-      "name": "frontend/utils/contentFallbackPolling.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "startContentFallbackPolling"
-          ],
-          "fullName": "startContentFallbackPolling waits for the content threshold before initializing the fallback",
-          "status": "passed",
-          "title": "waits for the content threshold before initializing the fallback"
-        },
-        {
-          "ancestorTitles": [
-            "startContentFallbackPolling"
-          ],
-          "fullName": "startContentFallbackPolling stops polling when content becomes ready before the threshold",
-          "status": "passed",
-          "title": "stops polling when content becomes ready before the threshold"
-        },
-        {
-          "ancestorTitles": [
-            "startContentFallbackPolling"
-          ],
-          "fullName": "startContentFallbackPolling supports explicit cleanup before the threshold",
-          "status": "passed",
-          "title": "supports explicit cleanup before the threshold"
-        }
-      ]
-    },
-    {
-      "name": "frontend/components/admin/membershipDisplayStatus.test.ts",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "membershipDisplayStatus"
-          ],
-          "fullName": "membershipDisplayStatus does not call a pending checkout active because of provisional dates",
-          "status": "passed",
-          "title": "does not call a pending checkout active because of provisional dates"
-        },
-        {
-          "ancestorTitles": [
-            "membershipDisplayStatus"
-          ],
-          "fullName": "membershipDisplayStatus shows failed and canceled checkouts without activating them",
-          "status": "passed",
-          "title": "shows failed and canceled checkouts without activating them"
-        },
-        {
-          "ancestorTitles": [
-            "membershipDisplayStatus"
-          ],
-          "fullName": "membershipDisplayStatus shows completed active memberships by their expiration",
-          "status": "passed",
-          "title": "shows completed active memberships by their expiration"
-        }
-      ]
-    },
-    {
       "name": "frontend/services/emailService.test.ts",
       "status": "passed",
       "assertionResults": [
@@ -1464,6 +1434,120 @@
           "fullName": "subscribeToUpdates hides a network failure behind the same generic message",
           "status": "passed",
           "title": "hides a network failure behind the same generic message"
+        }
+      ]
+    },
+    {
+      "name": "frontend/utils/dateLocalization.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "public date localization"
+          ],
+          "fullName": "public date localization maps supported route locales to browser date locales",
+          "status": "passed",
+          "title": "maps supported route locales to browser date locales"
+        },
+        {
+          "ancestorTitles": [
+            "public date localization"
+          ],
+          "fullName": "public date localization falls back to English for an unavailable route locale",
+          "status": "passed",
+          "title": "falls back to English for an unavailable route locale"
+        },
+        {
+          "ancestorTitles": [
+            "public date localization"
+          ],
+          "fullName": "public date localization formats the same event date for English and Japanese displays",
+          "status": "passed",
+          "title": "formats the same event date for English and Japanese displays"
+        }
+      ]
+    },
+    {
+      "name": "frontend/components/admin/membershipDisplayStatus.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "membershipDisplayStatus"
+          ],
+          "fullName": "membershipDisplayStatus does not call a pending checkout active because of provisional dates",
+          "status": "passed",
+          "title": "does not call a pending checkout active because of provisional dates"
+        },
+        {
+          "ancestorTitles": [
+            "membershipDisplayStatus"
+          ],
+          "fullName": "membershipDisplayStatus shows failed and canceled checkouts without activating them",
+          "status": "passed",
+          "title": "shows failed and canceled checkouts without activating them"
+        },
+        {
+          "ancestorTitles": [
+            "membershipDisplayStatus"
+          ],
+          "fullName": "membershipDisplayStatus shows completed active memberships by their expiration",
+          "status": "passed",
+          "title": "shows completed active memberships by their expiration"
+        }
+      ]
+    },
+    {
+      "name": "frontend/utils/emailValidation.test.ts",
+      "status": "passed",
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns true for valid email addresses",
+          "status": "passed",
+          "title": "returns true for valid email addresses"
+        },
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns false for an empty string",
+          "status": "passed",
+          "title": "returns false for an empty string"
+        },
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns false when the @ symbol is missing",
+          "status": "passed",
+          "title": "returns false when the @ symbol is missing"
+        },
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns false when the domain is missing",
+          "status": "passed",
+          "title": "returns false when the domain is missing"
+        },
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns false when the TLD is missing",
+          "status": "passed",
+          "title": "returns false when the TLD is missing"
+        },
+        {
+          "ancestorTitles": [
+            "isValidEmail"
+          ],
+          "fullName": "isValidEmail returns false when the value contains whitespace",
+          "status": "passed",
+          "title": "returns false when the value contains whitespace"
         }
       ]
     },
@@ -1538,110 +1622,32 @@
       ]
     },
     {
-      "name": "frontend/services/paymentReceipt.test.ts",
+      "name": "frontend/app/admin/board-of-directors/BoardOfDirectorCards.test.tsx",
       "status": "passed",
       "assertionResults": [
         {
-          "ancestorTitles": [],
-          "fullName": "reads only safe receipt fields from a no-cache request",
+          "ancestorTitles": [
+            "MemberPopUp translation buttons"
+          ],
+          "fullName": "MemberPopUp translation buttons translates each board-member field and keeps the values in the draft",
           "status": "passed",
-          "title": "reads only safe receipt fields from a no-cache request"
+          "title": "translates each board-member field and keeps the values in the draft"
         },
         {
-          "ancestorTitles": [],
-          "fullName": "accepts a safe membership option and optional backend donation purpose",
+          "ancestorTitles": [
+            "MemberPopUp translation buttons"
+          ],
+          "fullName": "MemberPopUp translation buttons shows a per-field notice after manual English edits without changing Japanese text",
           "status": "passed",
-          "title": "accepts a safe membership option and optional backend donation purpose"
+          "title": "shows a per-field notice after manual English edits without changing Japanese text"
         },
         {
-          "ancestorTitles": [],
-          "fullName": "reads a completed membership breakdown without recalculating its price",
+          "ancestorTitles": [
+            "MemberPopUp translation buttons"
+          ],
+          "fullName": "MemberPopUp translation buttons does not show a notice when an English field loses focus without a change",
           "status": "passed",
-          "title": "reads a completed membership breakdown without recalculating its price"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects malformed pi_secret without a request",
-          "status": "passed",
-          "title": "rejects malformed pi_secret without a request"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects malformed DON-1 without a request",
-          "status": "passed",
-          "title": "rejects malformed DON-1 without a request"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects malformed MEM-incorrect without a request",
-          "status": "passed",
-          "title": "rejects malformed MEM-incorrect without a request"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload null without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload null without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": 12.5, \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": 12.5, \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000043\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000043\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"membership\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"membership\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"invalid\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"invalid\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"secret\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"secret\", \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"donation_purpose\": [Object], \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content",
-          "status": "passed",
-          "title": "rejects invalid payload {\"amount\": \"12.50\", \"base_amount\": \"12.50\", \"completed_at\": \"2026-10-10T15:30:00Z\", \"confirmation_reference\": \"DON-00000042\", \"currency\": \"usd\", \"donation_purpose\": [Object], \"payment_purpose\": \"donation\", \"processing_cost_contribution\": \"0.00\", \"total_amount\": \"12.50\"} without exposing its content"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "hides HTTP and network errors",
-          "status": "passed",
-          "title": "hides HTTP and network errors"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "accepts a completed donation with the saved cost breakdown, not a recalculated fee",
-          "status": "passed",
-          "title": "accepts a completed donation with the saved cost breakdown, not a recalculated fee"
-        },
-        {
-          "ancestorTitles": [],
-          "fullName": "rejects inconsistent stored receipt totals",
-          "status": "passed",
-          "title": "rejects inconsistent stored receipt totals"
+          "title": "does not show a notice when an English field loses focus without a change"
         }
       ]
     },
@@ -1700,84 +1706,78 @@
       ]
     },
     {
-      "name": "frontend/app/admin/donations/page.test.ts",
+      "name": "frontend/utils/mediaUploadError.test.ts",
       "status": "passed",
       "assertionResults": [
         {
           "ancestorTitles": [
-            "donation admin name column"
+            "parseMediaUploadError"
           ],
-          "fullName": "donation admin name column shows an anonymous record without a leading comma or doubled name",
+          "fullName": "parseMediaUploadError returns an unsupported-format message for invalid media",
           "status": "passed",
-          "title": "shows an anonymous record without a leading comma or doubled name"
+          "title": "returns an unsupported-format message for invalid media"
         },
         {
           "ancestorTitles": [
-            "donation admin name column"
+            "parseMediaUploadError"
           ],
-          "fullName": "donation admin name column preserves the existing Last, First format for an ordinary donation",
+          "fullName": "parseMediaUploadError returns a size-specific media message",
           "status": "passed",
-          "title": "preserves the existing Last, First format for an ordinary donation"
+          "title": "returns a size-specific media message"
+        },
+        {
+          "ancestorTitles": [
+            "parseMediaUploadError"
+          ],
+          "fullName": "parseMediaUploadError returns an image-integrity message",
+          "status": "passed",
+          "title": "returns an image-integrity message"
+        },
+        {
+          "ancestorTitles": [
+            "parseMediaUploadError"
+          ],
+          "fullName": "parseMediaUploadError returns the caller fallback for non-media errors",
+          "status": "passed",
+          "title": "returns the caller fallback for non-media errors"
+        },
+        {
+          "ancestorTitles": [
+            "parseMediaUploadError"
+          ],
+          "fullName": "parseMediaUploadError handles non-object errors with the caller fallback",
+          "status": "passed",
+          "title": "handles non-object errors with the caller fallback"
         }
       ]
     },
     {
-      "name": "frontend/components/admin/EventForm.test.tsx",
+      "name": "frontend/utils/contentFallbackPolling.test.ts",
       "status": "passed",
       "assertionResults": [
         {
           "ancestorTitles": [
-            "EventForm translation buttons"
+            "startContentFallbackPolling"
           ],
-          "fullName": "EventForm translation buttons translates the selected event field and event-photo caption separately",
+          "fullName": "startContentFallbackPolling waits for the content threshold before initializing the fallback",
           "status": "passed",
-          "title": "translates the selected event field and event-photo caption separately"
+          "title": "waits for the content threshold before initializing the fallback"
         },
         {
           "ancestorTitles": [
-            "EventForm translation buttons"
+            "startContentFallbackPolling"
           ],
-          "fullName": "EventForm translation buttons shows independent notices for manual English edits and redisplays after dismissal",
+          "fullName": "startContentFallbackPolling stops polling when content becomes ready before the threshold",
           "status": "passed",
-          "title": "shows independent notices for manual English edits and redisplays after dismissal"
+          "title": "stops polling when content becomes ready before the threshold"
         },
         {
           "ancestorTitles": [
-            "EventForm translation buttons"
+            "startContentFallbackPolling"
           ],
-          "fullName": "EventForm translation buttons does not show a notice when an English field loses focus without a change",
+          "fullName": "startContentFallbackPolling supports explicit cleanup before the threshold",
           "status": "passed",
-          "title": "does not show a notice when an English field loses focus without a change"
-        }
-      ]
-    },
-    {
-      "name": "frontend/app/admin/board-of-directors/BoardOfDirectorCards.test.tsx",
-      "status": "passed",
-      "assertionResults": [
-        {
-          "ancestorTitles": [
-            "MemberPopUp translation buttons"
-          ],
-          "fullName": "MemberPopUp translation buttons translates each board-member field and keeps the values in the draft",
-          "status": "passed",
-          "title": "translates each board-member field and keeps the values in the draft"
-        },
-        {
-          "ancestorTitles": [
-            "MemberPopUp translation buttons"
-          ],
-          "fullName": "MemberPopUp translation buttons shows a per-field notice after manual English edits without changing Japanese text",
-          "status": "passed",
-          "title": "shows a per-field notice after manual English edits without changing Japanese text"
-        },
-        {
-          "ancestorTitles": [
-            "MemberPopUp translation buttons"
-          ],
-          "fullName": "MemberPopUp translation buttons does not show a notice when an English field loses focus without a change",
-          "status": "passed",
-          "title": "does not show a notice when an English field loses focus without a change"
+          "title": "supports explicit cleanup before the threshold"
         }
       ]
     },
