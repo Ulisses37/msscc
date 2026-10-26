@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 
 from donations.models import Donation, Membership
 from donations.processing_costs import calculate_donation_amounts
+from donations.receipts import send_donation_receipt
 from donations.services import create_pending_membership, update_membership_from_payment_intent
 from payments.serializers import (
     MEMBERSHIP_PRICES,
@@ -336,6 +337,8 @@ def _update_donation_payment_status(reference_id, new_status):
             # A missing write must never be reported as a successful update.
             # Raising inside atomic() rolls back the transaction.
             raise DatabaseError("Donation payment status was not updated.")
+        if new_status == Donation.PaymentStatus.COMPLETED:
+            transaction.on_commit(lambda pk=donation.pk: send_donation_receipt(pk))
         return True
 
 
