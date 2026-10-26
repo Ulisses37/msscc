@@ -27,6 +27,13 @@ const pageDescriptions: Record<string, string>={
   Media: "Manage media images across the website",
 }
 
+export function getPage(pageName: string){
+  return {
+    pageName,
+    pageDescription: pageDescriptions[pageName],
+  };
+}
+
 export function AvailablePages(
   {
     CategoryTitle
