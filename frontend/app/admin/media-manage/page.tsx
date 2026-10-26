@@ -5,6 +5,7 @@ import { ImportImage } from "@/components/ui/ImportImage";
 import { ImageDeletionManager } from "@/components/ui/ImageDeletionManager";
 import { GalleryVisibilityManager } from "@/components/ui/GalleryVisibilityManager";
 import ReplaceImage from "@/components/admin/ReplaceImage";
+import { parseMediaUploadError } from '@/utils/mediaUploadError';
 
 
 export default function Dashboard() {
@@ -29,8 +30,11 @@ export default function Dashboard() {
     );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error || 'Upload failed');
+      const errorBody: unknown = await response.json().catch(() => null);
+      throw parseMediaUploadError(
+        errorBody,
+        `Upload failed: ${response.status}`,
+      );
     }
 
     return response.json();
