@@ -83,6 +83,32 @@ REST_FRAMEWORK = {
     },
 }
 
+# Media uploads are checked before storage. These limits are intentionally
+# configurable so deployments can tune them without changing application code.
+MEDIA_MAX_UPLOAD_SIZE_BYTES = int(
+    os.getenv("MEDIA_MAX_UPLOAD_SIZE_BYTES", 20 * 2048 * 2048)
+)
+##:Labels
+#
+#
+# MEDIA_MAX_IMAGE_PIXELS: Maximum allowed number of pixels for images.
+# MEDIA_MAX_IMAGE_DIMENSION: Maximum allowed dimension (width or height) for images.
+# MEDIA_JPEG_QUALITY: Quality setting for JPEG images. (Compression algorithm)
+# MEDIA_PNG_COMPRESSION_LEVEL: Compression level for PNG images. (Compression algorithm)
+# MEDIA_WEBP_QUALITY: Quality setting for WebP images. (Compression algorithm)
+# MEDIA_WEBP_METHOD: Method setting for WebP images. (Compression type processing)
+# MEDIA_MAX_FILENAME_LENGTH: Maximum allowed length for media filenames.
+
+## 40MB image limit
+MEDIA_MAX_IMAGE_PIXELS = int(os.getenv("MEDIA_MAX_IMAGE_PIXELS", 40_000_000))
+## 4096px dimension limit
+MEDIA_MAX_IMAGE_DIMENSION = int(os.getenv("MEDIA_MAX_IMAGE_DIMENSION", 4096))
+MEDIA_JPEG_QUALITY = int(os.getenv("MEDIA_JPEG_QUALITY", 85))
+MEDIA_PNG_COMPRESSION_LEVEL = int(os.getenv("MEDIA_PNG_COMPRESSION_LEVEL", 9))
+MEDIA_WEBP_QUALITY = int(os.getenv("MEDIA_WEBP_QUALITY", 85))
+MEDIA_WEBP_METHOD = int(os.getenv("MEDIA_WEBP_METHOD", 4))
+MEDIA_MAX_FILENAME_LENGTH = int(os.getenv("MEDIA_MAX_FILENAME_LENGTH", 255))
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),

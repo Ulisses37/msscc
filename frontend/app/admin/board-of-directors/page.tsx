@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import {DirectorCardPreview, OfficerCardPreview, MemberPopUp} from "./BoardOfDirectorCards";
+import { parseMediaUploadError } from '@/utils/mediaUploadError';
 
 
 export interface BoardMember {
@@ -161,7 +162,12 @@ async function updateMember(member: BoardMember | null, file?: File | null) {
     });
 
     if (!mediaRes.ok) {
-      alert("Image upload failed");
+      const errorBody: unknown = await mediaRes.json().catch(() => null);
+      const uploadError = parseMediaUploadError(
+        errorBody,
+        `Image upload failed: ${mediaRes.status}`,
+      );
+      alert(uploadError.message);
       return;
     }
 
