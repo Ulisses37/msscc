@@ -437,3 +437,43 @@ class MediaUploadApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error"], "No file provided.")
         self.assertEqual(MediaAsset.objects.count(), 0)
+
+    def test_upload_records_file_size(self) -> None:
+        upload = SimpleUploadedFile("pic.png", image_bytes(), content_type="image/png")
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 201)
+        media = MediaAsset.objects.get()
+        self.assertGreater(media.file_size, 0)
+        self.assertEqual(media.file_size, default_storage.size(media.file.name))
+
+def make_asset(name: str, size: int | None) -> MediaAsset:
+    return MediaAsset.objects.create(
+        file_name=name,
+        file=f"public/{name}",
+        file_type="image/png",
+        file_size=size,
+    )
+
+
+class MediaTotalSizeViewTests(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    def test_empty_table_returns_zero(self) -> None:
+        response = self.client.get("/api/media/total-size/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["total_size_bytes"], 0)
+
+    def test_sums_sizes_and_ignores_nulls(self) -> None:
+        make_asset("a.png", 100)
+        make_asset("b.png", 250)
+        make_asset("old.png", None)
+
+        response = self.client.get("/api/media/total-size/")
+
+        self.assertEqual(response.data["total_size_bytes"], 350)
+        self.assertEqual(response.data["file_count"], 3)
+        self.assertEqual(response.data["files_with_size"], 2)

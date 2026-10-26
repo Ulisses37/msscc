@@ -104,15 +104,6 @@ class MediaUploadView(APIView):
 
         file.name = f"{safe_name}{ext}"
 
-        media = MediaAsset.objects.create(
-            file=file,
-            file_name=file.name,
-            file_type=file.content_type or "",
-            file_size=file.size,
-            alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
-            alt_text_ja=request.data.get("alt_text_ja", ""),
-        )
-
         serializer = MediaFileSerializer(media)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
