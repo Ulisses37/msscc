@@ -21,12 +21,17 @@ from resend.exceptions import ResendError
 from rest_framework.test import APIClient
 from rest_framework.throttling import ScopedRateThrottle
 
-from emails.models import Subscriber
+from emails.models import (
+    CONFIRMATION_RESEND_COOLDOWN,
+    CONFIRMATION_TOKEN_TTL,
+    Subscriber,
+    hash_confirmation_token,
+)
 from emails.providers import ContactState, ProviderError, get_provider
 from emails.providers.base import EmailProvider
 from emails.providers.resend import UNSUBSCRIBE_URL_PLACEHOLDER, ResendProvider
 from emails.services import send_email
-from emails.subscribers import subscribe_contact
+from emails.subscribers import confirm_subscription, subscribe_contact
 from emails.views import SUBSCRIBE_RESPONSE
 
 User = get_user_model()
@@ -132,6 +137,243 @@ class ProviderLayeringGuardTests(TestCase):
         )
 
 
+class SubscribeConfirmEndpointTests(TestCase):
+    """Only a valid, unexpired, unused token may subscribe an address."""
+
+    def setUp(self):
+        self.client = APIClient()
+        cache.clear()
+
+    def post(self, token="a" * 32):
+        return self.client.post(
+            "/api/emails/subscribe/confirm/", {"token": token}, format="json"
+        )
+
+    def create_pending(self, raw_token="a" * 32, **overrides):
+        """Store a pending row holding the hash of ``raw_token``."""
+        data = {
+            "email": "member@example.test",
+            "source": Subscriber.Source.FOOTER,
+            "status": Subscriber.Status.PENDING,
+            "confirmation_token_hash": hash_confirmation_token(raw_token),
+            "confirmation_sent_at": timezone.now(),
+            "confirmation_expires_at": timezone.now() + CONFIRMATION_TOKEN_TTL,
+        }
+        data.update(overrides)
+        return Subscriber.objects.create(**data)
+
+    def test_valid_token_confirms_and_creates_the_contact(self):
+        self.create_pending()
+
+        with patch("emails.subscribers.get_provider") as get_provider_mock:
+            response = self.post()
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        self.assertTrue(subscriber.provider_synced)
+        # Single use: the token never survives a successful confirm.
+        self.assertEqual(subscriber.confirmation_token_hash, "")
+        self.assertIsNone(subscriber.confirmation_sent_at)
+        self.assertIsNone(subscriber.confirmation_expires_at)
+        get_provider_mock.return_value.reactivate_contact.assert_called_once_with(
+            "member@example.test"
+        )
+
+    def test_token_is_rejected_on_the_second_use(self):
+        self.create_pending()
+
+        with patch("emails.subscribers.get_provider") as get_provider_mock:
+            first = self.post()
+            second = self.post()
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 400)
+        # The second attempt must not reach the provider again.
+        self.assertEqual(get_provider_mock.return_value.reactivate_contact.call_count, 1)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.SUBSCRIBED,
+        )
+
+    def test_expired_token_is_rejected_and_leaves_the_row_pending(self):
+        original_hash = hash_confirmation_token("a" * 32)
+        original_sent_at = timezone.now() - timedelta(hours=49)
+        original_expires_at = timezone.now() - timedelta(minutes=1)
+        self.create_pending(
+            confirmation_sent_at=original_sent_at,
+            confirmation_expires_at=original_expires_at,
+        )
+
+        with patch("emails.subscribers.get_provider") as get_provider_mock:
+            response = self.post()
+
+        self.assertEqual(response.status_code, 400)
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        self.assertFalse(subscriber.provider_synced)
+        # The rejected confirm must not touch the row at all, so an expired token
+        # stays expired and a later re-issue is the only way forward.
+        self.assertEqual(subscriber.confirmation_token_hash, original_hash)
+        self.assertEqual(subscriber.confirmation_sent_at, original_sent_at)
+        self.assertEqual(subscriber.confirmation_expires_at, original_expires_at)
+        get_provider_mock.assert_not_called()
+
+    def test_unknown_token_is_rejected(self):
+        self.create_pending(raw_token="b" * 32)
+
+        with patch("emails.subscribers.get_provider") as get_provider_mock:
+            response = self.post(token="a" * 32)
+
+        self.assertEqual(response.status_code, 400)
+        get_provider_mock.assert_not_called()
+
+    def test_malformed_token_is_rejected_without_touching_the_database(self):
+        response = self.post(token="not a token!")
+
+        # The serializer rejects it before any lookup happens.
+        self.assertEqual(response.status_code, 400)
+
+
+    def test_provider_failure_still_confirms_the_row(self):
+        self.create_pending()
+
+        with patch("emails.subscribers.get_provider") as get_provider_mock:
+            get_provider_mock.return_value.reactivate_contact.side_effect = (
+                ProviderError("down")
+            )
+            response = self.post()
+
+        # The database is the source of truth, so a provider outage does not
+        # undo a confirmation; provider_synced records the mirror is behind.
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        self.assertFalse(subscriber.provider_synced)
+
+    def test_misconfigured_provider_still_confirms_the_row(self):
+        self.create_pending()
+
+        with override_settings(EMAIL_PROVIDER="does-not-exist"):
+            response = self.post()
+
+        # A bad EMAIL_PROVIDER must not turn a confirmation into a 500.
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            Subscriber.objects.get(email="member@example.test").provider_synced
+        )
+
+    def test_missing_segment_configuration_still_confirms_the_row(self):
+        self.create_pending()
+
+        with override_settings(RESEND_SEGMENT_ID=""):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="member@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        self.assertFalse(subscriber.provider_synced)
+
+    def test_unsubscribed_address_rejoins_only_by_confirming(self):
+        raw_token = "c" * 32
+        Subscriber.objects.create(
+            email="gone@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=timezone.now() - timedelta(days=30),
+            confirmation_token_hash=hash_confirmation_token(raw_token),
+            confirmation_sent_at=timezone.now(),
+            confirmation_expires_at=timezone.now() + CONFIRMATION_TOKEN_TTL,
+        )
+
+        with patch("emails.subscribers.get_provider"):
+            response = self.post(token=raw_token)
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="gone@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        # A deliberate return clears the opt-out, so the field always means the
+        # time of the last unsubscribe before coming back.
+        self.assertIsNone(subscriber.unsubscribed_at)
+
+    def test_pending_row_without_a_token_cannot_be_confirmed(self):
+        self.create_pending(confirmation_token_hash="")
+
+        with patch("emails.subscribers.get_provider"):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_rapid_requests_from_one_ip_are_throttled(self):
+        # Patch the rate the throttle consults, as the signup throttle test does.
+        with patch.dict(
+            ScopedRateThrottle.THROTTLE_RATES, {"email_subscribe_confirm": "2/hour"}
+        ):
+            responses = [self.post() for _ in range(3)]
+
+        self.assertEqual(responses[0].status_code, 400)
+        self.assertEqual(responses[1].status_code, 400)
+        self.assertEqual(responses[2].status_code, 429)
+
+    def test_database_failure_returns_a_generic_error(self):
+        with patch("emails.views.confirm_subscription", side_effect=DatabaseError):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn("DatabaseError", str(response.json()))
+
+
+class SubscribeConfirmServiceTests(TestCase):
+    """confirm_subscription enforces single use and expiry in one write."""
+
+    def create_pending(self, raw_token="d" * 32, **overrides):
+        data = {
+            "email": "member@example.test",
+            "source": Subscriber.Source.FOOTER,
+            "status": Subscriber.Status.PENDING,
+            "confirmation_token_hash": hash_confirmation_token(raw_token),
+            "confirmation_sent_at": timezone.now(),
+            "confirmation_expires_at": timezone.now() + CONFIRMATION_TOKEN_TTL,
+        }
+        data.update(overrides)
+        return Subscriber.objects.create(**data)
+
+    def test_unknown_token_returns_none(self):
+        with patch("emails.subscribers.get_provider"):
+            self.assertIsNone(confirm_subscription("e" * 32))
+
+    def test_confirmed_row_is_returned_with_synced_state(self):
+        self.create_pending()
+
+        with patch("emails.subscribers.get_provider"):
+            subscriber = confirm_subscription("d" * 32)
+
+        self.assertIsNotNone(subscriber)
+        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        self.assertTrue(subscriber.provider_synced)
+
+    def test_expired_token_returns_none_and_changes_nothing(self):
+        self.create_pending(confirmation_expires_at=timezone.now() - timedelta(seconds=1))
+
+        with patch("emails.subscribers.get_provider"):
+            self.assertIsNone(confirm_subscription("d" * 32))
+
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.PENDING,
+        )
+
+    def test_second_call_returns_none(self):
+        self.create_pending()
+
+        with patch("emails.subscribers.get_provider"):
+            first = confirm_subscription("d" * 32)
+            second = confirm_subscription("d" * 32)
+
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+
+
 class SubscribeContactImportGuardTests(TestCase):
     """Joining the mailing list must stay independent of any payment concept."""
 
@@ -154,120 +396,171 @@ class SubscribeContactImportGuardTests(TestCase):
 
 
 class SubscribeContactServiceTests(TestCase):
-    """subscribe_contact is the single entry point for every signup."""
+    """subscribe_contact records intent and sends a confirmation link."""
 
-    def patch_provider(self):
-        return patch("emails.subscribers.get_provider")
+    def patch_mailer(self):
+        return patch("emails.subscribers.send_subscription_confirmation_email")
 
-    def test_creates_a_subscriber_with_the_normalized_email(self):
-        with self.patch_provider():
+    def test_creates_a_pending_subscriber_and_sends_a_confirmation(self):
+        with self.patch_mailer() as mailer:
             subscriber = subscribe_contact("  Member@Example.Test ", Subscriber.Source.DONATION)
 
         self.assertEqual(subscriber.email, "member@example.test")
         self.assertEqual(subscriber.source, Subscriber.Source.DONATION)
-        self.assertEqual(subscriber.status, Subscriber.Status.SUBSCRIBED)
+        # Signing up records intent only; the row is not subscribed until the
+        # address confirms from its own inbox.
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        mailer.assert_called_once()
+        self.assertEqual(mailer.call_args.args[0], "member@example.test")
 
-    def test_successful_sync_marks_the_row_as_synced(self):
-        with self.patch_provider() as get_provider_mock:
+    def test_stored_token_is_a_hash_and_is_not_the_raw_value(self):
+        with self.patch_mailer() as mailer:
             subscriber = subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
 
-        get_provider_mock.return_value.upsert_contact.assert_called_once_with(
-            "member@example.test"
-        )
+        raw_token = mailer.call_args.args[1]
         subscriber.refresh_from_db()
-        self.assertTrue(subscriber.provider_synced)
+        # The raw value only ever exists in the email, never in the database.
+        self.assertNotEqual(subscriber.confirmation_token_hash, raw_token)
+        self.assertEqual(
+            subscriber.confirmation_token_hash,
+            hashlib.sha256(raw_token.encode()).hexdigest(),
+        )
+        self.assertEqual(len(subscriber.confirmation_token_hash), 64)
 
-    def test_repeat_signup_on_a_synced_row_skips_the_provider(self):
-        with self.patch_provider() as get_provider_mock:
+    def test_confirmation_expires_forty_eight_hours_after_it_is_sent(self):
+        with self.patch_mailer():
+            subscriber = subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
+
+        subscriber.refresh_from_db()
+        self.assertIsNotNone(subscriber.confirmation_sent_at)
+        self.assertEqual(
+            subscriber.confirmation_expires_at - subscriber.confirmation_sent_at,
+            CONFIRMATION_TOKEN_TTL,
+        )
+
+    def test_no_contact_is_created_in_the_provider(self):
+        with self.patch_mailer():
+            with patch("emails.providers.get_provider") as get_provider_mock:
+                subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
+
+        # Only the confirm step may create a provider contact.
+        get_provider_mock.assert_not_called()
+
+
+    def test_repeat_signup_inside_the_cooldown_sends_one_email(self):
+        with self.patch_mailer() as mailer:
             subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
             subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
 
         self.assertEqual(Subscriber.objects.count(), 1)
-        # The public endpoint must not hammer Resend on every repeat POST.
-        self.assertEqual(get_provider_mock.return_value.upsert_contact.call_count, 1)
+        # A repeated public POST must not be a way to re-send mail on demand.
+        self.assertEqual(mailer.call_count, 1)
 
-    def test_unsynced_row_is_retried_on_the_next_signup(self):
-        with self.patch_provider() as get_provider_mock:
-            get_provider_mock.return_value.upsert_contact.side_effect = Exception("down")
+    def test_signup_past_the_cooldown_sends_a_new_link(self):
+        with self.patch_mailer() as mailer:
+            subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
+            first_hash = Subscriber.objects.get(
+                email="member@example.test"
+            ).confirmation_token_hash
+
+            row = Subscriber.objects.get(email="member@example.test")
+            row.confirmation_sent_at = timezone.now() - CONFIRMATION_RESEND_COOLDOWN
+            row.save(update_fields=["confirmation_sent_at"])
+
             subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
 
+        self.assertEqual(mailer.call_count, 2)
+        # Issuing a new token replaces the old hash, so the earlier link dies.
+        current_hash = Subscriber.objects.get(
+            email="member@example.test"
+        ).confirmation_token_hash
+        self.assertNotEqual(current_hash, first_hash)
+
+    def test_subscribed_row_is_sent_nothing(self):
+        Subscriber.objects.create(
+            email="member@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.SUBSCRIBED,
+        )
+
+        with self.patch_mailer() as mailer:
+            subscribe_contact("member@example.test", Subscriber.Source.DONATION)
+
+        # Already confirmed, so there is nothing to confirm again.
+        mailer.assert_not_called()
         subscriber = Subscriber.objects.get(email="member@example.test")
-        self.assertFalse(subscriber.provider_synced)
+        self.assertIsNone(subscriber.confirmation_sent_at)
 
-        with self.patch_provider() as retry_mock:
-            subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
-
-        retry_mock.return_value.upsert_contact.assert_called_once_with("member@example.test")
-        subscriber.refresh_from_db()
-        self.assertTrue(subscriber.provider_synced)
-
-    def test_unsubscribed_row_is_left_untouched_and_not_synced(self):
+    def test_unsubscribed_row_stays_unsubscribed_and_is_sent_a_new_confirmation(self):
+        original_time = timezone.now() - timedelta(days=30)
         Subscriber.objects.create(
             email="gone@example.test",
             source=Subscriber.Source.FOOTER,
             status=Subscriber.Status.UNSUBSCRIBED,
-            unsubscribed_at=timezone.now(),
+            unsubscribed_at=original_time,
         )
 
-        with self.patch_provider() as get_provider_mock:
+        with self.patch_mailer() as mailer:
             subscribe_contact("gone@example.test", Subscriber.Source.DONATION)
 
-        # Anyone can reach the public endpoint, so an opt-out must not be undone.
-        get_provider_mock.return_value.upsert_contact.assert_not_called()
+        # An address that left may come back, but only by confirming from its
+        # own inbox, so the opt-out stands until the confirm step runs.
+        mailer.assert_called_once()
         subscriber = Subscriber.objects.get(email="gone@example.test")
         self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
-        self.assertIsNotNone(subscriber.unsubscribed_at)
+        self.assertEqual(subscriber.unsubscribed_at, original_time)
         self.assertEqual(subscriber.source, Subscriber.Source.FOOTER)
+        # The row is not left untouched: a fresh token was issued for the link.
+        self.assertEqual(
+            subscriber.confirmation_token_hash,
+            hashlib.sha256(mailer.call_args.args[1].encode()).hexdigest(),
+        )
+        self.assertIsNotNone(subscriber.confirmation_sent_at)
+        self.assertIsNotNone(subscriber.confirmation_expires_at)
 
-    def test_provider_side_opt_out_marks_the_row_unsubscribed(self):
-        with self.patch_provider() as get_provider_mock:
-            get_provider_mock.return_value.upsert_contact.return_value = (
-                ContactState.UNSUBSCRIBED
-            )
-            subscribe_contact("optout@example.test", Subscriber.Source.FOOTER)
-
-        # The provider held an opt-out we did not know about, so record it
-        # instead of leaving the row subscribed and sending to someone who opted out.
-        subscriber = Subscriber.objects.get(email="optout@example.test")
-        self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
-        self.assertIsNotNone(subscriber.unsubscribed_at)
-        self.assertTrue(subscriber.provider_synced)
-
-    def test_provider_failure_still_saves_the_signup(self):
-        with self.patch_provider() as get_provider_mock:
-            get_provider_mock.return_value.upsert_contact.side_effect = ProviderError("down")
-            subscriber = subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
-
-        self.assertEqual(subscriber.email, "member@example.test")
-        subscriber.refresh_from_db()
-        self.assertFalse(subscriber.provider_synced)
-
-    def test_misconfiguration_still_saves_the_signup(self):
-        # A bad EMAIL_PROVIDER must not turn a saved signup into a 500.
+    def test_misconfiguration_does_not_break_the_saved_signup(self):
+        # A bad EMAIL_PROVIDER must not turn a saved signup into a 500. The real
+        # mailer path runs here, and send_email swallows the failure.
         with override_settings(EMAIL_PROVIDER="does-not-exist"):
             subscriber = subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
 
         self.assertIsNotNone(subscriber.pk)
         subscriber.refresh_from_db()
-        self.assertFalse(subscriber.provider_synced)
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        # The token is still recorded, so a developer can read the row.
+        self.assertIsNotNone(subscriber.confirmation_sent_at)
+
+    def test_provider_failure_does_not_break_the_saved_signup(self):
+        # A failure inside the send must never reach the caller, because this is
+        # a public endpoint and the row is already written.
+        with patch("emails.subscribers.send_subscription_confirmation_email") as mailer:
+            mailer.side_effect = ProviderError("down")
+            subscriber = subscribe_contact("member@example.test", Subscriber.Source.FOOTER)
+
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        # The token is still recorded, so the link can be re-issued later.
+        self.assertIsNotNone(subscriber.confirmation_sent_at)
 
     def test_integrity_error_during_create_falls_back_to_the_existing_row(self):
         Subscriber.objects.create(
             email="racer@example.test",
             source=Subscriber.Source.FOOTER,
-            provider_synced=True,
+            status=Subscriber.Status.PENDING,
+            confirmation_sent_at=timezone.now(),
         )
 
         # Simulate losing the get_or_create race: the insert fails even though
         # the lookup found nothing, because the other request committed first.
         with patch.object(Subscriber.objects, "get_or_create", side_effect=IntegrityError):
-            with self.patch_provider() as get_provider_mock:
+            with self.patch_mailer() as mailer:
                 subscriber = subscribe_contact("racer@example.test", Subscriber.Source.FOOTER)
 
         self.assertEqual(subscriber.email, "racer@example.test")
         self.assertEqual(Subscriber.objects.count(), 1)
-        # The existing row was already synced, so no duplicate provider call.
-        get_provider_mock.return_value.upsert_contact.assert_not_called()
+        # The row was sent one recently, so the cooldown suppresses a second.
+        mailer.assert_not_called()
 
 
 class SubscriberModelTests(TestCase):
@@ -321,6 +614,68 @@ class SubscriberModelTests(TestCase):
             subscriber.full_clean()
 
         self.assertIn("source", caught.exception.message_dict)
+
+    def test_pending_is_a_valid_status_for_full_clean(self):
+        subscriber = Subscriber(
+            email="waiting@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.PENDING,
+        )
+
+        # full_clean does not enforce database CheckConstraints, so this only
+        # shows that "pending" is an accepted choice for the field.
+        subscriber.full_clean()
+
+    def test_unsupported_status_is_rejected_by_full_clean(self):
+        subscriber = Subscriber(
+            email="member@example.test",
+            source=Subscriber.Source.FOOTER,
+            status="bogus",
+        )
+
+        with self.assertRaises(ValidationError) as caught:
+            subscriber.full_clean()
+
+        self.assertIn("status", caught.exception.message_dict)
+
+    def test_widened_constraint_allows_a_pending_row(self):
+        # A pending row saves and reloads, which is what the widened
+        # subscriber_valid_status constraint has to permit. The rejection half,
+        # that an out-of-range status still fails, is covered by
+        # test_database_rejects_an_unsupported_status.
+        subscriber = self.create_subscriber(status=Subscriber.Status.PENDING)
+
+        subscriber.refresh_from_db()
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+
+    def test_confirmation_token_hashes_are_unique_across_rows(self):
+        first = self.create_subscriber(email="one@example.test")
+        second = self.create_subscriber(email="two@example.test")
+
+        first_raw = first.issue_confirmation_token()
+        second_raw = second.issue_confirmation_token()
+
+        self.assertNotEqual(first_raw, second_raw)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertNotEqual(
+            first.confirmation_token_hash, second.confirmation_token_hash
+        )
+        self.assertEqual(len(first.confirmation_token_hash), 64)
+        self.assertEqual(len(second.confirmation_token_hash), 64)
+
+    def test_clearing_a_token_empties_the_hash_and_both_timestamps(self):
+        subscriber = self.create_subscriber()
+        subscriber.issue_confirmation_token()
+        subscriber.refresh_from_db()
+        self.assertNotEqual(subscriber.confirmation_token_hash, "")
+
+        subscriber.clear_confirmation_token()
+        subscriber.refresh_from_db()
+
+        self.assertEqual(subscriber.confirmation_token_hash, "")
+        self.assertIsNone(subscriber.confirmation_sent_at)
+        self.assertIsNone(subscriber.confirmation_expires_at)
 
     def test_str_reports_address_and_status(self):
         subscriber = self.create_subscriber(email="member@example.test")
@@ -423,6 +778,74 @@ class ResendAdapterTests(TestCase):
         self.assertEqual(state, ContactState.UNSUBSCRIBED)
         # Resend's create would flip this contact back to subscribed.
         create.assert_not_called()
+
+    @override_settings(RESEND_SEGMENT_ID="seg_123")
+    def test_reactivate_contact_creates_a_new_contact(self):
+        with patch("resend.Contacts.create") as create:
+            with patch("resend.Contacts.update") as update:
+                state = self.provider.reactivate_contact("user@example.test")
+
+        self.assertEqual(state, ContactState.SUBSCRIBED)
+        # The segment payload matches upsert_contact's, deliberately.
+        create.assert_called_once_with(
+            {"email": "user@example.test", "segments": [{"id": "seg_123"}]}
+        )
+        update.assert_called_once_with(
+            {"email": "user@example.test", "unsubscribed": False}
+        )
+
+    @override_settings(RESEND_SEGMENT_ID="seg_123")
+    def test_reactivate_contact_clears_an_existing_opt_out(self):
+        # Whether create upserts or errors on an existing address is unverified,
+        # so a create failure must not stop the update that clears the opt-out.
+        already_exists = ResendError(
+            code=409, error_type="validation_error", message="Contact already exists",
+            suggested_action="",
+        )
+        with patch("resend.Contacts.create", side_effect=already_exists):
+            with patch("resend.Contacts.update") as update:
+                state = self.provider.reactivate_contact("user@example.test")
+
+        self.assertEqual(state, ContactState.SUBSCRIBED)
+        update.assert_called_once_with(
+            {"email": "user@example.test", "unsubscribed": False}
+        )
+
+    @override_settings(RESEND_SEGMENT_ID="seg_123")
+    def test_reactivate_contact_fails_when_update_fails(self):
+        create_error = ResendError(
+            code=409, error_type="validation_error", message="Contact already exists",
+            suggested_action="",
+        )
+        update_error = ResendError(
+            code=500, error_type="application_error", message="Something went wrong",
+            suggested_action="",
+        )
+        with patch("resend.Contacts.create", side_effect=create_error):
+            with patch("resend.Contacts.update", side_effect=update_error):
+                with self.assertRaises(ProviderError):
+                    self.provider.reactivate_contact("user@example.test")
+
+    @override_settings(RESEND_SEGMENT_ID="seg_123")
+    def test_reactivate_contact_tolerates_a_non_sdk_create_failure(self):
+        # _call converts every exception type, so even a non-SDK failure falls
+        # through to the update.
+        with patch("resend.Contacts.create", side_effect=Exception("boom")):
+            with patch("resend.Contacts.update") as update:
+                state = self.provider.reactivate_contact("user@example.test")
+
+        self.assertEqual(state, ContactState.SUBSCRIBED)
+        update.assert_called_once()
+
+    @override_settings(RESEND_SEGMENT_ID="")
+    def test_reactivate_contact_fails_fast_without_a_segment(self):
+        with patch("resend.Contacts.create") as create:
+            with patch("resend.Contacts.update") as update:
+                with self.assertRaises(ProviderError):
+                    self.provider.reactivate_contact("user@example.test")
+
+        create.assert_not_called()
+        update.assert_not_called()
 
     @override_settings(RESEND_SEGMENT_ID="seg_123")
     def test_remove_contact_removes_segment_membership(self):
@@ -634,8 +1057,64 @@ class SubscribeEndpointTests(TestCase):
         with patch("emails.views.subscribe_contact"):
             response = self.post(email="gone@example.test")
 
+        # Same response as any other signup: coming back is not announced here,
+        # it only happens when the address confirms from its own inbox.
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), SUBSCRIBE_RESPONSE)
+
+    def test_unsubscribe_then_resubscribe_starts_a_pending_flow(self):
+        Subscriber.objects.create(
+            email="gone@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=timezone.now() - timedelta(days=30),
+        )
+
+        with patch("emails.views.subscribe_contact") as subscribe:
+            response = self.post(email="gone@example.test")
+
+        # The endpoint still records intent only; the status only changes when
+        # the confirmation link is followed.
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), SUBSCRIBE_RESPONSE)
+        subscribe.assert_called_once_with("gone@example.test", "footer")
+
+    def test_four_address_states_return_the_same_response(self):
+        # A caller must not be able to tell the four states apart, so the status
+        # and the body are compared across all of them in one place.
+        Subscriber.objects.create(
+            email="pending@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.PENDING,
+            confirmation_sent_at=timezone.now(),
+        )
+        Subscriber.objects.create(
+            email="known@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.SUBSCRIBED,
+        )
+        Subscriber.objects.create(
+            email="gone@example.test",
+            source=Subscriber.Source.FOOTER,
+            status=Subscriber.Status.UNSUBSCRIBED,
+            unsubscribed_at=timezone.now(),
+        )
+
+        with patch("emails.views.subscribe_contact"):
+            responses = [
+                self.post(email=address)
+                for address in (
+                    "brand-new@example.test",
+                    "pending@example.test",
+                    "known@example.test",
+                    "gone@example.test",
+                )
+            ]
+
+        statuses = {response.status_code for response in responses}
+        bodies = {json.dumps(response.json(), sort_keys=True) for response in responses}
+        self.assertEqual(statuses, {200})
+        self.assertEqual(bodies, {json.dumps(SUBSCRIBE_RESPONSE, sort_keys=True)})
 
     def test_invalid_email_is_rejected(self):
         response = self.post(email="not-an-email")
@@ -681,6 +1160,22 @@ class SubscribeEndpointTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("DatabaseError", str(response.json()))
+
+    def test_mailer_failure_still_returns_the_public_response(self):
+        # A failure in the mail path must not change the response, or a caller
+        # could use failures to probe whether an address is known.
+        with patch(
+            "emails.subscribers.send_subscription_confirmation_email",
+            side_effect=ProviderError("down"),
+        ):
+            response = self.post()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), SUBSCRIBE_RESPONSE)
+        self.assertEqual(
+            Subscriber.objects.get(email="member@example.test").status,
+            Subscriber.Status.PENDING,
+        )
 
 
 class ResendWebhookTests(TestCase):
@@ -794,6 +1289,45 @@ class ResendWebhookTests(TestCase):
         self.assertEqual(response.status_code, 200)
         subscriber = Subscriber.objects.get(email="resub@example.test")
         self.assertEqual(subscriber.status, Subscriber.Status.UNSUBSCRIBED)
+
+    def test_unsubscribed_false_never_resubscribes_a_pending_row(self):
+        # A pending row is waiting on its own inbox, so an echo of our own
+        # create or segment-remove call must not confirm it.
+        self.create_subscriber(
+            "waiting@example.test",
+            status=Subscriber.Status.PENDING,
+            confirmation_token_hash=hash_confirmation_token("f" * 32),
+            confirmation_sent_at=timezone.now(),
+            confirmation_expires_at=timezone.now() + CONFIRMATION_TOKEN_TTL,
+        )
+
+        response = self.deliver(self.contact_payload("waiting@example.test", False))
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="waiting@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        self.assertEqual(
+            subscriber.confirmation_token_hash, hash_confirmation_token("f" * 32)
+        )
+
+    def test_contact_deleted_leaves_a_pending_row_alone(self):
+        # A deleted contact is an opt-out signal for someone who was subscribed.
+        # A pending row never consented, so recording an unsubscribe for it would
+        # invent a departure that never happened.
+        self.create_subscriber(
+            "waiting@example.test",
+            status=Subscriber.Status.PENDING,
+            confirmation_sent_at=timezone.now(),
+        )
+
+        response = self.deliver(
+            {"type": "contact.deleted", "data": {"email": "waiting@example.test"}}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        subscriber = Subscriber.objects.get(email="waiting@example.test")
+        self.assertEqual(subscriber.status, Subscriber.Status.PENDING)
+        self.assertIsNone(subscriber.unsubscribed_at)
 
     def test_unknown_email_is_quietly_ignored(self):
         response = self.deliver(self.contact_payload("nobody@example.test", True))
@@ -918,6 +1452,26 @@ class ResendWebhookTests(TestCase):
             Subscriber.objects.get(email="member@example.test").status,
             Subscriber.Status.SUBSCRIBED,
         )
+
+
+class SubscriptionConfirmationTemplateTests(TestCase):
+    """The confirmation email carries the link and no marketing footer."""
+
+    CONTEXT = {
+        "confirmation_url": "https://example.test/subscribe/confirm?token=abc123",
+    }
+
+    def test_link_and_expiry_are_rendered(self):
+        html = render_to_string("emails/subscribe_confirm.html", self.CONTEXT)
+
+        self.assertIn(self.CONTEXT["confirmation_url"], html)
+        self.assertIn("48 hours", html)
+
+    def test_transactional_footer_is_not_rendered(self):
+        html = render_to_string("emails/subscribe_confirm.html", self.CONTEXT)
+
+        # Confirming a subscription is transactional, so no unsubscribe link.
+        self.assertNotIn("Unsubscribe from future announcements", html)
 
 
 class AnnouncementTemplateTests(TestCase):

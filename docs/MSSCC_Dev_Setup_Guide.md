@@ -570,7 +570,7 @@ For JetBrains IDEs, see section 10.
 
 The workflow triggers on `pull_request` and on `push` to `main`. `lint-backend` checks all of `backend/`, while `lint-frontend` compares the changed files against `main`. Tests and TypeScript checks are not part of CI yet, so run the `run-checks` Cline skill locally before opening a PR.
 
-Locally, an added pre-push hook runs `ruff check backend` over the whole backend before a push. Enable it once per clone with `pre-commit install --hook-type pre-push`.
+Locally, an added pre-push hook runs `ruff check backend` over the whole backend and `makemigrations --check` (pinned to test settings, so it needs `backend/.env` for the secret key and encryption keyring, but no running database) before a push. Enable it once per clone with `pre-commit install --hook-type pre-push`.
 
 ### 12.7 Using Cline
 

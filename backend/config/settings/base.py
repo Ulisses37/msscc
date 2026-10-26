@@ -79,9 +79,11 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     # Only endpoints that set throttle_classes use these, so no other endpoint
-    # changes behavior. The public signup endpoint is per-IP limited.
+    # changes behavior. Both public mailing-list endpoints are per-IP limited:
+    # the signup, and the token-bearing confirm link.
     "DEFAULT_THROTTLE_RATES": {
         "email_subscribe": "30/hour",
+        "email_subscribe_confirm": "60/hour",
         "anon": "60/min",
     },
 }
