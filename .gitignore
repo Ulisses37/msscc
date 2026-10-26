@@ -27,3 +27,6 @@ tmp/
 backend/tmp/
 frontend/tmp/
 docs/sprint8.docx
+
+# Recorded test runs. Only docs/testing/baseline/ is committed.
+docs/testing/runs/
