@@ -150,6 +150,7 @@ def record_signup_reassigned(signup: VolunteerSignup, before: dict) -> None:
                     "new_end_datetime": slot.end_datetime,
                     "new_location": slot.event.location_en,
                     "new_role": slot.position_name,
+                    "moved_source": "slot",
                 },
             ),
             signup,
@@ -195,6 +196,7 @@ def _slot_changes(slot: VolunteerSlot, before: dict) -> list:
                     "new_end_datetime": slot.end_datetime,
                     "new_location": slot.event.location_en,
                     "new_role": slot.position_name,
+                    "moved_source": "slot",
                 },
             )
         )
@@ -228,6 +230,7 @@ def _event_changes(event: Event, before: dict) -> list:
                     "new_start_datetime": event.start_datetime,
                     "new_end_datetime": event.end_datetime,
                     "new_location": event.location_en,
+                    "moved_source": "event",
                 },
             )
         ]
@@ -364,12 +367,19 @@ def _is_still_current(details_by_kind: dict) -> bool:
 
 
 def _values_match(details_by_kind: dict, slot: VolunteerSlot) -> bool:
-    """Compare the buffered final values with the rows as they are now."""
+    """Compare the buffered final values with the rows as they are now.
+
+    A move carries where it came from, because the two levels are validated
+    against different rows: a slot edit is checked against the slot's own
+    schedule, while an event edit is checked against the event's. Comparing a
+    move against the wrong row would drop every legitimate event-level change.
+    """
     for kind, details in details_by_kind.items():
         if kind == MOVED:
-            if slot.start_datetime != details["new_start_datetime"]:
+            schedule = slot.event if details.get("moved_source") == "event" else slot
+            if schedule.start_datetime != details["new_start_datetime"]:
                 return False
-            if slot.end_datetime != details["new_end_datetime"]:
+            if schedule.end_datetime != details["new_end_datetime"]:
                 return False
             if details.get("new_location") != slot.event.location_en:
                 return False

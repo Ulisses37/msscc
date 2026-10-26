@@ -893,6 +893,52 @@ class VolunteerChangeNotificationTests(TestCase):
         self.assertIn("Changed", sent[0].kwargs["subject"])
         self.assertNotIn("Cancelled", sent[0].kwargs["subject"])
 
+    def test_a_move_and_a_role_change_in_one_save_send_one_combined_email(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+                self.slot.end_datetime = datetime(2026, 12, 25, 16, 0, tzinfo=UTC)
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        sent = provider.return_value.send_email.call_args_list
+
+        self.assertEqual(len(sent), 1)
+        html = sent[0].kwargs["html"]
+        # The volunteer must see both facts in the one email.
+        self.assertIn("02:00 PM", html)
+        self.assertIn("Ticket Table", html)
+        self.assertIn("Greeter", html)
+
+    def test_a_role_only_change_uses_the_role_changed_template(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        sent = provider.return_value.send_email.call_args_list
+
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Role Changed", sent[0].kwargs["subject"])
+        self.assertIn("Ticket Table", sent[0].kwargs["html"])
+
+    def test_a_removal_overrides_the_other_changes(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+                self.slot.delete()
+
+        sent = provider.return_value.send_email.call_args_list
+
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Cancelled", sent[0].kwargs["subject"])
+        self.assertNotIn("Changed", sent[0].kwargs["subject"])
+        self.assertNotIn("Role Changed", sent[0].kwargs["subject"])
+        # The removal email describes the shift as it stood when it was removed,
+        # so the last saved role is what the volunteer sees.
+        self.assertIn("Ticket Table", sent[0].kwargs["html"])
+
     def test_a_signup_with_no_slot_never_notifies(self):
         orphan = VolunteerSignup.objects.create(
             slot=None,
@@ -912,6 +958,144 @@ class VolunteerChangeNotificationTests(TestCase):
             call.kwargs["to"] for call in provider.return_value.send_email.call_args_list
         ]
         self.assertEqual(recipients, ["aiko@example.test"])
+
+
+class VolunteerChangeEventLevelTests(TestCase):
+    """Event-level edits notify every volunteer signed up on that event."""
+
+    def setUp(self):
+        services.take_pending_changes()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            location_en="Community Center",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.first_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=self.event.start_datetime,
+            end_datetime=self.event.end_datetime,
+        )
+        self.second_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Usher",
+            start_datetime=self.event.start_datetime,
+            end_datetime=self.event.end_datetime,
+        )
+        self.first_signup = VolunteerSignup.objects.create(
+            slot=self.first_slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.test",
+            phone="916-555-0100",
+        )
+        self.second_signup = VolunteerSignup.objects.create(
+            slot=self.second_slot,
+            first_name="Kenji",
+            last_name="Sato",
+            email="kenji@example.test",
+            phone="916-555-0101",
+        )
+
+    def patch_provider(self):
+        return patch("emails.services.get_provider")
+
+    def recipients(self, provider_mock):
+        return sorted(
+            call.kwargs["to"] for call in provider_mock.return_value.send_email.call_args_list
+        )
+
+    def test_event_location_change_notifies_every_volunteer(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.event.location_en = "Memorial Auditorium"
+                self.event.save(update_fields=["location_en", "updated_at"])
+
+        self.assertEqual(
+            self.recipients(provider),
+            ["aiko@example.test", "kenji@example.test"],
+        )
+
+    def test_event_time_change_notifies_every_volunteer(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.event.start_datetime = datetime(2026, 12, 26, 10, 0, tzinfo=UTC)
+                self.event.save(update_fields=["start_datetime", "updated_at"])
+
+        self.assertEqual(len(provider.return_value.send_email.call_args_list), 2)
+
+    def test_event_title_change_notifies_nobody(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.event.title_en = "Renamed Gathering"
+                self.event.save(update_fields=["title_en", "updated_at"])
+
+        provider.return_value.send_email.assert_not_called()
+
+    def test_event_publish_change_notifies_nobody(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.event.is_published = True
+                self.event.save(update_fields=["is_published", "updated_at"])
+
+        provider.return_value.send_email.assert_not_called()
+
+    def test_the_volunteer_slots_recount_notifies_nobody(self):
+        # Adding a slot re-saves the event's volunteer_slots total, and that
+        # bookkeeping must stay silent.
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                VolunteerSlot.objects.create(
+                    event=self.event,
+                    position_name="Ticket Table",
+                    start_datetime=self.event.start_datetime,
+                    end_datetime=self.event.end_datetime,
+                )
+
+        provider.return_value.send_email.assert_not_called()
+
+    def test_another_event_is_not_notified_by_this_one(self):
+        other_event = Event.objects.create(
+            title_en="Other Event",
+            title_ja="別のイベント",
+            location_en="Hall",
+            start_datetime=datetime(2027, 1, 10, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2027, 1, 10, 12, 0, tzinfo=UTC),
+        )
+        other_slot = VolunteerSlot.objects.create(
+            event=other_event,
+            position_name="Greeter",
+            start_datetime=other_event.start_datetime,
+            end_datetime=other_event.end_datetime,
+        )
+        VolunteerSignup.objects.create(
+            slot=other_slot,
+            first_name="Yuki",
+            last_name="Mori",
+            email="yuki@example.test",
+            phone="916-555-0102",
+        )
+
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.first_slot.position_name = "Ticket Table"
+                self.first_slot.save()
+
+        self.assertEqual(self.recipients(provider), ["aiko@example.test"])
+
+    def test_deleting_an_event_notifies_its_volunteers(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.event.delete()
+
+        self.assertEqual(
+            self.recipients(provider),
+            ["aiko@example.test", "kenji@example.test"],
+        )
+
+
 
 
 
