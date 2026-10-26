@@ -7,8 +7,12 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .classification import classify_media
 from .models import MediaAsset, StaticImage
+from .persistence import MediaPersistenceError, persist_media_asset
+from .sanitization import MediaSanitizationError, sanitize_media
 from .serializers import MediaFileSerializer, StaticImageSerializer
+from .validation import validate_media
 
 
 #The file goes to MinIO automatically via django-storages + boto3.
@@ -29,21 +33,68 @@ class MediaUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        import os
-        import re
+        classification = classify_media(file)
+        if not classification.is_valid:
+            return Response(
+                {
+                    "error": "Unsupported or invalid media file.",
+                    "code": "invalid_media",
+                    "details": {
+                        "reasons": list(classification.reasons),
+                        "detected_kind": classification.detected_kind,
+                        "detected_format": classification.detected_format,
+                        "detected_mime_type": classification.detected_mime_type,
+                        "supplied_extension": classification.supplied_extension,
+                        "supplied_mime_type": classification.supplied_mime_type,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        name, ext = os.path.splitext(file.name)
-        safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+        validation = validate_media(file, classification)
+        if not validation.is_valid:
+            return Response(
+                {
+                    "error": "Media content failed validation.",
+                    "code": "invalid_media",
+                    "details": {
+                        "reasons": list(validation.reasons),
+                        "size_bytes": validation.size_bytes,
+                        "image_width": validation.image_width,
+                        "image_height": validation.image_height,
+                    },
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        file.name = f"{safe_name}{ext}"
 
-        media = MediaAsset.objects.create(
-            file=file,
-            file_name=file.name,
-            file_type=file.content_type or "",
-            alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
-            alt_text_ja=request.data.get("alt_text_ja", ""),
-        )
+        #Previous sanitization renaming moved to dedicated function
+        try:
+            sanitized_media = sanitize_media(file, classification)
+        except MediaSanitizationError as exc:
+            return Response(
+                {
+                    "error": "Media sanitization failed.",
+                    "code": "invalid_media",
+                    "details": {"reasons": [exc.reason]},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            media = persist_media_asset(
+                sanitized_media,
+                alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
+                alt_text_ja=request.data.get("alt_text_ja", ""),
+            )
+        except MediaPersistenceError:
+            return Response(
+                {
+                    "error": "Media could not be saved.",
+                    "code": "media_persistence_failed",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         serializer = MediaFileSerializer(media)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
