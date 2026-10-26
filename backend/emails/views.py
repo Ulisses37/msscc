@@ -171,8 +171,12 @@ class SubscribeView(APIView):
     """Add an address to the mailing list from any public entry point.
 
     Unauthenticated by design, so it is reachable by anyone. A per-IP rate limit
-    and a honeypot are the defenses, and the response never varies so it cannot
-    be used to check whether an address is already subscribed.
+    and a honeypot are the defenses. The response body and status are identical
+    for every accepted signup, so the endpoint cannot be used to check whether an
+    address is already subscribed.
+
+    This records intent only. No provider contact is created here; the address
+    must confirm from its own inbox before it is ``subscribed``.
     """
 
     authentication_classes = []
