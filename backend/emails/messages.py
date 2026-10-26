@@ -65,3 +65,76 @@ def send_event_reminder_email(to_email: str, event, first_name: str = "") -> Non
         context=reminder_details,
     )
 
+
+def format_event_datetime(value) -> str:
+    """Render a datetime the way the volunteer emails display it."""
+    if value is None:
+        return "To be announced"
+    return value.strftime("%B %d, %Y at %I:%M %p")
+
+
+def send_volunteer_shift_removed_email(to_email: str, details: dict) -> None:
+    """Tell a volunteer that a shift they signed up for was removed."""
+    send_email(
+        to=to_email,
+        subject=f"MSSCC Shift Cancelled: {details['event_name']}",
+        template_name="emails/volunteer_shift_removed.html",
+        context={
+            "first_name": details.get("first_name", ""),
+            "event_name": details["event_name"],
+            "role": details.get("role") or "Volunteer",
+            "removed_datetime": (
+                f"{format_event_datetime(details.get('start_datetime'))} - "
+                f"{format_event_datetime(details.get('end_datetime'))}"
+            ),
+        },
+    )
+
+
+def send_volunteer_shift_moved_email(
+    to_email: str,
+    details: dict,
+    role_changed_from: str | None = None,
+) -> None:
+    """Tell a volunteer that the date, time or location of a shift changed.
+
+    ``role_changed_from`` is set when the same save also changed the role, so the
+    volunteer learns about both in the one email the story asks for. The rename
+    is only applied in the body; the caller keeps passing ``new_role``.
+    """
+    new_role = details.get("new_role") or details.get("role") or "Volunteer"
+
+    send_email(
+        to=to_email,
+        subject=f"MSSCC Shift Changed: {details['event_name']}",
+        template_name="emails/volunteer_shift_moved.html",
+        context={
+            "first_name": details.get("first_name", ""),
+            "event_name": details["event_name"],
+            "role": new_role,
+            "role_changed_from": role_changed_from or "",
+            "new_datetime": (
+                f"{format_event_datetime(details.get('new_start_datetime'))} - "
+                f"{format_event_datetime(details.get('new_end_datetime'))}"
+            ),
+            "new_location": details.get("new_location") or "To be announced",
+        },
+    )
+
+
+def send_volunteer_role_changed_email(to_email: str, details: dict) -> None:
+    """Tell a volunteer that the role for a shift they hold has changed."""
+    send_email(
+        to=to_email,
+        subject=f"MSSCC Role Changed: {details['event_name']}",
+        template_name="emails/volunteer_role_changed.html",
+        context={
+            "first_name": details.get("first_name", ""),
+            "event_name": details["event_name"],
+            "old_role": details.get("old_role") or "",
+            "new_role": details.get("new_role") or "Volunteer",
+            "location": details.get("new_location") or details.get("location") or "To be announced",
+        },
+    )
+
+

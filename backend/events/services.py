@@ -275,16 +275,63 @@ def _record(signup_id: int, event_id: int, change: _Change) -> None:
 
 
 def _flush() -> None:
-    """Collect the buffered changes that are still true in the database.
+    """Deliver the buffered changes that are still true in the database.
 
     Entries are dropped when the recorded outcome no longer matches what is
     stored, which is how an edit that was rolled back never reaches a volunteer.
-    Delivery is wired in a later subtask, so this only validates and reports.
+    Each surviving entry goes out as one email per (volunteer, event).
+
+    Delivery is fire-and-forget: a provider outage is logged and swallowed, so a
+    broken email can never break or roll back the event edit that caused it.
     """
     pending = take_pending_changes()
     for details_by_kind in pending.values():
-        if _is_still_current(details_by_kind):
-            logger.info("Volunteer change detected.")
+        if not _is_still_current(details_by_kind):
+            continue
+        try:
+            _send(details_by_kind)
+        except Exception:
+            # Broad on purpose, matching the mailing-list sync: a provider
+            # outage or a misconfigured EMAIL_PROVIDER must not surface here.
+            # No recipient address in the log.
+            logger.error("Volunteer change notification failed.")
+
+
+def _send(details_by_kind: dict) -> None:
+    """Send the one email that covers this (volunteer, event) entry.
+
+    A disconnected email service is the only reason this import is local: the
+    detection half of this module has to stay usable without it.
+    """
+    from emails.messages import (  # noqa: PLC0415
+        send_volunteer_role_changed_email,
+        send_volunteer_shift_moved_email,
+        send_volunteer_shift_removed_email,
+    )
+
+    email = next(iter(details_by_kind.values()))["email"]
+
+    if REMOVED in details_by_kind:
+        # Nothing else matters about a shift that no longer exists, so a removal
+        # is the whole message.
+        send_volunteer_shift_removed_email(email, details_by_kind[REMOVED])
+        return
+
+    if MOVED in details_by_kind:
+        # One email that lists every surviving change: a volunteer who both moved
+        # and changed role must see both, so the role change is folded into the
+        # move rather than dropped by a precedence rule.
+        moved = details_by_kind[MOVED]
+        role_changed = details_by_kind.get(ROLE_CHANGED)
+        send_volunteer_shift_moved_email(
+            email,
+            {**moved, **(role_changed or {})},
+            role_changed_from=(role_changed or {}).get("old_role"),
+        )
+        return
+
+    if ROLE_CHANGED in details_by_kind:
+        send_volunteer_role_changed_email(email, details_by_kind[ROLE_CHANGED])
 
 
 def _is_still_current(details_by_kind: dict) -> bool:

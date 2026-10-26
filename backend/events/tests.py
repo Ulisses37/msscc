@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -669,6 +670,252 @@ class VolunteerDeleteCascadeTests(TestCase):
         self.slot.refresh_from_db()
         self.assertEqual(self.slot.filled_count, 0)
         self.assertEqual(VolunteerSlot.objects.count(), 1)
+
+
+class VolunteerChangeNotificationTests(TestCase):
+    """Surviving changes are delivered once, and a provider outage is contained.
+
+    The provider is mocked throughout: the sandbox only delivers to the account
+    owner, so no test may attempt a live send.
+    """
+
+    def setUp(self):
+        services.take_pending_changes()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            location_en="Community Center",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=self.event.start_datetime,
+            end_datetime=self.event.end_datetime,
+        )
+        self.signup = VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.test",
+            phone="916-555-0100",
+        )
+
+    def commit(self):
+        """Run the callbacks the transaction registered, as a commit would."""
+        with self.captureOnCommitCallbacks(execute=True):
+            pass
+
+    def patch_provider(self):
+        return patch("emails.services.get_provider")
+
+    def sent_subjects(self, provider_mock):
+        return [
+            call.kwargs["subject"]
+            for call in provider_mock.return_value.send_email.call_args_list
+        ]
+
+    def test_a_removal_sends_one_email_through_the_provider(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.delete()
+
+        sent = provider.return_value.send_email.call_args_list
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(sent[0].kwargs["to"], "aiko@example.test")
+        self.assertIn("Cancelled", sent[0].kwargs["subject"])
+        self.assertIn("Cultural Exchange", sent[0].kwargs["html"])
+
+    def test_a_move_sends_one_email(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+                self.slot.save()
+
+        sent = provider.return_value.send_email.call_args_list
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Changed", sent[0].kwargs["subject"])
+        self.assertIn("02:00 PM", sent[0].kwargs["html"])
+        self.assertIn("Community Center", sent[0].kwargs["html"])
+
+    def test_a_role_change_sends_one_email(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        sent = provider.return_value.send_email.call_args_list
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Role Changed", sent[0].kwargs["subject"])
+        self.assertIn("Ticket Table", sent[0].kwargs["html"])
+
+    def test_two_changes_in_one_save_send_one_email(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+                self.slot.end_datetime = datetime(2026, 12, 25, 16, 0, tzinfo=UTC)
+                self.slot.save()
+
+        sent = provider.return_value.send_email.call_args_list
+        self.assertEqual(len(sent), 1)
+
+    def test_two_volunteers_each_get_their_own_email(self):
+        VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Kenji",
+            last_name="Sato",
+            email="kenji@example.test",
+            phone="916-555-0101",
+        )
+
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        recipients = sorted(
+            call.kwargs["to"] for call in provider.return_value.send_email.call_args_list
+        )
+        self.assertEqual(recipients, ["aiko@example.test", "kenji@example.test"])
+
+    def test_a_plain_resave_does_not_resend(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+            self.assertEqual(len(provider.return_value.send_email.call_args_list), 1)
+
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.save()
+
+        # Nothing changed the second time, so nothing should be sent.
+        self.assertEqual(len(provider.return_value.send_email.call_args_list), 1)
+
+    def test_two_separate_saves_send_two_emails(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.start_datetime = datetime(2026, 12, 25, 14, 0, tzinfo=UTC)
+                self.slot.save()
+
+        # No time window exists, so two separate saves are two separate emails.
+        self.assertEqual(len(provider.return_value.send_email.call_args_list), 2)
+
+    def test_provider_failure_does_not_break_the_edit(self):
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = Exception("provider down")
+
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        # The edit must have stuck even though the email could not be sent.
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.position_name, "Ticket Table")
+
+    def test_provider_failure_is_logged(self):
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = Exception("provider down")
+
+            with self.assertLogs("emails.services", level="ERROR") as logs:
+                with self.captureOnCommitCallbacks(execute=True):
+                    self.slot.position_name = "Ticket Table"
+                    self.slot.save()
+
+        # emails.services already contains the failure, so the log comes from
+        # there. What matters is that it is recorded rather than raised.
+        self.assertTrue(any("failed" in line.lower() for line in logs.output))
+
+    def test_a_misconfigured_provider_does_not_break_the_edit(self):
+        with override_settings(EMAIL_PROVIDER="does-not-exist"):
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.position_name, "Ticket Table")
+
+    def test_a_broken_send_path_is_contained_by_the_flush(self):
+        # The provider layer contains its own errors; this covers the other way
+        # in, where building the message itself goes wrong.
+        with patch("events.services._send", side_effect=Exception("boom")):
+            with self.assertLogs("events.services", level="ERROR") as logs:
+                with self.captureOnCommitCallbacks(execute=True):
+                    self.slot.position_name = "Ticket Table"
+                    self.slot.save()
+
+        self.assertTrue(
+            any("Volunteer change notification failed" in line for line in logs.output)
+        )
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.position_name, "Ticket Table")
+
+
+    def test_a_rolled_back_edit_sends_nothing(self):
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                try:
+                    with transaction.atomic():
+                        self.slot.position_name = "Ticket Table"
+                        self.slot.save()
+                        raise RuntimeError("rollback")
+                except RuntimeError:
+                    pass
+
+                # A later, unrelated commit must not flush the abandoned change.
+                self.event.save(update_fields=["updated_at"])
+
+        provider.return_value.send_email.assert_not_called()
+        self.slot.refresh_from_db()
+        self.assertEqual(self.slot.position_name, "Greeter")
+
+    def test_a_reassigned_signup_gets_a_move_email(self):
+        later_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Ticket Table",
+            start_datetime=datetime(2026, 12, 25, 14, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 16, 0, tzinfo=UTC),
+        )
+
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.signup.slot = later_slot
+                self.signup.save()
+
+        sent = provider.return_value.send_email.call_args_list
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Changed", sent[0].kwargs["subject"])
+        self.assertNotIn("Cancelled", sent[0].kwargs["subject"])
+
+    def test_a_signup_with_no_slot_never_notifies(self):
+        orphan = VolunteerSignup.objects.create(
+            slot=None,
+            first_name="Kenji",
+            last_name="Sato",
+            email="kenji@example.test",
+            phone="916-555-0101",
+        )
+
+        with self.patch_provider() as provider:
+            with self.captureOnCommitCallbacks(execute=True):
+                self.slot.position_name = "Ticket Table"
+                self.slot.save()
+
+        self.assertEqual(orphan.email, "kenji@example.test")
+        recipients = [
+            call.kwargs["to"] for call in provider.return_value.send_email.call_args_list
+        ]
+        self.assertEqual(recipients, ["aiko@example.test"])
+
+
+
+
 
 
 
