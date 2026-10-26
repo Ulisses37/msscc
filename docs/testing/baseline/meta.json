@@ -1,0 +1,81 @@
+{
+  "schema": "msscc-test-run/1",
+  "timestamp": "2026-10-26T05:55:22+00:00",
+  "label": "baseline",
+  "git": {
+    "commit": "2261eb503f904774fd6e26248875c56c424b89f7",
+    "short": "2261eb5",
+    "branch": "feature/SCRUM-786-testing-report",
+    "dirty": false
+  },
+  "platform": {
+    "system": "Windows",
+    "release": "11",
+    "machine": "AMD64"
+  },
+  "python": {
+    "version": "3.13.2",
+    "interpreter": "backend/venv/Scripts/python.exe",
+    "source": "script interpreter"
+  },
+  "tools": {
+    "python": {
+      "version": "Python 3.13.2",
+      "status": "ok"
+    },
+    "django": {
+      "version": "6.0.3",
+      "status": "ok"
+    },
+    "pytest": {
+      "version": "pytest 9.1.1",
+      "status": "ok"
+    },
+    "pytest_django": {
+      "version": "4.14.0",
+      "status": "ok"
+    },
+    "ruff": {
+      "version": "ruff 0.16.9",
+      "status": "ok"
+    },
+    "node": {
+      "version": "v22.14.0",
+      "status": "ok"
+    },
+    "npm": {
+      "version": "10.9.2",
+      "status": "ok"
+    },
+    "jest": {
+      "version": "29.7.0",
+      "status": "ok"
+    },
+    "tsc": {
+      "version": "Version 5.9.3",
+      "status": "ok"
+    }
+  },
+  "steps": {
+    "pytest": {
+      "status": "passed",
+      "exit_code": 0,
+      "duration_seconds": 20.345
+    },
+    "jest": {
+      "status": "failed",
+      "exit_code": 1,
+      "duration_seconds": 9.596
+    },
+    "tsc": {
+      "status": "passed",
+      "exit_code": 0,
+      "duration_seconds": 2.146
+    },
+    "ruff": {
+      "status": "passed",
+      "exit_code": 0,
+      "duration_seconds": 0.101
+    }
+  }
+}
