@@ -87,6 +87,40 @@ class ResendProvider(EmailProvider):
         self._require_segment_id()
         self._call(resend.Contacts.Segments.remove, self._segment_params(email))
 
+    def reactivate_contact(self, email: str) -> ContactState:
+        """Create or refresh the contact, clearing any provider-side opt-out.
+
+        Called only by the confirm step, where the address has just proved
+        control of its own inbox. Order matters: a first-time subscriber has no
+        Resend contact yet, so ``update`` alone would fail before the contact
+        existed. ``create`` runs first and attaches the segment using the same
+        payload ``upsert_contact`` has always used; ``update`` then clears the
+        ``unsubscribed`` flag.
+
+        A ``create`` failure does not end the operation: whether Resend's create
+        upserts or errors on an address that already exists is unverified, so
+        both outcomes fall through to ``update``, which is what carries the
+        reactivation. Only an ``update`` failure becomes a ``ProviderError``.
+
+        UNVERIFIED against the live API, to confirm in the Resend dashboard:
+        create on an existing email, update on an unknown email, and whether
+        update with ``unsubscribed`` false restores segment membership.
+        """
+        self._require_segment_id()
+        try:
+            self._call(
+                resend.Contacts.create,
+                {"email": email, "segments": [{"id": settings.RESEND_SEGMENT_ID}]},
+            )
+        except ProviderError:
+            # Upsert and hard-error are both possible here, so the failure is
+            # only informational: the update below is authoritative. The log
+            # line carries no address.
+            logger.warning("Resend contact create failed during reactivation.")
+
+        self._call(resend.Contacts.update, {"email": email, "unsubscribed": False})
+        return ContactState.SUBSCRIBED
+
     def send_broadcast(self, *, subject: str, html: str) -> None:
         """Send a marketing email to the configured segment immediately."""
         self._require_segment_id()

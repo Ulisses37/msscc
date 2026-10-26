@@ -16,8 +16,12 @@ from emails.providers.resend_webhook import (
     UnconfiguredSecretError,
     parse_unsubscribe_event,
 )
-from emails.serializers import HONEYPOT_FIELD, SubscribeRequestSerializer
-from emails.subscribers import subscribe_contact
+from emails.serializers import (
+    HONEYPOT_FIELD,
+    SubscribeConfirmRequestSerializer,
+    SubscribeRequestSerializer,
+)
+from emails.subscribers import confirm_subscription, subscribe_contact
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +45,11 @@ class RawBodyParser(BaseParser):
 # The same body for every accepted signup. A response that varied would tell a
 # caller whether an address is already on the list, so keep it constant.
 SUBSCRIBE_RESPONSE = {"detail": "Thanks, you're on the list."}
+
+# One answer for an unknown, expired, reused or malformed token, so the endpoint
+# cannot be used to tell those cases apart. The frontend matches this string to
+# show its "link is invalid" state.
+CONFIRM_RESPONSE = {"detail": "Your subscription to the MSSCC mailing list is confirmed."}
 
 
 class AnnouncementSendView(APIView):
@@ -165,6 +174,46 @@ def _mark_subscriber_unsubscribed(email: str) -> bool:
         unsubscribed_at=timezone.now(),
         provider_synced=True,
     ) == 1
+
+
+class SubscribeConfirmView(APIView):
+    """Confirm a mailing-list signup from the token in its confirmation email.
+
+    Unauthenticated because the link is opened from an inbox, so the token is
+    the only credential. A per-IP rate limit bounds guessing, and every failure
+    case returns the same generic 400 so the endpoint cannot be used to probe
+    for valid, expired or used tokens.
+
+    This is the only endpoint that may create a provider contact, and only after
+    the address has proved control of its own inbox.
+    """
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "email_subscribe_confirm"
+
+    def post(self, request):
+        """Validate the token, then confirm the row it belongs to."""
+        serializer = SubscribeConfirmRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            subscriber = confirm_subscription(serializer.validated_data["token"])
+        except DatabaseError:
+            logger.error("Database error while confirming a mailing-list signup.")
+            return Response(
+                {"detail": "We could not confirm your subscription right now."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        if subscriber is None:
+            return Response(
+                {"detail": "This confirmation link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(CONFIRM_RESPONSE, status=status.HTTP_200_OK)
 
 
 class SubscribeView(APIView):

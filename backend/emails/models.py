@@ -17,6 +17,15 @@ CONFIRMATION_RESEND_COOLDOWN = timedelta(minutes=15)
 CONFIRMATION_TOKEN_BYTES = 32
 
 
+def hash_confirmation_token(raw_token: str) -> str:
+    """Return the stored digest for a raw confirmation token.
+
+    One place computes this, so the write in ``issue_confirmation_token`` and
+    the lookup in the confirm step can never drift apart.
+    """
+    return hashlib.sha256(raw_token.encode()).hexdigest()
+
+
 class Subscriber(models.Model):
     """Mailing-list consent record for a single email address.
 
@@ -95,7 +104,7 @@ class Subscriber(models.Model):
         """
         raw_token = secrets.token_urlsafe(CONFIRMATION_TOKEN_BYTES)
         now = timezone.now()
-        self.confirmation_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        self.confirmation_token_hash = hash_confirmation_token(raw_token)
         self.confirmation_sent_at = now
         self.confirmation_expires_at = now + CONFIRMATION_TOKEN_TTL
         self.save(

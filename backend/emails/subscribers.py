@@ -15,7 +15,12 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from emails.messages import send_subscription_confirmation_email
-from emails.models import CONFIRMATION_RESEND_COOLDOWN, Subscriber
+from emails.models import (
+    CONFIRMATION_RESEND_COOLDOWN,
+    Subscriber,
+    hash_confirmation_token,
+)
+from emails.providers import get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +51,77 @@ def subscribe_contact(email: str, source: str) -> Subscriber:
         _send_confirmation(normalized, raw_token)
 
     return subscriber
+
+
+def confirm_subscription(raw_token: str) -> Subscriber | None:
+    """Confirm a pending signup from the link mailed to its own address.
+
+    This is the only function that may flip a row to ``subscribed``, and it is
+    reachable only with the token that was mailed to the address itself, which
+    is the deliberate-return half of double opt-in: an address that previously
+    unsubscribed can come back, but only from its own inbox.
+
+    Returns ``None`` for an unknown, expired or already-used token. The caller
+    answers one generic error for all three, so it cannot be used to probe.
+
+    The write is a single conditional update filtered on the row, the token and
+    an unexpired "expires at", so there is no window between checking the expiry
+    and writing. The provider sync happens after that write, in
+    ``_sync_confirmed_contact``.
+    """
+    token_hash = hash_confirmation_token(raw_token)
+    subscriber = Subscriber.objects.filter(confirmation_token_hash=token_hash).first()
+    if subscriber is None:
+        return None
+
+    # The address is read before the update clears the hash, because the
+    # provider sync needs it and the row can no longer be found by token.
+    email = subscriber.email
+    updated = Subscriber.objects.filter(
+        pk=subscriber.pk,
+        confirmation_token_hash=token_hash,
+        confirmation_expires_at__gt=timezone.now(),
+    ).update(
+        status=Subscriber.Status.SUBSCRIBED,
+        unsubscribed_at=None,
+        confirmation_token_hash="",
+        confirmation_sent_at=None,
+        confirmation_expires_at=None,
+        provider_synced=False,
+    )
+    if updated != 1:
+        # Expired, already used, or re-issued by a race. One answer for all.
+        return None
+
+    _sync_confirmed_contact(email)
+    subscriber.refresh_from_db()
+    return subscriber
+
+
+def _sync_confirmed_contact(email: str) -> None:
+    """Push a confirmed address to the provider mirror and record the outcome.
+
+    Catches broadly on purpose: ``ProviderError`` covers an outage or an
+    unconfigured segment, and ``ImproperlyConfigured`` covers a bad
+    ``EMAIL_PROVIDER``. The confirmation is already committed to the database,
+    which is the source of truth, so the mirror is updated best effort and
+    ``provider_synced`` records that it is behind. Without a reconcile job that
+    flag is what a later fix would use, and until then the address stays
+    suppressed in Resend.
+
+    ``provider_synced`` is set with a queryset update rather than ``save()`` on
+    the loaded instance, so a webhook unsubscribe that lands in between is not
+    overwritten by a stale full-row write.
+    """
+    try:
+        get_provider().reactivate_contact(email)
+    except Exception:
+        # Deliberately no email address and no provider text in the log.
+        logger.error("Mailing-list provider sync failed.")
+        Subscriber.objects.filter(email=email).update(provider_synced=False)
+        return
+
+    Subscriber.objects.filter(email=email).update(provider_synced=True)
 
 
 def _send_confirmation(email: str, raw_token: str) -> None:
