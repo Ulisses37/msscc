@@ -548,13 +548,54 @@ def render_markdown(report: dict) -> str:
             lines.append(f"- {warning}")
         lines.append("")
 
-    if not has_differences(report):
-        lines.append("**No differences.** The two runs match.")
-    else:
-        lines.append("**Differences were found.** See the sections above.")
+    lines.append(summarize_verdict(report))
     lines.append("")
 
     return "\n".join(lines)
+
+
+def summarize_verdict(report: dict) -> str:
+    """Return the one-line verdict, naming the shape of the change.
+
+    A bare "differences were found" makes a reviewer read every section to learn
+    whether anything broke. Naming the counts answers that directly: anything in
+    the failing column is a regression, and additions or removals are change to
+    acknowledge rather than alarm. Additions are counted from the tests present
+    only in the current run, which does not distinguish new tests from renamed
+    ones; the detail section does.
+    """
+    pytest_results = report["pytest"]["results"]
+    jest_results = report["jest"]["results"]
+
+    total_newly_failing = 0
+    total_newly_passing = 0
+    total_added = 0
+    total_removed = 0
+
+    for results in (pytest_results, jest_results):
+        if not results.get("available", False):
+            continue
+        total_newly_failing += len(results["newly_failing"])
+        total_newly_passing += len(results["newly_passing"])
+        total_added += len(results["only_in_current"])
+        total_removed += len(results["only_in_baseline"])
+
+    if not has_differences(report):
+        return "**No differences.** The two runs match."
+
+    detail = (
+        f"{total_newly_failing} newly failing, "
+        f"{total_newly_passing} newly passing, "
+        f"{total_added} added, {total_removed} removed"
+    )
+
+    if total_newly_failing:
+        return f"**Differences were found.** {detail}. See the sections above."
+
+    return (
+        f"**No test regressions.** {detail}. The runs differ in the other "
+        "categories above, such as counts, tool versions, check status or check logs."
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

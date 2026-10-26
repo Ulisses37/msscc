@@ -258,6 +258,20 @@ A check's status and exit code are expected to agree. When a single run records
 self-contradictory and the comparison prints a warning. Warnings never change the
 exit code; a difference does.
 
+The closing line names the shape of the change rather than saying only that
+something changed, so a reviewer can tell a regression from churn without reading
+every section:
+
+| Closing line | Meaning |
+|---|---|
+| **No differences.** The two runs match. | Nothing in any counted category changed. Exit 0. |
+| **No test regressions.** N newly failing, ... | Tests changed but none broke. Usually added tests from a merged branch, or a check status or log change. Exit 1. |
+| **Differences were found.** N newly failing, ... | At least one test newly fails. Exit 1. |
+
+"Added" counts tests present only in the compared run. It cannot distinguish a new
+test from a renamed one at that level of detail, so check the "Only in the current
+run" section when that distinction matters.
+
 ## 7. What the tests do not cover
 
 **Resend is mocked in the backend tests.** No test calls the live Resend API, and
