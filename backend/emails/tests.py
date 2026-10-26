@@ -969,6 +969,96 @@ class AnnouncementTemplateTests(TestCase):
         self.assertNotIn("Unsubscribe from future announcements", html)
 
 
+class VolunteerChangeTemplateTests(TestCase):
+    """The volunteer change emails are transactional and carry no unsubscribe."""
+
+    CONTEXTS = {
+        "emails/volunteer_shift_removed.html": {
+            "first_name": "Aiko",
+            "event_name": "Cultural Exchange",
+            "role": "Greeter",
+            "removed_datetime": "December 25, 2026 at 10:00 AM",
+        },
+        "emails/volunteer_shift_moved.html": {
+            "first_name": "Aiko",
+            "event_name": "Cultural Exchange",
+            "role": "Greeter",
+            "new_datetime": "December 25, 2026 at 02:00 PM",
+            "new_location": "Memorial Auditorium",
+        },
+        "emails/volunteer_role_changed.html": {
+            "first_name": "Aiko",
+            "event_name": "Cultural Exchange",
+            "old_role": "Greeter",
+            "new_role": "Ticket Table",
+            "location": "Community Center",
+        },
+    }
+
+    def test_every_variant_renders_its_details(self):
+        expected = {
+            "emails/volunteer_shift_removed.html": [
+                "Aiko",
+                "Cultural Exchange",
+                "Greeter",
+                "December 25, 2026 at 10:00 AM",
+            ],
+            "emails/volunteer_shift_moved.html": [
+                "Aiko",
+                "Cultural Exchange",
+                "December 25, 2026 at 02:00 PM",
+                "Memorial Auditorium",
+            ],
+            "emails/volunteer_role_changed.html": [
+                "Aiko",
+                "Ticket Table",
+                "Greeter",
+                "Community Center",
+            ],
+        }
+
+        for template_name, context in self.CONTEXTS.items():
+            with self.subTest(template=template_name):
+                html = render_to_string(template_name, context)
+                for value in expected[template_name]:
+                    self.assertIn(value, html)
+
+    def test_no_variant_renders_the_unsubscribe_footer(self):
+        for template_name, context in self.CONTEXTS.items():
+            with self.subTest(template=template_name):
+                html = render_to_string(template_name, context)
+                # The same assertion the existing transactional-template test uses:
+                # the marketing footer block must not render into the body.
+                self.assertNotIn("Unsubscribe from future announcements", html)
+                self.assertNotIn("PO BOX 162785", html)
+                self.assertNotIn("footer_unsubscribe", html)
+
+    def test_no_variant_names_the_provider(self):
+        for template_name in self.CONTEXTS:
+            with self.subTest(template=template_name):
+                template = (
+                    pathlib.Path(__file__).resolve().parent
+                    / "templates"
+                    / template_name
+                ).read_text(encoding="utf-8")
+                self.assertNotIn("RESEND", template)
+
+    def test_the_move_variant_renders_without_a_first_name(self):
+        html = render_to_string(
+            "emails/volunteer_shift_moved.html",
+            {
+                "first_name": "",
+                "event_name": "Cultural Exchange",
+                "role": "Greeter",
+                "new_datetime": "December 25, 2026 at 02:00 PM",
+                "new_location": "Memorial Auditorium",
+            },
+        )
+
+        self.assertIn("Hello!", html)
+        self.assertIn("Memorial Auditorium", html)
+
+
 class AnnouncementEndpointTests(TestCase):
     """The announcement endpoint is admin-only and forwards the supplied HTML."""
 

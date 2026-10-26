@@ -1,0 +1,43 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Shift Cancelled — MSSCC{% endblock %}
+
+{% block preheader %}
+  <div style="display:none;font-size:1px;color:#F1EFE8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    The shift you signed up for has been removed.
+  </div>
+{% endblock %}
+
+{% block content %}
+  <h2 style="margin:0 0 12px 0;font-family:'Libre Baskerville',Georgia,serif;font-size:20px;line-height:1.3;font-weight:600;color:#264653;">
+    A shift you signed up for has been removed
+  </h2>
+  <p style="margin:0 0 24px 0;">
+    Hello{% if first_name %} {{ first_name }}{% endif %}! The volunteer shift below has been
+    removed from the event, so you are no longer scheduled for it. We are sorry for the
+    change, and we would love to have you join us another time.
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="12" cellspacing="0" border="0" style="background-color:#F1EFE8;border-radius:4px;margin-bottom:24px;">
+    <tr>
+      <td style="width:120px;font-weight:600;font-size:14px;color:#3D3D3A;border-bottom:1px solid #D3D1C7;">Event</td>
+      <td style="font-size:14px;color:#3D3D3A;border-bottom:1px solid #D3D1C7;">{{ event_name }}</td>
+    </tr>
+    <tr>
+      <td style="width:120px;font-weight:600;font-size:14px;color:#3D3D3A;border-bottom:1px solid #D3D1C7;">Role</td>
+      <td style="font-size:14px;color:#3D3D3A;border-bottom:1px solid #D3D1C7;">{{ role }}</td>
+    </tr>
+    <tr>
+      <td style="width:120px;font-weight:600;font-size:14px;color:#3D3D3A;">Original date &amp; time</td>
+      <td style="font-size:14px;color:#3D3D3A;">{{ removed_datetime }}</td>
+    </tr>
+  </table>
+
+  <p style="margin:16px 0 0 0;">
+    If you would like to help at another event, please visit our volunteer page.
+  </p>
+  <p style="margin:8px 0 0 0;font-size:14px;line-height:1.6;color:#6B6B68;">
+    Thank you for your interest in volunteering with the Matsuyama-Sacramento Sister City
+    Corporation. If you have any questions, please reply to this email.
+  </p>
+{% endblock %}
