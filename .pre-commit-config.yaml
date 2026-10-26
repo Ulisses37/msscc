@@ -25,6 +25,21 @@ repos:
         files: "^frontend/.*\\.([cm]?[jt]sx?)$"
         stages: [pre-commit]
 
+      # Runs with the normal development settings, so backend/.env must be
+      # present: settings import needs DJANGO_SECRET_KEY, FIELD_ENCRYPTION_KEYS
+      # and the DB_* variables. The check attempts a connection to each
+      # configured database; an unreachable dev DB only prints a
+      # RuntimeWarning, it does not fail the hook.
+      # The venv path below is Windows-only; on macOS/Linux use
+      # backend/venv/bin/python.
+      - id: makemigrations-check
+        name: django makemigrations --check
+        entry: backend/venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
       - id: ruff-check-backend
         name: ruff check backend (check only)
         entry: ruff check backend
