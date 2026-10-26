@@ -43,6 +43,7 @@ class Donation(models.Model):
     )
     reference_id = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+    receipt_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-donation_date", "-created_at", "donation_id"]
@@ -123,6 +124,7 @@ class Membership(models.Model):
     notes = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    receipt_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-start_date", "-created_at", "membership_id"]
