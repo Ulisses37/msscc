@@ -9,6 +9,13 @@ recorded for information and ignored here. Without that rule a re-run on the sam
 commit would always report differences, and the "empty diff" check would be
 useless.
 
+Results are keyed per failure, not per test. A pytest test using ``subTest()``
+renders as one ``<testcase>`` per test with one ``<failure>`` child per failing
+subtest, so keying per test would hide a subtest that newly broke inside a test
+that was already failing. A subtest failure is identified by its parameters when
+the message carries them, and by position otherwise; positional keys shift when
+subtests are added, removed or reordered, which the procedure documents.
+
 Exit codes: 0 when the two runs match, 1 when differences were found, 2 when a run
 directory could not be read. The distinction lets a reviewer or a future CI job
 gate on a changed test result.
@@ -16,6 +23,7 @@ gate on a changed test result.
 
 import argparse
 import json
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -52,7 +60,13 @@ def resolve_run(value: str) -> Path:
 
 
 def read_pytest(run_dir: Path) -> dict | None:
-    """Return the test node ids and per-app counts from a pytest.xml."""
+    """Return the test node ids and per-app counts from a pytest.xml.
+
+    Failures are keyed one entry per ``<failure>``/``<error>`` child, matching
+    ``summarize.py``. A single test using ``subTest()`` carries one child per
+    failing subtest, so keying per testcase would hide a subtest that newly
+    started failing inside a test that was already failing.
+    """
     path = run_dir / "pytest.xml"
     if not path.is_file():
         return None
@@ -64,24 +78,81 @@ def read_pytest(run_dir: Path) -> dict | None:
 
     results: dict[str, str] = {}
     per_app: dict[str, dict] = {}
+    subtest_labels = read_subtest_labels(run_dir)
 
     for testcase in root.iter("testcase"):
         classname = testcase.get("classname", "")
+        name = testcase.get("name", "")
         app = classname.split(".")[0] or "unknown"
-        node = f"{classname}::{testcase.get('name', '')}"
-
-        if testcase.find("failure") is not None or testcase.find("error") is not None:
-            status = "failed"
-        elif testcase.find("skipped") is not None:
-            status = "skipped"
-        else:
-            status = "passed"
-
-        results[node] = status
+        node = f"{classname}::{name}"
         bucket = per_app.setdefault(app, {"passed": 0, "failed": 0, "skipped": 0})
-        bucket[status] += 1
+        bucket["tests"] = bucket.get("tests", 0) + 1
+
+        failures = testcase.findall("failure") + testcase.findall("error")
+        if failures:
+            results.update({key: "failed" for key in _failure_keys(node, failures, subtest_labels)})
+            bucket["failed"] += len(failures)
+        elif testcase.find("skipped") is not None:
+            results[node] = "skipped"
+            bucket["skipped"] += 1
+        else:
+            results[node] = "passed"
+            bucket["passed"] += 1
 
     return {"results": results, "per_app": per_app, "total": len(results)}
+
+
+def read_subtest_labels(run_dir: Path) -> dict[str, list[str]]:
+    """Collect subtest identities from pytest's ``SUBFAILED`` report lines.
+
+    Each line looks like ``SUBFAILED(value='plaintext') <path>::<Class>::<test>``.
+    The parameters are what a reader recognises and they survive subtests being
+    reordered, so they are preferred over a positional label.
+    """
+    path = run_dir / "pytest-summary.txt"
+    if not path.is_file():
+        return {}
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+
+    labels: dict[str, list[str]] = {}
+    location_pattern = re.compile(r"^SUBFAILED\((.*?)\)\s+(\S+)\s*$", re.MULTILINE)
+    for params, location in location_pattern.findall(text):
+        normalized = location.replace("\\", "/")
+        labels.setdefault(normalized, []).append(f"subTest({params})")
+    return labels
+
+
+def _failure_keys(node: str, failures: list, labels: dict) -> list[str]:
+    """Return one key per failure inside a single testcase.
+
+    The subtest parameters reported by pytest are preferred, because they are what
+    a reader recognises and they survive subtests being reordered. When they are
+    unavailable the failure is keyed by position, which only stays stable while
+    the subtests are not added, removed or reordered; that limitation is
+    documented in the procedure.
+    """
+    if len(failures) == 1:
+        return [node]
+
+    class_segment = node.split("::")[0].rsplit(".", 1)[-1]
+    reported: list[str] = []
+    for location, values in labels.items():
+        if f"::{class_segment}::" in location:
+            reported = values
+            break
+
+    keys: list[str] = []
+    for index, failure in enumerate(failures, start=1):
+        label = reported[index - 1] if index <= len(reported) else None
+        if label is None:
+            match = re.search(r"subTest\((.*?)\)\s*$", failure.get("message", ""), re.MULTILINE)
+            label = f"subTest({match.group(1)})" if match else None
+        keys.append(f"{node} [{label or f'subtest {index}/{len(failures)}'}]")
+    return keys
 
 
 def read_jest(run_dir: Path) -> dict | None:
@@ -287,7 +358,8 @@ def render_markdown(report: dict) -> str:
 
         lines.append(
             f"Tests: {results['baseline_total']} in the baseline, "
-            f"{results['current_total']} now."
+            f"{results['current_total']} now. Counts include one entry per failure, so a "
+            "test with several failing subtests contributes several entries."
         )
         lines.append("")
 

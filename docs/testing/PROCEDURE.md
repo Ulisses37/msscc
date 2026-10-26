@@ -156,6 +156,7 @@ It writes to `docs/testing/runs/<timestamp>-<short-hash>/`:
 | File | Produced by |
 |---|---|
 | `pytest.xml` | pytest, JUnit XML, paths normalized |
+| `pytest-summary.txt` | pytest's own summary line, path-stripped |
 | `jest.json` | jest, JSON reporter, paths normalized |
 | `jest.log` | jest, human-readable output |
 | `tsc.log` | `tsc --noEmit` |
@@ -182,6 +183,35 @@ Two things the script does on purpose, both to keep a recorded run portable:
 JSON output flags are passed by the script, not baked into `backend/pytest.ini` or
 `frontend/package.json`, so a plain `pytest` or `npm test` stays side-effect free.
 This is a deliberate deviation from the file list in the SCRUM-786 story.
+
+### Tests and subtests
+
+The backend suite uses `subTest()` for table-driven cases, and those subtests are
+**not separate tests**. They run inside the test that contains them, which has two
+consequences worth knowing before reading any count:
+
+- pytest's summary reads `367 passed, 447 subtests passed`. The JUnit
+  `<testsuite tests="...">` attribute adds the two together and declares `814`,
+  which is **by design, not a defect**. A test count read from that attribute is
+  wrong; read `SUMMARY.md`, which counts `<testcase>` elements and reports subtests
+  on their own line.
+- **A subtest failure is not a separate `<testcase>`.** It is an extra `<failure>`
+  child on the parent test's one element. Three failing subtests in one test
+  produce one `<testcase>`, one element-level failure flag, and three `<failure>`
+  children. `scripts/summarize.py` and `scripts/compare_runs.py` both count
+  failure children, so three failing subtests are reported as three failures
+  rather than one.
+
+`SUMMARY.md` names a failing subtest by its parameters, read from pytest's
+`SUBFAILED(...)` line, for example
+`...::test_name [subTest(value='plaintext')]`. When the parameters cannot be
+recovered, the failure is identified by position instead, as `[subtest 2/3]`.
+**Positional identifiers shift when a subtest is added, removed or reordered**, so
+they can show up in `compare_runs.py` as a run of "newly failing" and "newly
+passing" entries that is really just a reordering. Treat a positional pair like
+that as a reordering until the underlying report says otherwise, and prefer a
+run captured with `pytest-summary.txt` present so the parameter form is used.
+
 
 ## 5. Summarize a run
 

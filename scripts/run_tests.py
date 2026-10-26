@@ -350,15 +350,27 @@ def strip_absolute_paths(text: str) -> str:
 
 
 def run_pytest(run_dir: Path, python: str, timeout: int) -> dict:
-    """Run the backend suite and write a normalized JUnit XML report."""
+    """Run the backend suite and write a normalized JUnit XML report.
+
+    pytest's own summary line is also saved to ``pytest-summary.txt``. The XML
+    cannot supply the subtest count on its own: a subtest is not a separate
+    ``<testcase>``, and when every subtest passes nothing in the XML records that
+    they ran at all. The summary line is the only place pytest states how many
+    subtests executed, so it is captured verbatim.
+    """
     report = (run_dir / "pytest.xml").resolve()
     result = run_command(
-        [python, "-m", "pytest", "backend", f"--junitxml={report}"],
+        [python, "-m", "pytest", "backend", "-q", f"--junitxml={report}"],
         REPO_ROOT,
         timeout,
     )
     if report.is_file():
         normalize_junit_xml(report)
+
+    (run_dir / "pytest-summary.txt").write_text(
+        strip_absolute_paths(result["output"]),
+        encoding="utf-8",
+    )
     return result
 
 

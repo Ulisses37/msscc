@@ -95,13 +95,26 @@ Those failures were observed at the baseline commit recorded in that summary. Ro
 causes were not investigated as part of the reporting work, and this document does
 not restate its conclusions. Use `scripts/compare_runs.py` to see when they clear.
 
-## Reporting caveat: the JUnit `tests` attribute
+## Reporting caveat: tests, subtests and the `tests` attribute
 
-`pytest.xml` has been observed declaring `tests="814"` on `<testsuite>` while the
-file contains **367** `<testcase>` elements, both before and after normalization
-by `scripts/run_tests.py`. The element count is authoritative and is what
-`scripts/summarize.py` counts; it warns rather than fails when the two disagree.
-Do not quote the `tests` attribute.
+The backend suite uses Django's `subTest()` for table-driven cases, and a subtest
+is **not** a separate test. It runs inside the test that contains it.
+
+pytest reports this as `367 passed, 447 subtests passed`, and the JUnit
+`<testsuite tests="...">` attribute adds the two together and declares `814`.
+**That is by design, not a defect and not a quirk.** Counting the attribute as a
+test count gives 814 for a suite of 367 tests.
+
+For the same reason, a failing subtest does not appear as its own `<testcase>`. It
+appears as an extra `<failure>` child on the parent test's element, so a test with
+three failing subtests renders as one `<testcase>` with three `<failure>` children.
+Both `scripts/summarize.py` and `scripts/compare_runs.py` count failure children
+rather than elements, so a subtest failure is neither lost nor merged into a
+single count. `SUMMARY.md` reports subtests on their own line and names each
+failing subtest by its parameters.
+
+See [PROCEDURE.md](PROCEDURE.md) for how a subtest failure is identified, including
+the positional fallback and its reordering caveat.
 
 ---
 

@@ -6,10 +6,16 @@ Reads the normalized ``pytest.xml``, ``jest.json`` and ``meta.json`` written by
 
 Two counting rules matter:
 
-* **Test counts come from the elements, never from the JUnit ``tests``
-  attribute.** Real pytest output on this project writes ``tests="814"`` while
-  containing 367 ``<testcase>`` elements, so the attribute is reported as a
-  warning when it disagrees and never used as the count.
+* **Test counts come from the ``<testcase>`` elements.** ``<testsuite
+  tests="...">`` counts subtests as well as tests, so on this project it reads
+  ``814`` for 367 tests plus 447 subtests. The attribute is reported as a warning
+  when it disagrees and never used as the count.
+* **Failures are counted per ``<failure>`` element, not per ``<testcase>``.** One
+  test using ``subTest()`` renders as a single ``<testcase>`` carrying one
+  ``<failure>`` child per failing subtest, so counting testcases would report
+  three subtest failures as one failed test. Subtests are also reported on their
+  own line, read from pytest's own summary, because a passing subtest leaves no
+  trace in the XML.
 * **Failed suites and failed tests are read from ``jest.json``, not written by
   hand.** A suite that fails to load reports a failed suite with no failed
   tests, so the two numbers legitimately differ.
@@ -19,6 +25,7 @@ Exit codes: 0 when a summary was written, 2 when the run could not be read.
 
 import argparse
 import json
+import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -51,7 +58,18 @@ def newest_run(runs_dir: Path) -> Path | None:
 
 
 def parse_pytest(run_dir: Path) -> dict:
-    """Read counts and failures out of a normalized pytest.xml."""
+    """Read counts and failures out of a normalized pytest.xml.
+
+    Two counting rules are deliberate:
+
+    * **Failures are counted per ``<failure>``/``<error>`` child, not per
+      ``<testcase>``.** A test using ``subTest()`` renders as one ``<testcase>``
+      with one ``<failure>`` child per failing subtest, so counting elements
+      would report three subtest failures as a single failed test and understate
+      the result.
+    * **``<testcase>`` count is the test count.** ``<testsuite tests="...">``
+      counts subtests as well as tests, so it is only reported when it disagrees.
+    """
     path = run_dir / "pytest.xml"
     if not path.is_file():
         return {"available": False}
@@ -62,37 +80,135 @@ def parse_pytest(run_dir: Path) -> dict:
         return {"available": False, "error": str(error)}
 
     suite = root.find("testsuite")
-    testsuites = root.get("tests", "0")
     total = 0
-    failed: list[str] = []
+    failure_count = 0
+    failed_tests: list[str] = []
     suites: dict[str, dict] = {}
+    summary = parse_pytest_summary(run_dir)
+    subtest_labels = summary.get("labels", {})
 
     for testcase in root.iter("testcase"):
         classname = testcase.get("classname", "")
+        name = testcase.get("name", "")
         # The classname is a dotted python path; the first segment is the app.
         app = classname.split(".")[0] or "unknown"
         bucket = suites.setdefault(app, {"total": 0, "failed": 0, "skipped": 0})
         bucket["total"] += 1
         total += 1
 
-        if testcase.find("failure") is not None or testcase.find("error") is not None:
-            bucket["failed"] += 1
-            failed.append(f"{classname}::{testcase.get('name', '')}")
+        failures = testcase.findall("failure") + testcase.findall("error")
+        if failures:
+            failure_count += len(failures)
+            bucket["failed"] += len(failures)
+            failed_tests.extend(
+                _subtest_ids(classname, name, failures, subtest_labels)
+            )
         elif testcase.find("skipped") is not None:
             bucket["skipped"] += 1
 
     attribute = suite.get("tests") if suite is not None else None
+
     return {
         "available": True,
         "total": total,
-        "failed": len(failed),
+        "failed": failure_count,
         "skipped": sum(b["skipped"] for b in suites.values()),
-        "failed_tests": sorted(failed),
+        "failed_tests": sorted(failed_tests),
         "suites": dict(sorted(suites.items())),
         "attribute_disagrees": attribute is not None and attribute.isdigit() and int(attribute) != total,
         "attribute_value": attribute,
-        "testsuites_attr": testsuites,
+        "subtests": summary,
     }
+
+
+def _subtest_ids(classname: str, name: str, failures: list, labels: dict) -> list[str]:
+    """Return one identifier per failure inside a single testcase.
+
+    The subtest parameters reported by pytest are preferred, because they are what
+    a reader recognises and they survive subtests being reordered. When they are
+    unavailable the failure is identified by position, which is stable only while
+    the subtests are not added, removed or reordered; that limitation is
+    documented in the procedure.
+    """
+    node = f"{classname}::{name}"
+    if len(failures) == 1:
+        return [node]
+
+    reported = _reported_labels(classname, labels)
+    ids: list[str] = []
+    for index, failure in enumerate(failures, start=1):
+        label = None
+        if index <= len(reported):
+            label = reported[index - 1]
+        if label is None:
+            label = _failure_label(failure.get("message", ""))
+        ids.append(f"{node} [{label or f'subtest {index}/{len(failures)}'}]")
+    return ids
+
+
+def _reported_labels(classname: str, labels: dict) -> list[str]:
+    """Return the subtest labels pytest reported for a classname, if any.
+
+    The location pytest prints is a file path plus ``::Class::test``, while the
+    XML gives a dotted ``module.Class``. The class segment is what both share, so
+    it is what the match is based on.
+    """
+    wanted = classname.rsplit(".", 1)[-1]
+    if not wanted:
+        return []
+    for location, values in labels.items():
+        if f"::{wanted}::" in location:
+            return values
+    return []
+
+
+def _failure_label(message: str) -> str | None:
+    """Extract a ``subTest`` parameter list from a failure message, if present."""
+    match = re.search(r"subTest\((.*?)\)\s*$", message, re.MULTILINE)
+    return f"subTest({match.group(1)})" if match else None
+
+
+def parse_pytest_summary(run_dir: Path) -> dict:
+    """Read pytest's own summary line for counts the XML does not carry.
+
+    Only the subtest count is taken from here, because a subtest is invisible in
+    the XML when it passes. Unexpected lines are ignored rather than guessed at.
+    """
+    path = run_dir / "pytest-summary.txt"
+    result = {"available": False, "subtests_passed": None, "subtests_failed": None, "labels": {}}
+    if not path.is_file():
+        return result
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return result
+
+    passed = re.search(r"(\d+) subtests? passed", text)
+    failed = re.search(r"(\d+) subtests? failed", text)
+    if passed or failed:
+        result["available"] = True
+        result["subtests_passed"] = int(passed.group(1)) if passed else 0
+        result["subtests_failed"] = int(failed.group(1)) if failed else 0
+
+    result["labels"] = parse_subtest_labels(text)
+    return result
+
+
+def parse_subtest_labels(text: str) -> dict[str, list[str]]:
+    """Collect subtest identities from pytest's ``SUBFAILED`` report lines.
+
+    Each line looks like ``SUBFAILED(value='plaintext') <path>::<Class>::<test>``.
+    The parameters are the identity a reader recognises and they survive subtests
+    being reordered, so they are preferred over a positional label. The key is the
+    file path plus test name, and the value is the ordered list of parameters.
+    """
+    labels: dict[str, list[str]] = {}
+    pattern = re.compile(r"^SUBFAILED\((.*?)\)\s+(\S+)\s*$", re.MULTILINE)
+    for params, location in pattern.findall(text):
+        labels.setdefault(location.replace("\\", "/"), []).append(f"subTest({params})")
+    return labels
+
 
 
 def parse_jest(run_dir: Path) -> dict:
@@ -199,12 +315,32 @@ def _render_counts(pytest_data: dict, jest_data: dict) -> list[str]:
     if pytest_data.get("available"):
         total = pytest_data["total"]
         failed = pytest_data["failed"]
-        passed = total - failed - pytest_data["skipped"]
+        passed = total - len(pytest_data["failed_tests"]) - pytest_data["skipped"]
+        subtests = pytest_data.get("subtests", {})
+
         lines.append(
             f"### Backend (pytest): {total} tests, {passed} passed, "
             f"{failed} failed, {pytest_data['skipped']} skipped"
         )
         lines.append("")
+
+        if subtests.get("available"):
+            sub_passed = subtests.get("subtests_passed") or 0
+            sub_failed = subtests.get("subtests_failed") or 0
+            if sub_failed:
+                lines.append(
+                    f"SubTests: {sub_passed} passed, {sub_failed} failed. A subtest "
+                    "failure is counted inside its parent test as well, so the two "
+                    "lines describe the same run at different granularity."
+                )
+            else:
+                lines.append(
+                    f"SubTests: {sub_passed} passed, 0 failed. Subtests are not "
+                    "separate tests; they run inside the tests counted above, so they "
+                    "are reported on their own line rather than added to the total."
+                )
+            lines.append("")
+
         lines.append("| App | Tests | Failed | Skipped |")
         lines.append("|---|---|---|---|")
         for app, counts in pytest_data["suites"].items():
@@ -333,26 +469,49 @@ def _render_known_failures(pytest_data: dict, jest_data: dict) -> list[str]:
 
 
 def _render_pytest_attribute_warning(pytest_data: dict) -> list[str]:
-    """Warn when the JUnit ``tests`` attribute disagrees with the element count.
+    """Explain the ``tests`` attribute when it disagrees with the element count.
 
-    This is a warning and never a failure. Real pytest output on this project has
-    been observed writing ``tests="814"`` for a file holding 367 ``<testcase>``
-    elements, so the element count is what this report counts; the attribute is
-    only reported so the discrepancy stays visible.
+    This is a warning and never a failure, and it is not a defect in anything:
+    pytest's ``tests`` attribute counts subtests alongside tests, so a suite with
+    367 tests and 447 subtests legitimately declares ``tests="814"``. The summary
+    reports the count it can attribute to individual tests, and says so here so
+    the difference stays visible rather than looking like a mistake.
     """
     if not pytest_data.get("available") or not pytest_data.get("attribute_disagrees"):
         return []
 
-    return [
+    subtests = pytest_data.get("subtests", {})
+    sub_total = (subtests.get("subtests_passed") or 0) + (subtests.get("subtests_failed") or 0)
+    lines = [
         "## Reporting note",
         "",
-        f"> Warning: `pytest.xml` declares `tests=\"{pytest_data['attribute_value']}\"` on "
-        f"`<testsuite>`, but the file contains {pytest_data['total']} `<testcase>` "
-        "elements. The element count is authoritative and is what this summary counts. "
-        "This attribute mismatch has been observed in raw pytest output, before any "
-        "normalization by `scripts/run_tests.py`.",
-        "",
+        f"`pytest.xml` declares `tests=\"{pytest_data['attribute_value']}\"` on "
+        f"`<testsuite>` while containing {pytest_data['total']} `<testcase>` elements. "
+        "The attribute counts subtests as well as tests, which is by design.",
     ]
+
+    if subtests.get("available") and sub_total:
+        lines.append("")
+        lines.append(
+            f"That run reported {subtests.get('subtests_passed') or 0} subtests passed and "
+            f"{subtests.get('subtests_failed') or 0} failed, and "
+            f"{pytest_data['total']} + {sub_total} = "
+            f"{pytest_data['total'] + sub_total}, which is the attribute value."
+        )
+    else:
+        lines.append("")
+        lines.append(
+            "The subtest count is unavailable for this run, so the difference cannot be "
+            "reconciled here. Recapture the run to record pytest's summary line."
+        )
+
+    lines.append("")
+    lines.append(
+        "The `<testcase>` element count is what this summary reports as the test count, "
+        "because it is the count that can be attributed to named tests."
+    )
+    lines.append("")
+    return lines
 
 
 def load_meta(run_dir: Path) -> dict:
@@ -384,6 +543,35 @@ def reconcile(pytest_data: dict, jest_data: dict) -> list[str]:
                 f"pytest: per-app totals sum to {suite_total} but {pytest_data['total']} "
                 "testcase elements were counted."
             )
+
+        failure_total = sum(counts["failed"] for counts in pytest_data["suites"].values())
+        if failure_total != pytest_data["failed"]:
+            warnings.append(
+                f"pytest: per-app failure counts sum to {failure_total} but "
+                f"{pytest_data['failed']} failure elements were counted."
+            )
+
+        named_failures = len(pytest_data["failed_tests"])
+        if named_failures != pytest_data["failed"]:
+            warnings.append(
+                f"pytest: {named_failures} failure names were extracted but "
+                f"{pytest_data['failed']} failure elements were counted."
+            )
+
+        subtests = pytest_data.get("subtests", {})
+        if subtests.get("available"):
+            sub_total = (subtests.get("subtests_passed") or 0) + (subtests.get("subtests_failed") or 0)
+            attribute = pytest_data.get("attribute_value")
+            if attribute and attribute.isdigit() and pytest_data["total"] + sub_total != int(attribute):
+                warnings.append(
+                    f"pytest: {pytest_data['total']} tests plus {sub_total} subtests does "
+                    f"not equal the declared tests attribute ({attribute})."
+                )
+            if (subtests.get("subtests_failed") or 0) != pytest_data["failed"]:
+                warnings.append(
+                    f"pytest: {subtests.get('subtests_failed') or 0} subtests failed but "
+                    f"{pytest_data['failed']} failure elements were counted."
+                )
 
     if jest_data.get("available"):
         suite_total = sum(suite["total"] for suite in jest_data["suites"])

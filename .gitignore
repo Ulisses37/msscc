@@ -21,6 +21,9 @@ backend/**/*.pyc
 backend/**/__pycache__/
 backend/staticfiles/
 
+# Python bytecode from the scripts in scripts/
+scripts/__pycache__/
+
 # Temporary Files
 *.tmp
 tmp/
