@@ -28,8 +28,9 @@ repos:
       # Runs with the normal development settings, so backend/.env must be
       # present: settings import needs DJANGO_SECRET_KEY, FIELD_ENCRYPTION_KEYS
       # and the DB_* variables. The check attempts a connection to each
-      # configured database; an unreachable dev DB only prints a
-      # RuntimeWarning, it does not fail the hook.
+      # configured database; an unreachable local DB (for example, the Docker
+      # Postgres container not running) only prints a RuntimeWarning, it does
+      # not fail the hook.
       # The venv path below is Windows-only; on macOS/Linux use
       # backend/venv/bin/python.
       - id: makemigrations-check
