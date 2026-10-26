@@ -25,17 +25,15 @@ repos:
         files: "^frontend/.*\\.([cm]?[jt]sx?)$"
         stages: [pre-commit]
 
-      # Runs with the normal development settings, so backend/.env must be
-      # present: settings import needs DJANGO_SECRET_KEY, FIELD_ENCRYPTION_KEYS
-      # and the DB_* variables. The check attempts a connection to each
-      # configured database; an unreachable local DB (for example, the Docker
-      # Postgres container not running) only prints a RuntimeWarning, it does
-      # not fail the hook.
+      # Pinned to test settings so an inherited DJANGO_SETTINGS_MODULE or DB_*
+      # variable cannot change what this check tests, and so no running database
+      # is needed. Those settings still import base.py, so backend/.env must be
+      # present for DJANGO_SECRET_KEY and FIELD_ENCRYPTION_KEYS.
       # The venv path below is Windows-only; on macOS/Linux use
       # backend/venv/bin/python.
       - id: makemigrations-check
         name: django makemigrations --check
-        entry: backend/venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run
+        entry: backend/venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
         language: system
         pass_filenames: false
         always_run: true
