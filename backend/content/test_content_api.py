@@ -1,5 +1,5 @@
 # Run from the repository root with:
-# backend\venv\Scripts\python.exe -m pytest backend/content/test_content_api.py
+# backend\venv\Scripts\python.exe -m pytest -v backend/content/test_content_api.py
 
 from django.test import TestCase
 from rest_framework.test import APIClient
