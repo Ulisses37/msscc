@@ -159,7 +159,7 @@ export default function PartnersPage() {
   const sponsors = partners.filter(partner => ['sponsor', 'sponsors'].includes(partner.categoryEn.toLowerCase()));
 
   return (
-    <main className="flex min-h-screen min-w-0 max-w-full flex-col items-center bg-[#fdfdfd] p-4 font-sans text-[#1a1a1a] sm:p-6 lg:p-10">
+    <main className="flex min-h-screen min-w-0 max-w-full flex-col items-center bg-[#fdfdfd] px-4 pb-4 font-sans text-[#1a1a1a] sm:px-6 sm:pb-6 lg:px-10 lg:pb-10">
       {/* Mobile-first padding preserves readable gutters, while width constraints prevent child
           content from expanding the page beyond narrow viewports. */}
       {/* Staff-entered headings use a fixed 64px size, so this page scales them on narrow screens.
