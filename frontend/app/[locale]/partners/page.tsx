@@ -165,7 +165,7 @@ export default function PartnersPage() {
       {/* Staff-entered headings use a fixed 64px size, so this page scales them on narrow screens.
           Emergency wrapping also keeps long English and Japanese content inside the viewport. */}
       <section
-        className="mx-auto w-full min-w-0 max-w-content px-4 py-8 [overflow-wrap:anywhere] sm:px-6 sm:py-10 [&_h2]:text-[clamp(2rem,10vw,4rem)]"
+        className="mx-auto w-full min-w-0 max-w-content px-4 pt-8 [overflow-wrap:anywhere] sm:px-6 sm:pt-10 [&_h2]:text-[clamp(2rem,10vw,4rem)]"
       >
         <ContentStateTransition state={contentDisplayState} source="partners">
           {contentBlocks.map((block) => (
@@ -181,7 +181,7 @@ export default function PartnersPage() {
       {/* Partner Links */}
       {/* Long partner names may contain few natural break points, so links can wrap without
           widening the section or causing horizontal page scrolling. */}
-      <section className="w-full min-w-0 max-w-content border-b border-msscc-gray-light px-4 py-8 sm:px-6 sm:py-10">
+      <section className="w-full min-w-0 max-w-content border-b border-msscc-gray-light px-4 pb-8 sm:px-6 sm:pb-10">
         <h2 className="mb-4 break-words font-heading text-heading-2 text-[#dc2626]">
           {t('partnerLinks')}
         </h2>
