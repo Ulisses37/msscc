@@ -45,14 +45,14 @@ export function ContentBlockRenderer({
 
         case 'subheader':
         return (
-          <h4 className="font-heading text-[18px] font-bold text-msscc-gray-dark">
+          <h4 className="font-heading text-[22px] font-bold text-msscc-gray-dark">
             <RichTextContent value={content} />
           </h4>
         );
 
       case 'paragraph':
         return (
-          <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
+          <p className="mb-4 whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
             <RichTextContent value={content} />
           </p>
         );
