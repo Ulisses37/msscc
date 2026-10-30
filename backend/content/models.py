@@ -39,6 +39,8 @@ class Content(models.Model):
 
     content_en = models.TextField(blank=True)
     content_ja = models.TextField(blank=True)
+    # Management-command imports use this key for idempotent runs and targeted rollback.
+    import_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     # Left alignment preserves the layout used before alignment controls existed.
     image_alignment = models.CharField(
         max_length=6,
