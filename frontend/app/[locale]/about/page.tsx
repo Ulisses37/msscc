@@ -174,23 +174,22 @@ export default function AboutPage() {
         ) : (
           <>
             {/* Officers Section */}
-            {/* Full-width mobile cards need shared gutters and extra vertical separation for readable bios. */}
-            <div className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-6 lg:gap-2 lg:px-2">
-              <div className="hidden lg:col-span-1 lg:block" /> {/* left spacer */}
-              {boardMembers.map((member) => {
-                if (!member.isDirector) {
-                  return (
-                    <OfficerCard
-                      key={member.boardMemberName}
-                      boardMemberName={member.boardMemberName}
-                      boardMemberRole={member.boardMemberRole}
-                      boardMemberCaption={member.boardMemberCaption ?? ""}
-                      boardMemberImageURL={member.boardMemberImageURL}
-                    />
-                  );
-                }
-              })}
-              <div className="hidden lg:col-span-1 lg:block" /> {/* right spacer */}
+            {/* Four desktop columns let every fifth officer begin a directly aligned new row. */}
+            <div
+              data-testid="officer-grid"
+              className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-4 lg:gap-4 lg:px-6"
+            >
+              {boardMembers
+                .filter((member) => !member.isDirector)
+                .map((member) => (
+                  <OfficerCard
+                    key={member.boardMemberName}
+                    boardMemberName={member.boardMemberName}
+                    boardMemberRole={member.boardMemberRole}
+                    boardMemberCaption={member.boardMemberCaption ?? ""}
+                    boardMemberImageURL={member.boardMemberImageURL}
+                  />
+                ))}
             </div>
 
             {/* Directors Section */}
@@ -201,19 +200,18 @@ export default function AboutPage() {
             </div>
             {/* Narrow gutters remain visible while keeping four Director frames inside a 768px viewport. */}
             <div
+              data-testid="director-grid"
               className="mx-auto mb-6 grid max-w-content grid-cols-2 gap-x-2 gap-y-8 px-4 sm:gap-x-3 md:grid-cols-4 md:gap-y-10 md:px-6 lg:gap-x-4"
             >
-              {boardMembers.map((member) => {
-                if (member.isDirector) {
-                  return (
-                    <DirectorCard
-                      key={member.boardMemberName}
-                      boardMemberName={member.boardMemberName}
-                      boardMemberImageURL={member.boardMemberImageURL}
-                    />
-                  );
-                }
-              })}
+              {boardMembers
+                .filter((member) => member.isDirector)
+                .map((member) => (
+                  <DirectorCard
+                    key={member.boardMemberName}
+                    boardMemberName={member.boardMemberName}
+                    boardMemberImageURL={member.boardMemberImageURL}
+                  />
+                ))}
             </div>
           </>
         )}

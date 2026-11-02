@@ -102,6 +102,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 ) {
   const [edited, setEdited] = useState<BoardMember | null>(member);
   const [editedFile, setEditedFile] = useState<File | null>(null);
+  const isNewMember = member?.boardMemberId === -1;
   // Keep each board-member translation independent so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
   const nameReviewNotice = useTranslationReviewNotice();
@@ -305,9 +306,18 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           <button onClick={() => onClose(null)} className="flex-1 px-2 sm:px-4 py-2 bg-gray-500 text-white rounded">
             Close
           </button>
-          <button onClick={() => { onDelete(member); onClose(null); }} className="flex-1 px-2 sm:px-4 py-2 bg-red-500 text-white rounded">
-            Delete
-          </button>
+          {/* An unsaved draft has no database record to delete. */}
+          {!isNewMember && (
+            <button
+              onClick={() => {
+                onDelete(member);
+                onClose(null);
+              }}
+              className="flex-1 rounded bg-red-500 px-2 py-2 text-white sm:px-4"
+            >
+              Delete
+            </button>
+          )}
           <button
             onClick={() => {
               if (!edited?.boardMemberNameEn?.trim()) {
@@ -319,7 +329,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             }}
             className="flex-1 px-2 sm:px-4 py-2 bg-green-500 text-white rounded"
           >
-            {member?.boardMemberNameEn ? "Update" : "Add"}
+            {isNewMember ? "Add" : "Update"}
           </button>
         </div>
       </div>
