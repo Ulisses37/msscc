@@ -188,4 +188,19 @@ describe('AboutPage CMS and board sections', () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });
+
+  it('limits board member rows to four columns on larger screens', async () => {
+    mockFetch
+      .mockResolvedValueOnce(response(boardMembers()))
+      .mockResolvedValueOnce(response([]));
+
+    render(<AboutPage />);
+
+    await waitFor(() => expect(screen.getByText('Alice Director')).toBeInTheDocument());
+
+    // Both groups rely on CSS Grid to move each fifth member directly to the next row.
+    expect(screen.getByTestId('officer-grid')).toHaveClass('lg:grid-cols-4');
+    expect(screen.getByTestId('officer-grid')).not.toHaveClass('lg:grid-cols-6');
+    expect(screen.getByTestId('director-grid')).toHaveClass('md:grid-cols-4');
+  });
 });

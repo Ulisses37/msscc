@@ -323,6 +323,70 @@ The command creates the Home, Program|Events, Support, Membership, About|Board, 
 records when they are missing. It can be run again safely and does not overwrite existing page
 records or page content.
 
+### Populate the initial public page content
+
+After running `seed_pages`, use the page-content importer to add the bilingual text and images
+defined in `docs/pagecontent.docx`. The command appends its blocks after any existing page content.
+It does not overwrite manually entered blocks, and repeated runs skip blocks that were already
+imported.
+
+Validate the document, page records, translations, and images without writing to the database or
+storage:
+
+**Windows:**
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py populate_page_content --dry-run
+```
+
+**Mac:**
+
+```bash
+backend/venv/bin/python backend/manage.py populate_page_content --dry-run
+```
+
+Populate the content after the dry run succeeds:
+
+**Windows:**
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py populate_page_content
+```
+
+**Mac:**
+
+```bash
+backend/venv/bin/python backend/manage.py populate_page_content
+```
+
+To use a document at another location, pass its path explicitly:
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py populate_page_content --document <path-to-docx>
+```
+
+```bash
+backend/venv/bin/python backend/manage.py populate_page_content --document <path-to-docx>
+```
+
+If the imported result needs to be removed, roll back only the blocks and media created by this
+command. Content entered manually through the Page Editor is preserved:
+
+**Windows:**
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py populate_page_content --rollback
+```
+
+**Mac:**
+
+```bash
+backend/venv/bin/python backend/manage.py populate_page_content --rollback
+```
+
+The population and rollback commands write to the configured development database and object
+storage. Coordinate with the team before running either command against the shared setup.
+
 ---
 
 ## 7. Configure Storage Bucket

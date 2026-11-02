@@ -17,6 +17,21 @@ export interface BoardMember {
 }
 
 
+function createBoardMemberDraft(type: 'officer' | 'director'): BoardMember {
+  // A negative ID lets the shared save flow distinguish unsaved records from existing members.
+  return {
+    boardMemberId: -1,
+    boardMemberNameEn: '',
+    boardMemberNameJa: '',
+    boardMemberImageURL: null,
+    boardMemberRoleEn: type === 'director' ? 'Director' : '',
+    boardMemberRoleJa: '',
+    boardMemberCaptionEn: '',
+    boardMemberCaptionJa: '',
+  };
+}
+
+
 export default function BoardOfDirectors() {
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
   const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
@@ -71,7 +86,24 @@ export default function BoardOfDirectors() {
       </header>
 
       <div className="border border-gray-300 my-6 pb-3 bg-msscc-gray-faint">
-        <h2 className="text-2xl font-serif px-3 py-2">Officers</h2>
+        <div className="flex items-center justify-between px-3 py-2">
+          <h2 className="font-serif text-2xl">Officers</h2>
+          <button
+            type="button"
+            aria-label="Add officer"
+            onClick={() => {
+              setSelectedMember(createBoardMemberDraft('officer'));
+              setIsOpen('officer');
+            }}
+            className={
+              'flex h-10 w-10 items-center justify-center rounded bg-green-400 font-bold ' +
+              'text-white hover:bg-green-600 sm:h-8 sm:w-8'
+            }
+          >
+            +
+          </button>
+        </div>
+        {/* CSS Grid automatically creates additional rows as new officers are added. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-3">
           {boardMembers
           .filter((member) => member.boardMemberRoleEn !== "Director")
@@ -96,17 +128,8 @@ export default function BoardOfDirectors() {
             type="button"
             aria-label="Add director"
             onClick={() => {
-            setSelectedMember({
-              boardMemberId: -1,
-              boardMemberNameEn: "",
-              boardMemberNameJa: "",
-              boardMemberImageURL: null,
-              boardMemberRoleEn: "Director",
-              boardMemberRoleJa: "",
-              boardMemberCaptionEn: "",
-              boardMemberCaptionJa: "",
-            });
-            setIsOpen("director");
+              setSelectedMember(createBoardMemberDraft('director'));
+              setIsOpen('director');
             }}
             className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center bg-green-400 text-white font-bold rounded hover:bg-green-600">
             +

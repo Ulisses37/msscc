@@ -29,6 +29,17 @@ const BOARD_MEMBER: BoardMember = {
   boardMemberCaptionJa: '',
 };
 
+const NEW_OFFICER: BoardMember = {
+  boardMemberId: -1,
+  boardMemberNameEn: '',
+  boardMemberNameJa: '',
+  boardMemberImageURL: null,
+  boardMemberRoleEn: '',
+  boardMemberRoleJa: '',
+  boardMemberCaptionEn: '',
+  boardMemberCaptionJa: '',
+};
+
 describe('MemberPopUp translation buttons', () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -146,5 +157,35 @@ describe('MemberPopUp translation buttons', () => {
     await user.tab();
 
     expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+  });
+
+  it('submits a new officer draft without offering a delete action', async () => {
+    const onUpdate = jest.fn();
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={NEW_OFFICER}
+        type="officer"
+        onUpdate={onUpdate}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Name (English)'), 'New Officer');
+    await user.type(screen.getByLabelText('Role (English)'), 'Secretary');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      {
+        ...NEW_OFFICER,
+        boardMemberNameEn: 'New Officer',
+        boardMemberRoleEn: 'Secretary',
+      },
+      null,
+    );
   });
 });
