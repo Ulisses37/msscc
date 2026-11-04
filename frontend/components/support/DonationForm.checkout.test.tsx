@@ -5,11 +5,13 @@ import userEvent from '@testing-library/user-event';
 
 import { DonationForm } from '@/components/support/DonationForm';
 import { createPaymentSession, getDonationQuote } from '@/services/paymentService';
+import { subscribeToUpdates } from '@/services/emailService';
 import en from '@/messages/en.json';
 import ja from '@/messages/ja.json';
 import { formatCurrency } from '@/utils/formatCurrency';
 
 let mockLocale: 'en' | 'ja' = 'en';
+jest.mock('@/services/emailService', () => ({ subscribeToUpdates: jest.fn() }));
 jest.mock('next-intl', () => ({
   useLocale: () => mockLocale,
   useTranslations: (namespace: 'SupportPage') => (key: keyof typeof en.SupportPage) =>
@@ -100,6 +102,7 @@ const originalFetch = global.fetch;
 
 beforeEach(() => {
   mockLocale = 'en';
+  jest.mocked(subscribeToUpdates).mockReset().mockResolvedValue(undefined);
   window.history.replaceState({}, '', '/en/support');
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
@@ -113,7 +116,7 @@ beforeEach(() => {
   jest.mocked(createPaymentSession).mockReset();
   jest.mocked(createPaymentSession).mockResolvedValue({ sessionId: 'cs_test', clientSecret: 'secret_test' });
 });
-afterEach(() => { global.fetch = originalFetch; });
+afterEach(() => { global.fetch = originalFetch; jest.restoreAllMocks(); });
 
 async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en.SupportPage) {
   // Donor identity is a prerequisite, not the behavior under test here. One
@@ -134,6 +137,74 @@ async function fillDonor(user: ReturnType<typeof userEvent.setup>, messages = en
     });
   });
 }
+
+describe('donation mailing-list feedback', () => {
+  it.each(['en', 'ja'] as const)('shows confirmation guidance in %s separately from payment', async (locale) => {
+    mockLocale = locale;
+    const messages = (locale === 'ja' ? ja : en).SupportPage;
+    const user = userEvent.setup();
+    render(<DonationForm />);
+    await fillDonor(user, messages);
+    expect(screen.getByText(messages.mailingListConsentDetail)).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /MSSCC/ }));
+    await user.click(screen.getByRole('button', { name: messages.continueToPayment }));
+    expect(await screen.findByText(messages.mailingListAccepted)).toBeInTheDocument();
+    expect(subscribeToUpdates).toHaveBeenCalledWith('donor@example.com', 'donation');
+    expect(await screen.findByTestId('stripe-payment')).toBeInTheDocument();
+  });
+
+  it('never requests signup when consent is unchecked or toggled off', async () => {
+    const user = userEvent.setup();
+    render(<DonationForm />);
+    await fillDonor(user);
+    const consent = screen.getByRole('checkbox', { name: /MSSCC/ });
+    await user.click(consent);
+    await user.click(consent);
+    await user.click(screen.getByRole('button', { name: en.SupportPage.continueToPayment }));
+    await screen.findByTestId('stripe-payment');
+    expect(subscribeToUpdates).not.toHaveBeenCalled();
+  });
+
+  it.each(['en', 'ja'] as const)('keeps Stripe available after signup fails in %s', async (locale) => {
+    mockLocale = locale;
+    const messages = (locale === 'ja' ? ja : en).SupportPage;
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.mocked(subscribeToUpdates).mockRejectedValue(new Error('private-provider-detail'));
+    const user = userEvent.setup();
+    render(<DonationForm />);
+    await fillDonor(user, messages);
+    await user.click(screen.getByRole('checkbox', { name: /MSSCC/ }));
+    await user.click(screen.getByRole('button', { name: messages.continueToPayment }));
+    expect(await screen.findByText(messages.mailingListFailed)).toBeInTheDocument();
+    expect(await screen.findByTestId('stripe-payment')).toBeInTheDocument();
+    expect(screen.queryByText(messages.paymentSessionError)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private-provider-detail/)).not.toBeInTheDocument();
+  });
+
+  it.each(['pending', 'accepted'] as const)('deduplicates %s signup across payment retries and rerenders', async (status) => {
+    let resolve!: () => void;
+    if (status === 'pending') {
+      jest.mocked(subscribeToUpdates).mockReturnValue(new Promise<void>((done) => { resolve = done; }));
+    }
+    jest.mocked(createPaymentSession).mockRejectedValueOnce(new Error('payment unavailable'));
+    const user = userEvent.setup();
+    const { rerender } = render(<DonationForm />);
+    await fillDonor(user);
+    await user.click(screen.getByRole('checkbox', { name: /MSSCC/ }));
+    const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+    await user.click(button);
+    await screen.findByText(en.SupportPage.paymentSessionError);
+    rerender(<DonationForm />);
+    await user.dblClick(button);
+    expect(await screen.findByTestId('stripe-payment')).toBeInTheDocument();
+    expect(subscribeToUpdates).toHaveBeenCalledTimes(1);
+    expect(createPaymentSession).toHaveBeenCalledTimes(2);
+    if (status === 'pending') {
+      expect(screen.getByText(en.SupportPage.mailingListPending)).toBeInTheDocument();
+      await act(async () => resolve());
+    }
+  });
+});
 
 it('submits an anonymous donation with email only and no personal record fields', async () => {
   const user = userEvent.setup();

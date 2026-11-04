@@ -67,6 +67,35 @@ export function DonationForm() {
   const [message, setMessage] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
+  const signupInFlight = useRef(false);
+  const acceptedSignupEmails = useRef(new Set<string>());
+  const [signupFeedback, setSignupFeedback] = useState<{
+    email: string;
+    status: 'pending' | 'accepted' | 'failed';
+  } | null>(null);
+
+  const requestMailingListSignup = async () => {
+    const signupEmail = email.trim().toLowerCase();
+    if (!wantsUpdates || signupInFlight.current) return;
+    if (acceptedSignupEmails.current.has(signupEmail)) {
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+      return;
+    }
+
+    // Payment retries must not resend an accepted or still-pending signup.
+    signupInFlight.current = true;
+    setSignupFeedback({ email: signupEmail, status: 'pending' });
+    try {
+      await subscribeToUpdates(signupEmail, 'donation');
+      acceptedSignupEmails.current.add(signupEmail);
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+    } catch (error: unknown) {
+      console.error('Mailing-list signup failed after a donation.', error);
+      setSignupFeedback({ email: signupEmail, status: 'failed' });
+    } finally {
+      signupInFlight.current = false;
+    }
+  };
 
   // Values displayed in the existing donation summary.
   const [summaryEmail, setSummaryEmail] = useState('');
@@ -355,16 +384,8 @@ export function DonationForm() {
         setSubmittedReference(donationReference);
       }
 
-      // Only after the donation record exists. This is deliberately not
-      // awaited: the backend makes synchronous Resend calls, and a mailing-list
-      // signup must never delay checkout. Failures are logged and ignored.
-      if (wantsUpdates) {
-        subscribeToUpdates(email.trim().toLowerCase(), 'donation').catch(
-          (error: unknown) => {
-            console.error('Mailing-list signup failed after a donation.', error);
-          },
-        );
-      }
+      // Only after the record exists, and never awaited by payment preparation.
+      void requestMailingListSignup();
 
       // The checkout API validates this base against the saved record and
       // charges the record's total, not this request value or the quote.
@@ -706,6 +727,13 @@ export function DonationForm() {
             </span>
           </span>
         </label>
+
+        {wantsUpdates && signupFeedback?.email === email.trim().toLowerCase() && (
+          <p role="status" aria-live="polite" className="text-sm text-msscc-teal">
+            {t(`mailingList${signupFeedback.status === 'pending'
+              ? 'Pending' : signupFeedback.status === 'accepted' ? 'Accepted' : 'Failed'}`)}
+          </p>
+        )}
 
         <label className="block text-sm font-medium text-slate-700">
           {t('message')}

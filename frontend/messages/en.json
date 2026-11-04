@@ -262,7 +262,10 @@
     "printForm": "Print Membership Form",
     "printFormUnavailable": "Membership form not found on the server.",
     "mailingListConsent": "Add me to the MSSCC mailing list",
-    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time."
+    "mailingListConsentDetail": "Receive updates about events and programs after confirming by email. Signup is separate from payment completion. You can unsubscribe at any time.",
+    "mailingListPending": "Submitting your mailing-list request. You can continue with payment.",
+    "mailingListAccepted": "Mailing-list request accepted. If confirmation is needed, check your inbox and spam folder and follow the confirmation link. This does not confirm payment.",
+    "mailingListFailed": "We couldn't submit your mailing-list request. You can still continue with payment."
   },
 
   "MailingList": {
@@ -345,7 +348,10 @@
     "anonymousDonationDetail": "When selected, your donation record shows Anonymous instead of your name and does not store your address. We retain your email for internal payment records. Payment processing may still require accurate billing information.",
     "anonymousName": "Anonymous",
     "mailingListConsent": "Add me to the MSSCC mailing list",
-    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time.",
+    "mailingListConsentDetail": "Receive updates about events and programs after confirming by email. Signup is separate from payment completion. You can unsubscribe at any time.",
+    "mailingListPending": "Submitting your mailing-list request. You can continue with payment.",
+    "mailingListAccepted": "Mailing-list request accepted. If confirmation is needed, check your inbox and spam folder and follow the confirmation link. This does not confirm payment.",
+    "mailingListFailed": "We couldn't submit your mailing-list request. You can still continue with payment.",
     "message": "Message (optional)",
     "no": "No",
     "yes": "Yes",
