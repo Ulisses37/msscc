@@ -641,6 +641,7 @@ class SecurePaymentDatabaseTests(TestCase):
         created = client.post("/api/donations/", {
             **choice, "donor_first_name": "Test", "donor_last_name": "Donor",
             "donor_email": "donor@example.test",
+            "address": "123 Main Street",
             "processing_cost_contribution": "0.00", "total_amount": "0.01",
         }, format="json")
         self.assertEqual(created.status_code, 201)

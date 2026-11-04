@@ -16,6 +16,7 @@ from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, s
 from donations.serializers import (
     DonationSerializer,
     MembershipSerializer,
+    PublicDonationCreateSerializer,
     StrictContributionChoiceField,
 )
 
@@ -145,6 +146,12 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
 
     serializer_class = DonationSerializer
     permission_classes = [HasFinancialRecordPermission]
+
+    def get_serializer_class(self):
+        """Keep public creation requirements and disclosures separate from admin reads."""
+        if self.request.method == "POST":
+            return PublicDonationCreateSerializer
+        return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""

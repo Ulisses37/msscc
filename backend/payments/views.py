@@ -388,6 +388,7 @@ class PaymentReceiptView(APIView):
                 payment = Donation.objects.defer(
                     "donor_first_name_encrypted", "donor_last_name_encrypted",
                     "donor_email_encrypted",
+                    "donor_address_encrypted",
                 ).get(
                     reference_id=reference,
                     payment_status=Donation.PaymentStatus.COMPLETED,

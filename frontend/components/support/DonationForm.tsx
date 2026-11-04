@@ -257,7 +257,7 @@ export function DonationForm() {
   const formIsValid =
     emailIsValid &&
     donationIsValid &&
-    // Names and the form-only address are required for an ordinary donation;
+    // Names and the stored contact address are required for an ordinary donation;
     // Stripe collects any billing information it needs separately at checkout.
     (isAnonymous || (firstName.trim().length > 0 &&
       lastName.trim().length > 0 && address.trim().length > 0));
@@ -311,11 +311,12 @@ export function DonationForm() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              // Do not transmit previously entered names when the donor opts
+              // Do not transmit previously entered names or address when the donor opts
               // out of identifying themselves in the application record.
               ...(!isAnonymous ? {
                 donor_first_name: firstName.trim(),
                 donor_last_name: lastName.trim(),
+                address: address.trim(),
               } : {}),
               donor_email: email.trim().toLowerCase(),
               amount: amountForAttempt,

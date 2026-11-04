@@ -37,6 +37,7 @@ class EncryptedPIIAPITests(TestCase):
         self.cases = (
             (Donation, "/api/donations/", DONATION_PII, {
                 "amount": "10.00", "message": "Unchanged message", "is_anonymous": False,
+                "address": "123 Main Street",
             }),
             (Membership, "/api/donations/memberships/", MEMBERSHIP_PII, {
                 "membership_type": "student", "amount_paid": "20.00",
@@ -120,6 +121,7 @@ class EncryptedPIIAPITests(TestCase):
         for model, url, pii, other in self.cases:
             values = {**{f"{field}_encrypted": value for field, value in pii.items()}, **other}
             if model is Donation:
+                values["donor_address_encrypted"] = values.pop("address")
                 values.update(donation_date=date(2026, 10, 21), reference_id="DON-00000001")
             record = model.objects.create(**values)
             for endpoint in (url, f"{url}{record.pk}/"):

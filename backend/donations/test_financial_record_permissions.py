@@ -26,6 +26,7 @@ class FinancialRecordPermissionTests(TestCase):
             "donor_first_name": "Private Donor",
             "donor_last_name": "松山",
             "donor_email": "donor-private@example.test",
+            "address": "123 Main Street",
             "amount": "10.00", "is_anonymous": False, "message": "Private message",
         }
         self.membership_data = {

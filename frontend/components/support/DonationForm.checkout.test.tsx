@@ -88,6 +88,7 @@ it('replaces an opted-in preview with the saved breakdown before checkout', asyn
   const [, request] = jest.mocked(global.fetch).mock.calls[0];
   const body = JSON.parse((request as RequestInit).body as string) as Record<string, unknown>;
   expect(body.contribute_to_processing_costs).toBe(true);
+  expect(body.address).toBe('123 Main St');
   expect(body).not.toHaveProperty('processing_cost_contribution');
   expect(body).not.toHaveProperty('total_amount');
   expect(createPaymentSession).toHaveBeenCalledWith({
@@ -180,6 +181,7 @@ it('omits previously entered names when anonymous and restores ordinary requirem
   expect(payload.is_anonymous).toBe(true);
   expect(payload).not.toHaveProperty('donor_first_name');
   expect(payload).not.toHaveProperty('donor_last_name');
+  expect(payload).not.toHaveProperty('address');
 
   await user.click(screen.getByRole('button', { name: 'Edit donation details' }));
   // Editing remounts the continue button after the Stripe UI is removed.
@@ -201,8 +203,42 @@ it('omits previously entered names when anonymous and restores ordinary requirem
   expect(payload).toMatchObject({
     is_anonymous: false, donor_first_name: 'Ada', donor_last_name: 'Lovelace',
     donor_email: 'donor@example.com',
+    address: '123 Main St',
   });
-  expect(payload).not.toHaveProperty('address');
+});
+
+it.each(['', '   '])('blocks a non-anonymous donation with address %p', async (address) => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  fireEvent.change(screen.getByRole('textbox', { name: en.SupportPage.address }), {
+    target: { value: address },
+  });
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  expect(button).toBeDisabled();
+  await user.click(button);
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(createPaymentSession).not.toHaveBeenCalled();
+});
+
+it('submits the latest trimmed non-anonymous address only to the donation API', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user);
+  fireEvent.change(screen.getByRole('textbox', { name: en.SupportPage.address }), {
+    target: { value: '  456 Example Street, 松山市  ' },
+  });
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  expect(JSON.parse((request as RequestInit).body as string)).toMatchObject({
+    address: '456 Example Street, 松山市', is_anonymous: false,
+  });
+  expect(createPaymentSession).toHaveBeenCalledWith({
+    amount: '5', currency: 'usd', paymentPurpose: 'Donation', internalReference: reference,
+  });
 });
 
 it('reviews anonymous details before sending the anonymous request', async () => {
