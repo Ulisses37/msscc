@@ -466,7 +466,7 @@ export default function EditPagesPage() {
            </div>
          )}
         <h1 className="mb-6 border-b border-msscc-gray-light pb-4 font-heading text-2xl text-msscc-teal sm:text-display md:mb-10">
-            Edit Pages Page
+            Page Editor
         </h1>
 
         {/* Keep controls above the editor through iPad Mini width, then restore the sidebar. */}

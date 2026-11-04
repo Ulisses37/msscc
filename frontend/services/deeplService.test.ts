@@ -1,5 +1,8 @@
 /**
  * @jest-environment jsdom
+ *
+ * Run this file from the repository root with:
+ * npm --prefix frontend test -- --runInBand services/deeplService.test.ts
  */
 
 import { requestDeepLTranslation } from '@/services/deeplService';
@@ -75,7 +78,8 @@ describe('requestDeepLTranslation', () => {
 
     await expect(requestDeepLTranslation('<strong>Four</strong>')).resolves.toBeNull();
     expect(window.alert).toHaveBeenCalledWith(
-      'This translation needs 4 characters, but only 3 remain in the DeepL quota.',
+      'This translation needs 4 characters, but only 3 remain in the DeepL quota for the ' +
+        'current billing cycle. Please refer to the admin dashboard for the remaining limit.',
     );
     expect(window.confirm).not.toHaveBeenCalled();
     expect(global.fetch).toHaveBeenCalledTimes(1);
