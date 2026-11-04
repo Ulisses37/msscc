@@ -246,6 +246,7 @@ class FinancialRecordPermissionTests(TestCase):
             **{field: self.membership_data[field]
                for field in ("first_name", "last_name", "email", "phone")},
             "membership_option_id": "student", "payment_purpose": "membership",
+            "address": "123 Main Street",
         }, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(

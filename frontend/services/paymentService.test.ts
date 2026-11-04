@@ -1,7 +1,10 @@
 const originalFetch = global.fetch;
 const safeError = 'Unable to create the payment session.';
 const confirmationReference = `MEM-${'a'.repeat(32)}`;
-const identity = { firstName: 'Maya', lastName: 'Chen', email: 'maya@example.com', phone: '' };
+const identity = {
+  firstName: 'Maya', lastName: 'Chen', email: 'maya@example.com', phone: '',
+  address: '123 Main Street\n松山市, 日本',
+};
 let createMembershipPaymentSession: typeof import('@/services/paymentService').createMembershipPaymentSession;
 let getMembershipPaymentStatus: typeof import('@/services/paymentService').getMembershipPaymentStatus;
 let getDonationQuote: typeof import('@/services/paymentService').getDonationQuote;
@@ -28,7 +31,7 @@ describe('createMembershipPaymentSession', () => {
     jest.clearAllMocks();
   });
 
-  it('sends identity, option and purpose but no price or billing data', async () => {
+  it('sends contact information, option and purpose but no price or card data', async () => {
     jest.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue({
@@ -56,6 +59,7 @@ describe('createMembershipPaymentSession', () => {
       contribute_to_processing_costs: false,
       payment_purpose: 'membership',
       first_name: 'Maya', last_name: 'Chen', email: 'maya@example.com', phone: '',
+      address: identity.address,
     });
   });
 

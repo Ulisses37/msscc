@@ -79,12 +79,12 @@ export function MembershipForm({
   }, [formIsValid, onValidityChange]);
 
   useEffect(() => {
-    // Pass only identity, not address, pricing, or Stripe fields, to checkout.
+    // Contact information stays in our encrypted records, not Stripe metadata.
     onInformationChange(formIsValid ? {
       firstName: firstName.trim(), lastName: lastName.trim(),
-      email: email.trim(), phone: phone.trim(),
+      email: email.trim(), phone: phone.trim(), address: address.trim(),
     } : null);
-  }, [formIsValid, firstName, lastName, email, phone, onInformationChange]);
+  }, [formIsValid, firstName, lastName, email, phone, address, onInformationChange]);
 
   const showEmailError = emailTouched && !emailIsValid;
   const showFirstNameError = firstNameTouched && !firstNameIsValid;

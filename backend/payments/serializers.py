@@ -122,6 +122,7 @@ class MembershipPaymentSessionRequestSerializer(StrictPaymentSerializer):
     last_name = StrictCharField(max_length=255, trim_whitespace=True)
     email = serializers.EmailField(max_length=254)
     phone = StrictCharField(max_length=50, required=False, allow_blank=True, trim_whitespace=True)
+    address = StrictCharField(trim_whitespace=True)
 
     def validate_email(self, value):
         return value.strip().lower()

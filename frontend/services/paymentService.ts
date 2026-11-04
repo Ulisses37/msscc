@@ -223,6 +223,7 @@ export async function createMembershipPaymentSession({
   lastName,
   email,
   phone,
+  address,
 }: CreateMembershipPaymentSessionRequest): Promise<MembershipPaymentSession> {
   // Keep the failure generic even when the network, backend, or Stripe response
   // contains details; the calling page shows its own translated message.
@@ -243,6 +244,7 @@ export async function createMembershipPaymentSession({
         last_name: lastName,
         email,
         phone,
+        address,
       }),
     });
     if (!response.ok) {

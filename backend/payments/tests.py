@@ -256,6 +256,7 @@ class MembershipPaymentSessionTests(TestCase):
             "membership_option_id": "student", "payment_purpose": "membership",
             "first_name": "Maya", "last_name": "Chen", "email": "maya@example.com",
             "phone": "555-0100",
+            "address": "123 Main Street",
         }
         data.update(overrides)
         return self.factory.post("/api/payments/membership/session/", data, format="json")
@@ -403,13 +404,14 @@ class MembershipPaymentSessionTests(TestCase):
         self.assertEqual(Membership.objects.count(), 0)
 
     @patch("donations.services.create_membership_payment_intent")
-    def test_missing_identity_and_billing_fields_are_rejected(self, create_intent):
-        for field in ("first_name", "last_name", "email"):
+    def test_missing_contact_fields_and_client_secrets_are_rejected(self, create_intent):
+        for field in ("first_name", "last_name", "email", "address"):
             with self.subTest(field=field):
                 # Rebuild the JSON body without the required field.
                 data = {
                     "membership_option_id": "student", "payment_purpose": "membership",
                     "first_name": "Maya", "last_name": "Chen", "email": "maya@example.com",
+                    "address": "123 Main Street",
                 }
                 data.pop(field)
                 request = self.factory.post(
@@ -417,7 +419,8 @@ class MembershipPaymentSessionTests(TestCase):
                 )
                 response = MembershipPaymentSessionCreateView.as_view()(request)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        for extra in ({"address": "123 Main St"}, {"client_secret": "pi_private"}):
+                self.assertIn(field, response.data)
+        for extra in ({"client_secret": "pi_private"},):
             response = MembershipPaymentSessionCreateView.as_view()(self.request(**extra))
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         create_intent.assert_not_called()

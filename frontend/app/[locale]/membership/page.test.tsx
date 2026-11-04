@@ -178,6 +178,7 @@ describe('MembershipPage review flow', () => {
       membershipOptionId: 'family',
       contributeToProcessingCosts: false,
       firstName: 'Maya', lastName: 'Chen', email: 'member@example.com', phone: '',
+      address: '123 Main Street',
     });
     // Page-content fetches are separate from the mocked payment service.
     expect(global.fetch).not.toHaveBeenCalled();

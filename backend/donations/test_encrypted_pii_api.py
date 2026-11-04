@@ -214,6 +214,7 @@ class EncryptedPIIAPITests(TestCase):
         with self.assertNoLogs("donations", level="DEBUG"):
             response = APIClient().post("/api/payments/membership/session/", {
                 **MEMBERSHIP_PII, "membership_option_id": "student",
+                "address": "123 Main Street",
                 "payment_purpose": "membership",
             }, format="json")
         self.assertEqual(response.status_code, 201)
@@ -290,6 +291,7 @@ class EncryptedPIIAPITests(TestCase):
             with self.assertLogs("payments.views", level="ERROR") as logs:
                 response = APIClient().post("/api/payments/membership/session/", {
                     **MEMBERSHIP_PII, "membership_option_id": "student",
+                    "address": "123 Main Street",
                     "payment_purpose": "membership",
                 }, format="json")
         self.assertEqual(response.status_code, 502)

@@ -198,6 +198,7 @@ class MembershipLegacyAPITests(TestCase):
         response = APIClient().post("/api/payments/membership/session/", {
             "first_name": "Maya", "last_name": "Chen", "email": "maya@example.test",
             "membership_option_id": "student", "payment_purpose": "membership",
+            "address": "123 Main Street",
         }, format="json")
         self.assertEqual(response.status_code, 201, response.data)
         member = Membership.objects.get()
