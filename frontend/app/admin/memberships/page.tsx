@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { ManualMembershipForm } from '@/components/admin/ManualMembershipForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
@@ -81,6 +82,8 @@ const membershipExportColumnWidths: Partial<Record<keyof MembershipEntry, number
 
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
+  const [isAddingMembership, setIsAddingMembership] = useState(false);
+  const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
@@ -149,7 +152,7 @@ export default function AdminMembershipsPage() {
     }
   }, [searchQuery]);
 
-  useVisibleTableRevisionPolling('memberships', fetchMemberships, 3000);
+  useVisibleTableRevisionPolling('memberships', fetchMemberships, 3000, isAddingMembership);
 
   // Matching happens only in the authorized backend; sorting and export use its results.
   const filteredMembershipItems = membershipItems;
@@ -312,6 +315,24 @@ export default function AdminMembershipsPage() {
       </header>
 
       <main className="w-full">
+        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
+        {!isAddingMembership ? (
+          <button type="button" className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+            onClick={() => {
+              setCreationMessage(null);
+              setIsAddingMembership(true);
+            }}>
+            Add membership
+          </button>
+        ) : (
+          <ManualMembershipForm
+            onCancel={() => setIsAddingMembership(false)}
+            onCreated={() => {
+              setIsAddingMembership(false);
+              setCreationMessage('Membership record saved.');
+            }}
+          />
+        )}
         {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
         {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}
