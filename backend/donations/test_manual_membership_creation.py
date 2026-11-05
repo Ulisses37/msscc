@@ -1,4 +1,5 @@
 from contextlib import ExitStack
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -6,12 +7,13 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, models
 from django.db.models.functions import Cast
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from config.encryption import EncryptedTextError, decrypt_text
 from donations.manual_memberships import create_manual_membership
-from donations.models import Membership
+from donations.models import Membership, MembershipAnnualHistory
 from donations.serializers import ManualMembershipCreateSerializer
 from emails.models import Subscriber
 
@@ -213,3 +215,56 @@ class ManualMembershipCreationTests(TestCase):
                 self.assertEqual(record.record_source, "manual")
                 self.assertIsNone(record.completed_at)
                 self.assertIsNone(record.renewal_date)
+
+    def test_current_offline_payment_persists_without_checkout_or_receipt_timestamps(self):
+        today = timezone.localdate()
+        end = today + timedelta(days=365)
+        response = self.client.post(self.url, self.membership_data(
+            membership_type="individual", status="active", start_date=today.isoformat(),
+            end_date=end.isoformat(), renewal_date=end.isoformat(), membership_price="35.00",
+            amount_paid="35.00", payment_status="completed", payment_method="cash",
+            reference_id="offline-reference", notes="Payment received offline",
+        ), format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        record = Membership.objects.get(pk=response.data["membership_id"])
+        self.assertEqual(record.start_date, today)
+        self.assertEqual(record.end_date, end)
+        self.assertEqual(record.renewal_date, end)
+        self.assertEqual(record.status, "active")
+        self.assertEqual(record.membership_price, Decimal("35.00"))
+        self.assertEqual(record.amount_paid, Decimal("35.00"))
+        self.assertEqual(record.payment_status, "completed")
+        self.assertEqual(record.payment_method, "cash")
+        self.assertEqual(record.record_source, "manual")
+        self.assertEqual(record.reference_id, "offline-reference")
+        self.assertEqual(record.notes, "Payment received offline")
+        self.assertIsNone(record.stripe_payment_intent_id)
+        self.assertIsNone(record.completed_at)
+        self.assertIsNone(record.receipt_sent_at)
+
+    def test_matching_identity_creates_separate_record_without_changing_existing_history(self):
+        existing = create_manual_membership(self.membership_data(
+            email="member@example.test", start_date="1990-01-01", end_date="1990-12-31",
+            status="expired", notes="Original historical facts",
+        ))
+        MembershipAnnualHistory.objects.create(membership=existing, year=1990, is_active=True)
+        MembershipAnnualHistory.objects.create(membership=existing, year=1991, is_active=False)
+        before_record = Membership.objects.filter(pk=existing.pk).values().get()
+        before_history = list(MembershipAnnualHistory.objects.order_by("pk").values())
+
+        response = self.client.post(self.url, self.membership_data(
+            email="member@example.test", status="active", amount_paid="0.00",
+            payment_status="waived", start_date="2026-01-01", notes="Separate manual entry",
+        ), format="json")
+
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertNotEqual(response.data["membership_id"], existing.pk)
+        self.assertEqual(Membership.objects.count(), 2)
+        self.assertEqual(Membership.objects.filter(pk=existing.pk).values().get(), before_record)
+        self.assertEqual(
+            list(MembershipAnnualHistory.objects.order_by("pk").values()), before_history,
+        )
+        created = Membership.objects.get(pk=response.data["membership_id"])
+        self.assertEqual(created.start_date, date(2026, 1, 1))
+        self.assertEqual(created.amount_paid, Decimal("0.00"))
+        self.assertFalse(created.annual_history.exists())

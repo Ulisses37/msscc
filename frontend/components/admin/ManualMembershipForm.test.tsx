@@ -160,6 +160,37 @@ describe('manual membership entry and confirmation', () => {
     });
   });
 
+  it('submits normalized populated manual facts without calling other services', async () => {
+    enterMinimum();
+    for (const [label, value] of [
+      ['Email (optional)', ' MEMBER@EXAMPLE.TEST '], ['Phone (optional)', ' +81 123 '],
+      ['Address (optional)', ' 123 Example Street\n松山市 '],
+      ['Membership price (USD) (optional)', '35.00'], ['Amount paid (USD) (optional)', '0.00'],
+      ['Start date (optional)', '2026-01-01'], ['End date (optional)', '2026-12-31'],
+      ['Renewal date (optional)', '2027-01-01'], ['Record status (required)', 'active'],
+      ['Payment status (optional)', 'waived'], ['Payment method (optional)', 'check'],
+      ['Reference (optional)', ' offline-reference '], ['Notes (optional)', ' Saved offline facts '],
+    ]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    }
+    openReview();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm and save membership' }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith({ membershipId: 42 }));
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, request] = mockFetch.mock.calls[0];
+    expect(url).toBe(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/`);
+    expect(request.method).toBe('POST');
+    expect(JSON.parse(request.body)).toEqual({
+      first_name: 'Maya', last_name: 'Sato', membership_type: 'Historical family', status: 'active',
+      email: 'member@example.test', phone: '+81 123', address: '123 Example Street\n松山市',
+      membership_price: '35.00', amount_paid: '0.00', start_date: '2026-01-01',
+      end_date: '2026-12-31', renewal_date: '2027-01-01', payment_status: 'waived',
+      payment_method: 'check', reference_id: 'offline-reference', notes: 'Saved offline facts',
+    });
+  });
+
   it('guards repeated clicks and disables navigation while a save is pending', async () => {
     let resolveSave!: (response: unknown) => void;
     mockFetch.mockReturnValue(new Promise((resolve) => { resolveSave = resolve; }));
