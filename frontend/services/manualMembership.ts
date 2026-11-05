@@ -1,6 +1,24 @@
 import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 
 import type { ManualMembershipInput } from '@/types/manualMembership';
+import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
+
+/** Retrieve saved server facts independently of list search and pagination. */
+export async function fetchSavedMembership(membershipId: number): Promise<MembershipEntry> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/${membershipId}/`,
+      { headers: getAdminRequestHeaders(), cache: 'no-store' },
+    );
+    if (!response.ok) throw new Error('Membership detail request failed.');
+    const data: MembershipEntry = await response.json();
+    if (data?.membership_id !== membershipId) throw new Error('Invalid membership response.');
+    return data;
+  } catch {
+    console.error('Unable to load the saved membership details.');
+    throw new Error('The record was saved, but its details could not be loaded. Please try again.');
+  }
+}
 
 const API_FIELDS: Record<keyof ManualMembershipInput, string> = {
   firstName: 'first_name',
