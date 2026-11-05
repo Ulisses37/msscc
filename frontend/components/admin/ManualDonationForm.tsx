@@ -20,18 +20,19 @@ interface FieldDefinition {
   type?: 'email' | 'date' | 'amount' | 'textarea' | 'select';
   maxLength?: number;
   identity?: boolean;
+  fullWidth?: boolean;
 }
 
 const FIELDS: FieldDefinition[] = [
   { key: 'amount', label: 'Donation amount (USD)', required: true, type: 'amount' },
   { key: 'donationDate', label: 'Donation date', required: true, type: 'date' },
   { key: 'paymentMethod', label: 'Payment method', type: 'select' },
+  { key: 'externalReference', label: 'External reference', maxLength: 255 },
   { key: 'donorFirstName', label: 'First name', maxLength: 255, identity: true },
   { key: 'donorLastName', label: 'Last name', maxLength: 255, identity: true },
-  { key: 'donorEmail', label: 'Email', type: 'email', maxLength: 254 },
-  { key: 'address', label: 'Address', type: 'textarea', identity: true },
-  { key: 'externalReference', label: 'External reference', maxLength: 255 },
-  { key: 'message', label: 'Message', type: 'textarea', maxLength: 500 },
+  { key: 'donorEmail', label: 'Email', type: 'email', maxLength: 254, fullWidth: true },
+  { key: 'address', label: 'Address', type: 'textarea', identity: true, fullWidth: true },
+  { key: 'message', label: 'Message', type: 'textarea', maxLength: 500, fullWidth: true },
 ];
 
 const INITIAL_VALUES = {
@@ -190,7 +191,8 @@ export function ManualDonationForm({ onCancel, onCreated }: ManualDonationFormPr
                     >) => setValues((previous) => ({ ...previous, [field.key]: event.target.value })),
                   };
                   return (
-                    <div key={field.key} className="min-w-0">
+                    <div key={field.key}
+                      className={field.fullWidth ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
                       <label htmlFor={id}>
                         {field.label} ({field.required ? 'required' : 'optional'})
                       </label>
@@ -221,7 +223,9 @@ export function ManualDonationForm({ onCancel, onCreated }: ManualDonationFormPr
             <section aria-label="Donation facts">
               <p className="mb-4">Nothing is created until you confirm and save.</p>
               <dl className="grid gap-4 sm:grid-cols-2">
-                <div><dt>Anonymous</dt><dd>{review.isAnonymous ? 'Yes' : 'No'}</dd></div>
+                <div className="sm:col-span-2">
+                  <dt>Anonymous</dt><dd>{review.isAnonymous ? 'Yes' : 'No'}</dd>
+                </div>
                 {FIELDS.map((field) => {
                   const value = review[field.key];
                   const display = field.identity && review.isAnonymous
@@ -230,15 +234,20 @@ export function ManualDonationForm({ onCancel, onCreated }: ManualDonationFormPr
                       : field.key === 'amount' ? `${value} USD`
                         : field.key === 'paymentMethod' ? value === 'cash' ? 'Cash' : 'Check' : value;
                   return (
-                    <div key={field.key} className="min-w-0">
+                    <div key={field.key}
+                      className={field.fullWidth ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
                       <dt className="text-body-sm text-msscc-gray-mid">{field.label}</dt>
                       <dd className="whitespace-pre-wrap break-words">{display}</dd>
                     </div>
                   );
                 })}
-                <div><dt>Internal reference</dt><dd>Generated on save</dd></div>
-                <div><dt>Record origin</dt><dd>Manual entry</dd></div>
-                <div><dt>Payment status</dt><dd>Completed, already received</dd></div>
+                <div className="sm:col-span-2">
+                  <dt>Internal reference</dt><dd>Generated on save</dd>
+                </div>
+                <div className="sm:col-span-2"><dt>Record origin</dt><dd>Manual entry</dd></div>
+                <div className="sm:col-span-2">
+                  <dt>Payment status</dt><dd>Completed, already received</dd>
+                </div>
               </dl>
             </section>
           )}

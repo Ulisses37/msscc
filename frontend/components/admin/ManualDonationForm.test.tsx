@@ -64,6 +64,43 @@ describe('manual donation entry and review', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])('keeps entry rows and DOM order aligned (anonymous: %s)', (anonymous) => {
+    if (anonymous) fireEvent.click(screen.getByRole('checkbox'));
+    const form = screen.getByLabelText('Donation amount (USD) (required)').closest('form');
+    expect(form).not.toBeNull();
+    const controls = Array.from(form!.querySelectorAll('input:not([type="checkbox"]), select, textarea'));
+    expect(controls.map((control) => control.id)).toEqual([
+      'amount', 'donationDate', 'paymentMethod', 'externalReference',
+      ...(!anonymous ? ['donorFirstName', 'donorLastName'] : []),
+      'donorEmail', ...(!anonymous ? ['address'] : []), 'message',
+    ].map((key) => `manual-donation-${key}`));
+    for (const control of controls) {
+      const fullWidth = ['donorEmail', 'address', 'message']
+        .some((key) => control.id === `manual-donation-${key}`);
+      expect(control.parentElement?.classList.contains('sm:col-span-2')).toBe(fullWidth);
+    }
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('keeps review rows aligned (anonymous: %s)', (anonymous) => {
+    if (anonymous) fireEvent.click(screen.getByRole('checkbox'));
+    enterMinimum();
+    review();
+    const facts = screen.getByRole('region', { name: 'Donation facts' });
+    const labels = Array.from(facts.querySelectorAll('dt'));
+    expect(labels.map((label) => label.textContent)).toEqual([
+      'Anonymous', 'Donation amount (USD)', 'Donation date', 'Payment method',
+      'External reference', 'First name', 'Last name', 'Email', 'Address', 'Message',
+      'Internal reference', 'Record origin', 'Payment status',
+    ]);
+    for (const label of labels) {
+      const fullWidth = ['Anonymous', 'Email', 'Address', 'Message', 'Internal reference',
+        'Record origin', 'Payment status'].includes(label.textContent ?? '');
+      expect(label.parentElement?.classList.contains('sm:col-span-2')).toBe(fullWidth);
+    }
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it('identifies invalid financial/contact fields and preserves entered values', () => {
     change('Donation amount (USD) (required)', '0');
     change('Donation date (required)', '9999-01-01');
