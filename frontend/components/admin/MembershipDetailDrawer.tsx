@@ -2,23 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { formatMembershipAmount, formatMembershipDate } from '@/utils/membershipValues';
 import { membershipDisplayStatus } from "./membershipDisplayStatus";
 
 export type MembershipEntry = {
   membership_id: number;
   first_name: string;
   last_name: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   membership_type: string;
-  amount_paid: number | string;
-  payment_status: string;
+  amount_paid?: number | string | null;
+  payment_status?: string | null;
   reference_id: string;
-  start_date: string;
-  end_date: string;
-  renewal_date: string;
-  status: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  renewal_date?: string | null;
+  status: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -41,38 +41,6 @@ function displayValue(value: DetailFieldProps["value"]): string {
   }
 
   return String(value);
-}
-
-function formatDate(value: string): string {
-  if (!value) return "Not provided";
-
-  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const date = dateOnlyMatch
-    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
-    : new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatDateTime(value: string): string {
-  if (!value) return "Not provided";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
 }
 
 function DetailField({ label, value, preserveWhitespace = false }: DetailFieldProps) {
@@ -195,15 +163,15 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
 
           <DetailSection title="Membership">
             <DetailField label="Type" value={membership.membership_type} />
-            <DetailField label="Start date" value={formatDate(membership.start_date)} />
-            <DetailField label="End date" value={formatDate(membership.end_date)} />
-            <DetailField label="Renewal date" value={formatDate(membership.renewal_date)} />
+            <DetailField label="Start date" value={formatMembershipDate(membership.start_date)} />
+            <DetailField label="End date" value={formatMembershipDate(membership.end_date)} />
+            <DetailField label="Renewal date" value={formatMembershipDate(membership.renewal_date)} />
             <DetailField label="Current status" value={membershipStatus} />
             <DetailField label="Record status" value={membership.status} />
           </DetailSection>
 
           <DetailSection title="Payment">
-            <DetailField label="Amount paid" value={formatCurrency(Number(membership.amount_paid))} />
+            <DetailField label="Amount paid" value={formatMembershipAmount(membership.amount_paid)} />
             <DetailField label="Payment status" value={membership.payment_status} />
             <DetailField label="Reference ID" value={membership.reference_id} />
           </DetailSection>
@@ -214,8 +182,8 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
 
           <DetailSection title="Record information">
             <DetailField label="Membership ID" value={membership.membership_id} />
-            <DetailField label="Created" value={formatDateTime(membership.created_at)} />
-            <DetailField label="Updated" value={formatDateTime(membership.updated_at)} />
+            <DetailField label="Created" value={formatMembershipDate(membership.created_at, true)} />
+            <DetailField label="Updated" value={formatMembershipDate(membership.updated_at, true)} />
           </DetailSection>
         </div>
 
