@@ -1,6 +1,24 @@
 import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 
 import type { ManualDonationInput } from '@/types/manualDonation';
+import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
+
+/** Retrieve saved server facts independently of list search and pagination. */
+export async function fetchSavedDonation(donationId: number): Promise<DonationEntry> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/donations/${donationId}/`,
+      { headers: getAdminRequestHeaders(), cache: 'no-store' },
+    );
+    if (!response.ok) throw new Error('Donation detail request failed.');
+    const data: DonationEntry = await response.json();
+    if (data?.donation_id !== donationId) throw new Error('Invalid donation response.');
+    return data;
+  } catch {
+    console.error('Unable to load the saved donation details.');
+    throw new Error('The record was saved, but its details could not be loaded. Please try again.');
+  }
+}
 
 const API_FIELDS: Record<keyof ManualDonationInput, string> = {
   donorFirstName: 'donor_first_name', donorLastName: 'donor_last_name', donorEmail: 'donor_email',

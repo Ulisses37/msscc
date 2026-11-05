@@ -252,6 +252,26 @@ class ManualDonationCreationTests(TestCase):
         self.assertEqual(record.external_reference, "original")
         self.assertEqual(record.currency, "usd")
 
+    def test_matching_identity_creates_separate_record_without_updating_original(self):
+        original = create_manual_donation(self.donation_data(
+            donor_first_name="Maya", donor_last_name="Donor", donor_email="donor@example.test",
+            payment_method="cash", external_reference="original",
+        ))
+        before = Donation.objects.filter(pk=original.pk).values().get()
+        response = self.client.post(self.url, self.donation_data(
+            donor_first_name="Maya", donor_last_name="Donor", donor_email="donor@example.test",
+            amount="50.00", payment_method="check", external_reference="separate",
+        ), format="json")
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertNotEqual(response.data["donation_id"], original.pk)
+        self.assertEqual(Donation.objects.count(), 2)
+        self.assertEqual(Donation.objects.filter(pk=original.pk).values().get(), before)
+        saved = self.client.get(f"/api/donations/{response.data['donation_id']}/")
+        self.assertEqual(saved.status_code, 200, saved.data)
+        self.assertEqual(saved.data["amount"], "50.00")
+        self.assertEqual(saved.data["payment_method"], "check")
+        self.assertEqual(saved.data["external_reference"], "separate")
+
     def test_database_constraints_reject_unsupported_origin_and_method(self):
         record = create_manual_donation(self.donation_data())
         for field in ("record_source", "payment_method"):
