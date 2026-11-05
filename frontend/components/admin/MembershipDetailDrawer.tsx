@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+import { z } from 'zod';
+
 import { MailingListStatus } from '@/components/admin/MailingListStatus';
 import { formatMembershipAmount, formatMembershipDate } from '@/utils/membershipValues';
 import { membershipDisplayStatus } from "./membershipDisplayStatus";
@@ -77,7 +80,8 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const membershipStatus = membershipDisplayStatus(membership);
-  const hasEmail = Boolean(membership.email?.trim());
+  const email = membership.email?.trim() ?? '';
+  const emailHref = z.email().safeParse(email).success ? `mailto:${encodeURIComponent(email)}` : null;
   const recordOrigins: Record<string, string> = {
     checkout: 'Checkout',
     manual: 'Manual entry',
@@ -109,8 +113,20 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
       }
 
       if (event.key === "Tab") {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
+        const controls = Array.from(
+          closeButtonRef.current?.closest('aside')?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), a[href]',
+          ) ?? [],
+        );
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
 
@@ -170,7 +186,6 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             <DetailField label="Last name" value={membership.last_name} />
             <DetailField label="Email" value={membership.email} />
             <DetailField label="Phone" value={membership.phone} />
-            <MailingListStatus resource="memberships" recordId={membership.membership_id} />
             <DetailField label="Address" value={membership.address} preserveWhitespace />
           </DetailSection>
 
@@ -206,25 +221,28 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
         </div>
 
         <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white px-4 py-3 sm:px-6 sm:py-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              disabled
-              title={hasEmail ? "Email action coming soon" : "No email address is available"}
-              className="rounded-md bg-msscc-pink px-4 py-3 text-btn tracking-btn text-msscc-white opacity-55 disabled:cursor-not-allowed"
+          <dl>
+            <MailingListStatus resource="memberships" recordId={membership.membership_id} />
+          </dl>
+          {emailHref ? (
+            <a
+              href={emailHref}
+              aria-describedby="member-email-explanation"
+              className="mt-2 block rounded-md bg-msscc-pink px-4 py-3 text-center text-btn tracking-btn text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
             >
-              {hasEmail ? "Email member" : "Email unavailable"}
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Cancellation action coming soon"
-              className="rounded-md border border-msscc-danger px-4 py-3 text-btn tracking-btn text-msscc-danger opacity-55 disabled:cursor-not-allowed"
-            >
-              Mark as cancelled
-            </button>
-          </div>
-          <p className="mt-2 text-center text-caption text-msscc-gray-mid">Member actions are coming soon.</p>
+              Email member
+            </a>
+          ) : (
+            <p className="mt-2 text-body-sm text-msscc-gray-dark">
+              Email unavailable: {email ? 'the recorded email address is invalid.'
+                : 'no email address is recorded.'}
+            </p>
+          )}
+          <p id="member-email-explanation" className="mt-2 text-caption text-msscc-gray-mid">
+            Opens your configured email application. The website does not send or track the message.
+            Individual membership/payment correspondence is separate from announcement subscription
+            and is not blocked by an unconfirmed or unsubscribed mailing-list status.
+          </p>
         </footer>
       </aside>
     </div>,
