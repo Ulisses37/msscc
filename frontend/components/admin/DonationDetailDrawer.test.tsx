@@ -5,6 +5,12 @@ import { render, screen, within } from '@testing-library/react';
 import { DonationDetailDrawer } from './DonationDetailDrawer';
 import type { DonationEntry } from './DonationDetailDrawer';
 
+jest.mock('@/components/admin/MailingListStatus', () => ({
+  MailingListStatus: ({ resource, recordId }: { resource: string; recordId: number }) => (
+    <div data-testid="mailing-list-status">{resource}:{recordId}</div>
+  ),
+}));
+
 const donation: DonationEntry = {
   donation_id: 1, donor_first_name: 'Test', donor_last_name: 'Donor',
   donor_email: 'donor@example.test', amount: '10.00', processing_cost_contribution: '0.00',
@@ -26,6 +32,7 @@ describe('DonationDetailDrawer addresses', () => {
     expect(addressValue().textContent).toBe(address);
     expect(addressValue()).toHaveClass('whitespace-pre-wrap');
     expect(addressValue().querySelector('b')).toBeNull();
+    expect(screen.getByTestId('mailing-list-status')).toHaveTextContent('donations:1');
   });
 
   it.each([null, undefined, '', ' \n '])('shows a fallback for missing address %p', (address) => {
