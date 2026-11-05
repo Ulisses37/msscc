@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { fetchSavedMembership } from '@/services/manualMembership';
 import { ManualMembershipForm } from '@/components/admin/ManualMembershipForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
@@ -84,6 +85,10 @@ const membershipExportColumnWidths: Partial<Record<keyof MembershipEntry, number
 export default function AdminMembershipsPage() {
   const [isAddingMembership, setIsAddingMembership] = useState(false);
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
+  const [savedMembershipId, setSavedMembershipId] = useState<number | null>(null);
+  const [isOpeningSavedMembership, setIsOpeningSavedMembership] = useState(false);
+  const [savedDetailsError, setSavedDetailsError] = useState<string | null>(null);
+  const openingSavedMembership = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
@@ -288,6 +293,24 @@ export default function AdminMembershipsPage() {
     setSelectedMembership(null);
   }, []);
 
+  async function openSavedMembership() {
+    if (savedMembershipId === null || openingSavedMembership.current) return;
+    openingSavedMembership.current = true;
+    setIsOpeningSavedMembership(true);
+    setSavedDetailsError(null);
+    try {
+      const record = await fetchSavedMembership(savedMembershipId);
+      setSelectedMembership(record);
+    } catch {
+      setSavedDetailsError(
+        'The record was saved, but its details could not be loaded. Please try again.',
+      );
+    } finally {
+      openingSavedMembership.current = false;
+      setIsOpeningSavedMembership(false);
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => void fetchMemberships(), 300);
     return () => {
@@ -316,10 +339,21 @@ export default function AdminMembershipsPage() {
 
       <main className="w-full">
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
+        {savedMembershipId !== null && (
+          <div className="mb-4">
+            <button type="button" disabled={isOpeningSavedMembership}
+              onClick={() => void openSavedMembership()}
+              className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
+              {isOpeningSavedMembership ? 'Loading saved membership…' : 'View saved membership'}
+            </button>
+            {savedDetailsError && (
+              <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>
+            )}
+          </div>
+        )}
         {!isAddingMembership ? (
           <button type="button" className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
             onClick={() => {
-              setCreationMessage(null);
               setIsAddingMembership(true);
             }}>
             Add membership
@@ -327,9 +361,13 @@ export default function AdminMembershipsPage() {
         ) : (
           <ManualMembershipForm
             onCancel={() => setIsAddingMembership(false)}
-            onCreated={() => {
+            onCreated={({ membershipId }) => {
               setIsAddingMembership(false);
               setCreationMessage('Membership record saved.');
+              setSavedMembershipId(membershipId);
+              setSavedDetailsError(null);
+              // Refresh the current query without inserting or merging a guessed table row.
+              void fetchMemberships();
             }}
           />
         )}

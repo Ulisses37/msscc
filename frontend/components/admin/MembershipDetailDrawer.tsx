@@ -21,6 +21,7 @@ export type MembershipEntry = {
   membership_type: string;
   amount_paid?: number | string | null;
   payment_status?: string | null;
+  payment_method?: string | null;
   reference_id: string;
   start_date?: string | null;
   end_date?: string | null;
@@ -89,6 +90,11 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
   };
   const recordOrigin = Object.hasOwn(recordOrigins, membership.record_source ?? '')
     ? recordOrigins[membership.record_source ?? ''] : 'Unknown';
+  const paymentMethods: Record<string, string> = {
+    cash: 'Cash', check: 'Check', card: 'Card', bank_transfer: 'Bank transfer', other: 'Other',
+  };
+  const paymentMethod = Object.hasOwn(paymentMethods, membership.payment_method ?? '')
+    ? paymentMethods[membership.payment_method ?? ''] : 'Unknown';
 
   useEffect(() => {
     // Portaling to document.body separates the fixed drawer from wide/scrollable admin table containers.
@@ -198,6 +204,13 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             <DetailField label="Record status" value={membership.status} />
           </DetailSection>
 
+          {membershipStatus === 'Active (expiration unknown)' && (
+            <p className="text-body-sm text-msscc-gray-mid">
+              The saved record is marked active, but its expiration is unknown.
+              This does not confirm current membership eligibility.
+            </p>
+          )}
+
           <DetailSection title="Payment">
             <DetailField
               label="Membership price"
@@ -205,6 +218,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             />
             <DetailField label="Amount paid" value={formatMembershipAmount(membership.amount_paid)} />
             <DetailField label="Payment status" value={membership.payment_status} />
+            <DetailField label="Payment method" value={paymentMethod} />
             <DetailField label="Reference ID" value={membership.reference_id} />
           </DetailSection>
 

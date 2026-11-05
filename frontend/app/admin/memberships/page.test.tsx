@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
@@ -9,6 +9,12 @@ import { downloadXlsx } from '@/utils/exportXlsx';
 import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 
 import AdminMembershipsPage from './page';
+
+jest.mock('@/components/admin/MailingListStatus', () => ({
+  MailingListStatus: ({ recordId }: { recordId: number }) => (
+    <div>Subscription for saved record {recordId}</div>
+  ),
+}));
 
 jest.mock('@/services/financialRecordSearch', () => ({ fetchFinancialRecords: jest.fn() }));
 jest.mock('@/utils/exportCsv', () => ({ downloadCsv: jest.fn() }));
@@ -31,6 +37,69 @@ describe('membership table nullable values', () => {
       { ...membership, membership_id: 2, first_name: 'Zero', amount_paid: '0.00',
         payment_status: 'pending', start_date: '2026-02-30', end_date: '2099-01-01' },
     ]);
+  });
+
+  it('refreshes the filtered list and retrieves saved details outside its results', async () => {
+    const originalFetch = global.fetch;
+    const saved = { ...membership, membership_id: 42, first_name: 'Saved',
+      email: 'saved@example.test', address: 'Saved address', payment_method: 'check',
+      reference_id: 'MEM-MANUAL-00000042', record_source: 'manual', notes: 'Saved notes' };
+    const request = jest.fn()
+      .mockResolvedValueOnce({ ok: true, status: 201,
+        json: async () => ({ membership_id: 42 }) })
+      .mockResolvedValue({ ok: true, json: async () => saved });
+    global.fetch = request;
+    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    try {
+      render(<AdminMembershipsPage />);
+      await screen.findByRole('table');
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'existing member' } });
+      await waitFor(() => expect(fetchFinancialRecords)
+        .toHaveBeenLastCalledWith('memberships', 'existing member'));
+      const previousCalls = jest.mocked(fetchFinancialRecords).mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: 'Add membership' }));
+      for (const [label, value] of [
+        ['First name (required)', 'Entered'], ['Last name (required)', 'Member'],
+        ['Membership type (required)', 'Historical'],
+      ]) {
+        fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Review membership' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm and save membership' }));
+      expect(await screen.findByText('Membership record saved.')).toBeInTheDocument();
+      await waitFor(() => expect(jest.mocked(fetchFinancialRecords).mock.calls.length)
+        .toBeGreaterThan(previousCalls));
+      expect(fetchFinancialRecords).toHaveBeenLastCalledWith('memberships', 'existing member');
+      expect(screen.getByRole('searchbox')).toHaveValue('existing member');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(within(screen.getByRole('table')).queryByText('Saved')).not.toBeInTheDocument();
+
+      // A detail failure must not erase the success message or submit creation again.
+      request.mockResolvedValueOnce({ ok: false, status: 503 });
+      const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      fireEvent.click(screen.getByRole('button', { name: 'View saved membership' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('The record was saved');
+      expect(screen.getByText('Membership record saved.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'View saved membership' }));
+      const drawer = await screen.findByRole('dialog', { name: 'Saved Member' });
+      expect(within(drawer).getByText('Saved address')).toBeInTheDocument();
+      expect(within(drawer).getByText('Saved notes')).toBeInTheDocument();
+      expect(within(drawer).getByText('Manual entry')).toBeInTheDocument();
+      expect(within(drawer).getByText('Check')).toBeInTheDocument();
+      expect(within(drawer).getByRole('link', { name: 'Email member' }))
+        .toHaveAttribute('href', 'mailto:saved%40example.test');
+      expect(within(drawer).getByText('Subscription for saved record 42')).toBeInTheDocument();
+      expect(request.mock.calls.filter(([, options]) => options.method === 'POST')).toHaveLength(1);
+      expect(request).toHaveBeenLastCalledWith(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/42/`,
+        { headers: { Authorization: 'Bearer test-admin-token' }, cache: 'no-store' },
+      );
+      log.mockRestore();
+    } finally {
+      global.fetch = originalFetch;
+      localStorage.clear();
+      jest.restoreAllMocks();
+    }
   });
 
   it('pauses revision polling while adding a membership and resumes on cancel', async () => {
