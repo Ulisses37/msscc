@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { fetchSavedDonation } from '@/services/manualDonation';
 import { ManualDonationForm } from '@/components/admin/ManualDonationForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
@@ -129,6 +130,10 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
 export default function AdminDonationsPage() {
   const [isAddingDonation, setIsAddingDonation] = useState(false);
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
+  const [savedDonationId, setSavedDonationId] = useState<number | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const detailRequestStarted = useRef(false);
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
   // Controlled input state keeps the visible search value and table filter in sync.
@@ -198,11 +203,8 @@ export default function AdminDonationsPage() {
             );
 
           case "donor_last_name": {
-            const xName =
-              `${x.donor_last_name} ${x.donor_first_name}`;
-
-            const yName =
-              `${y.donor_last_name} ${y.donor_first_name}`;
+            const xName = formatDonationName(x);
+            const yName = formatDonationName(y);
 
             return direction * xName.localeCompare(yName);
           }
@@ -296,6 +298,23 @@ export default function AdminDonationsPage() {
       setSelectedDonation(null);
     }, []);
 
+    async function viewSavedDonation() {
+      if (savedDonationId === null || detailRequestStarted.current) return;
+      detailRequestStarted.current = true;
+      setIsLoadingSaved(true);
+      setDetailError(null);
+      try {
+        setSelectedDonation(await fetchSavedDonation(savedDonationId));
+      } catch {
+        setDetailError(
+          'The record was saved, but its details could not be loaded. Please try again.',
+        );
+      } finally {
+        detailRequestStarted.current = false;
+        setIsLoadingSaved(false);
+      }
+    }
+
     useEffect(() => {
       const timer = setTimeout(() => void fetchDonations(), 300);
       return () => {
@@ -328,6 +347,14 @@ export default function AdminDonationsPage() {
 
       <main className="w-full">
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
+        {savedDonationId !== null && (
+          <button type="button" onClick={() => void viewSavedDonation()}
+            disabled={isLoadingSaved}
+            className="mb-4 rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
+            {isLoadingSaved ? 'Loading saved donation…' : 'View saved donation'}
+          </button>
+        )}
+        {detailError && <p role="alert" className="mb-4 text-msscc-danger">{detailError}</p>}
         {!isAddingDonation ? (
           <button type="button" onClick={() => setIsAddingDonation(true)}
             className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
@@ -335,9 +362,12 @@ export default function AdminDonationsPage() {
           </button>
         ) : (
           <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
-            onCreated={() => {
+            onCreated={({ donationId }) => {
               setIsAddingDonation(false);
               setCreationMessage('Donation record saved.');
+              setSavedDonationId(donationId);
+              setDetailError(null);
+              void fetchDonations();
             }} />
         )}
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
