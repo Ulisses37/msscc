@@ -9,6 +9,7 @@ export type DonationEntry = {
   donor_first_name: string;
   donor_last_name: string;
   donor_email: string;
+  address?: string | null;
   amount: number | string;
   processing_cost_contribution: number | string;
   total_amount: number | string;
@@ -187,6 +188,12 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
             <DetailField label="First name" value={donation.donor_first_name} />
             <DetailField label="Last name" value={donation.donor_last_name} />
             <DetailField label="Email" value={donation.donor_email} />
+            <DetailField
+              label="Address"
+              value={donation.is_anonymous
+                ? 'Address not retained for anonymous donations.' : donation.address}
+              preserveWhitespace
+            />
             <DetailField label="Anonymous" value={donation.is_anonymous ? "Yes" : "No"} />
           </DetailSection>
 

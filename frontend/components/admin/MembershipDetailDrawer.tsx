@@ -11,6 +11,9 @@ export type MembershipEntry = {
   last_name: string;
   email: string | null;
   phone: string | null;
+  address?: string | null;
+  membership_price?: number | string | null;
+  record_source?: string | null;
   membership_type: string;
   amount_paid?: number | string | null;
   payment_status?: string | null;
@@ -74,6 +77,13 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const membershipStatus = membershipDisplayStatus(membership);
   const hasEmail = Boolean(membership.email?.trim());
+  const recordOrigins: Record<string, string> = {
+    checkout: 'Checkout',
+    manual: 'Manual entry',
+    legacy_import: 'Legacy import',
+  };
+  const recordOrigin = Object.hasOwn(recordOrigins, membership.record_source ?? '')
+    ? recordOrigins[membership.record_source ?? ''] : 'Unknown';
 
   useEffect(() => {
     // Portaling to document.body separates the fixed drawer from wide/scrollable admin table containers.
@@ -159,6 +169,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             <DetailField label="Last name" value={membership.last_name} />
             <DetailField label="Email" value={membership.email} />
             <DetailField label="Phone" value={membership.phone} />
+            <DetailField label="Address" value={membership.address} preserveWhitespace />
           </DetailSection>
 
           <DetailSection title="Membership">
@@ -171,6 +182,10 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
           </DetailSection>
 
           <DetailSection title="Payment">
+            <DetailField
+              label="Membership price"
+              value={formatMembershipAmount(membership.membership_price)}
+            />
             <DetailField label="Amount paid" value={formatMembershipAmount(membership.amount_paid)} />
             <DetailField label="Payment status" value={membership.payment_status} />
             <DetailField label="Reference ID" value={membership.reference_id} />
@@ -182,6 +197,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
 
           <DetailSection title="Record information">
             <DetailField label="Membership ID" value={membership.membership_id} />
+            <DetailField label="Record origin" value={recordOrigin} />
             <DetailField label="Created" value={formatMembershipDate(membership.created_at, true)} />
             <DetailField label="Updated" value={formatMembershipDate(membership.updated_at, true)} />
           </DetailSection>
