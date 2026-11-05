@@ -73,9 +73,15 @@ class MembershipLegacyAPITests(TestCase):
     def test_explicit_null_updates_clear_known_values(self):
         member = self.create_membership(
             email="maya@example.test", phone="555-0100", amount_paid="20.00",
-            payment_status="paid by check", start_date="2020-01-01", end_date="2020-12-31",
+            payment_status="completed", start_date="2020-01-01", end_date="2020-12-31",
             renewal_date="2021-01-01", address="123 Example Street", membership_price="35.00",
         )
+        # Existing free-text states remain editable, but are not new-create choices.
+        response = self.client.patch(
+            self.detail_url(member), {"payment_status": "paid by check"}, format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["payment_status"], "paid by check")
         response = self.client.patch(
             self.detail_url(member),
             dict.fromkeys((*NULLABLE_FIELDS, "address", "membership_price")), format="json",

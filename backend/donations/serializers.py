@@ -237,6 +237,7 @@ class MembershipSerializer(serializers.ModelSerializer):
             "end_date",
             "renewal_date",
             "payment_status",
+            "payment_method",
             "reference_id",
             "status",
             "notes",
@@ -276,3 +277,60 @@ class MembershipSerializer(serializers.ModelSerializer):
         """Assign manual provenance unless trusted backend code supplies a source."""
         validated_data.setdefault("record_source", Membership.RecordSource.MANUAL)
         return super().create(validated_data)
+
+
+class ManualMembershipCreateSerializer(MembershipSerializer):
+    """Validate explicit manual facts without applying checkout defaults or catalog rules."""
+
+    MEMBERSHIP_STATUSES = ("unknown", "active", "inactive", "pending", "expired", "canceled")
+    PAYMENT_STATUSES = (*Membership.PaymentStatus.values, "waived")
+
+    email = serializers.EmailField(
+        source="email_encrypted", max_length=254, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    phone = MembershipAddressField(
+        source="phone_encrypted", max_length=255, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    address = MembershipAddressField(
+        source="address_encrypted", required=False, allow_null=True, allow_blank=True, default=None,
+    )
+    status = serializers.ChoiceField(choices=MEMBERSHIP_STATUSES)
+    payment_status = serializers.ChoiceField(
+        choices=PAYMENT_STATUSES, required=False, allow_null=True, default=None,
+    )
+    payment_method = serializers.ChoiceField(
+        choices=Membership.PaymentMethod.choices, required=False, allow_null=True, default=None,
+    )
+    membership_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True, default=None,
+    )
+    amount_paid = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True, default=None,
+    )
+
+    class Meta(MembershipSerializer.Meta):
+        extra_kwargs = {
+            "start_date": {"required": False, "allow_null": True, "default": None},
+            "end_date": {"required": False, "allow_null": True, "default": None},
+            "renewal_date": {"required": False, "allow_null": True, "default": None},
+            "reference_id": {"required": False, "allow_blank": True, "default": ""},
+            "notes": {"required": False, "allow_blank": True, "default": "", "max_length": 500},
+        }
+
+    def validate_email(self, value):
+        """Use null for unknown contacts and normalize supplied email casing."""
+        return value.lower() if value else None
+
+    def validate_phone(self, value):
+        """Preserve international free-text phone formats, but not empty strings."""
+        return value or None
+
+    def validate(self, attrs):
+        """Compare only supplied dates; absent historical dates remain unknown."""
+        start = attrs.get("start_date")
+        end = attrs.get("end_date")
+        if start is not None and end is not None and end < start:
+            raise serializers.ValidationError({"end_date": "End date cannot precede start date."})
+        return attrs
