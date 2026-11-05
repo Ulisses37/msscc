@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MailingListStatus } from '@/components/admin/MailingListStatus';
 import { formatCurrency } from "@/utils/formatCurrency";
 
 export type DonationEntry = {
@@ -188,6 +189,7 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
             <DetailField label="First name" value={donation.donor_first_name} />
             <DetailField label="Last name" value={donation.donor_last_name} />
             <DetailField label="Email" value={donation.donor_email} />
+            <MailingListStatus resource="donations" recordId={donation.donation_id} />
             <DetailField
               label="Address"
               value={donation.is_anonymous

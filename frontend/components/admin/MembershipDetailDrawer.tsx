@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MailingListStatus } from '@/components/admin/MailingListStatus';
 import { formatMembershipAmount, formatMembershipDate } from '@/utils/membershipValues';
 import { membershipDisplayStatus } from "./membershipDisplayStatus";
 
@@ -169,6 +170,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             <DetailField label="Last name" value={membership.last_name} />
             <DetailField label="Email" value={membership.email} />
             <DetailField label="Phone" value={membership.phone} />
+            <MailingListStatus resource="memberships" recordId={membership.membership_id} />
             <DetailField label="Address" value={membership.address} preserveWhitespace />
           </DetailSection>
 

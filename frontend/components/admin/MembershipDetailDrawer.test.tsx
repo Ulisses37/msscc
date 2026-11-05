@@ -5,6 +5,12 @@ import { render, screen, within } from '@testing-library/react';
 import { MembershipDetailDrawer } from './MembershipDetailDrawer';
 import type { MembershipEntry } from './MembershipDetailDrawer';
 
+jest.mock('@/components/admin/MailingListStatus', () => ({
+  MailingListStatus: ({ resource, recordId }: { resource: string; recordId: number }) => (
+    <div data-testid="mailing-list-status">{resource}:{recordId}</div>
+  ),
+}));
+
 const membership: MembershipEntry = {
   membership_id: 1, first_name: 'Test', last_name: 'Member', email: null, phone: null,
   membership_type: 'individual', amount_paid: null, payment_status: null,
@@ -31,6 +37,7 @@ describe('MembershipDetailDrawer nullable values', () => {
     expect(fieldValue('Membership price')).toHaveTextContent('$35.00');
     expect(fieldValue('Amount paid')).toHaveTextContent('$10.00');
     expect(fieldValue('Record origin')).toHaveTextContent('Checkout');
+    expect(screen.getByTestId('mailing-list-status')).toHaveTextContent('memberships:1');
   });
 
   it.each([null, undefined, '', ' \n '])('shows a fallback for missing address %p', (address) => {
