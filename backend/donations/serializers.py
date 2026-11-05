@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from .manual_memberships import _persist_manual_membership
 from .models import Donation, Membership
 from .processing_costs import calculate_donation_amounts
 
@@ -322,6 +323,10 @@ class ManualMembershipCreateSerializer(MembershipSerializer):
     def validate_email(self, value):
         """Use null for unknown contacts and normalize supplied email casing."""
         return value.lower() if value else None
+
+    def create(self, validated_data):
+        """Keep manual creation atomic and independent of public checkout services."""
+        return _persist_manual_membership(validated_data)
 
     def validate_phone(self, value):
         """Preserve international free-text phone formats, but not empty strings."""
