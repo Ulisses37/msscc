@@ -217,24 +217,32 @@ class ManualDonationCreationTests(TestCase):
 
     def test_no_payment_receipt_or_subscription_actions_including_on_commit(self):
         subscriber = Subscriber.objects.create(email="donor@example.test", status="unsubscribed")
-        before = list(Subscriber.objects.values())
+        before = list(Subscriber.objects.order_by("pk").values())
         targets = (
             "payments.views.create_payment_session",
             "payments.services.stripe_service.create_payment_session",
             "payments.views.send_donation_receipt", "donations.receipts.send_donation_receipt",
             "donations.receipts.send_email",
+            "emails.services.send_email", "emails.subscribers.subscribe_contact",
+            "emails.views.subscribe_contact", "emails.subscribers.get_provider",
+            "emails.services.get_provider",
         )
         with ExitStack() as stack:
             mocks = [stack.enter_context(patch(target)) for target in targets]
             with self.captureOnCommitCallbacks(execute=True) as callbacks:
-                response = self.client.post(self.url, self.donation_data(
-                    donor_email=subscriber.email, payment_method="check",
-                ), format="json")
-            self.assertEqual(response.status_code, 201, response.data)
+                for email in (subscriber.email, "new-contact@example.test"):
+                    with self.subTest(email=email):
+                        values = self.donation_data(donor_email=email, payment_method="check")
+                        response = self.client.post(self.url, values, format="json")
+                        self.assertEqual(response.status_code, 201, response.data)
+                        create_manual_donation(values)
+                        self.assertEqual(
+                            list(Subscriber.objects.order_by("pk").values()), before,
+                        )
             self.assertEqual(callbacks, [])
             for mock in mocks:
                 mock.assert_not_called()
-        self.assertEqual(list(Subscriber.objects.values()), before)
+        self.assertEqual(list(Subscriber.objects.order_by("pk").values()), before)
 
     def test_admin_metadata_is_read_only_on_existing_record(self):
         record = create_manual_donation(self.donation_data(
