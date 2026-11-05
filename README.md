@@ -271,6 +271,29 @@ to enter historical records or record current payments already received offline,
   if search or pagination hides it. If a save cannot be confirmed, check the membership list before
   retrying to avoid duplicates. A details-loading error after confirmation does not mean saving failed.
 
+#### Manual donation entry
+
+Admins with Finances permission and executive admins can use **Donations > Add donation** to
+record historical donations or current payments already received offline, without checkout.
+
+- Enter the required positive USD amount and actual donation date, which cannot be in the future.
+  Leave unknown historical names, email, and address blank. Missing names do not mean anonymous.
+- Select **Anonymous donation** only when anonymity is intended. Names and address are not retained
+  for anonymous donations; an optional email can still be retained internally. Avoid identifying
+  information in the message, which is not automatically anonymized.
+- **Manual** describes the record's origin. **Payment method** separately describes cash or check;
+  leave it unknown when not recorded. Do not infer the method from reference text. An optional
+  external reference is separate from the internal reference generated on save.
+- Select **Review donation**, verify the facts, and use **Back to edit** for corrections. Nothing is
+  created until **Confirm and save donation**. Saving creates a separate completed record, not an
+  update or merge with an existing donation. Completed describes money already received.
+- Saving does not process or charge a payment, send an automatic receipt, add an online
+  processing-cost contribution, obtain mailing-list consent, or change subscriptions. The recorded
+  total equals the donation amount. Individual email correspondence is separate from subscriptions.
+- The list refreshes after saving. **View saved donation** opens saved details even when search or
+  pagination hides the record. If saving cannot be confirmed, check the donation list before retrying
+  to avoid duplicates. A details-loading error after confirmation does not mean saving failed.
+
 ![Admin Dashboard](./docs/images/admin_dashboard.png)
 
 ![Admin Edit Pages Page](./docs/images/admin_edit_pages.png)
