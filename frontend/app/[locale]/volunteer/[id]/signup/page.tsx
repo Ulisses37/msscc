@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -28,7 +29,6 @@ export default function VolunteerSignupPage() {
   }
 
   interface SignupSuccessData {
-    volunteer_signup_id: number;
     first_name: string;
     last_name: string;
     email: string;
@@ -130,6 +130,7 @@ export default function VolunteerSignupPage() {
   }
 
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
+  const location = locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn;
 
   const dateLocale = locale === 'ja' ? 'ja-JP' : 'en-US';
   const formatShiftDate = (datetime: string) =>
@@ -148,7 +149,7 @@ export default function VolunteerSignupPage() {
     <main style={{ maxWidth: '75rem', margin: '0 auto', padding: 'var(--space-10) var(--space-6)', fontFamily: 'var(--font-body)' }}>
 
       {/* SUCCESS CONFIRMATION MODAL */}
-      {submittedData && (
+      {submittedData && typeof document !== 'undefined' && createPortal(
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
             <h2 style={modalHeadingStyle}>{t('confirmationTitle')}</h2>
@@ -156,8 +157,23 @@ export default function VolunteerSignupPage() {
               {t('saveInformation')}
             </p>
             <div style={infoBoxStyle}>
-              <p><strong>{t('signupId')}</strong> <span style={{ color: '#d72638', fontWeight: 800 }}>{submittedData.volunteer_signup_id}</span></p>
               <p><strong>{t('event')}</strong> {title}</p>
+              {selectedSlot ? (
+                <>
+                  <p><strong>{t('shift')}</strong> {selectedSlot.position_name}</p>
+                  <p><strong>{t('shiftDate')}</strong> {formatShiftDate(selectedSlot.start_datetime)}</p>
+                  <p>
+                    <strong>{t('shiftTime')}</strong>{' '}
+                    {formatShiftTime(selectedSlot.start_datetime)} –{' '}
+                    {formatShiftTime(selectedSlot.end_datetime)}
+                  </p>
+                </>
+              ) : (
+                <p><strong>{t('shift')}</strong> {t('generalVolunteer')}</p>
+              )}
+              {location && (
+                <p><strong>{t('location')}</strong> {location}</p>
+              )}
               <p><strong>{t('name')}</strong> {submittedData.first_name} {submittedData.last_name}</p>
               <p><strong>{t('email')}</strong> {submittedData.email}</p>
               <p><strong>{t('phone')}</strong> {submittedData.phone || t('notAvailable')}</p>
@@ -166,7 +182,8 @@ export default function VolunteerSignupPage() {
               <Button text={t('finish')} onClick={() => router.push(`/${locale}/events/${id}`)} padding="12px 48px" />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <Link href={`/${locale}/volunteer/${id}`} style={{ color: 'var(--color-teal)', textDecoration: 'none' }}>← {t('backToShifts')}</Link>
@@ -289,7 +306,7 @@ export default function VolunteerSignupPage() {
 const inputStyle = { width: '100%', padding: '12px', fontSize: '16px', borderRadius: '8px', border: '1px solid var(--color-gray-light)', backgroundColor: 'white' };
 const modalOverlayStyle: React.CSSProperties =
  { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)',
-   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' };
+   display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100000, padding: '20px' };
 const modalContentStyle: React.CSSProperties =
 { backgroundColor: 'white', padding: 'clamp(1.25rem, 5vw, 3rem)', borderRadius: '12px', maxWidth: '42rem', width: '100%',
   maxHeight: '90vh', overflowY: 'auto',
