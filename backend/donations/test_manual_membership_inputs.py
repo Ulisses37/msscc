@@ -36,7 +36,7 @@ class ManualMembershipInputTests(TestCase):
         ):
             with self.subTest(field=field):
                 self.assertIsNone(getattr(record, field))
-        self.assertEqual(record.reference_id, "")
+        self.assertEqual(record.reference_id, f"MEM-MANUAL-{record.pk:08d}")
         self.assertEqual(record.notes, "")
 
     def test_required_fields_and_supported_choices(self):
