@@ -60,7 +60,7 @@ const defaultMembershipExportFields: (keyof MembershipEntry)[] = [
 ];
 
 // Spreadsheet widths are defined per API field because XLSX columns need explicit readable sizing.
-const membershipExportColumnWidths: Record<keyof MembershipEntry, number> = {
+const membershipExportColumnWidths: Partial<Record<keyof MembershipEntry, number>> = {
   membership_id: 15,
   first_name: 18,
   last_name: 18,
@@ -264,7 +264,7 @@ export default function AdminMembershipsPage() {
 
     const selectedColumns: XlsxColumn<MembershipEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
       header,
-      width: membershipExportColumnWidths[field],
+      width: membershipExportColumnWidths[field] ?? 20,
       getCell: (membership) => createMembershipXlsxCell(membership, field),
     }));
 
