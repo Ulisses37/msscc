@@ -133,6 +133,7 @@ export function MembershipForm({
       </h2>
 
       <div className="mt-4 space-y-4">
+        <p className="text-sm text-msscc-gray-mid">{t('contactRequirements')}</p>
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input

@@ -472,6 +472,7 @@ export function DonationForm() {
           onSubmit={handleSubmit}
           noValidate
         >
+        <p className="text-sm text-msscc-gray-mid">{t('contactRequirements')}</p>
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -652,7 +653,7 @@ export function DonationForm() {
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               onBlur={() => setSummaryFirstName(firstName)}
-              disabled={!emailIsValid || fieldsAreLocked}
+              disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
               required={!isAnonymous}
               className={inputClassName}
             />
@@ -668,7 +669,7 @@ export function DonationForm() {
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               onBlur={() => setSummaryLastName(lastName)}
-              disabled={!emailIsValid || fieldsAreLocked}
+              disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
               required={!isAnonymous}
               className={inputClassName}
             />
@@ -684,7 +685,7 @@ export function DonationForm() {
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             onBlur={() => setSummaryAddress(address)}
-            disabled={!emailIsValid || fieldsAreLocked}
+            disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
             required={!isAnonymous}
             className={inputClassName}
           />
@@ -745,6 +746,7 @@ export function DonationForm() {
             onChange={(event) => setMessage(event.target.value)}
             onBlur={() => setSummaryMessage(message)}
             disabled={!emailIsValid || fieldsAreLocked}
+            aria-describedby={isAnonymous ? 'anonymous-message-description' : undefined}
             className={inputClassName}
           />
 
@@ -752,6 +754,12 @@ export function DonationForm() {
             {message.length}/500
           </span>
         </label>
+
+        {isAnonymous && (
+          <p id="anonymous-message-description" className="text-sm text-msscc-gray-mid">
+            {t('anonymousMessageReminder')}
+          </p>
+        )}
 
         <DonationSummary
           donation={donation}

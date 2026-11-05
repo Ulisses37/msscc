@@ -163,4 +163,24 @@ describe('MembershipForm mailing-list feedback', () => {
     });
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
+
+  it.each(['en', 'ja'] as const)('requires all contact fields except phone in %s', async (locale) => {
+    const { messages, button } = await setup(locale);
+    expect(screen.getByText(messages.contactRequirements)).toBeVisible();
+    const phone = screen.getByLabelText(messages.phoneOptional);
+    expect(phone).not.toBeRequired();
+    expect(phone).toHaveValue('');
+    expect(button).toBeEnabled();
+    for (const label of [messages.email, messages.firstName, messages.lastName, messages.address]) {
+      const field = screen.getByLabelText(label);
+      expect(field).toBeRequired();
+      const original = (field as HTMLInputElement).value;
+      fireEvent.change(field, { target: { value: '   ' } });
+      fireEvent.blur(field);
+      expect(button).toBeDisabled();
+      expect(field).toHaveAttribute('aria-invalid', 'true');
+      fireEvent.change(field, { target: { value: original } });
+      expect(button).toBeEnabled();
+    }
+  });
 });

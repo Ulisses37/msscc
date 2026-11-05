@@ -223,6 +223,9 @@ it('submits an anonymous donation with email only and no personal record fields'
   expect(firstName).not.toBeRequired();
   expect(lastName).not.toBeRequired();
   expect(address).not.toBeRequired();
+  expect(firstName).toBeDisabled();
+  expect(lastName).toBeDisabled();
+  expect(address).toBeDisabled();
   await waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
   await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
@@ -242,8 +245,7 @@ it('omits previously entered names when anonymous and restores ordinary requirem
   const choice = screen.getByRole('checkbox', { name: en.SupportPage.anonymousDonation });
   const lastName = screen.getByRole('textbox', { name: en.SupportPage.lastName });
   await user.click(choice);
-  // Previously entered names remain editable for an ordinary attempt but
-  // must never be sent in the anonymous request.
+  // Preserve local values for switching back, but never send them anonymously.
   await waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
   await waitFor(() => expect(createPaymentSession).toHaveBeenCalledTimes(1));
@@ -259,6 +261,7 @@ it('omits previously entered names when anonymous and restores ordinary requirem
   const editButton = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
   await user.click(choice);
   expect(lastName).toBeRequired();
+  expect(lastName).toBeEnabled();
   await user.clear(lastName);
   expect(editButton).toBeDisabled();
   await user.type(lastName, 'Lovelace');
@@ -276,6 +279,65 @@ it('omits previously entered names when anonymous and restores ordinary requirem
     donor_email: 'donor@example.com',
     address: '123 Main St',
   });
+});
+
+it.each(['en', 'ja'] as const)('enforces contact privacy and restores required fields in %s', async (locale) => {
+  mockLocale = locale;
+  const messages = (locale === 'ja' ? ja : en).SupportPage;
+  const user = userEvent.setup();
+  render(<DonationForm />);
+  await fillDonor(user, messages);
+  expect(screen.getByText(messages.contactRequirements)).toBeVisible();
+  expect(screen.queryByRole('textbox', { name: /phone|電話/i })).not.toBeInTheDocument();
+  const fields = [messages.firstName, messages.lastName, messages.address].map((name) =>
+    screen.getByRole('textbox', { name }),
+  );
+  const email = screen.getByRole('textbox', { name: messages.email });
+  const button = screen.getByRole('button', { name: messages.continueToPayment });
+  const consent = screen.getByRole('checkbox', { name: /MSSCC/ });
+  const anonymous = screen.getByRole('checkbox', { name: messages.anonymousDonation });
+  const message = screen.getByRole('textbox', {
+    name: (name) => name.startsWith(messages.message),
+  });
+  for (const field of fields) {
+    fireEvent.change(field, { target: { value: '   ' } });
+    expect(button).toBeDisabled();
+    fireEvent.change(field, { target: { value: 'Restored contact' } });
+  }
+  await user.click(anonymous);
+  for (const field of fields) {
+    expect(field).toBeDisabled();
+    expect(field).not.toBeRequired();
+    expect(field).toHaveValue('Restored contact');
+  }
+  expect(email).toBeRequired();
+  expect(email).toBeEnabled();
+  expect(consent).not.toBeChecked();
+  expect(message).toBeEnabled();
+  expect(message).not.toBeRequired();
+  expect(message).toHaveAccessibleDescription(messages.anonymousMessageReminder);
+  await user.type(message, 'Thank you for your work');
+  fireEvent.change(email, { target: { value: '' } });
+  expect(button).toBeDisabled();
+  fireEvent.change(email, { target: { value: 'donor@example.com' } });
+  await user.click(anonymous);
+  for (const field of fields) {
+    expect(field).toBeEnabled();
+    expect(field).toBeRequired();
+  }
+  await user.click(anonymous);
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+  await screen.findByTestId('stripe-payment');
+  expect(subscribeToUpdates).not.toHaveBeenCalled();
+  const [, request] = jest.mocked(global.fetch).mock.calls[0];
+  const payload = JSON.parse((request as RequestInit).body as string);
+  expect(payload).toMatchObject({
+    donor_email: 'donor@example.com', is_anonymous: true, message: 'Thank you for your work',
+  });
+  for (const field of ['donor_first_name', 'donor_last_name', 'address']) {
+    expect(payload).not.toHaveProperty(field);
+  }
 });
 
 it.each(['', '   '])('blocks a non-anonymous donation with address %p', async (address) => {

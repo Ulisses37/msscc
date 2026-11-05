@@ -61,6 +61,51 @@ class DonationAddressTests(TestCase):
                     self.assertNotIn(self.address, str(response.data))
         self.assertFalse(Donation.objects.exists())
 
+    def test_forged_anonymous_identity_is_discarded_before_encryption(self):
+        """Bypassing the form cannot retain identifying contact fields or auto-subscribe."""
+        identifying_values = {"Maya", "Chen", self.address}
+
+        def reject_identifying_encryption(value):
+            if value in identifying_values:
+                self.fail("Anonymous identifying data reached encryption.")
+            return encrypt_text(value)
+
+        with patch("config.fields.encrypt_text", side_effect=reject_identifying_encryption):
+            with patch("emails.views.subscribe_contact") as subscribe:
+                donation, response = self.create_donation(is_anonymous=True)
+        subscribe.assert_not_called()
+        self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
+        self.assertEqual(donation.donor_last_name_encrypted, "")
+        self.assertIsNone(donation.donor_address_encrypted)
+        self.assertIsNone(self.stored_address(donation))
+        self.assertEqual(donation.donor_email_encrypted, "maya@example.test")
+        stored_email = Donation.objects.annotate(
+            stored_email=Cast("donor_email_encrypted", output_field=models.TextField()),
+        ).values_list("stored_email", flat=True).get(pk=donation.pk)
+        self.assertTrue(is_encrypted_text(stored_email))
+        self.assertEqual(decrypt_text(stored_email), "maya@example.test")
+        for value in identifying_values:
+            self.assertNotIn(value, str(response.data))
+
+    def test_public_contact_requirements_for_both_anonymity_choices(self):
+        """Ordinary donors need all contact fields; anonymous donors still need email."""
+        for anonymous in (False, True):
+            fields = ("donor_email",) if anonymous else (
+                "donor_first_name", "donor_last_name", "donor_email", "address",
+            )
+            for field in fields:
+                for value in (None, "", "   "):
+                    with self.subTest(anonymous=anonymous, field=field, value=value):
+                        data = self.donation_data(is_anonymous=anonymous)
+                        if value is None:
+                            data.pop(field)
+                        else:
+                            data[field] = value
+                        response = self.client.post("/api/donations/", data, format="json")
+                        self.assertEqual(response.status_code, 400)
+                        self.assertIn(field, response.data)
+        self.assertFalse(Donation.objects.exists())
+
     def test_address_is_encrypted_and_only_available_through_authorized_records(self):
         with self.assertNoLogs("donations", level="DEBUG"):
             donation, response = self.create_donation(address=f"  {self.address}\n ")
