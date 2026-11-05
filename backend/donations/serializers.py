@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from .manual_donations import _persist_manual_donation
 from .manual_memberships import _persist_manual_membership
 from .models import Donation, Membership
 from .processing_costs import calculate_donation_amounts
@@ -161,6 +162,7 @@ class DonationSerializer(serializers.ModelSerializer):
                 total_amount=total,
                 donation_date=timezone.localdate(),
                 payment_status=Donation.PaymentStatus.PENDING,
+                record_source=Donation.RecordSource.CHECKOUT,
                 reference_id="pending",
             )
             donation.reference_id = f"DON-{donation.donation_id:08d}"
@@ -188,10 +190,24 @@ class DonationSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class ManualDonationInputSerializer(serializers.Serializer):
-    """Validate received donation facts independently of public checkout and persistence."""
+class AdminDonationSerializer(DonationSerializer):
+    """Expose recorded provenance and offline facts only through authorized admin paths."""
 
-    PAYMENT_METHODS = ("cash", "check")
+    class Meta(DonationSerializer.Meta):
+        fields = [
+            *DonationSerializer.Meta.fields,
+            "record_source", "payment_method", "external_reference", "currency",
+        ]
+        read_only_fields = [
+            *DonationSerializer.Meta.read_only_fields,
+            "record_source", "payment_method", "external_reference", "currency",
+        ]
+
+
+class ManualDonationInputSerializer(serializers.Serializer):
+    """Validate and save received donation facts independently of public checkout."""
+
+    PAYMENT_METHODS = Donation.PaymentMethod.values
 
     donor_first_name = DonationAddressField(
         source="donor_first_name_encrypted", max_length=255, required=False,
@@ -237,6 +253,10 @@ class ManualDonationInputSerializer(serializers.Serializer):
         if value > timezone.localdate():
             raise serializers.ValidationError("Donation date cannot be in the future.")
         return value
+
+    def create(self, validated_data):
+        """Persist validated facts atomically without payment or subscription actions."""
+        return _persist_manual_donation(validated_data)
 
     def validate(self, attrs):
         """Normalize unknown contacts and discard anonymous identity without inferring facts."""
