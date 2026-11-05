@@ -249,6 +249,28 @@ The images below are selected interface previews for the MSSCC public website an
 
 ### Admin Pages
 
+#### Manual membership entry
+
+Admins with Finances permission and executive admins can use **Memberships > Add membership**
+to enter historical records or record current payments already received offline, without checkout.
+
+- Enter the required first name, last name, membership type, and record status. Choose **Unknown**
+  status when necessary. Leave unknown optional contacts, amounts, dates, and payment facts blank;
+  enter `0.00` only when zero is known. An active record with unknown expiration does not confirm
+  current eligibility.
+- **Manual entry** describes the record's origin. **Payment method** separately describes how an
+  offline payment was received, such as cash or check. Do not guess either payment status or method
+  from historical reference text.
+- Select **Review membership**, check the proposed facts, and use **Back to edit** for corrections.
+  Nothing is created until **Confirm and save membership**. Canceling before submission creates
+  nothing. Saving creates a separate record, not a merge with existing memberships or annual history.
+- Saving does not process or charge a payment, send a receipt, or obtain mailing-list consent or
+  change subscriptions. The recorded payment status describes supplied facts, not a payment run by
+  this form. Individual email correspondence remains separate from mailing-list subscription.
+- After confirmation, the list refreshes and **View saved membership** opens the saved record even
+  if search or pagination hides it. If a save cannot be confirmed, check the membership list before
+  retrying to avoid duplicates. A details-loading error after confirmation does not mean saving failed.
+
 ![Admin Dashboard](./docs/images/admin_dashboard.png)
 
 ![Admin Edit Pages Page](./docs/images/admin_edit_pages.png)
