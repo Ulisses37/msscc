@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { ManualDonationForm } from '@/components/admin/ManualDonationForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -126,6 +127,8 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
 
   //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminDonationsPage() {
+  const [isAddingDonation, setIsAddingDonation] = useState(false);
+  const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
   const [donationItems, setDonationItems] = useState<DonationEntry[]>([]);
   // Controlled input state keeps the visible search value and table filter in sync.
@@ -172,7 +175,7 @@ export default function AdminDonationsPage() {
       }
     }, [searchQuery]);
 
-    useVisibleTableRevisionPolling('donations', fetchDonations, 3000);
+    useVisibleTableRevisionPolling('donations', fetchDonations, 3000, isAddingDonation);
 
     // Matching happens only in the authorized backend; sorting and export use its results.
     const filteredDonationItems = donationItems;
@@ -324,6 +327,19 @@ export default function AdminDonationsPage() {
       </header>
 
       <main className="w-full">
+        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
+        {!isAddingDonation ? (
+          <button type="button" onClick={() => setIsAddingDonation(true)}
+            className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
+            Add donation
+          </button>
+        ) : (
+          <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
+            onCreated={() => {
+              setIsAddingDonation(false);
+              setCreationMessage('Donation record saved.');
+            }} />
+        )}
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
                 {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
                 {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}
