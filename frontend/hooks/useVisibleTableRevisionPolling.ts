@@ -20,8 +20,11 @@ export function useVisibleTableRevisionPolling(
   tableKey: AdminTableKey,
   reloadTable: () => Promise<void> | void,
   pollingInterval = DEFAULT_TABLE_REVISION_POLLING_INTERVAL,
+  paused = false,
 ): void {
   const reloadTableRef = useRef(reloadTable);
+  const controllerRef = useRef<ReturnType<typeof startVisibleTableRevisionPolling> | null>(null);
+  const pausedRef = useRef(paused);
 
   // A page can replace its callback after rendering. Keeping the latest callback
   // in a ref avoids resetting the active interval solely because its identity changed.
@@ -30,13 +33,24 @@ export function useVisibleTableRevisionPolling(
   }, [reloadTable]);
 
   useEffect(() => {
-    return startVisibleTableRevisionPolling({
+    const controller = startVisibleTableRevisionPolling({
       tableKey,
       // The controller calls the current page callback without owning page state.
       reloadTable: () => reloadTableRef.current(),
       fetchRevisions: fetchTableRevisions,
       document,
       pollingInterval,
+      paused: pausedRef.current,
     });
+    controllerRef.current = controller;
+    return () => {
+      controller();
+      controllerRef.current = null;
+    };
   }, [pollingInterval, tableKey]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    controllerRef.current?.setPaused(paused);
+  }, [paused]);
 }

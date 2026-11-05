@@ -71,6 +71,97 @@ describe('startVisibleTableRevisionPolling', () => {
     jest.restoreAllMocks();
   });
 
+  it('pauses requests and checks the retained baseline immediately on resume', async () => {
+    const document = new FakeVisibilityDocument();
+    const fetchRevisions = jest.fn()
+      .mockResolvedValueOnce(createRevisions(1, 4))
+      .mockResolvedValue(createRevisions(1, 5));
+    const reloadTable = jest.fn();
+    const controller = startVisibleTableRevisionPolling({
+      tableKey: 'memberships', reloadTable, fetchRevisions, document,
+    });
+    await flushPromises();
+    controller.setPaused(true);
+    expect(jest.getTimerCount()).toBe(0);
+    jest.advanceTimersByTime(DEFAULT_TABLE_REVISION_POLLING_INTERVAL * 3);
+    document.setVisibilityState('hidden');
+    document.setVisibilityState('visible');
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(1);
+    controller.setPaused(false);
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(2);
+    expect(reloadTable).toHaveBeenCalledTimes(1);
+    jest.advanceTimersByTime(DEFAULT_TABLE_REVISION_POLLING_INTERVAL);
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(3);
+    expect(reloadTable).toHaveBeenCalledTimes(1);
+    controller();
+  });
+
+  it('does not reload on resume when the revision is unchanged', async () => {
+    const document = new FakeVisibilityDocument();
+    const fetchRevisions = jest.fn().mockResolvedValue(createRevisions(1, 4));
+    const reloadTable = jest.fn();
+    const controller = startVisibleTableRevisionPolling({
+      tableKey: 'memberships', reloadTable, fetchRevisions, document,
+    });
+    await flushPromises();
+    controller.setPaused(true);
+    controller.setPaused(false);
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(2);
+    expect(reloadTable).not.toHaveBeenCalled();
+    controller();
+    controller.setPaused(false);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('discards an in-flight pre-pause response and queues an immediate resume check', async () => {
+    const document = new FakeVisibilityDocument();
+    let resolveRequest!: (value: AdminTableRevisions) => void;
+    const fetchRevisions = jest.fn()
+      .mockResolvedValueOnce(createRevisions(1, 4))
+      .mockImplementationOnce(() => new Promise<AdminTableRevisions>((resolve) => {
+        resolveRequest = resolve;
+      }))
+      .mockResolvedValue(createRevisions(1, 5));
+    const reloadTable = jest.fn();
+    const controller = startVisibleTableRevisionPolling({
+      tableKey: 'memberships', reloadTable, fetchRevisions, document,
+    });
+    await flushPromises();
+    jest.advanceTimersByTime(DEFAULT_TABLE_REVISION_POLLING_INTERVAL);
+    controller.setPaused(true);
+    controller.setPaused(false);
+    expect(fetchRevisions).toHaveBeenCalledTimes(2);
+    resolveRequest(createRevisions(1, 99));
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(3);
+    expect(reloadTable).toHaveBeenCalledTimes(1);
+    controller();
+  });
+
+  it('waits for tab visibility when a paused controller resumes in the background', async () => {
+    const document = new FakeVisibilityDocument();
+    const fetchRevisions = jest.fn().mockResolvedValue(createRevisions(1, 4));
+    const reloadTable = jest.fn();
+    const controller = startVisibleTableRevisionPolling({
+      tableKey: 'memberships', reloadTable, fetchRevisions, document, paused: true,
+    });
+    await flushPromises();
+    expect(fetchRevisions).not.toHaveBeenCalled();
+    document.setVisibilityState('hidden');
+    controller.setPaused(false);
+    await flushPromises();
+    expect(fetchRevisions).not.toHaveBeenCalled();
+    document.setVisibilityState('visible');
+    await flushPromises();
+    expect(fetchRevisions).toHaveBeenCalledTimes(1);
+    expect(reloadTable).toHaveBeenCalledTimes(1);
+    controller();
+  });
+
   it('stores the initial visible revision without reloading the table', async () => {
     const document = new FakeVisibilityDocument();
     const fetchRevisions = jest.fn().mockResolvedValue(createRevisions(12, 4));

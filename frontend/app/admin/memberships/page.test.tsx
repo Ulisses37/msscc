@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { downloadCsv } from '@/utils/exportCsv';
 import { downloadXlsx } from '@/utils/exportXlsx';
 import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
@@ -30,6 +31,18 @@ describe('membership table nullable values', () => {
       { ...membership, membership_id: 2, first_name: 'Zero', amount_paid: '0.00',
         payment_status: 'pending', start_date: '2026-02-30', end_date: '2099-01-01' },
     ]);
+  });
+
+  it('pauses revision polling while adding a membership and resumes on cancel', async () => {
+    render(<AdminMembershipsPage />);
+    await screen.findByRole('table');
+    expect(jest.mocked(useVisibleTableRevisionPolling).mock.lastCall?.[3]).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Add membership' }));
+    expect(screen.getByRole('dialog', { name: 'Add membership' })).toBeInTheDocument();
+    expect(jest.mocked(useVisibleTableRevisionPolling).mock.lastCall?.[3]).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(jest.mocked(useVisibleTableRevisionPolling).mock.lastCall?.[3]).toBe(false);
   });
 
   it('renders fallbacks and known zero without activating pending checkouts', async () => {
