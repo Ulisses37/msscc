@@ -5,14 +5,19 @@ import { createPortal } from "react-dom";
 
 import { z } from 'zod';
 
+import { formatDonationName } from '@/utils/formatDonationName';
+
 import { MailingListStatus } from '@/components/admin/MailingListStatus';
 import { formatCurrency } from "@/utils/formatCurrency";
 
 export type DonationEntry = {
   donation_id: number;
-  donor_first_name: string;
-  donor_last_name: string;
-  donor_email: string;
+  donor_first_name: string | null;
+  donor_last_name: string | null;
+  donor_email: string | null;
+  record_source?: 'manual' | 'checkout' | 'unknown';
+  payment_method?: 'cash' | 'check' | null;
+  external_reference?: string;
   address?: string | null;
   amount: number | string;
   processing_cost_contribution: number | string;
@@ -107,6 +112,7 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const isManual = donation.record_source === 'manual';
   const email = donation.donor_email?.trim() ?? '';
   const emailHref = z.email().safeParse(email).success ? `mailto:${encodeURIComponent(email)}` : null;
 
@@ -185,7 +191,7 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
           <div className="min-w-0">
             <p className="mb-1 text-eyebrow font-semibold uppercase tracking-eyebrow text-msscc-pink-dark">Donation details</p>
             <h2 id="donation-detail-title" className="break-words font-heading text-heading-2 text-msscc-teal">
-              {displayValue(`${donation.donor_first_name} ${donation.donor_last_name}`.trim())}
+              {formatDonationName(donation, 'first-last')}
             </h2>
             <p className="mt-1 text-caption text-msscc-gray-mid">Donation #{donation.donation_id}</p>
           </div>
@@ -202,8 +208,14 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
 
         <div className="min-h-0 min-w-0 flex-1 space-y-7 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           <DetailSection title="Donor">
-            <DetailField label="First name" value={donation.donor_first_name} />
-            <DetailField label="Last name" value={donation.donor_last_name} />
+            {donation.is_anonymous ? (
+              <DetailField label="Name" value="Anonymous" />
+            ) : (
+              <>
+                <DetailField label="First name" value={donation.donor_first_name} />
+                <DetailField label="Last name" value={donation.donor_last_name} />
+              </>
+            )}
             <DetailField label="Email" value={donation.donor_email} />
             <DetailField
               label="Address"
@@ -216,21 +228,35 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
 
           <DetailSection title="Donation">
             <DetailField label="Date" value={formatDate(donation.donation_date)} />
-            <DetailField label="Base donation" value={formatCurrency(Number(donation.amount))} />
+            <DetailField label={isManual ? 'Donation amount' : 'Base donation'}
+              value={formatCurrency(Number(donation.amount))} />
             <DetailField label="Message" value={donation.message} preserveWhitespace />
           </DetailSection>
 
           {/* The existing amount means the base donation, not the Stripe
               charge; show the saved contribution and total for reconciliation. */}
           <DetailSection title="Payment">
-            <DetailField label="Processing-cost contribution" value={formatCurrency(Number(donation.processing_cost_contribution))} />
-            <DetailField label="Total payment" value={formatCurrency(Number(donation.total_amount))} />
+            {isManual ? (
+              <p className="py-3 text-body-sm text-msscc-gray-dark">
+                Recorded offline donation. No online processing-cost contribution was added.
+              </p>
+            ) : (
+              <DetailField label="Processing-cost contribution"
+                value={formatCurrency(Number(donation.processing_cost_contribution))} />
+            )}
+            <DetailField label={isManual ? 'Recorded total' : 'Total payment'}
+              value={formatCurrency(Number(donation.total_amount))} />
             <DetailField label="Payment status" value={donation.payment_status} />
+            <DetailField label="Payment method" value={donation.payment_method === 'cash'
+              ? 'Cash' : donation.payment_method === 'check' ? 'Check' : null} />
             <DetailField label="Reference ID" value={donation.reference_id} />
+            <DetailField label="External reference" value={donation.external_reference} />
           </DetailSection>
 
           <DetailSection title="Record information">
             <DetailField label="Donation ID" value={donation.donation_id} />
+            <DetailField label="Record origin" value={isManual ? 'Manual'
+              : donation.record_source === 'checkout' ? 'Online checkout' : 'Unknown'} />
             <DetailField label="Created" value={formatDateTime(donation.created_at)} />
           </DetailSection>
         </div>
