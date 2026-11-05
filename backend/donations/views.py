@@ -15,6 +15,7 @@ from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import (
     DonationSerializer,
+    ManualMembershipCreateSerializer,
     MembershipSerializer,
     PublicDonationCreateSerializer,
     StrictContributionChoiceField,
@@ -249,6 +250,12 @@ class MembershipListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPI
 
     serializer_class = MembershipSerializer
     permission_classes = [HasFinancialRecordPermission]
+
+    def get_serializer_class(self):
+        """Restrict new manual inputs without rejecting existing historical statuses on reads."""
+        if self.request.method == "POST":
+            return ManualMembershipCreateSerializer
+        return MembershipSerializer
 
     def create(self, request, *args, **kwargs):
         """Never expose a database exception or claim a failed creation succeeded."""
