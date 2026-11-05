@@ -622,7 +622,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         # Manual-entry fields retain their own values; no other row is changed.
         payload = "O'Connor' OR '1'='1 --"
         for field in ("first_name", "last_name", "phone", "membership_type",
-                      "payment_status", "reference_id", "status", "notes"):
+                      "reference_id", "notes"):
             with self.subTest(field=field):
                 response = self.client.post(
                     "/api/donations/memberships/",
@@ -634,7 +634,17 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
                     "first_name", "last_name", "phone"
                 ) else field
                 self.assertEqual(getattr(member, stored_field), payload)
-        self.assertEqual(Membership.objects.count(), 8)
+        self.assertEqual(Membership.objects.count(), 6)
+        # Statuses and methods are structured choices, not free-text fields.
+        for field in ("payment_status", "status", "payment_method"):
+            with self.subTest(field=field):
+                response = self.client.post(
+                    "/api/donations/memberships/",
+                    self.membership_data(**{field: payload}), format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+        self.assertEqual(Membership.objects.count(), 6)
         self.assertFalse(Membership.objects.filter(status="active").exists())
 
     def test_sql_like_membership_email_is_rejected_without_creating_a_row(self):
@@ -665,7 +675,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         self.assertEqual(Membership.objects.count(), 2)
 
     def test_missing_oversized_and_mistyped_membership_fields_do_not_create_rows(self):
-        for field in self.membership_data():
+        for field in ("first_name", "last_name", "membership_type", "status"):
             with self.subTest(missing=field):
                 response = self.client.post(
                     "/api/donations/memberships/",
