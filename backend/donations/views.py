@@ -9,11 +9,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from config.encryption import EncryptedTextError
+from donations.manual_donations import create_manual_donation
 from donations.models import AdminTableRevision, Donation, Membership
 from donations.permissions import HasFinancialRecordPermission
 from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import (
+    AdminDonationSerializer,
     DonationSerializer,
     ManualMembershipCreateSerializer,
     MembershipSerializer,
@@ -186,6 +188,24 @@ def filter_encrypted_email(queryset, field_name, email):
     return queryset.filter(pk__in=matches)
 
 
+class ManualDonationCreateView(EncryptedPIIResponseMixin, APIView):
+    """Record one already received donation, never initiate checkout."""
+
+    permission_classes = [HasFinancialRecordPermission]
+
+    def post(self, request):
+        """Use shared validation and contain database failures without exposing private facts."""
+        try:
+            donation = create_manual_donation(request.data)
+        except DatabaseError:
+            logger.error("Database error while creating a manual donation.")
+            return Response(
+                {"detail": "Unable to save the donation at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(AdminDonationSerializer(donation).data, status=status.HTTP_201_CREATED)
+
+
 class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIView):
     """List donation records or create a new donation."""
 
@@ -196,7 +216,7 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
         """Keep public creation requirements and disclosures separate from admin reads."""
         if self.request.method == "POST":
             return PublicDonationCreateSerializer
-        return super().get_serializer_class()
+        return AdminDonationSerializer
 
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""
@@ -240,7 +260,7 @@ class DonationDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDestr
     """Retrieve, update, or delete a single donation record."""
 
     queryset = Donation.objects.all()
-    serializer_class = DonationSerializer
+    serializer_class = AdminDonationSerializer
     lookup_field = "donation_id"
     permission_classes = [HasFinancialRecordPermission]
 
