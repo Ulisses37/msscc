@@ -1,4 +1,4 @@
-import { previewMembershipCsv } from './membershipImportPreview';
+import { confirmMembershipCsv, previewMembershipCsv } from './membershipImportPreview';
 
 const originalFetch = global.fetch;
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -48,4 +48,25 @@ describe('membership CSV preview request', () => {
       if (failure === 'no token') expect(fetch).not.toHaveBeenCalled();
     },
   );
+
+  it('sends the original file and signed review, not browser-supplied proposals', async () => {
+    const result = { record_type: 'membership', batch_id: 'batch-1', created_count: 1,
+      membership_ids: [7], already_imported: false };
+    jest.mocked(fetch).mockResolvedValue({ ok: true, json: async () => result });
+    await expect(confirmMembershipCsv(file, 'signed-review', true)).resolves.toEqual(result);
+    const [url, options] = jest.mocked(fetch).mock.calls[0];
+    expect(url).toBe(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/import/confirm/`);
+    expect(options).toMatchObject({ method: 'POST', headers: { Authorization: 'Bearer test-token' } });
+    const body = options?.body as FormData;
+    expect(body.get('file')).toBe(file);
+    expect(body.get('review_token')).toBe('signed-review');
+    expect(body.get('acknowledge_warnings')).toBe('true');
+    expect([...body.keys()]).toEqual(['file', 'review_token', 'acknowledge_warnings']);
+  });
+
+  it('keeps errors private and permits a retry after uncertain confirmation', async () => {
+    jest.mocked(fetch).mockRejectedValue(new Error('private upload data'));
+    await expect(confirmMembershipCsv(file, 'signed-review', false)).rejects.toThrow('uncertain');
+    expect(console.error).not.toHaveBeenCalled();
+  });
 });

@@ -2,11 +2,13 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-import { previewMembershipCsv } from '@/services/membershipImportPreview';
+import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershipImportPreview';
 
 import { MembershipCsvReview } from './MembershipCsvReview';
 
-jest.mock('@/services/membershipImportPreview', () => ({ previewMembershipCsv: jest.fn() }));
+jest.mock('@/services/membershipImportPreview', () => ({
+  previewMembershipCsv: jest.fn(), confirmMembershipCsv: jest.fn(),
+}));
 
 const file = new File(['fixed headers'], 'membership.csv', { type: 'text/csv' });
 const proposal = {
@@ -26,6 +28,10 @@ const reviewed = {
 describe('membership CSV review only', () => {
   beforeEach(() => {
     jest.mocked(previewMembershipCsv).mockReset().mockResolvedValue(reviewed);
+    jest.mocked(confirmMembershipCsv).mockReset().mockResolvedValue({
+      record_type: 'membership', batch_id: 'batch-1', created_count: 2,
+      membership_ids: [1, 2], already_imported: false,
+    });
   });
 
   it('uploads, renders normalized values as text, gates warnings and reports errors', async () => {
@@ -98,5 +104,39 @@ describe('membership CSV review only', () => {
     resolveRequest(reviewed);
     await waitFor(() => expect(screen.queryByText(/Membership preview:/)).toBeNull());
     expect(screen.getByRole('button', { name: 'Upload and review CSV' })).toBeEnabled();
+  });
+
+  it('confirms only an error-free review, requires warning acknowledgment, and reports save', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], review_token: 'signed-review',
+    });
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const confirm = await screen.findByRole('button', { name: 'Confirm membership import' });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(confirm);
+    expect(await screen.findByText(/Membership batch saved. Batch batch-1: 2 memberships/)).toBeInTheDocument();
+    expect(confirmMembershipCsv).toHaveBeenCalledWith(file, 'signed-review', true);
+    expect(screen.queryByText(/no records have been saved/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirm membership import' })).toBeNull();
+  });
+
+  it('retains the reviewed file after an uncertain confirmation for an idempotent retry', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockRejectedValueOnce(new Error('network'));
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm membership import' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Retry with the same reviewed file');
+    expect(screen.queryByText(/no records have been saved/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm membership import' }));
+    expect(await screen.findByText(/Membership batch saved/)).toBeInTheDocument();
+    expect(confirmMembershipCsv).toHaveBeenCalledTimes(2);
+    expect(previewMembershipCsv).toHaveBeenCalledTimes(1);
   });
 });

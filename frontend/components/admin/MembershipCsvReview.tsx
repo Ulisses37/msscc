@@ -2,9 +2,9 @@
 
 import { useRef, useState } from 'react';
 
-import { previewMembershipCsv } from '@/services/membershipImportPreview';
+import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershipImportPreview';
 
-import type { MembershipCsvPreview } from '@/services/membershipImportPreview';
+import type { MembershipCsvConfirmation, MembershipCsvPreview } from '@/services/membershipImportPreview';
 
 // Mirror the backend's ordered template for display, not for parsing. Only
 // backend-normalized values returned by the authorized preview are rendered.
@@ -14,12 +14,15 @@ const HEADERS = [
   'payment_status', 'payment_method', 'reference_id', 'notes',
 ] as const;
 
-/** Read-only review, deliberately without a save action until server-bound confirmation exists. */
+/** Review and confirm only with a signed, server-revalidated CSV decision. */
 export function MembershipCsvReview() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<MembershipCsvPreview | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmationAttempted, setConfirmationAttempted] = useState(false);
+  const [confirmation, setConfirmation] = useState<MembershipCsvConfirmation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const requestVersion = useRef(0);
   // The ref closes the double-click window before React re-renders the
@@ -34,7 +37,34 @@ export function MembershipCsvReview() {
     setAcknowledged(false);
     setError(null);
     setLoading(false);
+    setConfirmation(null);
+    setConfirmationAttempted(false);
     inFlight.current = false;
+  }
+
+  async function confirm() {
+    if (!file || !preview?.review_token || preview.errors.length || confirmation
+      || (preview.warnings.length && !acknowledged) || inFlight.current) return;
+    inFlight.current = true;
+    const version = requestVersion.current;
+    setConfirming(true);
+    // After a request starts, even a failed response cannot prove that the
+    // transaction did not commit. Never revert to a "nothing saved" claim.
+    setConfirmationAttempted(true);
+    setError(null);
+    try {
+      const result = await confirmMembershipCsv(file, preview.review_token, acknowledged);
+      if (version === requestVersion.current) setConfirmation(result);
+    } catch {
+      if (version === requestVersion.current) {
+        setError('Confirmation status is uncertain or review changed. Retry with the same reviewed file, or upload again.');
+      }
+    } finally {
+      if (version === requestVersion.current) {
+        inFlight.current = false;
+        setConfirming(false);
+      }
+    }
   }
 
   async function upload() {
@@ -66,6 +96,7 @@ export function MembershipCsvReview() {
       <p className="mt-2 text-body-sm">Upload the fixed template for a read-only review. No records are saved.</p>
       <label htmlFor="membership-csv-file" className="mt-4 block text-body-sm">Membership CSV file</label>
       <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block"
+        disabled={confirming}
         onChange={(event) => {
           // Never leave an old file's warnings or acknowledgment visible while
           // the picker points to a different CSV, including an empty selection.
@@ -73,11 +104,11 @@ export function MembershipCsvReview() {
           setFile(event.target.files?.[0] ?? null);
         }} />
       <div className="mt-4 flex gap-3">
-        <button type="button" disabled={!file || loading} onClick={() => void upload()}
+        <button type="button" disabled={!file || loading || confirming} onClick={() => void upload()}
           className="rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
           {loading ? 'Reviewing CSV…' : 'Upload and review CSV'}
         </button>
-        {(preview || error) && <button type="button" onClick={clearReview}
+        {(preview || error) && <button type="button" disabled={confirming} onClick={clearReview}
           className="rounded-md border border-msscc-gray-light px-4 py-2">Cancel review</button>}
       </div>
       {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
@@ -99,7 +130,7 @@ export function MembershipCsvReview() {
             ))}</ul>
             <label className="mt-3 flex gap-2">
               <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
-              I have reviewed these warnings and will resolve them before a future confirmation.
+              I have reviewed these warnings and still want to confirm this import.
             </label>
           </div>}
           <div className="mt-4 overflow-x-auto">
@@ -120,12 +151,27 @@ export function MembershipCsvReview() {
               ))}</tbody>
             </table>
           </div>
-          <p role="status" className="mt-4">Review only; no records have been saved.
+          {!confirmation && <p role="status" className="mt-4">
+            {confirmationAttempted ? 'Confirmation may have saved records; retry with the same file to check.'
+              : 'Review only; no records have been saved.'}
             {/* Confirmation needs a separately authorized, server-bound batch;
                 preview acknowledgment alone cannot create financial records. */}
             {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
             {preview.warnings.length > 0 && !acknowledged ? ' Acknowledge warnings before future confirmation.' : ''}
-          </p>
+          </p>}
+          {/* The signed review token is only a prerequisite: the backend checks
+              its owner, original file, current warnings and every row again. */}
+          {!confirmation && preview.review_token && preview.errors.length === 0 && (
+            <button type="button" onClick={() => void confirm()} disabled={confirming ||
+              (preview.warnings.length > 0 && !acknowledged)}
+              className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
+              {confirming ? 'Confirming…' : 'Confirm membership import'}
+            </button>
+          )}
+          {confirmation && <p role="status" className="mt-4">
+            {confirmation.already_imported ? 'This batch was already imported.' : 'Membership batch saved.'}
+            {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.
+          </p>}
         </div>
       )}
     </section>
