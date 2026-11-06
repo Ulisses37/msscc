@@ -1,6 +1,6 @@
 from django.urls import path
 
-from donations.membership_import_views import MembershipCsvTemplateView
+from donations.membership_import_views import MembershipCsvPreviewView, MembershipCsvTemplateView
 from donations.views import (
     AdminTableRevisionView,
     DonationDetailView,
@@ -39,6 +39,11 @@ urlpatterns = [
         "memberships/import/template/",
         MembershipCsvTemplateView.as_view(),
         name="membership-import-template",
+    ),
+    path(
+        "memberships/import/preview/",
+        MembershipCsvPreviewView.as_view(),
+        name="membership-import-preview",
     ),
     path(
         "memberships/<int:membership_id>/",
