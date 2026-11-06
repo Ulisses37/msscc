@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from donations.membership_csv_contract import MAX_MEMBERSHIP_CSV_BYTES, membership_csv_template
+from donations.membership_csv_duplicates import membership_duplicate_warnings
 from donations.membership_csv_preview import parse_membership_csv
 from donations.permissions import HasFinancialRecordPermission
 
@@ -50,4 +51,9 @@ class MembershipCsvPreviewView(APIView):
             return Response({"detail": "Unable to read the CSV file."},
                             status=status.HTTP_400_BAD_REQUEST)
         preview = parse_membership_csv(raw)
+        # Only validated rows can be compared; errors still block later confirmation.
+        # Duplicate lookup runs exclusively inside this finance-authorized view:
+        # it may decrypt saved names, which must never be queried for an outsider.
+        # This is still read-only; a later save must recompute these warnings.
+        preview["warnings"] = membership_duplicate_warnings(preview["proposed_records"])
         return Response(preview, status=status.HTTP_200_OK)
