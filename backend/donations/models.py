@@ -8,6 +8,19 @@ from config.fields import EncryptedTextField
 class Donation(models.Model):
     """Donation record to store donation information."""
 
+    class RecordSource(models.TextChoices):
+        """Known provenance, without classifying legacy records by inference."""
+
+        UNKNOWN = "unknown", "Unknown"
+        CHECKOUT = "checkout", "Checkout"
+        MANUAL = "manual", "Manual entry"
+
+    class PaymentMethod(models.TextChoices):
+        """Explicit offline payment facts, independent of provenance."""
+
+        CASH = "cash", "Cash"
+        CHECK = "check", "Check"
+
     class PaymentStatus(models.TextChoices):
         """Payment states that may be stored for a donation."""
 
@@ -43,6 +56,13 @@ class Donation(models.Model):
         default=PaymentStatus.PENDING,
     )
     reference_id = models.CharField(max_length=255)
+    record_source = models.CharField(
+        max_length=20, choices=RecordSource.choices, default=RecordSource.UNKNOWN,
+    )
+    payment_method = models.CharField(
+        max_length=20, choices=PaymentMethod.choices, null=True, blank=True,
+    )
+    external_reference = models.CharField(max_length=255, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     receipt_sent_at = models.DateTimeField(null=True, blank=True)
 
@@ -61,7 +81,16 @@ class Donation(models.Model):
                     ]
                 ),
                 name="donation_valid_payment_status",
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(record_source__in=["unknown", "checkout", "manual"]),
+                name="donation_valid_record_source",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(payment_method__isnull=True)
+                | models.Q(payment_method__in=["cash", "check"]),
+                name="donation_valid_payment_method",
+            ),
         ]
 
     def __str__(self):

@@ -1,7 +1,10 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from .manual_donations import _persist_manual_donation
 from .manual_memberships import _persist_manual_membership
 from .models import Donation, Membership
 from .processing_costs import calculate_donation_amounts
@@ -159,6 +162,7 @@ class DonationSerializer(serializers.ModelSerializer):
                 total_amount=total,
                 donation_date=timezone.localdate(),
                 payment_status=Donation.PaymentStatus.PENDING,
+                record_source=Donation.RecordSource.CHECKOUT,
                 reference_id="pending",
             )
             donation.reference_id = f"DON-{donation.donation_id:08d}"
@@ -184,6 +188,90 @@ class DonationSerializer(serializers.ModelSerializer):
             validated_data["processing_cost_contribution"] = contribution
             validated_data["total_amount"] = total
         return super().update(instance, validated_data)
+
+
+class AdminDonationSerializer(DonationSerializer):
+    """Expose recorded provenance and offline facts only through authorized admin paths."""
+
+    class Meta(DonationSerializer.Meta):
+        fields = [
+            *DonationSerializer.Meta.fields,
+            "record_source", "payment_method", "external_reference", "currency",
+        ]
+        read_only_fields = [
+            *DonationSerializer.Meta.read_only_fields,
+            "record_source", "payment_method", "external_reference", "currency",
+        ]
+
+
+class ManualDonationInputSerializer(serializers.Serializer):
+    """Validate and save received donation facts independently of public checkout."""
+
+    PAYMENT_METHODS = Donation.PaymentMethod.values
+
+    donor_first_name = DonationAddressField(
+        source="donor_first_name_encrypted", max_length=255, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    donor_last_name = DonationAddressField(
+        source="donor_last_name_encrypted", max_length=255, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    donor_email = serializers.EmailField(
+        source="donor_email_encrypted", max_length=254, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    address = DonationAddressField(
+        source="donor_address_encrypted", required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal("0.01"),
+    )
+    currency = serializers.ChoiceField(choices=("usd",), default="usd")
+    donation_date = serializers.DateField(input_formats=["%Y-%m-%d"])
+    payment_method = serializers.ChoiceField(
+        choices=PAYMENT_METHODS, required=False, allow_null=True, default=None,
+    )
+    is_anonymous = StrictContributionChoiceField(default=False)
+    external_reference = DonationAddressField(
+        max_length=255, required=False, allow_blank=True, default="",
+    )
+    message = DonationAddressField(max_length=500, required=False, allow_blank=True, default="")
+
+    def to_internal_value(self, data):
+        """Reject checkout identifiers and server-controlled facts rather than ignore them."""
+        if not isinstance(data, dict):
+            raise serializers.ValidationError({"non_field_errors": ["Expected an object."]})
+        unknown = set(data) - set(self.fields)
+        if unknown:
+            raise serializers.ValidationError({key: "Unsupported field." for key in unknown})
+        return super().to_internal_value(data)
+
+    def validate_donation_date(self, value):
+        """A received payment cannot have a future donation date."""
+        if value > timezone.localdate():
+            raise serializers.ValidationError("Donation date cannot be in the future.")
+        return value
+
+    def create(self, validated_data):
+        """Persist validated facts atomically without payment or subscription actions."""
+        return _persist_manual_donation(validated_data)
+
+    def validate(self, attrs):
+        """Normalize unknown contacts and discard anonymous identity without inferring facts."""
+        for field in (
+            "donor_first_name_encrypted", "donor_last_name_encrypted",
+            "donor_email_encrypted", "donor_address_encrypted",
+        ):
+            attrs[field] = attrs.get(field) or None
+        if attrs["donor_email_encrypted"]:
+            attrs["donor_email_encrypted"] = attrs["donor_email_encrypted"].lower()
+        if attrs["is_anonymous"]:
+            attrs["donor_first_name_encrypted"] = None
+            attrs["donor_last_name_encrypted"] = None
+            attrs["donor_address_encrypted"] = None
+        return attrs
 
 
 class PublicDonationCreateSerializer(DonationSerializer):
