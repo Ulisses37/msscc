@@ -9,8 +9,15 @@ import { membershipDisplayStatus } from "@/components/admin/membershipDisplaySta
 import { PostPages } from "@/components/content/Pagination";
 import { PostTable, PostTableColumn, SortDirection } from "@/components/content/PostGeneratedData";
 import { downloadCsv, type CsvColumn } from "@/utils/exportCsv";
-import { downloadXlsx, type XlsxCell, type XlsxColumn } from "@/utils/exportXlsx";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadXlsx, type XlsxColumn } from "@/utils/exportXlsx";
+import { createMembershipXlsxCell, membershipCsvValue } from '@/utils/membershipExport';
+import {
+  compareMembershipValues,
+  formatMembershipAmount,
+  formatMembershipDate,
+  membershipAmount,
+  parseMembershipDate,
+} from '@/utils/membershipValues';
 
 type SortColumn =
   | "last_name"
@@ -53,7 +60,7 @@ const defaultMembershipExportFields: (keyof MembershipEntry)[] = [
 ];
 
 // Spreadsheet widths are defined per API field because XLSX columns need explicit readable sizing.
-const membershipExportColumnWidths: Record<keyof MembershipEntry, number> = {
+const membershipExportColumnWidths: Partial<Record<keyof MembershipEntry, number>> = {
   membership_id: 15,
   first_name: 18,
   last_name: 18,
@@ -71,61 +78,6 @@ const membershipExportColumnWidths: Record<keyof MembershipEntry, number> = {
   created_at: 22,
   updated_at: 22,
 };
-
-// Parse date-only API values in local time so spreadsheet dates do not shift across time zones.
-function parseDateOnly(value: string): Date | null {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-
-  if (!match) return null;
-
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-// Convert API values to native spreadsheet cell types so Excel can sort and format them correctly.
-// Unparseable values fall back to text rather than being dropped from the export.
-function createMembershipXlsxCell(membership: MembershipEntry, field: keyof MembershipEntry): XlsxCell {
-  const value = membership[field];
-
-  if (value === null || value === undefined || value === "") return null;
-
-  if (field === "membership_id") {
-    return { value: Number(value), type: Number, format: "0" };
-  }
-
-  if (field === "amount_paid") {
-    const amount = Number(value);
-
-    return Number.isFinite(amount)
-      ? { value: amount, type: Number, format: "[$$-409]#,##0.00" }
-      : { value: String(value), type: String, format: "@" };
-  }
-
-  if (field === "start_date" || field === "end_date" || field === "renewal_date") {
-    const date = parseDateOnly(String(value));
-
-    return date
-      ? { value: date, type: Date, format: "mm/dd/yyyy" }
-      : { value: String(value), type: String, format: "@" };
-  }
-
-  if (field === "created_at" || field === "updated_at") {
-    const date = new Date(String(value));
-
-    return Number.isNaN(date.getTime())
-      ? { value: String(value), type: String, format: "@" }
-      : { value: date, type: Date, format: "mm/dd/yyyy h:mm AM/PM" };
-  }
-
-  return {
-    value: String(value),
-    type: String,
-    format: "@",
-    wrap: field === "notes",
-    alignVertical: field === "notes" ? "top" : "center",
-  };
-}
 
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
@@ -150,11 +102,20 @@ export default function AdminMembershipsPage() {
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
   const columns: PostTableColumn<MembershipEntry, SortColumn>[] = [
-    { key: "start_date", header: "Date Paid", width: 150 },
+    {
+      key: 'start_date', header: 'Start date', width: 150,
+      render: (_value, membership) => formatMembershipDate(membership.start_date),
+    },
     { key: "last_name", header: "Name", width: 220, render: (_value, membership) => `${membership.last_name}, ${membership.first_name}` },
-    { key: "payment_status", header: "Payment Status", width: 200 },
+    {
+      key: 'payment_status', header: 'Payment Status', width: 200,
+      render: (_value, membership) => membership.payment_status?.trim() || 'Not provided',
+    },
     { key: "membership_type", header: "Membership", width: 180, render: (value) => <span className="capitalize">{String(value)}</span> },
-    { key: "amount_paid", header: "Amount", width: 140, render: (value) => formatCurrency(Number(value)) },
+    {
+      key: 'amount_paid', header: 'Amount', width: 140,
+      render: (_value, membership) => formatMembershipAmount(membership.amount_paid),
+    },
     {
       key: "end_date",
       header: "Status",
@@ -205,9 +166,9 @@ export default function AdminMembershipsPage() {
 
       switch (sortColumn) {
         case "start_date":
-          return direction * (
-            new Date(x.start_date).getTime() -
-            new Date(y.start_date).getTime()
+          return compareMembershipValues(
+            parseMembershipDate(x.start_date)?.getTime() ?? null,
+            parseMembershipDate(y.start_date)?.getTime() ?? null, direction,
           );
 
         case "last_name": {
@@ -221,8 +182,8 @@ export default function AdminMembershipsPage() {
         }
 
         case "payment_status":
-          return direction * x.payment_status.localeCompare(
-            y.payment_status,
+          return compareMembershipValues(
+            x.payment_status?.trim() || null, y.payment_status?.trim() || null, direction,
           );
 
         case "membership_type":
@@ -231,12 +192,14 @@ export default function AdminMembershipsPage() {
           );
 
         case "amount_paid":
-          return direction * (Number(x.amount_paid) - Number(y.amount_paid));
+          return compareMembershipValues(
+            membershipAmount(x.amount_paid), membershipAmount(y.amount_paid), direction,
+          );
 
         case "end_date":
-          return direction * (
-            new Date(x.end_date).getTime() -
-            new Date(y.end_date).getTime()
+          return compareMembershipValues(
+            parseMembershipDate(x.end_date)?.getTime() ?? null,
+            parseMembershipDate(y.end_date)?.getTime() ?? null, direction,
           );
 
         default:
@@ -291,7 +254,7 @@ export default function AdminMembershipsPage() {
     if (format === "csv") {
       const selectedColumns: CsvColumn<MembershipEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
         header,
-        getValue: (membership) => membership[field],
+        getValue: (membership) => membershipCsvValue(membership, field),
       }));
 
       // Export the complete filtered/sorted result set, not only the currently paginated table page.
@@ -301,7 +264,7 @@ export default function AdminMembershipsPage() {
 
     const selectedColumns: XlsxColumn<MembershipEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
       header,
-      width: membershipExportColumnWidths[field],
+      width: membershipExportColumnWidths[field] ?? 20,
       getCell: (membership) => createMembershipXlsxCell(membership, field),
     }));
 

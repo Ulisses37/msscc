@@ -47,7 +47,7 @@ const defaultDonationExportFields: (keyof DonationEntry)[] = [
 ];
 
 // Spreadsheet widths are defined per API field because XLSX columns need explicit readable sizing.
-const donationExportColumnWidths: Record<keyof DonationEntry, number> = {
+const donationExportColumnWidths: Partial<Record<keyof DonationEntry, number>> = {
   donation_id: 15,
   donor_first_name: 18,
   donor_last_name: 18,
@@ -272,7 +272,7 @@ export default function AdminDonationsPage() {
 
       const selectedColumns: XlsxColumn<DonationEntry>[] = selectedFieldOptions.map(({ field, header }) => ({
         header,
-        width: donationExportColumnWidths[field],
+        width: donationExportColumnWidths[field] ?? 20,
         getCell: (donation) => createDonationXlsxCell(donation, field),
       }));
 

@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+import { z } from 'zod';
+
+import { MailingListStatus } from '@/components/admin/MailingListStatus';
 import { formatCurrency } from "@/utils/formatCurrency";
 
 export type DonationEntry = {
@@ -9,6 +13,7 @@ export type DonationEntry = {
   donor_first_name: string;
   donor_last_name: string;
   donor_email: string;
+  address?: string | null;
   amount: number | string;
   processing_cost_contribution: number | string;
   total_amount: number | string;
@@ -102,7 +107,8 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawerProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  const hasEmail = Boolean(donation.donor_email?.trim());
+  const email = donation.donor_email?.trim() ?? '';
+  const emailHref = z.email().safeParse(email).success ? `mailto:${encodeURIComponent(email)}` : null;
 
   useEffect(() => {
     // Portaling to document.body separates the fixed drawer from wide/scrollable admin table containers.
@@ -127,8 +133,20 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
       }
 
       if (event.key === "Tab") {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
+        const controls = Array.from(
+          closeButtonRef.current?.closest('aside')?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), a[href]',
+          ) ?? [],
+        );
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
 
@@ -187,6 +205,12 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
             <DetailField label="First name" value={donation.donor_first_name} />
             <DetailField label="Last name" value={donation.donor_last_name} />
             <DetailField label="Email" value={donation.donor_email} />
+            <DetailField
+              label="Address"
+              value={donation.is_anonymous
+                ? 'Address not retained for anonymous donations.' : donation.address}
+              preserveWhitespace
+            />
             <DetailField label="Anonymous" value={donation.is_anonymous ? "Yes" : "No"} />
           </DetailSection>
 
@@ -212,15 +236,28 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
         </div>
 
         <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white px-4 py-3 sm:px-6 sm:py-4">
-          <button
-            type="button"
-            disabled
-            title={hasEmail ? "Email action coming soon" : "No email address is available"}
-            className="w-full rounded-md bg-msscc-pink px-4 py-3 text-btn tracking-btn text-msscc-white opacity-55 disabled:cursor-not-allowed"
-          >
-            {hasEmail ? "Email donor" : "Email unavailable"}
-          </button>
-          <p className="mt-2 text-center text-caption text-msscc-gray-mid">Donor email actions are coming soon.</p>
+          <dl>
+            <MailingListStatus resource="donations" recordId={donation.donation_id} />
+          </dl>
+          {emailHref ? (
+            <a
+              href={emailHref}
+              aria-describedby="donor-email-explanation"
+              className="mt-2 block rounded-md bg-msscc-pink px-4 py-3 text-center text-btn tracking-btn text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+            >
+              Email donor
+            </a>
+          ) : (
+            <p className="mt-2 text-body-sm text-msscc-gray-dark">
+              Email unavailable: {email ? 'the recorded email address is invalid.'
+                : 'no email address is recorded.'}
+            </p>
+          )}
+          <p id="donor-email-explanation" className="mt-2 text-caption text-msscc-gray-mid">
+            Opens your configured email application. The website does not send or track the message.
+            Individual membership/payment correspondence is separate from announcement subscription
+            and is not blocked by an unconfirmed or unsubscribed mailing-list status.
+          </p>
         </footer>
       </aside>
     </div>,

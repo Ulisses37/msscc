@@ -5,11 +5,22 @@ from donations.views import (
     DonationDetailView,
     DonationListCreateView,
     DonationQuoteView,
+    FinancialRecordSubscriptionStatusView,
     MembershipDetailView,
     MembershipListCreateView,
 )
 
 urlpatterns = [
+    path(
+        "<int:donation_id>/subscription-status/",
+        FinancialRecordSubscriptionStatusView.as_view(),
+        name="donation-subscription-status",
+    ),
+    path(
+        "memberships/<int:membership_id>/subscription-status/",
+        FinancialRecordSubscriptionStatusView.as_view(),
+        name="membership-subscription-status",
+    ),
     # Put the public price preview alongside donation creation; it does not
     # create a record or accept client-supplied contribution/total fields.
     path("quote/", DonationQuoteView.as_view(), name="donation-quote"),
