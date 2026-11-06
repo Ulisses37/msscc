@@ -4,11 +4,13 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
 import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 
 import AdminDonationsPage from './page';
 
 jest.mock('@/services/financialRecordSearch', () => ({ fetchFinancialRecords: jest.fn() }));
+jest.mock('@/services/donationImportTemplate', () => ({ downloadDonationImportTemplate: jest.fn() }));
 jest.mock('@/hooks/useVisibleTableRevisionPolling', () => ({
   useVisibleTableRevisionPolling: jest.fn(),
 }));
@@ -54,6 +56,25 @@ describe('donation page manual-entry dialog', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     localStorage.clear();
+  });
+
+  it('offers the separate donation template and reports download access failures', async () => {
+    // The service is mocked so this test proves page wiring without hitting
+    // the backend or downloading a real file in the DOM test environment.
+    jest.mocked(downloadDonationImportTemplate).mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('private response'));
+    render(<AdminDonationsPage />);
+    expect(screen.getByText(/payment status is always completed/i)).toBeInTheDocument();
+    expect(screen.getByText(/anonymous donations retain no donor names or address/i))
+      .toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Download donation CSV template' });
+    fireEvent.click(button);
+    await waitFor(() => expect(downloadDonationImportTemplate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    // Never display a raw private server/network message in the admin page.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
+    expect(screen.queryByText('private response')).not.toBeInTheDocument();
   });
 
   it('opens on an empty list, pauses polling, and resumes it when canceled', async () => {

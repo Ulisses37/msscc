@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedDonation } from '@/services/manualDonation';
+import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
 import { ManualDonationForm } from '@/components/admin/ManualDonationForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
@@ -129,6 +130,10 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
   //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminDonationsPage() {
   const [isAddingDonation, setIsAddingDonation] = useState(false);
+  // Template failures belong to the import section, not the existing table or
+  // single-record form; keep their loading/error state independent.
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [savedDonationId, setSavedDonationId] = useState<number | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -346,6 +351,75 @@ export default function AdminDonationsPage() {
       </header>
 
       <main className="w-full">
+        {/* Put import instructions alongside the existing donation workflow,
+            but do not couple this header-only download to record export. */}
+        <section aria-labelledby="donation-import-template-title"
+          className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]">
+          <h2 id="donation-import-template-title" className="font-heading text-heading-3 text-msscc-teal">
+            Donation CSV import template
+          </h2>
+          <p className="mt-2 text-body-sm">
+            Download the fixed, donation-only CSV template. Keep all ten columns in order; one data row
+            represents one already-received offline or historical donation. This is not the configurable
+            CSV/XLSX record export. Downloading the template does not save donations.
+          </p>
+          <p className="mt-2 text-body-sm">Exact ordered columns:</p>
+          {/* The ten-column header is meant to be copied verbatim; horizontal
+              scrolling avoids wrapping commas into confusing mobile lines. */}
+          <p className="mt-1 max-w-full overflow-x-auto whitespace-nowrap text-body-sm">
+            <code>amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_name,donor_email,address,external_reference,message</code>
+          </p>
+          <p className="mt-2 text-body-sm">
+            Required: amount (known, positive USD decimal up to 99,999,999.99), donation_date (YYYY-MM-DD,
+            not in the future), and is_anonymous (write exactly true or false). Amounts allow up to two
+            decimal places, without currency symbols, thousands separators, or exponent notation.
+            Payment status is always completed because these payments have already been received; it is
+            not a CSV column. Currency is USD. No online processing fees are calculated.
+          </p>
+          <p className="mt-2 text-body-sm">
+            Optional: payment_method (cash or check, or blank if unknown), donor_first_name,
+            donor_last_name, donor_email, address, external_reference, and message. Blank historical
+            contact details remain unknown and do not make a non-anonymous donation anonymous.
+            Anonymous donations retain no donor names or address, so leave those cells blank; an
+            optional email may still be retained internally. The template contains no example people.
+          </p>
+          <p className="mt-2 text-body-sm">
+            UTF-8 CSV limit: 1,048,576 bytes and 500 data rows. Cell character limits: amount 11,
+            donation_date 10, is_anonymous 5, payment_method 20, donor names 255 each,
+            donor_email 254, address 500, external_reference 255, and message 500.
+            This import does not charge payments, send receipts, or enroll anyone in a mailing list.
+          </p>
+          <p className="mt-2 text-body-sm">
+            This first step provides the template only. Upload, review, and confirmation controls
+            will be added in the following donation import steps; the manual donation form below
+            is for a single record, not a CSV upload.
+          </p>
+          <p className="mt-2 text-body-sm">
+            Team setup, the complete CSV field guide, and the planned workflow are tracked in
+            docs/donation-csv-import.md. This page and the CSV template are supplied by application
+            code, not seeded database content.
+          </p>
+          {/* The backend owns both the header order and the authorization check;
+              never build a template from the unrelated configurable export. */}
+          <button type="button" disabled={isDownloadingTemplate}
+            className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+            onClick={async () => {
+              // A failed private request should clear only this section's
+              // message; it must not disturb a saved donation or table filter.
+              setTemplateError(null);
+              setIsDownloadingTemplate(true);
+              try {
+                await downloadDonationImportTemplate();
+              } catch {
+                setTemplateError('Unable to download the template. Check your finance access and try again.');
+              } finally {
+                setIsDownloadingTemplate(false);
+              }
+            }}>
+            {isDownloadingTemplate ? 'Downloading template…' : 'Download donation CSV template'}
+          </button>
+          {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+        </section>
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedDonationId !== null && (
           <button type="button" onClick={() => void viewSavedDonation()}
