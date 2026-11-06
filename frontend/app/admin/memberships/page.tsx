@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedMembership } from '@/services/manualMembership';
+import { downloadMembershipImportTemplate } from '@/services/membershipImportTemplate';
 import { ManualMembershipForm } from '@/components/admin/ManualMembershipForm';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
@@ -106,6 +107,8 @@ export default function AdminMembershipsPage() {
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof MembershipEntry)[]>(defaultMembershipExportFields);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -338,6 +341,48 @@ export default function AdminMembershipsPage() {
       </header>
 
       <main className="w-full">
+        <section aria-labelledby="membership-import-template-title" className="mb-6 rounded-md border border-msscc-gray-light p-4">
+          <h2 id="membership-import-template-title" className="font-heading text-heading-3 text-msscc-teal">Membership CSV import template</h2>
+          <p className="mt-2 text-body-sm">
+            Download the fixed membership-only CSV template. Keep its columns in order; one row represents
+            one membership. This template is separate from the CSV/XLSX record exports. Upload and review
+            will be available in a later step; downloading does not create records.
+          </p>
+          <p className="mt-2 text-body-sm">
+            Required: first_name, last_name, membership_type (free text), status. Optional: email, phone,
+            address, membership_price, amount_paid, start_date, end_date, renewal_date, payment_status,
+            payment_method, reference_id, notes. Leave optional cells blank when unknown; 0.00 means a
+            known zero, not unknown. Do not substitute current prices, dates, payment statuses or methods.
+          </p>
+          <p className="mt-2 text-body-sm">
+            Status: unknown, active, inactive, pending, expired, canceled. Payment status (optional):
+            pending, completed, failed, canceled, waived. Payment method (optional): cash, check, card,
+            bank_transfer, other. Dates use YYYY-MM-DD; amounts use nonnegative decimal values with up to
+            two decimal places, no currency symbols or thousands separators.
+          </p>
+          <p className="mt-2 text-body-sm">
+            CSV limit: 1,048,576 UTF-8 bytes and 500 data rows. Cell limits: names, membership type,
+            status, phone, payment status and reference_id 255 characters; email 254; address and notes
+            500; payment_method 20; dates 10; amounts 12 characters. The download contains headers only,
+            not sample personal information. This template does not process payments or mailing-list consent.
+          </p>
+          <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50"
+            disabled={isDownloadingTemplate}
+            onClick={async () => {
+              setTemplateError(null);
+              setIsDownloadingTemplate(true);
+              try {
+                await downloadMembershipImportTemplate();
+              } catch {
+                setTemplateError('Unable to download the template. Check your finance access and try again.');
+              } finally {
+                setIsDownloadingTemplate(false);
+              }
+            }}>
+            {isDownloadingTemplate ? 'Downloading template…' : 'Download membership CSV template'}
+          </button>
+          {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+        </section>
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedMembershipId !== null && (
           <div className="mb-4">
