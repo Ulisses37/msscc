@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 
 import { getRichTextPlainText } from '@/utils/richText';
 import { formatLocalizedDate } from '@/utils/dateLocalization';
+import { buildGoogleCalendarUrl } from '@/utils/googleCalendar';
 
 import { RichTextContent } from '@/components/content/RichTextContent';
 import Button from '@/components/ui/Button';
@@ -48,24 +49,16 @@ function formatDateTime(
 
 // Generates a Google Calendar add-event link from event data
 function generateGoogleCalendarLink(event: Event, locale: string | string[] | undefined): string {
-  const formatDateForCalendar = (datetime: string): string => {
-    return new Date(datetime)
-      .toISOString()
-      .replace(/[-:]/g, '')
-      .replace('.000Z', 'Z');
-  };
-
   // Calendar content follows the page language, with English as the existing fallback.
   const isJapanese = locale === 'ja';
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: isJapanese ? event.titleJa || event.titleEn : event.titleEn,
-    dates: `${formatDateForCalendar(event.startDatetime)}/${formatDateForCalendar(event.endDatetime)}`,
+
+  return buildGoogleCalendarUrl({
+    title: isJapanese ? event.titleJa || event.titleEn : event.titleEn,
+    start: event.startDatetime,
+    end: event.endDatetime,
     details: isJapanese ? event.descriptionJa || event.descriptionEn : event.descriptionEn,
     location: isJapanese ? event.locationJa || event.locationEn : event.locationEn,
-  });
-
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }) ?? '#';
 }
 
 // Checks if two ISO datetime strings fall on the same calendar day
