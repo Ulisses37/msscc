@@ -15,11 +15,57 @@ from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import (
     DonationSerializer,
+    ManualMembershipCreateSerializer,
     MembershipSerializer,
+    PublicDonationCreateSerializer,
     StrictContributionChoiceField,
 )
+from emails.models import Subscriber
 
 logger = logging.getLogger(__name__)
+
+
+class FinancialRecordSubscriptionStatusView(APIView):
+    """Read current mailing-list state without changing consent or contacting a provider."""
+
+    permission_classes = [HasFinancialRecordPermission]
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Keep private subscription lookups out of browser and intermediary caches."""
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response["Cache-Control"] = "no-store, private"
+        return response
+
+    def get(self, request, donation_id=None, membership_id=None):
+        """Resolve the email from the authorized record, never from caller-supplied email."""
+        try:
+            if membership_id is not None:
+                record = get_object_or_404(
+                    Membership.objects.only("email_encrypted"), pk=membership_id,
+                )
+                email = record.email_encrypted
+            else:
+                record = get_object_or_404(
+                    Donation.objects.only("donor_email_encrypted"), pk=donation_id,
+                )
+                email = record.donor_email_encrypted
+            normalized = (email or "").strip().casefold()
+            if not normalized:
+                return Response({"status": "email_unavailable"})
+            current = Subscriber.objects.filter(email=normalized).values_list(
+                "status", flat=True,
+            ).first()
+            if current is not None and current not in Subscriber.Status.values:
+                logger.error("Unsupported mailing-list status on financial record lookup.")
+                return Response(
+                    {"detail": "Subscription status is temporarily unavailable."}, status=503,
+                )
+            return Response({"status": current or "not_recorded"})
+        except (DatabaseError, EncryptedTextError, ImproperlyConfigured):
+            logger.error("Financial record subscription lookup failed.")
+            return Response(
+                {"detail": "Subscription status is temporarily unavailable."}, status=503,
+            )
 
 
 class DonationQuoteSerializer(serializers.Serializer):
@@ -146,6 +192,12 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
     serializer_class = DonationSerializer
     permission_classes = [HasFinancialRecordPermission]
 
+    def get_serializer_class(self):
+        """Keep public creation requirements and disclosures separate from admin reads."""
+        if self.request.method == "POST":
+            return PublicDonationCreateSerializer
+        return super().get_serializer_class()
+
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""
         try:
@@ -198,6 +250,12 @@ class MembershipListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPI
 
     serializer_class = MembershipSerializer
     permission_classes = [HasFinancialRecordPermission]
+
+    def get_serializer_class(self):
+        """Restrict new manual inputs without rejecting existing historical statuses on reads."""
+        if self.request.method == "POST":
+            return ManualMembershipCreateSerializer
+        return MembershipSerializer
 
     def create(self, request, *args, **kwargs):
         """Never expose a database exception or claim a failed creation succeeded."""

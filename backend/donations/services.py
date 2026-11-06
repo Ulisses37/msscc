@@ -99,7 +99,8 @@ def update_membership_from_payment_intent(
 
 
 def create_pending_membership(
-    *, option_id, first_name, last_name, email, phone="", contribute_to_processing_costs=False
+    *, option_id, first_name, last_name, email, address, phone="",
+    contribute_to_processing_costs=False
 ):
     """Save an inactive member and link an unconfirmed, server-priced intent."""
     # Do not trust a caller's price, currency, reference, or payment state.
@@ -113,6 +114,7 @@ def create_pending_membership(
             membership = Membership.objects.create(
                 first_name_encrypted=first_name, last_name_encrypted=last_name,
                 email_encrypted=email, phone_encrypted=phone,
+                address_encrypted=address,
                 membership_type=option_id, membership_option_id=option_id,
                 amount_paid=0, expected_amount=amount, base_amount=base,
                 membership_price=base, record_source=Membership.RecordSource.CHECKOUT,

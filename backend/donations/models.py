@@ -20,6 +20,7 @@ class Donation(models.Model):
     donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_email_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_address_encrypted = EncryptedTextField(null=True, blank=True)
     # Keep amount as the original/base donation so existing admin and receipt
     # data do not silently change meaning when contribution totals are added.
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -77,6 +78,15 @@ class Donation(models.Model):
 class Membership(models.Model):
     """Membership record to store membership information."""
 
+    class PaymentMethod(models.TextChoices):
+        """Explicitly recorded methods, independent of provenance and payment state."""
+
+        CASH = "cash", "Cash"
+        CHECK = "check", "Check"
+        CARD = "card", "Card"
+        BANK_TRANSFER = "bank_transfer", "Bank transfer"
+        OTHER = "other", "Other"
+
     class PaymentStatus(models.TextChoices):
         PENDING = "pending", "Pending"
         COMPLETED = "completed", "Completed"
@@ -106,6 +116,9 @@ class Membership(models.Model):
     renewal_date = models.DateField(null=True, blank=True)
     # Manual admin records predate checkout; retain their free-text statuses.
     payment_status = models.CharField(max_length=255, null=True, blank=True)
+    payment_method = models.CharField(
+        max_length=20, choices=PaymentMethod.choices, null=True, blank=True,
+    )
     record_source = models.CharField(
         max_length=20, choices=RecordSource.choices, default=RecordSource.MANUAL,
     )

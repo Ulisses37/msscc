@@ -87,6 +87,7 @@ class MembershipCompatibilityTests(TestCase):
         public = APIClient()
         response = public.post("/api/payments/membership/session/", {
             "first_name": "Alex", "last_name": "Rivera", "email": "alex@example.test",
+            "address": "123 Main Street",
             "membership_option_id": "student", "payment_purpose": "membership",
             "contribute_to_processing_costs": True,
         }, format="json")

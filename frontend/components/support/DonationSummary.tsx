@@ -119,6 +119,12 @@ export function DonationSummary({
           </dd>
         </div>
       </dl>
+      {isAnonymous && (
+        <div className="mt-4 space-y-2 text-sm text-msscc-gray-mid">
+          <p>{t('anonymousReviewPrivacy')}</p>
+          <p>{t('anonymousMessageReminder')}</p>
+        </div>
+      )}
       {/* Only a quote matched to the current form (or the saved record) may
           be passed in; do not reconstruct a fee from the amount in React. */}
       {quote && donationIsValid && (

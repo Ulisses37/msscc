@@ -2,6 +2,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from .manual_memberships import _persist_manual_membership
 from .models import Donation, Membership
 from .processing_costs import calculate_donation_amounts
 
@@ -13,6 +14,15 @@ class StrictContributionChoiceField(serializers.BooleanField):
         if type(data) is not bool:
             raise serializers.ValidationError("Expected a boolean.")
         return data
+
+
+class DonationAddressField(serializers.CharField):
+    """Reject non-text addresses instead of coercing numbers to personal data."""
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            raise serializers.ValidationError("Expected a string.")
+        return super().to_internal_value(data)
 
 
 class DonationSerializer(serializers.ModelSerializer):
@@ -27,6 +37,9 @@ class DonationSerializer(serializers.ModelSerializer):
         source="donor_last_name_encrypted", max_length=255, required=False, allow_blank=True,
     )
     donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
+    address = DonationAddressField(
+        source="donor_address_encrypted", required=False, allow_null=True, allow_blank=True,
+    )
     contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
     class Meta:
@@ -36,6 +49,7 @@ class DonationSerializer(serializers.ModelSerializer):
             "donor_first_name",
             "donor_last_name",
             "donor_email",
+            "address",
             "amount",
             "contribute_to_processing_costs",
             "processing_cost_contribution",
@@ -78,6 +92,10 @@ class DonationSerializer(serializers.ModelSerializer):
         """Normalize email before storing it."""
         return value.strip().lower()
 
+    def validate_address(self, value):
+        """Keep unknown historical addresses as null, not encrypted blank strings."""
+        return value or None
+
     def validate_message(self, value):
         """Keep optional donor messages short."""
         if len(value) > 500:
@@ -92,6 +110,7 @@ class DonationSerializer(serializers.ModelSerializer):
             # and authorized updates must not retain a supplied personal name.
             attrs["donor_first_name_encrypted"] = "Anonymous"
             attrs["donor_last_name_encrypted"] = ""
+            attrs["donor_address_encrypted"] = None
         else:
             # Partial admin edits may reuse existing ordinary names, but a
             # formerly anonymous record needs real names before being unmarked.
@@ -167,6 +186,22 @@ class DonationSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class PublicDonationCreateSerializer(DonationSerializer):
+    """Require ordinary public donors' addresses without returning them to callers."""
+
+    address = DonationAddressField(
+        source="donor_address_encrypted", required=False, allow_null=True, allow_blank=True,
+        write_only=True,
+    )
+
+    def validate(self, attrs):
+        """Apply public requirements independently of historical record validation."""
+        attrs = super().validate(attrs)
+        if not attrs.get("is_anonymous", False) and not attrs.get("donor_address_encrypted"):
+            raise serializers.ValidationError({"address": "Address is required."})
+        return attrs
+
+
 class MembershipAddressField(serializers.CharField):
     """Accept free-form address text without coercing non-string input."""
 
@@ -203,6 +238,7 @@ class MembershipSerializer(serializers.ModelSerializer):
             "end_date",
             "renewal_date",
             "payment_status",
+            "payment_method",
             "reference_id",
             "status",
             "notes",
@@ -242,3 +278,64 @@ class MembershipSerializer(serializers.ModelSerializer):
         """Assign manual provenance unless trusted backend code supplies a source."""
         validated_data.setdefault("record_source", Membership.RecordSource.MANUAL)
         return super().create(validated_data)
+
+
+class ManualMembershipCreateSerializer(MembershipSerializer):
+    """Validate explicit manual facts without applying checkout defaults or catalog rules."""
+
+    MEMBERSHIP_STATUSES = ("unknown", "active", "inactive", "pending", "expired", "canceled")
+    PAYMENT_STATUSES = (*Membership.PaymentStatus.values, "waived")
+
+    email = serializers.EmailField(
+        source="email_encrypted", max_length=254, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    phone = MembershipAddressField(
+        source="phone_encrypted", max_length=255, required=False,
+        allow_null=True, allow_blank=True, default=None,
+    )
+    address = MembershipAddressField(
+        source="address_encrypted", required=False, allow_null=True, allow_blank=True, default=None,
+    )
+    status = serializers.ChoiceField(choices=MEMBERSHIP_STATUSES)
+    payment_status = serializers.ChoiceField(
+        choices=PAYMENT_STATUSES, required=False, allow_null=True, default=None,
+    )
+    payment_method = serializers.ChoiceField(
+        choices=Membership.PaymentMethod.choices, required=False, allow_null=True, default=None,
+    )
+    membership_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True, default=None,
+    )
+    amount_paid = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0, required=False, allow_null=True, default=None,
+    )
+
+    class Meta(MembershipSerializer.Meta):
+        extra_kwargs = {
+            "start_date": {"required": False, "allow_null": True, "default": None},
+            "end_date": {"required": False, "allow_null": True, "default": None},
+            "renewal_date": {"required": False, "allow_null": True, "default": None},
+            "reference_id": {"required": False, "allow_blank": True, "default": ""},
+            "notes": {"required": False, "allow_blank": True, "default": "", "max_length": 500},
+        }
+
+    def validate_email(self, value):
+        """Use null for unknown contacts and normalize supplied email casing."""
+        return value.lower() if value else None
+
+    def create(self, validated_data):
+        """Keep manual creation atomic and independent of public checkout services."""
+        return _persist_manual_membership(validated_data)
+
+    def validate_phone(self, value):
+        """Preserve international free-text phone formats, but not empty strings."""
+        return value or None
+
+    def validate(self, attrs):
+        """Compare only supplied dates; absent historical dates remain unknown."""
+        start = attrs.get("start_date")
+        end = attrs.get("end_date")
+        if start is not None and end is not None and end < start:
+            raise serializers.ValidationError({"end_date": "End date cannot precede start date."})
+        return attrs

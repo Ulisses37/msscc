@@ -67,6 +67,35 @@ export function DonationForm() {
   const [message, setMessage] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
+  const signupInFlight = useRef(false);
+  const acceptedSignupEmails = useRef(new Set<string>());
+  const [signupFeedback, setSignupFeedback] = useState<{
+    email: string;
+    status: 'pending' | 'accepted' | 'failed';
+  } | null>(null);
+
+  const requestMailingListSignup = async () => {
+    const signupEmail = email.trim().toLowerCase();
+    if (!wantsUpdates || signupInFlight.current) return;
+    if (acceptedSignupEmails.current.has(signupEmail)) {
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+      return;
+    }
+
+    // Payment retries must not resend an accepted or still-pending signup.
+    signupInFlight.current = true;
+    setSignupFeedback({ email: signupEmail, status: 'pending' });
+    try {
+      await subscribeToUpdates(signupEmail, 'donation');
+      acceptedSignupEmails.current.add(signupEmail);
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+    } catch (error: unknown) {
+      console.error('Mailing-list signup failed after a donation.', error);
+      setSignupFeedback({ email: signupEmail, status: 'failed' });
+    } finally {
+      signupInFlight.current = false;
+    }
+  };
 
   // Values displayed in the existing donation summary.
   const [summaryEmail, setSummaryEmail] = useState('');
@@ -257,7 +286,7 @@ export function DonationForm() {
   const formIsValid =
     emailIsValid &&
     donationIsValid &&
-    // Names and the form-only address are required for an ordinary donation;
+    // Names and the stored contact address are required for an ordinary donation;
     // Stripe collects any billing information it needs separately at checkout.
     (isAnonymous || (firstName.trim().length > 0 &&
       lastName.trim().length > 0 && address.trim().length > 0));
@@ -311,11 +340,12 @@ export function DonationForm() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              // Do not transmit previously entered names when the donor opts
+              // Do not transmit previously entered names or address when the donor opts
               // out of identifying themselves in the application record.
               ...(!isAnonymous ? {
                 donor_first_name: firstName.trim(),
                 donor_last_name: lastName.trim(),
+                address: address.trim(),
               } : {}),
               donor_email: email.trim().toLowerCase(),
               amount: amountForAttempt,
@@ -354,16 +384,8 @@ export function DonationForm() {
         setSubmittedReference(donationReference);
       }
 
-      // Only after the donation record exists. This is deliberately not
-      // awaited: the backend makes synchronous Resend calls, and a mailing-list
-      // signup must never delay checkout. Failures are logged and ignored.
-      if (wantsUpdates) {
-        subscribeToUpdates(email.trim().toLowerCase(), 'donation').catch(
-          (error: unknown) => {
-            console.error('Mailing-list signup failed after a donation.', error);
-          },
-        );
-      }
+      // Only after the record exists, and never awaited by payment preparation.
+      void requestMailingListSignup();
 
       // The checkout API validates this base against the saved record and
       // charges the record's total, not this request value or the quote.
@@ -450,6 +472,7 @@ export function DonationForm() {
           onSubmit={handleSubmit}
           noValidate
         >
+        <p className="text-sm text-msscc-gray-mid">{t('contactRequirements')}</p>
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -630,7 +653,7 @@ export function DonationForm() {
               value={firstName}
               onChange={(event) => setFirstName(event.target.value)}
               onBlur={() => setSummaryFirstName(firstName)}
-              disabled={!emailIsValid || fieldsAreLocked}
+              disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
               required={!isAnonymous}
               className={inputClassName}
             />
@@ -646,7 +669,7 @@ export function DonationForm() {
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               onBlur={() => setSummaryLastName(lastName)}
-              disabled={!emailIsValid || fieldsAreLocked}
+              disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
               required={!isAnonymous}
               className={inputClassName}
             />
@@ -662,7 +685,7 @@ export function DonationForm() {
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             onBlur={() => setSummaryAddress(address)}
-            disabled={!emailIsValid || fieldsAreLocked}
+            disabled={isAnonymous || !emailIsValid || fieldsAreLocked}
             required={!isAnonymous}
             className={inputClassName}
           />
@@ -706,6 +729,13 @@ export function DonationForm() {
           </span>
         </label>
 
+        {wantsUpdates && signupFeedback?.email === email.trim().toLowerCase() && (
+          <p role="status" aria-live="polite" className="text-sm text-msscc-teal">
+            {t(`mailingList${signupFeedback.status === 'pending'
+              ? 'Pending' : signupFeedback.status === 'accepted' ? 'Accepted' : 'Failed'}`)}
+          </p>
+        )}
+
         <label className="block text-sm font-medium text-slate-700">
           {t('message')}
           <textarea
@@ -716,6 +746,7 @@ export function DonationForm() {
             onChange={(event) => setMessage(event.target.value)}
             onBlur={() => setSummaryMessage(message)}
             disabled={!emailIsValid || fieldsAreLocked}
+            aria-describedby={isAnonymous ? 'anonymous-message-description' : undefined}
             className={inputClassName}
           />
 
@@ -723,6 +754,12 @@ export function DonationForm() {
             {message.length}/500
           </span>
         </label>
+
+        {isAnonymous && (
+          <p id="anonymous-message-description" className="text-sm text-msscc-gray-mid">
+            {t('anonymousMessageReminder')}
+          </p>
+        )}
 
         <DonationSummary
           donation={donation}

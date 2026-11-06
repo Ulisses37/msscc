@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 
 import type { MembershipOptionId } from '@/constants/membershipOptions';
@@ -50,6 +50,35 @@ export function MembershipForm({
   const [phone, setPhone] = useState('');
   // Opt-in checkbox: joining the mailing list is independent of the payment.
   const [wantsUpdates, setWantsUpdates] = useState(false);
+  const signupInFlight = useRef(false);
+  const acceptedSignupEmails = useRef(new Set<string>());
+  const [signupFeedback, setSignupFeedback] = useState<{
+    email: string;
+    status: 'pending' | 'accepted' | 'failed';
+  } | null>(null);
+
+  const requestMailingListSignup = async () => {
+    const signupEmail = email.trim().toLowerCase();
+    if (!wantsUpdates || signupInFlight.current) return;
+    if (acceptedSignupEmails.current.has(signupEmail)) {
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+      return;
+    }
+
+    // A ref closes the gap before React renders, without gating payment.
+    signupInFlight.current = true;
+    setSignupFeedback({ email: signupEmail, status: 'pending' });
+    try {
+      await subscribeToUpdates(signupEmail, 'membership');
+      acceptedSignupEmails.current.add(signupEmail);
+      setSignupFeedback({ email: signupEmail, status: 'accepted' });
+    } catch (error: unknown) {
+      console.error('Mailing-list signup failed for a membership.', error);
+      setSignupFeedback({ email: signupEmail, status: 'failed' });
+    } finally {
+      signupInFlight.current = false;
+    }
+  };
 
   // Touched flags delay errors until the user leaves a field. Because each
   // error also checks current validity, correcting a value removes it at once.
@@ -79,12 +108,12 @@ export function MembershipForm({
   }, [formIsValid, onValidityChange]);
 
   useEffect(() => {
-    // Pass only identity, not address, pricing, or Stripe fields, to checkout.
+    // Contact information stays in our encrypted records, not Stripe metadata.
     onInformationChange(formIsValid ? {
       firstName: firstName.trim(), lastName: lastName.trim(),
-      email: email.trim(), phone: phone.trim(),
+      email: email.trim(), phone: phone.trim(), address: address.trim(),
     } : null);
-  }, [formIsValid, firstName, lastName, email, phone, onInformationChange]);
+  }, [formIsValid, firstName, lastName, email, phone, address, onInformationChange]);
 
   const showEmailError = emailTouched && !emailIsValid;
   const showFirstNameError = firstNameTouched && !firstNameIsValid;
@@ -104,6 +133,7 @@ export function MembershipForm({
       </h2>
 
       <div className="mt-4 space-y-4">
+        <p className="text-sm text-msscc-gray-mid">{t('contactRequirements')}</p>
         <label className="block text-sm font-medium text-slate-700">
           {t('email')}
           <input
@@ -257,6 +287,13 @@ export function MembershipForm({
           </span>
         </label>
 
+        {wantsUpdates && signupFeedback?.email === email.trim().toLowerCase() && (
+          <p role="status" aria-live="polite" className="text-sm text-msscc-teal">
+            {t(`mailingList${signupFeedback.status === 'pending'
+              ? 'Pending' : signupFeedback.status === 'accepted' ? 'Accepted' : 'Failed'}`)}
+          </p>
+        )}
+
         <label className="flex items-start gap-3 text-sm font-medium text-slate-700">
           <input type="checkbox" checked={contributeToProcessingCosts}
             onChange={(event) => onContributionChange(event.target.checked)}
@@ -273,15 +310,7 @@ export function MembershipForm({
           type="button"
           onClick={() => {
             if (formIsValid && isQuoteReady && !isPreparingPayment && !isPaymentSessionReady) {
-              // Mailing list first, but never in the way of payment: a signup
-              // failure is logged and the payment flow proceeds regardless.
-              if (wantsUpdates) {
-                subscribeToUpdates(email.trim().toLowerCase(), 'membership').catch(
-                  (error: unknown) => {
-                    console.error('Mailing-list signup failed for a membership.', error);
-                  },
-                );
-              }
+              void requestMailingListSignup();
               onContinueToPayment();
             }
           }}

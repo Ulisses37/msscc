@@ -2,23 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { formatCurrency } from "@/utils/formatCurrency";
+
+import { z } from 'zod';
+
+import { MailingListStatus } from '@/components/admin/MailingListStatus';
+import { formatMembershipAmount, formatMembershipDate } from '@/utils/membershipValues';
 import { membershipDisplayStatus } from "./membershipDisplayStatus";
 
 export type MembershipEntry = {
   membership_id: number;
   first_name: string;
   last_name: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
+  address?: string | null;
+  membership_price?: number | string | null;
+  record_source?: string | null;
   membership_type: string;
-  amount_paid: number | string;
-  payment_status: string;
+  amount_paid?: number | string | null;
+  payment_status?: string | null;
+  payment_method?: string | null;
   reference_id: string;
-  start_date: string;
-  end_date: string;
-  renewal_date: string;
-  status: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  renewal_date?: string | null;
+  status: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -41,38 +49,6 @@ function displayValue(value: DetailFieldProps["value"]): string {
   }
 
   return String(value);
-}
-
-function formatDate(value: string): string {
-  if (!value) return "Not provided";
-
-  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const date = dateOnlyMatch
-    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
-    : new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatDateTime(value: string): string {
-  if (!value) return "Not provided";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
 }
 
 function DetailField({ label, value, preserveWhitespace = false }: DetailFieldProps) {
@@ -105,7 +81,20 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const membershipStatus = membershipDisplayStatus(membership);
-  const hasEmail = Boolean(membership.email?.trim());
+  const email = membership.email?.trim() ?? '';
+  const emailHref = z.email().safeParse(email).success ? `mailto:${encodeURIComponent(email)}` : null;
+  const recordOrigins: Record<string, string> = {
+    checkout: 'Checkout',
+    manual: 'Manual entry',
+    legacy_import: 'Legacy import',
+  };
+  const recordOrigin = Object.hasOwn(recordOrigins, membership.record_source ?? '')
+    ? recordOrigins[membership.record_source ?? ''] : 'Unknown';
+  const paymentMethods: Record<string, string> = {
+    cash: 'Cash', check: 'Check', card: 'Card', bank_transfer: 'Bank transfer', other: 'Other',
+  };
+  const paymentMethod = Object.hasOwn(paymentMethods, membership.payment_method ?? '')
+    ? paymentMethods[membership.payment_method ?? ''] : 'Unknown';
 
   useEffect(() => {
     // Portaling to document.body separates the fixed drawer from wide/scrollable admin table containers.
@@ -130,8 +119,20 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
       }
 
       if (event.key === "Tab") {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
+        const controls = Array.from(
+          closeButtonRef.current?.closest('aside')?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), a[href]',
+          ) ?? [],
+        );
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
 
@@ -191,20 +192,33 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
             <DetailField label="Last name" value={membership.last_name} />
             <DetailField label="Email" value={membership.email} />
             <DetailField label="Phone" value={membership.phone} />
+            <DetailField label="Address" value={membership.address} preserveWhitespace />
           </DetailSection>
 
           <DetailSection title="Membership">
             <DetailField label="Type" value={membership.membership_type} />
-            <DetailField label="Start date" value={formatDate(membership.start_date)} />
-            <DetailField label="End date" value={formatDate(membership.end_date)} />
-            <DetailField label="Renewal date" value={formatDate(membership.renewal_date)} />
+            <DetailField label="Start date" value={formatMembershipDate(membership.start_date)} />
+            <DetailField label="End date" value={formatMembershipDate(membership.end_date)} />
+            <DetailField label="Renewal date" value={formatMembershipDate(membership.renewal_date)} />
             <DetailField label="Current status" value={membershipStatus} />
             <DetailField label="Record status" value={membership.status} />
           </DetailSection>
 
+          {membershipStatus === 'Active (expiration unknown)' && (
+            <p className="text-body-sm text-msscc-gray-mid">
+              The saved record is marked active, but its expiration is unknown.
+              This does not confirm current membership eligibility.
+            </p>
+          )}
+
           <DetailSection title="Payment">
-            <DetailField label="Amount paid" value={formatCurrency(Number(membership.amount_paid))} />
+            <DetailField
+              label="Membership price"
+              value={formatMembershipAmount(membership.membership_price)}
+            />
+            <DetailField label="Amount paid" value={formatMembershipAmount(membership.amount_paid)} />
             <DetailField label="Payment status" value={membership.payment_status} />
+            <DetailField label="Payment method" value={paymentMethod} />
             <DetailField label="Reference ID" value={membership.reference_id} />
           </DetailSection>
 
@@ -214,31 +228,35 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
 
           <DetailSection title="Record information">
             <DetailField label="Membership ID" value={membership.membership_id} />
-            <DetailField label="Created" value={formatDateTime(membership.created_at)} />
-            <DetailField label="Updated" value={formatDateTime(membership.updated_at)} />
+            <DetailField label="Record origin" value={recordOrigin} />
+            <DetailField label="Created" value={formatMembershipDate(membership.created_at, true)} />
+            <DetailField label="Updated" value={formatMembershipDate(membership.updated_at, true)} />
           </DetailSection>
         </div>
 
         <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white px-4 py-3 sm:px-6 sm:py-4">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              disabled
-              title={hasEmail ? "Email action coming soon" : "No email address is available"}
-              className="rounded-md bg-msscc-pink px-4 py-3 text-btn tracking-btn text-msscc-white opacity-55 disabled:cursor-not-allowed"
+          <dl>
+            <MailingListStatus resource="memberships" recordId={membership.membership_id} />
+          </dl>
+          {emailHref ? (
+            <a
+              href={emailHref}
+              aria-describedby="member-email-explanation"
+              className="mt-2 block rounded-md bg-msscc-pink px-4 py-3 text-center text-btn tracking-btn text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
             >
-              {hasEmail ? "Email member" : "Email unavailable"}
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Cancellation action coming soon"
-              className="rounded-md border border-msscc-danger px-4 py-3 text-btn tracking-btn text-msscc-danger opacity-55 disabled:cursor-not-allowed"
-            >
-              Mark as cancelled
-            </button>
-          </div>
-          <p className="mt-2 text-center text-caption text-msscc-gray-mid">Member actions are coming soon.</p>
+              Email member
+            </a>
+          ) : (
+            <p className="mt-2 text-body-sm text-msscc-gray-dark">
+              Email unavailable: {email ? 'the recorded email address is invalid.'
+                : 'no email address is recorded.'}
+            </p>
+          )}
+          <p id="member-email-explanation" className="mt-2 text-caption text-msscc-gray-mid">
+            Opens your configured email application. The website does not send or track the message.
+            Individual membership/payment correspondence is separate from announcement subscription
+            and is not blocked by an unconfirmed or unsubscribed mailing-list status.
+          </p>
         </footer>
       </aside>
     </div>,

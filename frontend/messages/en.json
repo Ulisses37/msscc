@@ -246,6 +246,7 @@
     "lastName": "Last name",
     "address": "Address",
     "phoneOptional": "Phone number (optional)",
+    "contactRequirements": "First name, last name, email, and address are required. Phone number is optional.",
     "membershipRequired": "Select a membership option.",
     "emailError": "Enter a valid email address.",
     "firstNameRequired": "Enter your first name.",
@@ -266,7 +267,10 @@
     "printForm": "Print Membership Form",
     "printFormUnavailable": "Membership form not found on the server.",
     "mailingListConsent": "Add me to the MSSCC mailing list",
-    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time."
+    "mailingListConsentDetail": "Receive updates about events and programs after confirming by email. Signup is separate from payment completion. You can unsubscribe at any time.",
+    "mailingListPending": "Submitting your mailing-list request. You can continue with payment.",
+    "mailingListAccepted": "Mailing-list request accepted. If confirmation is needed, check your inbox and spam folder and follow the confirmation link. This does not confirm payment.",
+    "mailingListFailed": "We couldn't submit your mailing-list request. You can still continue with payment."
   },
 
   "MailingList": {
@@ -346,10 +350,16 @@
     "lastName": "Last Name",
     "submitSuccess": "Donation recorded. Reference: {reference}",
     "anonymousDonation": "Make this donation anonymous",
-    "anonymousDonationDetail": "When selected, your donation record shows Anonymous instead of your name and does not store your address. We retain your email for internal payment records. Payment processing may still require accurate billing information.",
+    "contactRequirements": "Email is required for every donation. First name, last name, and address are also required unless you choose an anonymous donation. No donor phone number is requested. A message is optional.",
+    "anonymousDonationDetail": "When selected, your name and address are not retained in the donation record, which shows Anonymous instead of your name. We retain your email internally. Payment processing may still require accurate billing information. This choice does not sign you up for the mailing list.",
+    "anonymousReviewPrivacy": "For this anonymous donation, your name and address will not be retained in the donation record. Your email is retained internally. Payment processing may still require accurate billing information.",
+    "anonymousMessageReminder": "To keep your donation anonymous, do not include your name, address, or other identifying information in the optional message.",
     "anonymousName": "Anonymous",
     "mailingListConsent": "Add me to the MSSCC mailing list",
-    "mailingListConsentDetail": "We will email you about upcoming events and programs. You can unsubscribe at any time.",
+    "mailingListConsentDetail": "Receive updates about events and programs after confirming by email. Signup is separate from payment completion. You can unsubscribe at any time.",
+    "mailingListPending": "Submitting your mailing-list request. You can continue with payment.",
+    "mailingListAccepted": "Mailing-list request accepted. If confirmation is needed, check your inbox and spam folder and follow the confirmation link. This does not confirm payment.",
+    "mailingListFailed": "We couldn't submit your mailing-list request. You can still continue with payment.",
     "message": "Message (optional)",
     "no": "No",
     "yes": "Yes",

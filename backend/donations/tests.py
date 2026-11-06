@@ -64,7 +64,7 @@ class DonationPaymentDataTests(TestCase):
         self.assertEqual(donation.donor_first_name_encrypted, "Anonymous")
         self.assertEqual(donation.donor_last_name_encrypted, "")
         self.assertEqual(donation.donor_email_encrypted, "donor@example.com")
-        self.assertFalse(any("address" in field.name for field in Donation._meta.fields))
+        self.assertIsNone(donation.donor_address_encrypted)
 
     def test_email_remains_required_and_valid_for_anonymous_donations(self):
         for email in (None, "", "not-an-email"):
@@ -78,7 +78,10 @@ class DonationPaymentDataTests(TestCase):
         self.assertEqual(Donation.objects.count(), 0)
 
     def test_non_anonymous_creation_still_requires_and_saves_real_names(self):
-        data = {"donor_email": "donor@example.com", "amount": "5.00", "is_anonymous": False}
+        data = {
+            "donor_email": "donor@example.com", "amount": "5.00", "is_anonymous": False,
+            "address": "123 Main Street",
+        }
         for payload in (data, {**data, "donor_first_name": "Ada", "donor_last_name": " "}):
             response = APIClient().post("/api/donations/", payload, format="json")
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -143,6 +146,7 @@ class DonationPaymentDataTests(TestCase):
         data = {
             "donor_first_name": "Test", "donor_last_name": "Donor",
             "donor_email": "test@example.com", "amount": "12.50",
+            "address": "123 Main Street",
         }
         for choice in (True, False, None):
             with self.subTest(choice=choice):
@@ -172,6 +176,7 @@ class DonationPaymentDataTests(TestCase):
             "donor_first_name": "Test", "donor_last_name": "Donor",
             "donor_email": "test@example.com", "amount": "10.00",
             "contribute_to_processing_costs": True,
+            "address": "123 Main Street",
             "processing_cost_contribution": "999.00", "total_amount": "1009.00",
         }
         client = APIClient()
@@ -239,6 +244,7 @@ class DonationPaymentDataTests(TestCase):
                 saved = client.post("/api/donations/", {
                     **data, "donor_first_name": "Test", "donor_last_name": "Donor",
                     "donor_email": "test@example.com",
+                    "address": "123 Main Street",
                 }, format="json")
                 self.assertEqual(saved.status_code, 201)
                 for key in ("amount", "processing_cost_contribution", "total_amount"):
@@ -350,6 +356,7 @@ class DonationDatabaseFailureTests(TestCase):
             "amount": "10.00",
             "is_anonymous": False,
             "message": "",
+            "address": "123 Main Street",
         }
 
     def test_reference_write_failure_rolls_back_the_new_donation(self):
@@ -615,7 +622,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         # Manual-entry fields retain their own values; no other row is changed.
         payload = "O'Connor' OR '1'='1 --"
         for field in ("first_name", "last_name", "phone", "membership_type",
-                      "payment_status", "reference_id", "status", "notes"):
+                      "reference_id", "notes"):
             with self.subTest(field=field):
                 response = self.client.post(
                     "/api/donations/memberships/",
@@ -627,7 +634,17 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
                     "first_name", "last_name", "phone"
                 ) else field
                 self.assertEqual(getattr(member, stored_field), payload)
-        self.assertEqual(Membership.objects.count(), 8)
+        self.assertEqual(Membership.objects.count(), 6)
+        # Statuses and methods are structured choices, not free-text fields.
+        for field in ("payment_status", "status", "payment_method"):
+            with self.subTest(field=field):
+                response = self.client.post(
+                    "/api/donations/memberships/",
+                    self.membership_data(**{field: payload}), format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+        self.assertEqual(Membership.objects.count(), 6)
         self.assertFalse(Membership.objects.filter(status="active").exists())
 
     def test_sql_like_membership_email_is_rejected_without_creating_a_row(self):
@@ -658,7 +675,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         self.assertEqual(Membership.objects.count(), 2)
 
     def test_missing_oversized_and_mistyped_membership_fields_do_not_create_rows(self):
-        for field in self.membership_data():
+        for field in ("first_name", "last_name", "membership_type", "status"):
             with self.subTest(missing=field):
                 response = self.client.post(
                     "/api/donations/memberships/",
@@ -737,6 +754,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
             "/api/donations/",
             {"donor_first_name": "O'Connor", "donor_last_name": "Anne-Marie",
              "donor_email": "donor@example.com", "amount": "10.00",
+             "address": "123 Main Street",
              "message": message, "payment_status": "completed",
              "reference_id": "DON-00000001' OR 1=1 --"}, format="json",
         )
@@ -754,6 +772,7 @@ class MembershipPaymentSecurityRegressionTests(TestCase):
         base = {
             "donor_first_name": "First", "donor_last_name": "Last",
             "donor_email": "donor@example.com", "amount": "10.00", "message": "Safe",
+            "address": "123 Main Street",
         }
         for field in ("donor_first_name", "donor_last_name", "message"):
             with self.subTest(field=field):
