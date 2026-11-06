@@ -1,4 +1,6 @@
-import { confirmMembershipCsv, previewMembershipCsv } from './membershipImportPreview';
+import {
+  confirmMembershipCsv, MembershipCsvReviewRejected, previewMembershipCsv,
+} from './membershipImportPreview';
 
 const originalFetch = global.fetch;
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -69,4 +71,32 @@ describe('membership CSV preview request', () => {
     await expect(confirmMembershipCsv(file, 'signed-review', false)).rejects.toThrow('uncertain');
     expect(console.error).not.toHaveBeenCalled();
   });
+
+  it.each([400, 409, 401, 403])('recognizes a definite %s rejection before persistence', async (status) => {
+    jest.mocked(fetch).mockResolvedValue({ ok: false, status });
+    try {
+      await confirmMembershipCsv(file, 'signed-review', false);
+      throw new Error('Expected a rejection');
+    } catch (error) {
+      expect(error).toBeInstanceOf(MembershipCsvReviewRejected);
+      expect((error as MembershipCsvReviewRejected).reason)
+        .toBe(status === 401 || status === 403 ? 'access' : 'review');
+    }
+  });
+
+  it('treats a missing admin token as a definite access failure without sending the file', async () => {
+    jest.mocked(localStorage.getItem).mockReturnValue(null);
+    await expect(confirmMembershipCsv(file, 'signed-review', false))
+      .rejects.toMatchObject({ reason: 'access' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['server failure', 'invalid receipt'])(
+    'does not claim an unconfirmed outcome is safe to restart after %s', async (failure) => {
+      jest.mocked(fetch).mockResolvedValue(failure === 'server failure'
+        ? { ok: false, status: 503 }
+        : { ok: true, status: 201, json: async () => ({ record_type: 'membership' }) });
+      await expect(confirmMembershipCsv(file, 'signed-review', false)).rejects.toThrow('uncertain');
+    },
+  );
 });

@@ -91,6 +91,9 @@ export default function AdminMembershipsPage() {
   const [isOpeningSavedMembership, setIsOpeningSavedMembership] = useState(false);
   const [savedDetailsError, setSavedDetailsError] = useState<string | null>(null);
   const openingSavedMembership = useRef(false);
+  const [openingImportedId, setOpeningImportedId] = useState<number | null>(null);
+  const [importedDetailsError, setImportedDetailsError] = useState<string | null>(null);
+  const openingImportedMembership = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
@@ -315,6 +318,23 @@ export default function AdminMembershipsPage() {
     }
   }
 
+  async function openImportedMembership(id: number) {
+    if (openingImportedMembership.current) return;
+    openingImportedMembership.current = true;
+    setOpeningImportedId(id);
+    setImportedDetailsError(null);
+    try {
+      // The list can be filtered or paginated. Ask the authorized detail API
+      // for committed facts instead of finding a row in the visible table.
+      setSelectedMembership(await fetchSavedMembership(id));
+    } catch {
+      setImportedDetailsError('The batch was saved, but details could not be loaded. Try this record again.');
+    } finally {
+      openingImportedMembership.current = false;
+      setOpeningImportedId(null);
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => void fetchMemberships(), 300);
     return () => {
@@ -367,6 +387,14 @@ export default function AdminMembershipsPage() {
             500; payment_method 20; dates 10; amounts 12 characters. The download contains headers only,
             not sample personal information. This template does not process payments or mailing-list consent.
           </p>
+          <p className="mt-2 text-body-sm">
+            Workflow: fill the template, upload it below, correct any row errors in the CSV and review
+            possible duplicates. Acknowledge warnings before confirming. Preview does not save anything;
+            Confirm saves the whole batch. The result shows its batch ID and links to each saved record,
+            even when the current search hides it. If confirmation loses its response, retry the same
+            reviewed file. After leaving this page, upload that same CSV again and confirm to retrieve
+            an already-imported result instead of creating another batch.
+          </p>
           <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50"
             disabled={isDownloadingTemplate}
             onClick={async () => {
@@ -386,7 +414,17 @@ export default function AdminMembershipsPage() {
         </section>
         {/* Keep CSV review separate from both the record-export menu and the
             single-record manual form; preview cannot write to either path. */}
-        <MembershipCsvReview />
+        <MembershipCsvReview
+          onConfirmed={() => {
+            // Refresh with the existing search text; never change an admin's
+            // filter merely to make the imported rows appear in the table.
+            setImportedDetailsError(null);
+            void fetchMemberships();
+          }}
+          onOpenSavedMembership={(id) => void openImportedMembership(id)}
+          openingMembershipId={openingImportedId}
+          savedDetailsError={importedDetailsError}
+        />
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedMembershipId !== null && (
           <div className="mb-4">
