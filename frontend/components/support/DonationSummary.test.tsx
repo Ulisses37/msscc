@@ -111,6 +111,8 @@ it.each(['en', 'ja'] as const)(
     expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.no);
 
     rerender(details(true));
+    expect(within(region).getByText(messages.anonymousReviewPrivacy)).toBeVisible();
+    expect(within(region).getByText(messages.anonymousMessageReminder)).toBeVisible();
     expect(valueFor(messages.name)).toHaveTextContent(messages.anonymousName);
     expect(valueFor(messages.name)).not.toHaveTextContent('Ada');
     expect(valueFor(messages.address)).toHaveTextContent(messages.addressOmitted);
@@ -119,6 +121,7 @@ it.each(['en', 'ja'] as const)(
     expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.yes);
 
     rerender(details(false));
+    expect(within(region).queryByText(messages.anonymousReviewPrivacy)).not.toBeInTheDocument();
     expect(valueFor(messages.name)).toHaveTextContent('Ada Lovelace');
     expect(valueFor(messages.address)).toHaveTextContent('123 Main St');
     expect(valueFor(messages.anonymousDonation)).toHaveTextContent(messages.no);

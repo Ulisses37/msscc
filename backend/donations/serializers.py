@@ -15,6 +15,15 @@ class StrictContributionChoiceField(serializers.BooleanField):
         return data
 
 
+class DonationAddressField(serializers.CharField):
+    """Reject non-text addresses instead of coercing numbers to personal data."""
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            raise serializers.ValidationError("Expected a string.")
+        return super().to_internal_value(data)
+
+
 class DonationSerializer(serializers.ModelSerializer):
     """Serializer for donation records."""
 
@@ -27,6 +36,9 @@ class DonationSerializer(serializers.ModelSerializer):
         source="donor_last_name_encrypted", max_length=255, required=False, allow_blank=True,
     )
     donor_email = serializers.EmailField(source="donor_email_encrypted", max_length=254)
+    address = DonationAddressField(
+        source="donor_address_encrypted", required=False, allow_null=True, allow_blank=True,
+    )
     contribute_to_processing_costs = StrictContributionChoiceField(required=False, default=False)
 
     class Meta:
@@ -36,6 +48,7 @@ class DonationSerializer(serializers.ModelSerializer):
             "donor_first_name",
             "donor_last_name",
             "donor_email",
+            "address",
             "amount",
             "contribute_to_processing_costs",
             "processing_cost_contribution",
@@ -78,6 +91,10 @@ class DonationSerializer(serializers.ModelSerializer):
         """Normalize email before storing it."""
         return value.strip().lower()
 
+    def validate_address(self, value):
+        """Keep unknown historical addresses as null, not encrypted blank strings."""
+        return value or None
+
     def validate_message(self, value):
         """Keep optional donor messages short."""
         if len(value) > 500:
@@ -92,6 +109,7 @@ class DonationSerializer(serializers.ModelSerializer):
             # and authorized updates must not retain a supplied personal name.
             attrs["donor_first_name_encrypted"] = "Anonymous"
             attrs["donor_last_name_encrypted"] = ""
+            attrs["donor_address_encrypted"] = None
         else:
             # Partial admin edits may reuse existing ordinary names, but a
             # formerly anonymous record needs real names before being unmarked.
@@ -165,6 +183,22 @@ class DonationSerializer(serializers.ModelSerializer):
             validated_data["processing_cost_contribution"] = contribution
             validated_data["total_amount"] = total
         return super().update(instance, validated_data)
+
+
+class PublicDonationCreateSerializer(DonationSerializer):
+    """Require ordinary public donors' addresses without returning them to callers."""
+
+    address = DonationAddressField(
+        source="donor_address_encrypted", required=False, allow_null=True, allow_blank=True,
+        write_only=True,
+    )
+
+    def validate(self, attrs):
+        """Apply public requirements independently of historical record validation."""
+        attrs = super().validate(attrs)
+        if not attrs.get("is_anonymous", False) and not attrs.get("donor_address_encrypted"):
+            raise serializers.ValidationError({"address": "Address is required."})
+        return attrs
 
 
 class MembershipAddressField(serializers.CharField):

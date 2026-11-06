@@ -33,6 +33,7 @@ class PIIRotationTests(TestCase):
             "donor_first_name_encrypted": "松山 O'Connor ☕\n",
             "donor_last_name_encrypted": "Example",
             "donor_email_encrypted": "private@example.test",
+            "donor_address_encrypted": "123 Private Street\n松山市, 日本",
             "amount": Decimal("123.45"),
             "currency": "jpy",
             "completed_at": timezone.now(),

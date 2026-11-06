@@ -123,6 +123,7 @@ class MembershipLegacyFieldsTests(TestCase):
         result = create_pending_membership(
             option_id="student", first_name="Maya", last_name="Chen",
             email="maya@example.test", contribute_to_processing_costs=True,
+            address="123 Main Street",
         )
         member = Membership.objects.get(checkout_reference=result["confirmation_reference"])
         self.assertEqual(member.record_source, Membership.RecordSource.CHECKOUT)

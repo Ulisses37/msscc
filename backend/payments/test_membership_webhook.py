@@ -119,6 +119,7 @@ class MembershipWebhookTests(TestCase):
             {
                 "membership_option_id": "family", "payment_purpose": "membership",
                 "first_name": "Alex", "last_name": "Rivera", "email": "alex@example.com",
+                "address": "123 Main Street",
             },
             format="json",
         )

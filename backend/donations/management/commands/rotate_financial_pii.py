@@ -8,7 +8,10 @@ from donations.models import Donation, Membership
 ROTATION_FIELDS = (
     (
         Donation,
-        ("donor_first_name_encrypted", "donor_last_name_encrypted", "donor_email_encrypted"),
+        (
+            "donor_first_name_encrypted", "donor_last_name_encrypted", "donor_email_encrypted",
+            "donor_address_encrypted",
+        ),
     ),
     (
         Membership,

@@ -20,6 +20,7 @@ class Donation(models.Model):
     donor_first_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_last_name_encrypted = EncryptedTextField(null=True, blank=True)
     donor_email_encrypted = EncryptedTextField(null=True, blank=True)
+    donor_address_encrypted = EncryptedTextField(null=True, blank=True)
     # Keep amount as the original/base donation so existing admin and receipt
     # data do not silently change meaning when contribution totals are added.
     amount = models.DecimalField(max_digits=10, decimal_places=2)

@@ -6,6 +6,7 @@ export interface MembershipIdentity {
   lastName: string;
   email: string;
   phone: string;
+  address: string;
 }
 
 /** A membership session is priced by the backend, never by this request. */

@@ -37,6 +37,7 @@ class EncryptedPIIAPITests(TestCase):
         self.cases = (
             (Donation, "/api/donations/", DONATION_PII, {
                 "amount": "10.00", "message": "Unchanged message", "is_anonymous": False,
+                "address": "123 Main Street",
             }),
             (Membership, "/api/donations/memberships/", MEMBERSHIP_PII, {
                 "membership_type": "student", "amount_paid": "20.00",
@@ -120,6 +121,7 @@ class EncryptedPIIAPITests(TestCase):
         for model, url, pii, other in self.cases:
             values = {**{f"{field}_encrypted": value for field, value in pii.items()}, **other}
             if model is Donation:
+                values["donor_address_encrypted"] = values.pop("address")
                 values.update(donation_date=date(2026, 10, 21), reference_id="DON-00000001")
             record = model.objects.create(**values)
             for endpoint in (url, f"{url}{record.pk}/"):
@@ -214,6 +216,7 @@ class EncryptedPIIAPITests(TestCase):
         with self.assertNoLogs("donations", level="DEBUG"):
             response = APIClient().post("/api/payments/membership/session/", {
                 **MEMBERSHIP_PII, "membership_option_id": "student",
+                "address": "123 Main Street",
                 "payment_purpose": "membership",
             }, format="json")
         self.assertEqual(response.status_code, 201)
@@ -290,6 +293,7 @@ class EncryptedPIIAPITests(TestCase):
             with self.assertLogs("payments.views", level="ERROR") as logs:
                 response = APIClient().post("/api/payments/membership/session/", {
                     **MEMBERSHIP_PII, "membership_option_id": "student",
+                    "address": "123 Main Street",
                     "payment_purpose": "membership",
                 }, format="json")
         self.assertEqual(response.status_code, 502)

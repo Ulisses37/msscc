@@ -26,6 +26,7 @@ class FinancialRecordPermissionTests(TestCase):
             "donor_first_name": "Private Donor",
             "donor_last_name": "松山",
             "donor_email": "donor-private@example.test",
+            "address": "123 Main Street",
             "amount": "10.00", "is_anonymous": False, "message": "Private message",
         }
         self.membership_data = {
@@ -246,6 +247,7 @@ class FinancialRecordPermissionTests(TestCase):
             **{field: self.membership_data[field]
                for field in ("first_name", "last_name", "email", "phone")},
             "membership_option_id": "student", "payment_purpose": "membership",
+            "address": "123 Main Street",
         }, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
