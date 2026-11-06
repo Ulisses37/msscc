@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { downloadMembershipImportTemplate } from '@/services/membershipImportTemplate';
 import { downloadCsv } from '@/utils/exportCsv';
 import { downloadXlsx } from '@/utils/exportXlsx';
 import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
@@ -22,6 +23,9 @@ jest.mock('@/utils/exportXlsx', () => ({ downloadXlsx: jest.fn().mockResolvedVal
 jest.mock('@/hooks/useVisibleTableRevisionPolling', () => ({
   useVisibleTableRevisionPolling: jest.fn(),
 }));
+jest.mock('@/services/membershipImportTemplate', () => ({
+  downloadMembershipImportTemplate: jest.fn().mockResolvedValue(undefined),
+}));
 
 const membership: MembershipEntry = {
   membership_id: 1, first_name: 'Unknown', last_name: 'Member', email: null, phone: null,
@@ -32,11 +36,31 @@ const membership: MembershipEntry = {
 
 describe('membership table nullable values', () => {
   beforeEach(() => {
+    jest.mocked(downloadMembershipImportTemplate).mockReset().mockResolvedValue(undefined);
     jest.mocked(fetchFinancialRecords).mockResolvedValue([
       membership,
       { ...membership, membership_id: 2, first_name: 'Zero', amount_paid: '0.00',
         payment_status: 'pending', start_date: '2026-02-30', end_date: '2099-01-01' },
     ]);
+  });
+
+  it('keeps the membership-only template separate from record export', async () => {
+    render(<AdminMembershipsPage />);
+    const button = screen.getByRole('button', { name: 'Download membership CSV template' });
+    expect(screen.getByText(/Required: first_name, last_name, membership_type/)).toBeInTheDocument();
+    expect(screen.getByText(/1,048,576 UTF-8 bytes and 500 data rows/)).toBeInTheDocument();
+    fireEvent.click(button);
+    await waitFor(() => expect(downloadMembershipImportTemplate).toHaveBeenCalledTimes(1));
+    expect(downloadCsv).not.toHaveBeenCalled();
+    expect(downloadXlsx).not.toHaveBeenCalled();
+  });
+
+  it('reports template download failures without claiming records were created', async () => {
+    jest.mocked(downloadMembershipImportTemplate).mockRejectedValue(new Error('denied'));
+    render(<AdminMembershipsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Download membership CSV template' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
+    expect(screen.queryByText('Membership record saved.')).not.toBeInTheDocument();
   });
 
   it('refreshes the filtered list and retrieves saved details outside its results', async () => {
