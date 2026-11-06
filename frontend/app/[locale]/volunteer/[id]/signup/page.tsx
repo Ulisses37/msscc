@@ -9,6 +9,7 @@ import { getEventById } from '@/services/eventService';
 import { getSlotsByEventId, submitVolunteerSignup } from '@/services/volunteerService';
 import type { Event } from '@/types/event';
 import Button from '@/components/ui/Button';
+import { buildGoogleCalendarUrl } from '@/utils/googleCalendar';
 
 // Keep this in step with the comments limit in the signup serializer
 const COMMENTS_MAX_LENGTH = 500;
@@ -131,6 +132,15 @@ export default function VolunteerSignupPage() {
 
   const title = locale === 'ja' ? event.titleJa || event.titleEn : event.titleEn;
   const location = locale === 'ja' ? event.locationJa || event.locationEn : event.locationEn;
+  const calendarUrl = selectedSlot
+    ? buildGoogleCalendarUrl({
+        title: `${title} – ${selectedSlot.position_name}`,
+        start: selectedSlot.start_datetime,
+        end: selectedSlot.end_datetime,
+        details: selectedSlot.description ?? undefined,
+        location: location || undefined,
+      })
+    : null;
 
   const dateLocale = locale === 'ja' ? 'ja-JP' : 'en-US';
   const formatShiftDate = (datetime: string) =>
@@ -153,9 +163,21 @@ export default function VolunteerSignupPage() {
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
             <h2 style={modalHeadingStyle}>{t('confirmationTitle')}</h2>
-            <p style={{ marginBottom: '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>
+            <p style={{ marginBottom: calendarUrl ? '0.75rem' : '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>
               {t('confirmationEmailSent', { email: submittedData.email })}
             </p>
+            {calendarUrl && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+                <a
+                  href={calendarUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={calendarLinkStyle}
+                >
+                  {t('addToGoogleCalendar')}
+                </a>
+              </div>
+            )}
             <div style={infoBoxStyle}>
               <p><strong>{t('event')}</strong> {title}</p>
               {selectedSlot ? (
@@ -313,5 +335,16 @@ const modalContentStyle: React.CSSProperties =
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', textAlign: 'left' };
 const modalHeadingStyle: React.CSSProperties =
  { color: '#d72638', marginBottom: '1.25rem', textAlign: 'center', fontSize: 'clamp(1.75rem, 6vw, 2.5rem)', fontWeight: 800 };
+const calendarLinkStyle: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '6px 14px',
+  borderRadius: '6px',
+  border: '1.5px solid var(--color-teal)',
+  color: 'var(--color-teal)',
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  textDecoration: 'none',
+  textAlign: 'center',
+};
 const infoBoxStyle: React.CSSProperties =
 { backgroundColor: '#f8f9fa', padding: 'clamp(1rem, 4vw, 2rem)', borderRadius: '8px', marginBottom: '1.5rem', lineHeight: '1.8', fontSize: '1rem', overflowWrap: 'anywhere' };
