@@ -154,7 +154,7 @@ export default function VolunteerSignupPage() {
           <div style={modalContentStyle}>
             <h2 style={modalHeadingStyle}>{t('confirmationTitle')}</h2>
             <p style={{ marginBottom: '1.5rem', fontWeight: 600, fontSize: '1.1rem' }}>
-              {t('saveInformation')}
+              {t('confirmationEmailSent', { email: submittedData.email })}
             </p>
             <div style={infoBoxStyle}>
               <p><strong>{t('event')}</strong> {title}</p>

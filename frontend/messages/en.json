@@ -125,7 +125,7 @@
     "loading": "Loading...",
     "eventNotFound": "Event not found.",
     "confirmationTitle": "Registration Confirmed!",
-    "saveInformation": "Please save this information:",
+    "confirmationEmailSent": "A confirmation email is being sent to {email}. Please check your inbox, and your spam folder if you don't see it.",
     "event": "Event:",
     "shift": "Shift:",
     "shiftDate": "Date:",

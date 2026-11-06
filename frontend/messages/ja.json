@@ -126,7 +126,7 @@
     "loading": "読み込んでいます...",
     "eventNotFound": "イベントが見つかりません。",
     "confirmationTitle": "登録が完了しました！",
-    "saveInformation": "以下の情報を保存してください：",
+    "confirmationEmailSent": "{email} 宛に確認メールを送信しています。受信トレイをご確認ください。届かない場合は、迷惑メールフォルダもご確認ください。",
     "event": "イベント：",
     "shift": "シフト：",
     "shiftDate": "日付：",
