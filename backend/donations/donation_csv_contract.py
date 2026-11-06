@@ -17,8 +17,8 @@ DONATION_CSV_HEADERS = (
 # Amount and date are facts a received donation cannot infer. Anonymity is
 # explicit so missing contact information does not silently imply anonymity.
 REQUIRED_DONATION_CSV_FIELDS = ("amount", "donation_date", "is_anonymous")
-# CSV carries text rather than JSON booleans; spellings are intentionally narrow
-# so "unknown", "yes", and blank cannot turn into a non-anonymous donation.
+# CSV carries text rather than JSON booleans. Normalize case and surrounding
+# whitespace, but never treat "unknown", "yes", or blank as a false donation.
 DONATION_CSV_ANONYMITY_VALUES = ("true", "false")
 # Keep available methods in sync with manual entry, not checkout's card methods.
 DONATION_CSV_PAYMENT_METHODS = tuple(ManualDonationInputSerializer.PAYMENT_METHODS)
@@ -35,7 +35,9 @@ MAX_DONATION_CSV_ROWS = 500
 # positive value supported by DecimalField(max_digits=10, decimal_places=2).
 # These are published limits; the later upload parser must enforce every one.
 DONATION_CSV_FIELD_LIMITS = {
-    "amount": 11, "donation_date": 10, "is_anonymous": 5, "payment_method": 20,
+    # Allow modest spreadsheet padding in the raw boolean cell; the only
+    # accepted semantic values still normalize to five characters or fewer.
+    "amount": 11, "donation_date": 10, "is_anonymous": 32, "payment_method": 20,
     "donor_first_name": 255, "donor_last_name": 255, "donor_email": 254,
     "address": 500, "external_reference": 255, "message": 500,
 }
@@ -47,14 +49,15 @@ def donation_csv_manual_input(row: dict[str, str]) -> dict[str, str | bool | Non
     Reject unknown anonymity instead of silently interpreting it as false.
     C2 also checks required cells and format before calling this helper.
     """
-    if row.get("is_anonymous") not in DONATION_CSV_ANONYMITY_VALUES:
+    anonymity = row.get("is_anonymous", "").strip().casefold()
+    if anonymity not in DONATION_CSV_ANONYMITY_VALUES:
         raise ValueError("Unsupported donation anonymity value.")
     # DRF treats an omitted optional choice differently from an empty string.
     # Convert only nullable optional facts; leave required amount/date untouched
     # so missing values cannot be mistaken for zero or today's date.
     nullable = {"payment_method", "donor_first_name", "donor_last_name", "donor_email", "address"}
     return {
-        key: (value == "true" if key == "is_anonymous" else
+        key: (anonymity == "true" if key == "is_anonymous" else
               None if key in nullable and not value.strip() else value)
         for key, value in row.items()
     }

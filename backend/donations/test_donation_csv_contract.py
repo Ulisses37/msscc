@@ -59,7 +59,7 @@ class DonationCsvContractTests(TestCase):
         self.assertEqual(DONATION_CSV_CURRENCY, "usd")
         self.assertEqual((MAX_DONATION_CSV_BYTES, MAX_DONATION_CSV_ROWS), (1_048_576, 500))
         self.assertEqual(DONATION_CSV_FIELD_LIMITS, {
-            "amount": 11, "donation_date": 10, "is_anonymous": 5, "payment_method": 20,
+            "amount": 11, "donation_date": 10, "is_anonymous": 32, "payment_method": 20,
             "donor_first_name": 255, "donor_last_name": 255, "donor_email": 254,
             "address": 500, "external_reference": 255, "message": 500,
         })
@@ -71,10 +71,12 @@ class DonationCsvContractTests(TestCase):
                 / "frontend/app/admin/donations/page.tsx").read_text(encoding="utf-8")
         self.assertIn(",".join(DONATION_CSV_HEADERS), page)
         self.assertIn("cash or check, or blank if unknown", page)
-        self.assertIn("write exactly true or false", page)
+        self.assertIn("true or false in any letter case", page)
         self.assertIn("always completed", page)
         self.assertIn("1,048,576 bytes and 500 data rows", page)
         self.assertIn("YYYY-MM-DD", page)
+        self.assertIn("MM-DD-YYYY", page)
+        self.assertIn("MM/DD/YYYY", page)
         self.assertIn("donor_email 254, address 500, external_reference 255, and message 500", page)
 
     def test_admin_guide_matches_contract_and_marks_later_work_as_planned(self):
@@ -125,9 +127,18 @@ class DonationCsvContractTests(TestCase):
     def test_unknown_anonymity_never_becomes_false(self):
         # A typo should be corrected by the uploader in C2, not quietly turned
         # into a saved non-anonymous record by Python's bool conversion.
-        for value in ("", "unknown", "yes", "TRUE", "0"):
+        for value in ("", " ", "unknown", "yes", "0"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 donation_csv_manual_input({"is_anonymous": value})
+
+    def test_anonymity_input_normalizes_case_and_surrounding_whitespace(self):
+        # The mapping helper must be safe even if called separately from the
+        # preview parser; an unknown value must never default to false.
+        for value, expected in (("TRUE", True), (" true ", True), ("FaLsE", False),
+                                ("  FALSE  ", False)):
+            with self.subTest(value=value):
+                self.assertIs(donation_csv_manual_input({"is_anonymous": value})["is_anonymous"],
+                              expected)
 
 
 class DonationCsvTemplateEndpointTests(TestCase):

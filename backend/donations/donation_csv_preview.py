@@ -2,6 +2,7 @@
 
 import csv
 import re
+from datetime import datetime
 from io import StringIO
 
 from donations.donation_csv_contract import (
@@ -20,6 +21,9 @@ from donations.serializers import ManualDonationInputSerializer
 # remain the responsibility of the existing manual-entry serializer.
 DECIMAL_CSV_PATTERN = re.compile(r"^(?:0|[1-9][0-9]{0,7})(?:\.[0-9]{1,2})?$")
 DATE_CSV_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+# Excel can export the same US date with either separator. Require a single
+# consistent separator so an ambiguous/mixed spelling is never guessed.
+US_DATE_CSV_PATTERN = re.compile(r"^[0-9]{2}(?P<separator>[-/])[0-9]{2}(?P=separator)[0-9]{4}$")
 CONTACT_STORAGE_FIELDS = {
     "donor_first_name": "donor_first_name_encrypted",
     "donor_last_name": "donor_last_name_encrypted",
@@ -53,18 +57,50 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
     """Check CSV-specific rules before reusing manual-entry validation."""
     errors = []
     invalid = set()
+    # Normalize the explicit boolean and the supported Excel date spellings
+    # before manual validation. Never guess a blank date or boolean.
+    raw_anonymity_length = len(row["is_anonymous"])
+    row = {**row, "is_anonymous": row["is_anonymous"].strip().casefold()}
+    us_date = row["donation_date"]
+    us_date_match = US_DATE_CSV_PATTERN.fullmatch(us_date)
+    if us_date_match:
+        try:
+            # Date-only, fixed-width US values are unambiguous. Convert to the
+            # existing ISO manual-input contract rather than changing the
+            # serializer used by other donation entry points.
+            date_format = "%m-%d-%Y" if us_date_match.group("separator") == "-" else "%m/%d/%Y"
+            row["donation_date"] = datetime.strptime(us_date, date_format).date().isoformat()
+        except ValueError:
+            # Let the existing manual serializer report impossible calendar
+            # dates as a safe row/field error, never echo the uploaded value.
+            pass
     for field, value in row.items():
-        if len(value) > DONATION_CSV_FIELD_LIMITS[field]:
+        # Enforce the published bound on the original cell before trimming;
+        # otherwise arbitrarily large whitespace would bypass the cell limit.
+        length = raw_anonymity_length if field == "is_anonymous" else len(value)
+        if length > DONATION_CSV_FIELD_LIMITS[field]:
+            # Keep diagnostics independent of private uploaded cell contents.
             errors.append(_error(row_number, field, "Cell exceeds its character limit."))
             invalid.add(field)
         elif field == "amount" and value and not DECIMAL_CSV_PATTERN.fullmatch(value):
             errors.append(_error(row_number, field, "Use a positive decimal without separators."))
             invalid.add(field)
-        elif field == "donation_date" and value and not DATE_CSV_PATTERN.fullmatch(value):
-            errors.append(_error(row_number, field, "Use YYYY-MM-DD for a received donation."))
+        elif field == "donation_date" and value and not (
+            DATE_CSV_PATTERN.fullmatch(value) or US_DATE_CSV_PATTERN.fullmatch(value)
+        ):
+            errors.append(_error(
+                row_number, field,
+                "Use YYYY-MM-DD, MM-DD-YYYY, or MM/DD/YYYY for a received donation.",
+            ))
             invalid.add(field)
         elif field == "is_anonymous" and value not in DONATION_CSV_ANONYMITY_VALUES:
             errors.append(_error(row_number, field, "Use true or false, not an unknown value."))
+            invalid.add(field)
+        elif field == "donation_date" and not value:
+            # Never fill a historical donation's unknown date with today.
+            errors.append(_error(
+                row_number, field, "A known donation date is required (YYYY-MM-DD).",
+            ))
             invalid.add(field)
 
     if row["is_anonymous"] == "true":

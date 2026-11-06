@@ -5,12 +5,14 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
+import { previewDonationCsv } from '@/services/donationImportPreview';
 import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 
 import AdminDonationsPage from './page';
 
 jest.mock('@/services/financialRecordSearch', () => ({ fetchFinancialRecords: jest.fn() }));
 jest.mock('@/services/donationImportTemplate', () => ({ downloadDonationImportTemplate: jest.fn() }));
+jest.mock('@/services/donationImportPreview', () => ({ previewDonationCsv: jest.fn() }));
 jest.mock('@/hooks/useVisibleTableRevisionPolling', () => ({
   useVisibleTableRevisionPolling: jest.fn(),
 }));
@@ -46,6 +48,9 @@ function saveDonation() {
 describe('donation page manual-entry dialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+    });
     jest.mocked(fetchFinancialRecords).mockResolvedValue([]);
     localStorage.setItem('msscc_access_token', 'test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({
@@ -75,6 +80,21 @@ describe('donation page manual-entry dialog', () => {
     // Never display a raw private server/network message in the admin page.
     expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
     expect(screen.queryByText('private response')).not.toBeInTheDocument();
+  });
+
+  it('places read-only CSV review alongside the existing manual donation workflow', async () => {
+    render(<AdminDonationsPage />);
+    expect(screen.getByRole('button', { name: 'Download donation CSV template' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add donation' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    expect(await screen.findByText(/Donation preview: 1 data rows/)).toBeInTheDocument();
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /confirm donation import/i })).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('opens on an empty list, pauses polling, and resumes it when canceled', async () => {

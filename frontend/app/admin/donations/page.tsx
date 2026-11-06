@@ -6,6 +6,7 @@ import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedDonation } from '@/services/manualDonation';
 import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
 import { ManualDonationForm } from '@/components/admin/ManualDonationForm';
+import { DonationCsvReview } from '@/components/admin/DonationCsvReview';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -370,8 +371,10 @@ export default function AdminDonationsPage() {
             <code>amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_name,donor_email,address,external_reference,message</code>
           </p>
           <p className="mt-2 text-body-sm">
-            Required: amount (known, positive USD decimal up to 99,999,999.99), donation_date (YYYY-MM-DD,
-            not in the future), and is_anonymous (write exactly true or false). Amounts allow up to two
+            Required: amount (known, positive USD decimal up to 99,999,999.99), donation_date
+            (YYYY-MM-DD, or US month-first MM-DD-YYYY or MM/DD/YYYY, not in the future), and is_anonymous
+            (true or false in any letter case; surrounding
+            spaces are ignored). Blank, yes, no, and unknown are not accepted. Amounts allow up to two
             decimal places, without currency symbols, thousands separators, or exponent notation.
             Payment status is always completed because these payments have already been received; it is
             not a CSV column. Currency is USD. No online processing fees are calculated.
@@ -385,14 +388,16 @@ export default function AdminDonationsPage() {
           </p>
           <p className="mt-2 text-body-sm">
             UTF-8 CSV limit: 1,048,576 bytes and 500 data rows. Cell character limits: amount 11,
-            donation_date 10, is_anonymous 5, payment_method 20, donor names 255 each,
+            donation_date 10, is_anonymous 32 before normalization, payment_method 20, donor names 255 each,
             donor_email 254, address 500, external_reference 255, and message 500.
             This import does not charge payments, send receipts, or enroll anyone in a mailing list.
           </p>
           <p className="mt-2 text-body-sm">
-            This first step provides the template only. Upload, review, and confirmation controls
-            will be added in the following donation import steps; the manual donation form below
-            is for a single record, not a CSV upload.
+            Fill the template and upload it below for a read-only review. Correct errors in the
+            source CSV and re-upload; warnings may indicate repeated or possible existing gifts,
+            but an email match alone is not proof. Review and acknowledge warnings explicitly.
+            Confirmation and saving are not available yet; the manual donation form below is for
+            a single record, not a CSV upload.
           </p>
           <p className="mt-2 text-body-sm">
             Team setup, the complete CSV field guide, and the planned workflow are tracked in
@@ -420,6 +425,9 @@ export default function AdminDonationsPage() {
           </button>
           {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
         </section>
+        {/* Review is read-only and stays separate from the existing single-record
+            form and configurable exports. No callback here can save a batch. */}
+        <DonationCsvReview />
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedDonationId !== null && (
           <button type="button" onClick={() => void viewSavedDonation()}

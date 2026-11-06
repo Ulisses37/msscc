@@ -60,6 +60,47 @@ class DonationCsvParserTests(TestCase):
                 })
                 self.assertFalse(Donation.objects.exists())
 
+    def test_excel_us_date_normalizes_to_the_same_known_iso_date(self):
+        """Excel's fixed-width US export must not change the reviewed gift date."""
+        preview = parse_donation_csv(csv_file(
+            row(donation_date="01-02-1990"),
+            row(donation_date="1990-01-02"),
+            row(donation_date="12-31-2020"),
+            row(donation_date="10/11/2020"),
+            row(donation_date="10-11-2020"),
+        ))
+        self.assertEqual(preview["errors"], [])
+        self.assertEqual([proposal["values"]["donation_date"]
+                          for proposal in preview["proposed_records"]],
+                         ["1990-01-02", "1990-01-02", "2020-12-31",
+                          "2020-10-11", "2020-10-11"])
+        self.assertFalse(Donation.objects.exists())
+
+    def test_excel_date_rejects_ambiguous_invalid_missing_and_future_values(self):
+        """Never infer a locale, roll over a date, or invent an unknown fact."""
+        for value in ("", "1-02-1990", "01-2-1990", "1/2/1990", "2020/10/11",
+                      "10-11/2020", "10/11-2020", "31-12-2020", "02-29-2025",
+                      "02/29/2025", "13-01-2020", "00-12-2020", "11-05-2026",
+                      "11/05/2026", "01-02-1990 00:00:00"):
+            with self.subTest(value=value), \
+                 patch("donations.serializers.timezone.localdate",
+                       return_value=date(2026, 11, 4)):
+                preview = parse_donation_csv(csv_file(row(donation_date=value)))
+                self.assertEqual(preview["proposed_records"], [])
+                self.assertIn("donation_date", {e["field"] for e in preview["errors"]})
+                if value and value not in ("11-05-2026", "11/05/2026"):
+                    self.assertNotIn(value, str(preview["errors"]))
+
+        # An actual leap day is valid in either supported spelling.
+        valid = parse_donation_csv(csv_file(row(donation_date="02-29-2024")))
+        self.assertEqual(valid["errors"], [])
+        self.assertEqual(valid["proposed_records"][0]["values"]["donation_date"],
+                         "2024-02-29")
+        with_slash = parse_donation_csv(csv_file(row(donation_date="02/29/2024")))
+        self.assertEqual(with_slash["errors"], [])
+        self.assertEqual(with_slash["proposed_records"][0]["values"]["donation_date"],
+                         "2024-02-29")
+
     def test_headers_empty_malformed_encoding_and_column_count(self):
         cases = (
             (b"", "file"), (b"\xff", "file"), (b"garbage", "header"),
@@ -100,7 +141,7 @@ class DonationCsvParserTests(TestCase):
                         "100000000.00", "NaN")),
             ("donation_date", ("", "2025-02-29", "2020-13-01", "not-a-date",
                                "2026-11-05", "2026-11-04T00:00:00Z")),
-            ("is_anonymous", ("", "TRUE", "yes", "0")),
+            ("is_anonymous", ("", " ", "yes", "0", "private-unknown-choice")),
             ("payment_method", ("card", "unknown", "cash ")),
             ("donor_email", ("private-invalid-email",)),
         ):
@@ -110,9 +151,54 @@ class DonationCsvParserTests(TestCase):
                            return_value=date(2026, 11, 4)):
                     preview = parse_donation_csv(csv_file(row(**{field: value})))
                     self.assertIn(field, {error["field"] for error in preview["errors"]})
-                    self.assertNotIn(value if value else "private-invalid-email",
-                                     str(preview["errors"]))
+                    # A single space is normal in fixed error prose; the
+                    # privacy assertion is meaningful for nonblank cell text.
+                    if value.strip():
+                        self.assertNotIn(value, str(preview["errors"]))
                     self.assertEqual(preview["proposed_records"], [])
+
+    def test_spreadsheet_boolean_whitespace_is_accepted_but_missing_dates_are_not(self):
+        """Normalize explicit booleans without guessing a historical date."""
+        preview = parse_donation_csv(csv_file(
+            row(donation_date="", is_anonymous="false "),
+            row(donation_date="", is_anonymous="TRUE "),
+            row(donation_date="", is_anonymous=" true "),
+        ))
+        self.assertEqual(preview["row_count"], 3)
+        self.assertEqual(preview["proposed_records"], [])
+        self.assertEqual(len(preview["errors"]), 3)
+        for csv_row in (2, 3, 4):
+            self.assertEqual({(issue["field"], issue["message"])
+                              for issue in preview["errors"] if issue["row"] == csv_row}, {
+                ("donation_date", "A known donation date is required (YYYY-MM-DD)."),
+            })
+        # Other overlong/unknown strings must retain their generic safe
+        # diagnostics; we must not expose uploaded values in an error reply.
+        oversized = parse_donation_csv(csv_file(row(is_anonymous="private-" * 5)))
+        self.assertEqual(oversized["errors"][0]["message"],
+                         "Cell exceeds its character limit.")
+        self.assertNotIn("private-", str(oversized["errors"]))
+        padded = parse_donation_csv(csv_file(row(is_anonymous=" " * 32 + "true")))
+        self.assertEqual(padded["errors"][0]["message"],
+                         "Cell exceeds its character limit.")
+        unknown = parse_donation_csv(csv_file(row(is_anonymous="yes")))
+        self.assertEqual(unknown["errors"][0]["message"],
+                         "Use true or false, not an unknown value.")
+        # Diagnostics do not soften validation: only an explicit boolean and
+        # actual received date can produce a reviewable proposal.
+        fixed = parse_donation_csv(csv_file(row(donation_date="1990-01-02",
+                                                   is_anonymous=" FALSE ")))
+        self.assertEqual(fixed["errors"], [])
+        self.assertEqual(len(fixed["proposed_records"]), 1)
+        self.assertIs(fixed["proposed_records"][0]["values"]["is_anonymous"], False)
+
+    def test_normalized_true_still_blocks_anonymous_names_and_address(self):
+        preview = parse_donation_csv(csv_file(row(
+            is_anonymous=" TRUE ", donor_first_name="Private", address="Private street",
+        )))
+        self.assertEqual({error["field"] for error in preview["errors"]},
+                         {"donor_first_name", "address"})
+        self.assertEqual(preview["proposed_records"], [])
 
     def test_anonymous_names_and_address_require_correction_not_silent_discard(self):
         preview = parse_donation_csv(csv_file(row(
@@ -207,7 +293,9 @@ class DonationCsvPreviewEndpointTests(TestCase):
         self.assertEqual(response.data["proposed_records"][0]["values"]["donor_email"],
                          "test@example.test")
         self.assertNotIn("review_token", response.data)
-        self.assertNotIn("warnings", response.data)
+        # SCRUM-883 adds warning results; a single valid row without existing
+        # evidence must return an empty list, not invent a duplicate.
+        self.assertEqual(response.data["warnings"], [])
         self.assertFalse(Donation.objects.exists())
         save.assert_not_called()
         create.assert_not_called()

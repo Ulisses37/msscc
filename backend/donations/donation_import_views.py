@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from donations.donation_csv_contract import MAX_DONATION_CSV_BYTES, donation_csv_template
+from donations.donation_csv_duplicates import donation_duplicate_warnings
 from donations.donation_csv_preview import parse_donation_csv
 from donations.permissions import HasFinancialRecordPermission
 
@@ -65,4 +66,9 @@ class DonationCsvPreviewView(APIView):
             # Upload exceptions can contain file paths or original input.
             return Response({"detail": "Unable to read the CSV file."},
                             status=status.HTTP_400_BAD_REQUEST)
-        return Response(parse_donation_csv(raw), status=status.HTTP_200_OK)
+        preview = parse_donation_csv(raw)
+        # Only valid proposals are comparable. Name matching may decrypt saved
+        # fields, so it must happen exclusively after finance authorization.
+        # A future confirmation must recompute warnings, not trust this reply.
+        preview["warnings"] = donation_duplicate_warnings(preview["proposed_records"])
+        return Response(preview, status=status.HTTP_200_OK)
