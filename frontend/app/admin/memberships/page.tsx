@@ -356,13 +356,13 @@ export default function AdminMembershipsPage() {
   const hasSearchResults = sortedMembershipItems.length > 0;
 
   return(
-    <div className="min-h-screen bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+    <div className="min-h-screen min-w-0 bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
         <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Memberships</h1>
       </header>
 
-      <main className="w-full">
-        <section aria-labelledby="membership-import-template-title" className="mb-6 rounded-md border border-msscc-gray-light p-4">
+      <main className="min-w-0 w-full">
+        <section aria-labelledby="membership-import-template-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]">
           <h2 id="membership-import-template-title" className="font-heading text-heading-3 text-msscc-teal">Membership CSV import template</h2>
           <p className="mt-2 text-body-sm">
             Download the fixed membership-only CSV template. Keep its columns in order; one row represents
@@ -395,7 +395,11 @@ export default function AdminMembershipsPage() {
             reviewed file. After leaving this page, upload that same CSV again and confirm to retrieve
             an already-imported result instead of creating another batch.
           </p>
-          <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50"
+          <p className="mt-2 text-body-sm">
+            Team setup and the complete import instructions are tracked in docs/membership-csv-import.md;
+            this page and the CSV template are supplied by application code, not seeded database content.
+          </p>
+          <button type="button" className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
             disabled={isDownloadingTemplate}
             onClick={async () => {
               setTemplateError(null);

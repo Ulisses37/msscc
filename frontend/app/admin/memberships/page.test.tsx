@@ -126,6 +126,10 @@ describe('membership table nullable values', () => {
       fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
       expect(await screen.findByRole('alert')).toHaveTextContent('batch was saved');
       expect(screen.getByText(/Batch batch-42: 1 memberships/)).toBeInTheDocument();
+      // Wait for the failed request's finally block to release its in-flight
+      // guard; clicking while the guard is active is deliberately ignored.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'View saved membership 42' })).toBeEnabled());
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
       fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
       expect(await screen.findByRole('dialog', { name: 'Imported Member' })).toBeInTheDocument();
       expect(request).toHaveBeenCalledTimes(2);
@@ -145,6 +149,8 @@ describe('membership table nullable values', () => {
     const button = screen.getByRole('button', { name: 'Download membership CSV template' });
     expect(screen.getByText(/Required: first_name, last_name, membership_type/)).toBeInTheDocument();
     expect(screen.getByText(/1,048,576 UTF-8 bytes and 500 data rows/)).toBeInTheDocument();
+    expect(screen.getByText(/docs\/membership-csv-import\.md/)).toBeInTheDocument();
+    expect(button).toHaveClass('w-full', 'sm:w-auto');
     fireEvent.click(button);
     await waitFor(() => expect(downloadMembershipImportTemplate).toHaveBeenCalledTimes(1));
     expect(downloadCsv).not.toHaveBeenCalled();

@@ -116,11 +116,11 @@ export function MembershipCsvReview({
   }
 
   return (
-    <section aria-labelledby="membership-csv-review-title" className="mb-6 rounded-md border border-msscc-gray-light p-4">
+    <section aria-labelledby="membership-csv-review-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
       <h2 id="membership-csv-review-title" className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
       <p className="mt-2 text-body-sm">Upload the fixed template to review proposed records. Only Confirm saves a batch.</p>
       <label htmlFor="membership-csv-file" className="mt-4 block text-body-sm">Membership CSV file</label>
-      <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block"
+      <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block w-full min-w-0 max-w-full text-body-sm"
         disabled={confirming}
         onChange={(event) => {
           // Never leave an old file's warnings or acknowledgment visible while
@@ -128,17 +128,19 @@ export function MembershipCsvReview({
           clearReview();
           setFile(event.target.files?.[0] ?? null);
         }} />
-      <div className="mt-4 flex gap-3">
+      {/* A native file picker can have an intrinsic width wider than a phone.
+          Stack the actions until there is room; never squeeze labels into columns. */}
+      <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button type="button" disabled={!file || loading || confirming} onClick={() => void upload()}
-          className="rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
+          className="w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
           {loading ? 'Reviewing CSV…' : 'Upload and review CSV'}
         </button>
         {(preview || error) && <button type="button" disabled={confirming} onClick={clearReview}
-          className="rounded-md border border-msscc-gray-light px-4 py-2">Cancel review</button>}
+          className="w-full rounded-md border border-msscc-gray-light px-4 py-2 sm:w-auto">Cancel review</button>}
       </div>
       {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
       {preview && (
-        <div className="mt-6">
+        <div className="mt-6 min-w-0 max-w-full [overflow-wrap:anywhere]">
           <p>Membership preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
           {preview.errors.length > 0 && <div role="alert" className="mt-3">
             {/* Errors are locations only; the admin fixes and re-uploads the source CSV. */}
@@ -158,7 +160,8 @@ export function MembershipCsvReview({
               I have reviewed these warnings and still want to confirm this import.
             </label>
           </div>}
-          <div className="mt-4 overflow-x-auto">
+          {/* The 16-column preview scrolls inside the panel, not the whole page. */}
+          <div className="mt-4 max-w-full overflow-x-auto">
             {/* React escapes uploaded text, including tags in names/notes. Do not
                 use innerHTML or let CSV values become links or executable markup. */}
             <table className="min-w-full border-collapse text-left text-body-sm">
@@ -190,7 +193,7 @@ export function MembershipCsvReview({
           {!confirmation && !reviewRejected && preview.review_token && preview.errors.length === 0 && (
             <button type="button" onClick={() => void confirm()} disabled={confirming ||
               (preview.warnings.length > 0 && !acknowledged)}
-              className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
+              className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
               {confirming ? 'Confirming…' : 'Confirm membership import'}
             </button>
           )}
@@ -199,11 +202,11 @@ export function MembershipCsvReview({
               {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.</p>
             {/* IDs come from the committed batch receipt, not the filtered or
                 paginated table. Load private saved details only on demand. */}
-            {onOpenSavedMembership && <ul className="mt-3 flex flex-wrap gap-2">
+            {onOpenSavedMembership && <ul className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {confirmation.membership_ids.map((id) => (
                 <li key={id}><button type="button" disabled={openingMembershipId !== null && openingMembershipId !== undefined}
                   onClick={() => onOpenSavedMembership(id)}
-                  className="rounded-md border border-msscc-pink px-3 py-2 text-msscc-pink disabled:opacity-50">
+                  className="w-full rounded-md border border-msscc-pink px-3 py-2 text-msscc-pink disabled:opacity-50 sm:w-auto">
                   {openingMembershipId === id ? 'Loading membership…' : `View saved membership ${id}`}
                 </button></li>
               ))}

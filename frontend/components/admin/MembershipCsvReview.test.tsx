@@ -63,6 +63,22 @@ describe('membership CSV review only', () => {
     expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
   });
 
+  it('keeps narrow-screen upload controls and the wide proposal table inside the panel', async () => {
+    // jsdom does not calculate layout; assert the responsive classes that
+    // prevent intrinsic file-input and 16-column table widths escaping a phone.
+    render(<MembershipCsvReview />);
+    const picker = screen.getByLabelText('Membership CSV file');
+    expect(picker).toHaveClass('w-full', 'min-w-0', 'max-w-full');
+    fireEvent.change(picker, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const cancel = await screen.findByRole('button', { name: 'Cancel review' });
+    const upload = screen.getByRole('button', { name: 'Upload and review CSV' });
+    expect(upload.parentElement).toHaveClass('flex-col', 'sm:flex-row');
+    expect(upload).toHaveClass('w-full', 'sm:w-auto');
+    expect(cancel).toHaveClass('w-full', 'sm:w-auto');
+    expect(screen.getByRole('table').parentElement).toHaveClass('max-w-full', 'overflow-x-auto');
+  });
+
   it('clears acknowledgment and prior review on file change, cancel and re-upload', async () => {
     render(<MembershipCsvReview />);
     const choose = screen.getByLabelText('Membership CSV file');
@@ -181,6 +197,8 @@ describe('membership CSV review only', () => {
     expect(onConfirmed).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'View saved membership 22' }));
     expect(onOpenSavedMembership).toHaveBeenCalledWith(22);
-    expect(screen.getByRole('button', { name: 'View saved membership 21' })).toBeInTheDocument();
+    const savedButton = screen.getByRole('button', { name: 'View saved membership 21' });
+    expect(savedButton).toHaveClass('w-full', 'sm:w-auto');
+    expect(savedButton.closest('ul')).toHaveClass('flex-col', 'sm:flex-row');
   });
 });
