@@ -2,7 +2,9 @@
 
 import { useRef, useState } from 'react';
 
-import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershipImportPreview';
+import {
+  confirmMembershipCsv, MembershipCsvReviewRejected, previewMembershipCsv,
+} from '@/services/membershipImportPreview';
 
 import type { MembershipCsvConfirmation, MembershipCsvPreview } from '@/services/membershipImportPreview';
 
@@ -15,7 +17,16 @@ const HEADERS = [
 ] as const;
 
 /** Review and confirm only with a signed, server-revalidated CSV decision. */
-export function MembershipCsvReview() {
+type MembershipCsvReviewProps = {
+  onConfirmed?: (result: MembershipCsvConfirmation) => void;
+  onOpenSavedMembership?: (membershipId: number) => void;
+  openingMembershipId?: number | null;
+  savedDetailsError?: string | null;
+};
+
+export function MembershipCsvReview({
+  onConfirmed, onOpenSavedMembership, openingMembershipId, savedDetailsError,
+}: MembershipCsvReviewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<MembershipCsvPreview | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -24,6 +35,7 @@ export function MembershipCsvReview() {
   const [confirmationAttempted, setConfirmationAttempted] = useState(false);
   const [confirmation, setConfirmation] = useState<MembershipCsvConfirmation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reviewRejected, setReviewRejected] = useState(false);
   const requestVersion = useRef(0);
   // The ref closes the double-click window before React re-renders the
   // disabled button; requestVersion independently rejects obsolete results.
@@ -36,6 +48,7 @@ export function MembershipCsvReview() {
     setPreview(null);
     setAcknowledged(false);
     setError(null);
+    setReviewRejected(false);
     setLoading(false);
     setConfirmation(null);
     setConfirmationAttempted(false);
@@ -54,10 +67,22 @@ export function MembershipCsvReview() {
     setError(null);
     try {
       const result = await confirmMembershipCsv(file, preview.review_token, acknowledged);
-      if (version === requestVersion.current) setConfirmation(result);
-    } catch {
       if (version === requestVersion.current) {
-        setError('Confirmation status is uncertain or review changed. Retry with the same reviewed file, or upload again.');
+        setConfirmation(result);
+        onConfirmed?.(result);
+      }
+    } catch (failure) {
+      if (version === requestVersion.current) {
+        if (failure instanceof MembershipCsvReviewRejected) {
+          // A definite rejection invalidates this review for saving. Re-upload
+          // to receive a fresh signed token and current warning set.
+          setReviewRejected(true);
+          setError(failure.message);
+        } else {
+          // Keep the exact file/token for a retry: a dropped reply may follow
+          // a successful commit. Do not instruct the admin to start over.
+          setError('Confirmation status is uncertain. Retry with the same reviewed file to check the batch.');
+        }
       }
     } finally {
       if (version === requestVersion.current) {
@@ -93,7 +118,7 @@ export function MembershipCsvReview() {
   return (
     <section aria-labelledby="membership-csv-review-title" className="mb-6 rounded-md border border-msscc-gray-light p-4">
       <h2 id="membership-csv-review-title" className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
-      <p className="mt-2 text-body-sm">Upload the fixed template for a read-only review. No records are saved.</p>
+      <p className="mt-2 text-body-sm">Upload the fixed template to review proposed records. Only Confirm saves a batch.</p>
       <label htmlFor="membership-csv-file" className="mt-4 block text-body-sm">Membership CSV file</label>
       <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block"
         disabled={confirming}
@@ -152,7 +177,8 @@ export function MembershipCsvReview() {
             </table>
           </div>
           {!confirmation && <p role="status" className="mt-4">
-            {confirmationAttempted ? 'Confirmation may have saved records; retry with the same file to check.'
+            {reviewRejected ? 'This review did not save records. Upload and review the file again.'
+              : confirmationAttempted ? 'Confirmation may have saved records; retry with the same file to check.'
               : 'Review only; no records have been saved.'}
             {/* Confirmation needs a separately authorized, server-bound batch;
                 preview acknowledgment alone cannot create financial records. */}
@@ -161,17 +187,29 @@ export function MembershipCsvReview() {
           </p>}
           {/* The signed review token is only a prerequisite: the backend checks
               its owner, original file, current warnings and every row again. */}
-          {!confirmation && preview.review_token && preview.errors.length === 0 && (
+          {!confirmation && !reviewRejected && preview.review_token && preview.errors.length === 0 && (
             <button type="button" onClick={() => void confirm()} disabled={confirming ||
               (preview.warnings.length > 0 && !acknowledged)}
               className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
               {confirming ? 'Confirming…' : 'Confirm membership import'}
             </button>
           )}
-          {confirmation && <p role="status" className="mt-4">
-            {confirmation.already_imported ? 'This batch was already imported.' : 'Membership batch saved.'}
-            {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.
-          </p>}
+          {confirmation && <div role="status" className="mt-4">
+            <p>{confirmation.already_imported ? 'This batch was already imported.' : 'Membership batch saved.'}
+              {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.</p>
+            {/* IDs come from the committed batch receipt, not the filtered or
+                paginated table. Load private saved details only on demand. */}
+            {onOpenSavedMembership && <ul className="mt-3 flex flex-wrap gap-2">
+              {confirmation.membership_ids.map((id) => (
+                <li key={id}><button type="button" disabled={openingMembershipId !== null && openingMembershipId !== undefined}
+                  onClick={() => onOpenSavedMembership(id)}
+                  className="rounded-md border border-msscc-pink px-3 py-2 text-msscc-pink disabled:opacity-50">
+                  {openingMembershipId === id ? 'Loading membership…' : `View saved membership ${id}`}
+                </button></li>
+              ))}
+            </ul>}
+            {savedDetailsError && <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>}
+          </div>}
         </div>
       )}
     </section>

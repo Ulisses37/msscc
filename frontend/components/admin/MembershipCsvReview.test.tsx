@@ -2,12 +2,19 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershipImportPreview';
+import {
+  confirmMembershipCsv, MembershipCsvReviewRejected, previewMembershipCsv,
+} from '@/services/membershipImportPreview';
 
 import { MembershipCsvReview } from './MembershipCsvReview';
 
 jest.mock('@/services/membershipImportPreview', () => ({
   previewMembershipCsv: jest.fn(), confirmMembershipCsv: jest.fn(),
+  MembershipCsvReviewRejected: class MembershipCsvReviewRejected extends Error {
+    constructor(public readonly reason: 'review' | 'access') {
+      super(reason === 'review' ? 'Review rejected. Upload again.' : 'Finance access required.');
+    }
+  },
 }));
 
 const file = new File(['fixed headers'], 'membership.csv', { type: 'text/csv' });
@@ -138,5 +145,42 @@ describe('membership CSV review only', () => {
     expect(await screen.findByText(/Membership batch saved/)).toBeInTheDocument();
     expect(confirmMembershipCsv).toHaveBeenCalledTimes(2);
     expect(previewMembershipCsv).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks retry with a stale review after a definite rejection', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockRejectedValueOnce(new MembershipCsvReviewRejected('review'));
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm membership import' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Upload again');
+    expect(screen.getByText(/This review did not save records/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm membership import' })).toBeNull();
+    expect(confirmMembershipCsv).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers committed IDs and refreshes only after a confirmed or already-imported result', async () => {
+    const onConfirmed = jest.fn();
+    const onOpenSavedMembership = jest.fn();
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockResolvedValue({
+      record_type: 'membership', batch_id: 'batch-1', created_count: 2,
+      membership_ids: [21, 22], already_imported: true,
+    });
+    render(<MembershipCsvReview onConfirmed={onConfirmed}
+      onOpenSavedMembership={onOpenSavedMembership} />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm membership import' }));
+    expect(await screen.findByText(/This batch was already imported/)).toBeInTheDocument();
+    expect(onConfirmed).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'View saved membership 22' }));
+    expect(onOpenSavedMembership).toHaveBeenCalledWith(22);
+    expect(screen.getByRole('button', { name: 'View saved membership 21' })).toBeInTheDocument();
   });
 });

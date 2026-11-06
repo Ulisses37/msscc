@@ -29,10 +29,28 @@ export interface MembershipCsvConfirmation {
   already_imported: boolean;
 }
 
+/** A known rejection happened before the backend could commit the batch. */
+export class MembershipCsvReviewRejected extends Error {
+  constructor(public readonly reason: 'review' | 'access') {
+    super(reason === 'access'
+      ? 'Finance access is required to confirm this import. Sign in again before reviewing.'
+      : 'The review was rejected or expired. Upload and review the CSV again before confirming.');
+    this.name = 'MembershipCsvReviewRejected';
+  }
+}
+
 /** Send the original file again; proposals in the browser never become save input. */
 export async function confirmMembershipCsv(
   file: File, token: string, acknowledgeWarnings: boolean,
 ): Promise<MembershipCsvConfirmation> {
+  let headers: Record<string, string>;
+  try {
+    headers = getAdminRequestHeaders();
+  } catch {
+    // No request was sent, so there is no possibly committed transaction to
+    // recover. Unlike a lost response, this is a definite access failure.
+    throw new MembershipCsvReviewRejected('access');
+  }
   const form = new FormData();
   form.append('file', file);
   form.append('review_token', token);
@@ -40,18 +58,31 @@ export async function confirmMembershipCsv(
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/import/confirm/`,
-      { method: 'POST', headers: getAdminRequestHeaders(), body: form, cache: 'no-store' },
+      { method: 'POST', headers, body: form, cache: 'no-store' },
     );
-    if (!response.ok) throw new Error('Confirmation rejected.');
+    // These responses are issued before persistence. An unexpected response,
+    // server failure, or lost connection cannot prove the transaction failed.
+    if (response.status === 400 || response.status === 409) {
+      throw new MembershipCsvReviewRejected('review');
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new MembershipCsvReviewRejected('access');
+    }
+    if (!response.ok) throw new Error('Confirmation outcome unknown.');
     const data: unknown = await response.json();
     if (!data || typeof data !== 'object' || !('record_type' in data)
       || data.record_type !== 'membership' || !('batch_id' in data)
       || typeof data.batch_id !== 'string' || !('created_count' in data)
       || typeof data.created_count !== 'number' || !('membership_ids' in data)
-      || !Array.isArray(data.membership_ids) || !('already_imported' in data)
-      || typeof data.already_imported !== 'boolean') throw new Error('Invalid confirmation.');
+      || !Array.isArray(data.membership_ids)
+      || data.membership_ids.length !== data.created_count
+      || !data.membership_ids.every((id) => Number.isSafeInteger(id) && id > 0)
+      || !('already_imported' in data) || typeof data.already_imported !== 'boolean') {
+      throw new Error('Invalid confirmation.');
+    }
     return data as MembershipCsvConfirmation;
-  } catch {
+  } catch (error) {
+    if (error instanceof MembershipCsvReviewRejected) throw error;
     // A network error can mean the server committed but the reply was lost.
     // Keep the selected file and token for a safe, idempotent retry.
     throw new Error('Confirmation status is uncertain. Retry with the same reviewed file.');
