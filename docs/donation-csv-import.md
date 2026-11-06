@@ -8,9 +8,16 @@ existing configurable CSV/XLSX donation exports are **not** import templates.
 
 ## Availability and safe testing
 
-- **SCRUM-881 provides the template download only.** Upload, read-only review,
-  duplicate warnings, confirmation, and batch results are planned for later
-  subtasks. The existing Add donation form creates one record, not a CSV batch.
+- SCRUM-881 provides the template download only; it has no upload or save path.
+  The later SCRUM-882 endpoint adds backend-only validation without changing
+  what was delivered at that first checkpoint.
+- **SCRUM-882 adds a backend-only, read-only preview endpoint** at
+  `POST /api/donations/import/preview/`. Send one multipart `file` containing
+  the fixed CSV. The authorized response reports validated proposed rows and
+  safe row/field errors. Preview creates no donations. There is no admin upload
+  control yet: duplicate warnings, confirmation, and batch results are planned
+  for later subtasks. The existing Add donation form creates one record, not a
+  CSV batch.
 - Run a frontend and backend version that both include the donation template
   endpoint. Sign in as an active executive admin or an active admin with
   `Finances` access. The download endpoint independently checks permission;
@@ -57,9 +64,8 @@ Use UTF-8 CSV with the downloaded header, at most **1,048,576 bytes** and
 **500 data rows**. Cell character limits: `amount` 11; `donation_date` 10;
 `is_anonymous` 5; `payment_method` 20; each donor name 255; `donor_email`
 254; `address` 500; `external_reference` 255; `message` 500. Preserve all
-columns, even when optional cells are blank. These are the contracted limits
-for the upload validation planned in SCRUM-882, not a claim that upload is
-already available in SCRUM-881.
+columns, even when optional cells are blank. The SCRUM-882 backend preview
+enforces these limits; the admin upload interface has not yet been delivered.
 
 ## Planned workflow after later subtasks
 
@@ -71,5 +77,5 @@ none. A matching email alone will not prove that two donations are duplicates.
 Results will identify the batch and offer access to its saved donations, even
 if the current list search hides them. A lost confirmation response must be
 resolved by a safe retry or authorized batch lookup, not by assuming no rows
-were saved. **None of these upload, review, or save controls exists yet at the
-SCRUM-881 checkpoint.**
+were saved. **The SCRUM-882 backend preview cannot save; the admin upload,
+warning, confirmation, and result controls do not exist yet.**
