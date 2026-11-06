@@ -29,6 +29,57 @@ function addressValue(): HTMLElement {
 }
 
 describe('DonationDetailDrawer addresses', () => {
+  it.each(['cash', 'check', null] as const)(
+    'shows saved offline facts independently of contacts with method %p', (method) => {
+      render(<DonationDetailDrawer donation={{
+        ...donation, donor_first_name: null, donor_last_name: null, donor_email: null,
+        record_source: 'manual', payment_method: method, external_reference: 'Ledger 42',
+        reference_id: 'DON-MANUAL-00000001', amount: '35.00', total_amount: '35.00',
+        donation_date: '1990-01-02',
+      }} onClose={jest.fn()} />);
+      expect(screen.getByRole('heading', { name: 'Not provided' })).toBeInTheDocument();
+      const fieldValue = (label: string) => screen.getByText(label).closest('div');
+      expect(fieldValue('Donation amount')).toHaveTextContent('$35.00');
+      expect(fieldValue('Recorded total')).toHaveTextContent('$35.00');
+      expect(fieldValue('Date')).toHaveTextContent('January 2, 1990');
+      expect(fieldValue('Payment status')).toHaveTextContent('completed');
+      expect(fieldValue('Record origin')).toHaveTextContent('Manual');
+      expect(fieldValue('Payment method')).toHaveTextContent(
+        method === 'cash' ? 'Cash' : method === 'check' ? 'Check' : 'Not provided',
+      );
+      expect(fieldValue('Reference ID')).toHaveTextContent('DON-MANUAL-00000001');
+      expect(fieldValue('External reference')).toHaveTextContent('Ledger 42');
+      expect(screen.getByText(/No online processing-cost contribution was added/))
+        .toBeInTheDocument();
+      expect(screen.queryByText('Total payment')).not.toBeInTheDocument();
+      expect(screen.queryByText('Processing-cost contribution')).not.toBeInTheDocument();
+      expect(screen.getByText(/^Email unavailable:/))
+        .toHaveTextContent('no email address is recorded');
+      expect(screen.getByTestId('mailing-list-status')).toHaveTextContent('donations:1');
+    },
+  );
+
+  it('preserves online contribution and total presentation', () => {
+    render(<DonationDetailDrawer donation={{
+      ...donation, record_source: 'checkout', processing_cost_contribution: '0.60',
+      total_amount: '10.60',
+    }} onClose={jest.fn()} />);
+    expect(screen.getByText('Processing-cost contribution').closest('div'))
+      .toHaveTextContent('$0.60');
+    expect(screen.getByText('Total payment').closest('div')).toHaveTextContent('$10.60');
+    expect(screen.getByText('Record origin').closest('div')).toHaveTextContent('Online checkout');
+  });
+
+  it('hides supplied names as well as the address when anonymous', () => {
+    render(<DonationDetailDrawer donation={{
+      ...donation, is_anonymous: true, donor_first_name: 'Private first',
+      donor_last_name: 'Private last', address: 'Private address',
+    }} onClose={jest.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Anonymous' })).toBeInTheDocument();
+    expect(screen.queryByText(/Private first|Private last|Private address/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Email donor' })).toBeInTheDocument();
+  });
+
   it.each(['Unsubscribed', 'Confirmation pending'])(
     'offers recipient-only correspondence independently of %s', (status) => {
       mockSubscriptionLabel = status;
