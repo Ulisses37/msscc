@@ -6,6 +6,7 @@ import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedMembership } from '@/services/manualMembership';
 import { downloadMembershipImportTemplate } from '@/services/membershipImportTemplate';
 import { ManualMembershipForm } from '@/components/admin/ManualMembershipForm';
+import { MembershipCsvReview } from '@/components/admin/MembershipCsvReview';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
@@ -346,7 +347,7 @@ export default function AdminMembershipsPage() {
           <p className="mt-2 text-body-sm">
             Download the fixed membership-only CSV template. Keep its columns in order; one row represents
             one membership. This template is separate from the CSV/XLSX record exports. Upload and review
-            will be available in a later step; downloading does not create records.
+            appears below; downloading and reviewing never create records.
           </p>
           <p className="mt-2 text-body-sm">
             Required: first_name, last_name, membership_type (free text), status. Optional: email, phone,
@@ -383,6 +384,9 @@ export default function AdminMembershipsPage() {
           </button>
           {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
         </section>
+        {/* Keep CSV review separate from both the record-export menu and the
+            single-record manual form; preview cannot write to either path. */}
+        <MembershipCsvReview />
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedMembershipId !== null && (
           <div className="mb-4">

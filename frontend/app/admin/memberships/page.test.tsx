@@ -46,6 +46,9 @@ describe('membership table nullable values', () => {
 
   it('keeps the membership-only template separate from record export', async () => {
     render(<AdminMembershipsPage />);
+    // Review sits alongside the separate import template, not in export controls.
+    expect(screen.getByRole('heading', { name: 'Review membership CSV' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Membership CSV file')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Download membership CSV template' });
     expect(screen.getByText(/Required: first_name, last_name, membership_type/)).toBeInTheDocument();
     expect(screen.getByText(/1,048,576 UTF-8 bytes and 500 data rows/)).toBeInTheDocument();

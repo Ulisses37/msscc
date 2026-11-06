@@ -1,0 +1,133 @@
+'use client';
+
+import { useRef, useState } from 'react';
+
+import { previewMembershipCsv } from '@/services/membershipImportPreview';
+
+import type { MembershipCsvPreview } from '@/services/membershipImportPreview';
+
+// Mirror the backend's ordered template for display, not for parsing. Only
+// backend-normalized values returned by the authorized preview are rendered.
+const HEADERS = [
+  'first_name', 'last_name', 'membership_type', 'status', 'email', 'phone', 'address',
+  'membership_price', 'amount_paid', 'start_date', 'end_date', 'renewal_date',
+  'payment_status', 'payment_method', 'reference_id', 'notes',
+] as const;
+
+/** Read-only review, deliberately without a save action until server-bound confirmation exists. */
+export function MembershipCsvReview() {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<MembershipCsvPreview | null>(null);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  // The ref closes the double-click window before React re-renders the
+  // disabled button; requestVersion independently rejects obsolete results.
+  const inFlight = useRef(false);
+
+  function clearReview() {
+    // A pending response cannot resurrect an old review after cancel/file change.
+    // Acknowledgment belongs only to the precise file and warning set shown.
+    requestVersion.current += 1;
+    setPreview(null);
+    setAcknowledged(false);
+    setError(null);
+    setLoading(false);
+    inFlight.current = false;
+  }
+
+  async function upload() {
+    if (!file || inFlight.current) return;
+    // Re-upload is a fresh backend review even when the filename is unchanged;
+    // warnings can change as other admins create memberships.
+    clearReview();
+    inFlight.current = true;
+    const version = requestVersion.current;
+    setLoading(true);
+    try {
+      const next = await previewMembershipCsv(file);
+      if (version === requestVersion.current) setPreview(next);
+    } catch {
+      if (version === requestVersion.current) {
+        setError('Unable to review the CSV. Check your finance access and try again.');
+      }
+    } finally {
+      if (version === requestVersion.current) {
+        inFlight.current = false;
+        setLoading(false);
+      }
+    }
+  }
+
+  return (
+    <section aria-labelledby="membership-csv-review-title" className="mb-6 rounded-md border border-msscc-gray-light p-4">
+      <h2 id="membership-csv-review-title" className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
+      <p className="mt-2 text-body-sm">Upload the fixed template for a read-only review. No records are saved.</p>
+      <label htmlFor="membership-csv-file" className="mt-4 block text-body-sm">Membership CSV file</label>
+      <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block"
+        onChange={(event) => {
+          // Never leave an old file's warnings or acknowledgment visible while
+          // the picker points to a different CSV, including an empty selection.
+          clearReview();
+          setFile(event.target.files?.[0] ?? null);
+        }} />
+      <div className="mt-4 flex gap-3">
+        <button type="button" disabled={!file || loading} onClick={() => void upload()}
+          className="rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50">
+          {loading ? 'Reviewing CSV…' : 'Upload and review CSV'}
+        </button>
+        {(preview || error) && <button type="button" onClick={clearReview}
+          className="rounded-md border border-msscc-gray-light px-4 py-2">Cancel review</button>}
+      </div>
+      {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
+      {preview && (
+        <div className="mt-6">
+          <p>Membership preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
+          {preview.errors.length > 0 && <div role="alert" className="mt-3">
+            {/* Errors are locations only; the admin fixes and re-uploads the source CSV. */}
+            <h3>Errors: correct the source CSV and re-upload it.</h3>
+            <ul className="list-disc pl-5">{preview.errors.map((issue, index) => (
+              <li key={`${issue.row}-${issue.field}-${index}`}>Row {issue.row}, {issue.field}: {issue.message}</li>
+            ))}</ul>
+          </div>}
+          {preview.warnings.length > 0 && <div className="mt-3">
+            {/* Acknowledgment is local review state, NOT permission to save. */}
+            <h3>Potential duplicates (not confirmed matches)</h3>
+            <ul className="list-disc pl-5">{preview.warnings.map((issue, index) => (
+              <li key={`${issue.row}-${issue.reason}-${index}`}>Row {issue.row}: {issue.message}</li>
+            ))}</ul>
+            <label className="mt-3 flex gap-2">
+              <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
+              I have reviewed these warnings and will resolve them before a future confirmation.
+            </label>
+          </div>}
+          <div className="mt-4 overflow-x-auto">
+            {/* React escapes uploaded text, including tags in names/notes. Do not
+                use innerHTML or let CSV values become links or executable markup. */}
+            <table className="min-w-full border-collapse text-left text-body-sm">
+              <caption className="text-left">Backend-validated membership proposals (read only)</caption>
+              <thead><tr><th scope="col" className="p-2">CSV row</th>{HEADERS.map((field) => (
+                <th scope="col" key={field} className="p-2">{field}</th>
+              ))}</tr></thead>
+              <tbody>{preview.proposed_records.map((proposal) => (
+                <tr key={proposal.row} className="border-t border-msscc-gray-light">
+                  <th scope="row" className="p-2">{proposal.row}</th>
+                  {HEADERS.map((field) => (
+                    <td key={field} className="p-2 whitespace-pre-wrap">{proposal.values[field] ?? 'Unknown'}</td>
+                  ))}
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+          <p role="status" className="mt-4">Review only; no records have been saved.
+            {/* Confirmation needs a separately authorized, server-bound batch;
+                preview acknowledgment alone cannot create financial records. */}
+            {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
+            {preview.warnings.length > 0 && !acknowledged ? ' Acknowledge warnings before future confirmation.' : ''}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
