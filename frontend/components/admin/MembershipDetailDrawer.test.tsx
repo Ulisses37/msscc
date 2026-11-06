@@ -28,6 +28,20 @@ function fieldValue(label: string): HTMLElement {
 }
 
 describe('MembershipDetailDrawer nullable values', () => {
+  it.each([
+    ['cash', 'Cash'], ['check', 'Check'], ['card', 'Card'], ['bank_transfer', 'Bank transfer'],
+    ['other', 'Other'], [null, 'Unknown'], [undefined, 'Unknown'], ['', 'Unknown'],
+    ['unsupported', 'Unknown'], ['toString', 'Unknown'],
+  ])('displays payment method %p independently of manual origin', (method, label) => {
+    render(<MembershipDetailDrawer membership={{
+      ...membership, payment_method: method, record_source: 'manual',
+    }} onClose={jest.fn()} />);
+    expect(fieldValue('Payment method')).toHaveTextContent(label as string);
+    expect(fieldValue('Record origin')).toHaveTextContent('Manual entry');
+    expect(screen.getByText(/does not confirm current membership eligibility/))
+      .toBeInTheDocument();
+  });
+
   it.each(['Unsubscribed', 'Confirmation pending'])(
     'offers recipient-only correspondence independently of %s', (status) => {
       mockSubscriptionLabel = status;
