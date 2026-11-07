@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from 'next/link';
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedMembership } from '@/services/manualMembership';
+import { downloadMembershipImportTemplate } from '@/services/membershipImportTemplate';
 import { ManualMembershipForm } from '@/components/admin/ManualMembershipForm';
+import { MembershipCsvReview } from '@/components/admin/MembershipCsvReview';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { MembershipDetailDrawer, type MembershipEntry } from "@/components/admin/MembershipDetailDrawer";
 import { membershipDisplayStatus } from "@/components/admin/membershipDisplayStatus";
@@ -89,6 +92,9 @@ export default function AdminMembershipsPage() {
   const [isOpeningSavedMembership, setIsOpeningSavedMembership] = useState(false);
   const [savedDetailsError, setSavedDetailsError] = useState<string | null>(null);
   const openingSavedMembership = useRef(false);
+  const [openingImportedId, setOpeningImportedId] = useState<number | null>(null);
+  const [importedDetailsError, setImportedDetailsError] = useState<string | null>(null);
+  const openingImportedMembership = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [membershipItems, setMembershipItems] = useState<MembershipEntry[]>([]);
@@ -106,6 +112,8 @@ export default function AdminMembershipsPage() {
   const [selectedExportFields, setSelectedExportFields] = useState<(keyof MembershipEntry)[]>(defaultMembershipExportFields);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const pageSizeOptions = [5, 10, 15, 20];
 
   //Maps to PostGeneratedData.tsx, defines the columns to be displayed in the table, their headers, widths, and any custom rendering logic.
@@ -311,6 +319,23 @@ export default function AdminMembershipsPage() {
     }
   }
 
+  async function openImportedMembership(id: number) {
+    if (openingImportedMembership.current) return;
+    openingImportedMembership.current = true;
+    setOpeningImportedId(id);
+    setImportedDetailsError(null);
+    try {
+      // The list can be filtered or paginated. Ask the authorized detail API
+      // for committed facts instead of finding a row in the visible table.
+      setSelectedMembership(await fetchSavedMembership(id));
+    } catch {
+      setImportedDetailsError('The batch was saved, but details could not be loaded. Try this record again.');
+    } finally {
+      openingImportedMembership.current = false;
+      setOpeningImportedId(null);
+    }
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => void fetchMemberships(), 300);
     return () => {
@@ -332,45 +357,87 @@ export default function AdminMembershipsPage() {
   const hasSearchResults = sortedMembershipItems.length > 0;
 
   return(
-    <div className="min-h-screen bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+    <div className="min-h-screen min-w-0 bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
         <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Memberships</h1>
       </header>
 
-      <main className="w-full">
-        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
-        {savedMembershipId !== null && (
-          <div className="mb-4">
-            <button type="button" disabled={isOpeningSavedMembership}
-              onClick={() => void openSavedMembership()}
-              className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
-              {isOpeningSavedMembership ? 'Loading saved membership…' : 'View saved membership'}
+      <main className="min-w-0 w-full">
+        <section aria-labelledby="membership-entry-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
+          <h2 id="membership-entry-title" className="font-heading text-heading-3 text-msscc-teal">Add memberships</h2>
+          <p className="mt-2 text-body-sm">Add one membership manually, or download a template to review and import multiple memberships.</p>
+          {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
+          {savedMembershipId !== null && (
+            <div className="mt-4">
+              <button type="button" disabled={isOpeningSavedMembership}
+                onClick={() => void openSavedMembership()}
+                className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
+                {isOpeningSavedMembership ? 'Loading saved membership…' : 'View saved membership'}
+              </button>
+              {savedDetailsError && (
+                <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>
+              )}
+            </div>
+          )}
+          {!isAddingMembership ? (
+            <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+              onClick={() => setIsAddingMembership(true)}>Add membership</button>
+          ) : (
+            <ManualMembershipForm
+              onCancel={() => setIsAddingMembership(false)}
+              onCreated={({ membershipId }) => {
+                setIsAddingMembership(false);
+                setCreationMessage('Membership record saved.');
+                setSavedMembershipId(membershipId);
+                setSavedDetailsError(null);
+                // Refresh the current query without inserting or merging a guessed table row.
+                void fetchMemberships();
+              }}
+            />
+          )}
+          {/* These are one CSV workflow, separate from both single-entry saving
+              and the table's record-export menu. Preview alone never writes. */}
+          <div role="group" aria-labelledby="membership-csv-group-title"
+            className="mt-6 min-w-0 border-t border-msscc-gray-light pt-5">
+            <h3 id="membership-csv-group-title" className="font-heading text-heading-3 text-msscc-teal">Import from CSV</h3>
+            <p className="mt-2 text-body-sm">
+              Download the template, fill one membership per row, then upload it to review.
+              Correct errors in the file and acknowledge any warnings before confirming.
+              Preview does not save records; Confirm saves the whole batch.
+            </p>
+            <p className="mt-2 text-body-sm">
+              Need field formats or supported values? See <Link href="/admin/documentation"
+                className="text-msscc-pink underline">Documentation &amp; Help</Link> under Finances.
+            </p>
+            <button type="button" className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+              disabled={isDownloadingTemplate}
+              onClick={async () => {
+                setTemplateError(null);
+                setIsDownloadingTemplate(true);
+                try {
+                  await downloadMembershipImportTemplate();
+                } catch {
+                  setTemplateError('Unable to download the template. Check your finance access and try again.');
+                } finally {
+                  setIsDownloadingTemplate(false);
+                }
+              }}>
+              {isDownloadingTemplate ? 'Downloading template…' : 'Download membership CSV template'}
             </button>
-            {savedDetailsError && (
-              <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>
-            )}
+            {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+            <MembershipCsvReview embedded
+              onConfirmed={() => {
+                // Refresh with the existing search text; never change an admin's
+                // filter merely to make the imported rows appear in the table.
+                setImportedDetailsError(null);
+                void fetchMemberships();
+              }}
+              onOpenSavedMembership={(id) => void openImportedMembership(id)}
+              openingMembershipId={openingImportedId}
+              savedDetailsError={importedDetailsError}
+            />
           </div>
-        )}
-        {!isAddingMembership ? (
-          <button type="button" className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
-            onClick={() => {
-              setIsAddingMembership(true);
-            }}>
-            Add membership
-          </button>
-        ) : (
-          <ManualMembershipForm
-            onCancel={() => setIsAddingMembership(false)}
-            onCreated={({ membershipId }) => {
-              setIsAddingMembership(false);
-              setCreationMessage('Membership record saved.');
-              setSavedMembershipId(membershipId);
-              setSavedDetailsError(null);
-              // Refresh the current query without inserting or merging a guessed table row.
-              void fetchMemberships();
-            }}
-          />
-        )}
+        </section>
         {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
         {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}

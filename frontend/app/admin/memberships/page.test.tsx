@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
+import { downloadMembershipImportTemplate } from '@/services/membershipImportTemplate';
+import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershipImportPreview';
 import { downloadCsv } from '@/utils/exportCsv';
 import { downloadXlsx } from '@/utils/exportXlsx';
 import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
@@ -22,6 +24,13 @@ jest.mock('@/utils/exportXlsx', () => ({ downloadXlsx: jest.fn().mockResolvedVal
 jest.mock('@/hooks/useVisibleTableRevisionPolling', () => ({
   useVisibleTableRevisionPolling: jest.fn(),
 }));
+jest.mock('@/services/membershipImportTemplate', () => ({
+  downloadMembershipImportTemplate: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/services/membershipImportPreview', () => ({
+  previewMembershipCsv: jest.fn(), confirmMembershipCsv: jest.fn(),
+  MembershipCsvReviewRejected: class MembershipCsvReviewRejected extends Error {},
+}));
 
 const membership: MembershipEntry = {
   membership_id: 1, first_name: 'Unknown', last_name: 'Member', email: null, phone: null,
@@ -32,11 +41,137 @@ const membership: MembershipEntry = {
 
 describe('membership table nullable values', () => {
   beforeEach(() => {
+    jest.mocked(downloadMembershipImportTemplate).mockReset().mockResolvedValue(undefined);
+    jest.mocked(previewMembershipCsv).mockReset();
+    jest.mocked(confirmMembershipCsv).mockReset();
     jest.mocked(fetchFinancialRecords).mockResolvedValue([
       membership,
       { ...membership, membership_id: 2, first_name: 'Zero', amount_paid: '0.00',
         payment_status: 'pending', start_date: '2026-02-30', end_date: '2099-01-01' },
     ]);
+  });
+
+  it('refreshes the current search and opens imported details outside filtered/paged results', async () => {
+    const originalFetch = global.fetch;
+    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    const saved = { ...membership, membership_id: 42, first_name: 'Imported',
+      record_source: 'csv_import' };
+    const request = jest.fn().mockResolvedValue({ ok: true, json: async () => saved });
+    global.fetch = request;
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      record_type: 'membership', row_count: 1, proposed_records: [],
+      errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockResolvedValue({
+      record_type: 'membership', batch_id: 'batch-42', created_count: 1,
+      membership_ids: [42], already_imported: false,
+    });
+    try {
+      render(<AdminMembershipsPage />);
+      await screen.findByRole('table');
+      fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'other member' } });
+      await waitFor(() => expect(fetchFinancialRecords).toHaveBeenLastCalledWith('memberships', 'other member'));
+      const previousCalls = jest.mocked(fetchFinancialRecords).mock.calls.length;
+      fireEvent.change(screen.getByLabelText('Membership CSV file'), {
+        target: { files: [new File(['csv'], 'membership.csv')] },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Confirm membership import' }));
+      expect(await screen.findByText(/Batch batch-42: 1 memberships/)).toBeInTheDocument();
+      await waitFor(() => expect(jest.mocked(fetchFinancialRecords).mock.calls.length)
+        .toBeGreaterThan(previousCalls));
+      expect(fetchFinancialRecords).toHaveBeenLastCalledWith('memberships', 'other member');
+      expect(screen.getByRole('searchbox')).toHaveValue('other member');
+      // The preview table lives in a dialog only while reviewing; the saved
+      // result stays visible even when the current list filter hides its rows.
+      expect(screen.queryByRole('dialog', { name: 'Review membership CSV' })).toBeNull();
+      expect(within(screen.getByRole('table')).queryByText('Imported')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
+      const drawer = await screen.findByRole('dialog', { name: 'Imported Member' });
+      expect(within(drawer).getByText('CSV import')).toBeInTheDocument();
+      expect(request).toHaveBeenLastCalledWith(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/donations/memberships/42/`,
+        { headers: { Authorization: 'Bearer test-admin-token' }, cache: 'no-store' },
+      );
+      expect(confirmMembershipCsv).toHaveBeenCalledTimes(1);
+    } finally {
+      global.fetch = originalFetch;
+      localStorage.clear();
+    }
+  });
+
+  it('keeps the committed batch and saved-record button after a detail request fails', async () => {
+    const originalFetch = global.fetch;
+    const request = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValue({ ok: true, json: async () => ({
+        ...membership, membership_id: 42, first_name: 'Imported', record_source: 'csv_import',
+      }) });
+    global.fetch = request;
+    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      record_type: 'membership', row_count: 1, proposed_records: [],
+      errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockResolvedValue({
+      record_type: 'membership', batch_id: 'batch-42', created_count: 1,
+      membership_ids: [42], already_imported: true,
+    });
+    const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      render(<AdminMembershipsPage />);
+      fireEvent.change(screen.getByLabelText('Membership CSV file'), {
+        target: { files: [new File(['csv'], 'membership.csv')] },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Confirm membership import' }));
+      expect(await screen.findByText(/This batch was already imported/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('batch was saved');
+      expect(screen.getByText(/Batch batch-42: 1 memberships/)).toBeInTheDocument();
+      // Wait for the failed request's finally block to release its in-flight
+      // guard; clicking while the guard is active is deliberately ignored.
+      await waitFor(() => expect(screen.getByRole('button', { name: 'View saved membership 42' })).toBeEnabled());
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
+      expect(await screen.findByRole('dialog', { name: 'Imported Member' })).toBeInTheDocument();
+      expect(request).toHaveBeenCalledTimes(2);
+      expect(confirmMembershipCsv).toHaveBeenCalledTimes(1);
+    } finally {
+      global.fetch = originalFetch;
+      localStorage.clear();
+      log.mockRestore();
+    }
+  });
+
+  it('keeps the membership-only template separate from record export', async () => {
+    render(<AdminMembershipsPage />);
+    // All creation paths belong together; table export stays outside this section.
+    const entry = screen.getByRole('region', { name: 'Add memberships' });
+    const csvGroup = within(entry).getByRole('group', { name: 'Import from CSV' });
+    expect(within(entry).getByRole('button', { name: 'Add membership' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('heading', { name: 'Review membership CSV' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('button', { name: 'Upload and review CSV' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('button', { name: 'Download membership CSV template' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Membership CSV file')).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Download membership CSV template' });
+    expect(screen.getByText(/Preview does not save records/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Documentation & Help' })).toHaveAttribute('href', '/admin/documentation');
+    expect(screen.queryByText(/Team setup/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1,048,576 UTF-8 bytes/)).not.toBeInTheDocument();
+    expect(button).toHaveClass('w-full', 'sm:w-auto');
+    fireEvent.click(button);
+    await waitFor(() => expect(downloadMembershipImportTemplate).toHaveBeenCalledTimes(1));
+    expect(downloadCsv).not.toHaveBeenCalled();
+    expect(downloadXlsx).not.toHaveBeenCalled();
+  });
+
+  it('reports template download failures without claiming records were created', async () => {
+    jest.mocked(downloadMembershipImportTemplate).mockRejectedValue(new Error('denied'));
+    render(<AdminMembershipsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Download membership CSV template' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
+    expect(screen.queryByText('Membership record saved.')).not.toBeInTheDocument();
   });
 
   it('refreshes the filtered list and retrieves saved details outside its results', async () => {

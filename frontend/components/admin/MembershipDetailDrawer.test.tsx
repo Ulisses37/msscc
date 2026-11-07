@@ -149,6 +149,7 @@ describe('MembershipDetailDrawer nullable values', () => {
 
   it.each([
     ['checkout', 'Checkout'], ['manual', 'Manual entry'], ['legacy_import', 'Legacy import'],
+    ['csv_import', 'CSV import'],
     [null, 'Unknown'], [undefined, 'Unknown'], ['', 'Unknown'], ['other', 'Unknown'],
     ['toString', 'Unknown'],
   ])('labels record origin %p as %s', (recordSource, label) => {
