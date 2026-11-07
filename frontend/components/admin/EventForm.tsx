@@ -446,6 +446,30 @@ export default function EventForm({
               </div>
             )}
           </div>
+
+          {volunteerSlots > 0 && (
+            <div className="mt-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.sendVolunteerReminders}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sendVolunteerReminders: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-msscc-teal"
+                />
+                <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+                  Send volunteer reminder emails
+                </span>
+              </label>
+              <p className="mt-1 ml-7 text-caption text-msscc-gray-mid">
+                Volunteers will receive a reminder email before the event starts.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Title + Datetimes + Location */}
@@ -738,31 +762,6 @@ export default function EventForm({
           )}
         </div>
       </section>
-
-      {/* Send Volunteer Reminders Checkbox (hidden when there are no volunteer slots) */}
-      {volunteerSlots > 0 && (
-        <div className="mt-6">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.sendVolunteerReminders}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  sendVolunteerReminders: e.target.checked,
-                }))
-              }
-              className="w-4 h-4 accent-msscc-teal"
-            />
-            <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
-              Send volunteer reminder emails
-            </span>
-          </label>
-          <p className="text-caption text-msscc-gray-mid mt-1 ml-7">
-            Volunteers will receive a reminder email before the event starts.
-          </p>
-        </div>
-      )}
 
       {/* Sticky save bar: stays pinned to the bottom of the viewport while scrolling.
           Messages live inside the bar so they're visible without scrolling down. */}
