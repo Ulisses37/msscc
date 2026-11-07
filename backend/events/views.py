@@ -4,7 +4,7 @@ from django.db.models import QuerySet
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -80,6 +80,25 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(slot_id=slot_id)
 
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        """Return a success response without saving a bot-filled signup form."""
+        # Honeypot: people never see this field, so a filled value means a bot.
+        # Answer like a success so the bot does not learn it was caught, but save
+        # nothing and send no email.
+        if str(request.data.get("website", "")).strip():
+            return Response(
+                {
+                    "volunteer_signup_id": 0,
+                    "first_name": request.data.get("first_name", ""),
+                    "last_name": request.data.get("last_name", ""),
+                    "email": request.data.get("email", ""),
+                    "phone": request.data.get("phone", ""),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         signup = serializer.save(status="approved")

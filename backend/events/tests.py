@@ -114,6 +114,27 @@ class VolunteerSignupEmailTests(TestCase):
         self.slot.refresh_from_db()
         self.assertEqual(self.slot.filled_count, 1)
 
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_honeypot_signup_is_accepted_without_saving_or_sending_email(self, mock_send_email):
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": self.slot.volunteer_slot_id,
+                "first_name": "Aiko",
+                "last_name": "Tanaka",
+                "email": "aiko@example.com",
+                "phone": "916-555-0100",
+                "website": "https://spam.example",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["volunteer_signup_id"], 0)
+        self.assertEqual(response.json()["email"], "aiko@example.com")
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
     @patch("emails.messages.send_email")
     def test_confirmation_email_includes_unique_cancellation_url(self, mock_send_email):
         signup = VolunteerSignup.objects.create(
