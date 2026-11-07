@@ -143,14 +143,19 @@ describe('membership table nullable values', () => {
 
   it('keeps the membership-only template separate from record export', async () => {
     render(<AdminMembershipsPage />);
-    // Review sits alongside the separate import template, not in export controls.
-    expect(screen.getByRole('heading', { name: 'Review membership CSV' })).toBeInTheDocument();
+    // All creation paths belong together; table export stays outside this section.
+    const entry = screen.getByRole('region', { name: 'Add memberships' });
+    const csvGroup = within(entry).getByRole('group', { name: 'Import from CSV' });
+    expect(within(entry).getByRole('button', { name: 'Add membership' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('heading', { name: 'Review membership CSV' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('button', { name: 'Upload and review CSV' })).toBeInTheDocument();
+    expect(within(csvGroup).getByRole('button', { name: 'Download membership CSV template' })).toBeInTheDocument();
     expect(screen.getByLabelText('Membership CSV file')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Download membership CSV template' });
-    expect(screen.getByText(/Required: first_name, last_name, membership_type/)).toBeInTheDocument();
-    expect(screen.getByText(/1,048,576 UTF-8 bytes and 500 data rows/)).toBeInTheDocument();
-    expect(screen.getByText(/Dates use YYYY-MM-DD or YYYY\/MM\/DD, or Excel-style MM\/DD\/YYYY/)).toBeInTheDocument();
-    expect(screen.getByText(/docs\/membership-csv-import\.md/)).toBeInTheDocument();
+    expect(screen.getByText(/Preview does not save records/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Documentation & Help' })).toHaveAttribute('href', '/admin/documentation');
+    expect(screen.queryByText(/Team setup/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1,048,576 UTF-8 bytes/)).not.toBeInTheDocument();
     expect(button).toHaveClass('w-full', 'sm:w-auto');
     fireEvent.click(button);
     await waitFor(() => expect(downloadMembershipImportTemplate).toHaveBeenCalledTimes(1));

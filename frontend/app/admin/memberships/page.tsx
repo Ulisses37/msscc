@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from 'next/link';
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedMembership } from '@/services/manualMembership';
@@ -362,107 +363,81 @@ export default function AdminMembershipsPage() {
       </header>
 
       <main className="min-w-0 w-full">
-        <section aria-labelledby="membership-import-template-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]">
-          <h2 id="membership-import-template-title" className="font-heading text-heading-3 text-msscc-teal">Membership CSV import template</h2>
-          <p className="mt-2 text-body-sm">
-            Download the fixed membership-only CSV template. Keep its columns in order; one row represents
-            one membership. This template is separate from the CSV/XLSX record exports. Upload and review
-            appears below; downloading and reviewing never create records.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Required: first_name, last_name, membership_type (free text), status. Optional: email, phone,
-            address, membership_price, amount_paid, start_date, end_date, renewal_date, payment_status,
-            payment_method, reference_id, notes. Leave optional cells blank when unknown; 0.00 means a
-            known zero, not unknown. Do not substitute current prices, dates, payment statuses or methods.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Status: unknown, active, inactive, pending, expired, canceled. Payment status (optional):
-            pending, completed, failed, canceled, waived. Payment method (optional): cash, check, card,
-            bank_transfer, other. Dates use YYYY-MM-DD or YYYY/MM/DD, or Excel-style MM/DD/YYYY or
-            MM-DD-YYYY; preview shows dates as YYYY-MM-DD. Amounts use nonnegative decimals with up to
-            two decimal places, no currency symbols or thousands separators.
-          </p>
-          <p className="mt-2 text-body-sm">
-            CSV limit: 1,048,576 UTF-8 bytes and 500 data rows. Cell limits: names, membership type,
-            status, phone, payment status and reference_id 255 characters; email 254; address and notes
-            500; payment_method 20; dates 10; amounts 12 characters. The download contains headers only,
-            not sample personal information. This template does not process payments or mailing-list consent.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Workflow: fill the template, upload it below, correct any row errors in the CSV and review
-            possible duplicates. Acknowledge warnings before confirming. Preview does not save anything;
-            Confirm saves the whole batch. The result shows its batch ID and links to each saved record,
-            even when the current search hides it. If confirmation loses its response, retry the same
-            reviewed file. After leaving this page, upload that same CSV again and confirm to retrieve
-            an already-imported result instead of creating another batch.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Team setup and the complete import instructions are tracked in docs/membership-csv-import.md;
-            this page and the CSV template are supplied by application code, not seeded database content.
-          </p>
-          <button type="button" className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
-            disabled={isDownloadingTemplate}
-            onClick={async () => {
-              setTemplateError(null);
-              setIsDownloadingTemplate(true);
-              try {
-                await downloadMembershipImportTemplate();
-              } catch {
-                setTemplateError('Unable to download the template. Check your finance access and try again.');
-              } finally {
-                setIsDownloadingTemplate(false);
-              }
-            }}>
-            {isDownloadingTemplate ? 'Downloading template…' : 'Download membership CSV template'}
-          </button>
-          {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
-        </section>
-        {/* Keep CSV review separate from both the record-export menu and the
-            single-record manual form; preview cannot write to either path. */}
-        <MembershipCsvReview
-          onConfirmed={() => {
-            // Refresh with the existing search text; never change an admin's
-            // filter merely to make the imported rows appear in the table.
-            setImportedDetailsError(null);
-            void fetchMemberships();
-          }}
-          onOpenSavedMembership={(id) => void openImportedMembership(id)}
-          openingMembershipId={openingImportedId}
-          savedDetailsError={importedDetailsError}
-        />
-        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
-        {savedMembershipId !== null && (
-          <div className="mb-4">
-            <button type="button" disabled={isOpeningSavedMembership}
-              onClick={() => void openSavedMembership()}
-              className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
-              {isOpeningSavedMembership ? 'Loading saved membership…' : 'View saved membership'}
+        <section aria-labelledby="membership-entry-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
+          <h2 id="membership-entry-title" className="font-heading text-heading-3 text-msscc-teal">Add memberships</h2>
+          <p className="mt-2 text-body-sm">Add one membership manually, or download a template to review and import multiple memberships.</p>
+          {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
+          {savedMembershipId !== null && (
+            <div className="mt-4">
+              <button type="button" disabled={isOpeningSavedMembership}
+                onClick={() => void openSavedMembership()}
+                className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
+                {isOpeningSavedMembership ? 'Loading saved membership…' : 'View saved membership'}
+              </button>
+              {savedDetailsError && (
+                <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>
+              )}
+            </div>
+          )}
+          {!isAddingMembership ? (
+            <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+              onClick={() => setIsAddingMembership(true)}>Add membership</button>
+          ) : (
+            <ManualMembershipForm
+              onCancel={() => setIsAddingMembership(false)}
+              onCreated={({ membershipId }) => {
+                setIsAddingMembership(false);
+                setCreationMessage('Membership record saved.');
+                setSavedMembershipId(membershipId);
+                setSavedDetailsError(null);
+                // Refresh the current query without inserting or merging a guessed table row.
+                void fetchMemberships();
+              }}
+            />
+          )}
+          {/* These are one CSV workflow, separate from both single-entry saving
+              and the table's record-export menu. Preview alone never writes. */}
+          <div role="group" aria-labelledby="membership-csv-group-title"
+            className="mt-6 min-w-0 border-t border-msscc-gray-light pt-5">
+            <h3 id="membership-csv-group-title" className="font-heading text-heading-3 text-msscc-teal">Import from CSV</h3>
+            <p className="mt-2 text-body-sm">
+              Download the template, fill one membership per row, then upload it to review.
+              Correct errors in the file and acknowledge any warnings before confirming.
+              Preview does not save records; Confirm saves the whole batch.
+            </p>
+            <p className="mt-2 text-body-sm">
+              Need field formats or supported values? See <Link href="/admin/documentation"
+                className="text-msscc-pink underline">Documentation &amp; Help</Link> under Finances.
+            </p>
+            <button type="button" className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+              disabled={isDownloadingTemplate}
+              onClick={async () => {
+                setTemplateError(null);
+                setIsDownloadingTemplate(true);
+                try {
+                  await downloadMembershipImportTemplate();
+                } catch {
+                  setTemplateError('Unable to download the template. Check your finance access and try again.');
+                } finally {
+                  setIsDownloadingTemplate(false);
+                }
+              }}>
+              {isDownloadingTemplate ? 'Downloading template…' : 'Download membership CSV template'}
             </button>
-            {savedDetailsError && (
-              <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>
-            )}
+            {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+            <MembershipCsvReview embedded
+              onConfirmed={() => {
+                // Refresh with the existing search text; never change an admin's
+                // filter merely to make the imported rows appear in the table.
+                setImportedDetailsError(null);
+                void fetchMemberships();
+              }}
+              onOpenSavedMembership={(id) => void openImportedMembership(id)}
+              openingMembershipId={openingImportedId}
+              savedDetailsError={importedDetailsError}
+            />
           </div>
-        )}
-        {!isAddingMembership ? (
-          <button type="button" className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
-            onClick={() => {
-              setIsAddingMembership(true);
-            }}>
-            Add membership
-          </button>
-        ) : (
-          <ManualMembershipForm
-            onCancel={() => setIsAddingMembership(false)}
-            onCreated={({ membershipId }) => {
-              setIsAddingMembership(false);
-              setCreationMessage('Membership record saved.');
-              setSavedMembershipId(membershipId);
-              setSavedDetailsError(null);
-              // Refresh the current query without inserting or merging a guessed table row.
-              void fetchMemberships();
-            }}
-          />
-        )}
+        </section>
         {error && <div className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
         {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
         {isLoading && !error && <div className="border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading memberships...</div>}

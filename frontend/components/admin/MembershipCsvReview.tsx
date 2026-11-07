@@ -18,6 +18,7 @@ const HEADERS = [
 
 /** Review and confirm only with a signed, server-revalidated CSV decision. */
 type MembershipCsvReviewProps = {
+  embedded?: boolean;
   onConfirmed?: (result: MembershipCsvConfirmation) => void;
   onOpenSavedMembership?: (membershipId: number) => void;
   openingMembershipId?: number | null;
@@ -25,7 +26,7 @@ type MembershipCsvReviewProps = {
 };
 
 export function MembershipCsvReview({
-  onConfirmed, onOpenSavedMembership, openingMembershipId, savedDetailsError,
+  embedded = false, onConfirmed, onOpenSavedMembership, openingMembershipId, savedDetailsError,
 }: MembershipCsvReviewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<MembershipCsvPreview | null>(null);
@@ -116,9 +117,9 @@ export function MembershipCsvReview({
   }
 
   return (
-    <section aria-labelledby="membership-csv-review-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
-      <h2 id="membership-csv-review-title" className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
-      <p className="mt-2 text-body-sm">Upload the fixed template to review proposed records. Only Confirm saves a batch.</p>
+    <section aria-labelledby="membership-csv-review-title"
+      className={embedded ? 'mt-5 min-w-0 max-w-full' : 'mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4'}>
+      <h4 id="membership-csv-review-title" className="font-heading text-lg text-msscc-teal">Review membership CSV</h4>
       <label htmlFor="membership-csv-file" className="mt-4 block text-body-sm">Membership CSV file</label>
       <input id="membership-csv-file" type="file" accept=".csv,text/csv" className="mt-2 block w-full min-w-0 max-w-full text-body-sm"
         disabled={confirming}
