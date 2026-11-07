@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ImportImage } from '@/components/ui/ImportImage'
 import PostImage from '@/components/ui/PostImage'
 import { parseMediaUploadError } from '@/utils/mediaUploadError'
+import Image from 'next/image'
 
 export interface PartnerProp{
   DisplayOrder: number;
@@ -36,7 +37,7 @@ const modalTitleClass = "mb-4 font-heading text-xl text-msscc-teal sm:text-2xl";
 // Columns: Order | Name | Image | Contribution | (Website, md+) | Page (prev/next controls)
 // Class names must be written out in full so Tailwind can find them.
 export function getGridCols() {
-  return 'grid grid-cols-[56px_minmax(0,1fr)_80px_152px] sm:grid-cols-[60px_minmax(0,1fr)_120px_220px_152px] md:grid-cols-[60px_minmax(0,1fr)_120px_220px_minmax(0,1fr)_152px]';
+  return 'grid grid-cols-[minmax(0,1fr)_152px] sm:grid-cols-[60px_minmax(0,1fr)_120px_220px_152px] md:grid-cols-[60px_minmax(0,1fr)_120px_220px_minmax(0,1fr)_152px]';
 }
 
 export function PartnerTableHeader(
@@ -61,13 +62,11 @@ export function PartnerTableHeader(
   const headerCell = "flex items-center py-3 text-label uppercase tracking-label text-msscc-gray-mid";
   return (
     <div className={`${getGridCols()} border-b border-msscc-gray-light bg-msscc-gray-faint items-center`}>
-      <div className={`${headerCell} justify-center px-2 text-center`}>Order</div>
-      <div className={`${headerCell} px-3`}>Name</div>
-      <div className={`${headerCell} hidden justify-center px-2 text-center sm:flex`}>Image</div>
-      <div className={`${headerCell} justify-end px-3 text-right`}>
-        <span className="whitespace-nowrap"><span className="hidden sm:inline">Contribution </span>Amount</span>
-      </div>
-      <div className={`${headerCell} hidden px-3 pl-8 md:flex`}>Website</div>
+    <div className={`${headerCell} hidden justify-center px-2 text-center sm:flex`}>Order</div>
+    <div className={`${headerCell} px-3`}>Name</div>
+    <div className={`${headerCell} hidden justify-center px-2 text-center sm:flex`}>Image</div>
+    <div className={`${headerCell} hidden justify-end whitespace-nowrap px-3 text-right sm:flex`}>Contribution Amount</div>
+    <div className={`${headerCell} hidden px-3 pl-8 md:flex`}>Website</div>
       <div className="flex items-center justify-end gap-1 px-2 py-2 normal-case tracking-normal">
         <button
           type="button"
@@ -135,7 +134,7 @@ function DisplayRow({
        text-body-sm text-msscc-gray-dark last:border-b-0 hover:bg-msscc-pink-faint`}
       onClick={() => setEditPopUp(partnerInfo)}
     >
-      <div className="px-2 py-3 text-center">{partnerInfo.DisplayOrder}</div>
+      <div className="hidden px-2 py-3 text-center sm:block">{partnerInfo.DisplayOrder}</div>
       <div className="truncate px-3 py-3 font-semibold">{partnerInfo.Name}</div>
       <div className="hidden items-center justify-center px-3 py-1.5 sm:flex">
         {partnerInfo.MediaAsset !== null ? (
@@ -150,12 +149,11 @@ function DisplayRow({
           <span className="text-body-sm text-msscc-gray-mid">No image</span>
         )}
       </div>
-      <div className="px-3 py-3 text-right">${partnerInfo.ContributionAmount}</div>
-      <div className="hidden truncate px-3 py-3 pl-8 md:block">
-        {partnerInfo.Website}
-      </div>
-      {/* Empty cell keeps rows aligned with the header's page-controls column */}
-      <div aria-hidden="true" />
+<div className="whitespace-nowrap px-2 py-3 text-right sm:px-3">${partnerInfo.ContributionAmount}</div>
+<div className="hidden truncate px-3 py-3 pl-8 md:block">
+  {partnerInfo.Website}
+</div>
+<div aria-hidden="true" className="hidden sm:block" />
     </div>
   );
 }
@@ -324,13 +322,15 @@ export function CreatePartnerProp(
             />
             {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
             {previewUrl && (
-              <div className="mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
-                <img
-                  src={previewUrl}
-                  alt="Selected partner image preview"
-                  className="h-full w-full object-contain"
-                />
-              </div>
+            <div className="relative mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
+              <Image
+                src={previewUrl}
+                alt="Selected partner image preview"
+                fill
+                unoptimized
+                className="object-contain"
+              />
+            </div>
             )}
             <label className={`${checkboxLabelClass} mt-2`}>
               <input
@@ -590,11 +590,13 @@ export function EditPartnerProp(
               />
               {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
               {previewUrl && (
-                <div className="mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
-                  <img
+                <div className="relative mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
+                  <Image
                     src={previewUrl}
                     alt="New partner image preview"
-                    className="h-full w-full object-contain"
+                    fill
+                    unoptimized
+                    className="object-contain"
                   />
                 </div>
               )}
