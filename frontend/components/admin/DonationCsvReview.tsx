@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { confirmDonationCsv, DonationCsvReviewRejected, previewDonationCsv } from '@/services/donationImportPreview';
 import { fetchSavedDonation } from '@/services/manualDonation';
@@ -36,9 +37,66 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
   const detailInFlight = useRef(false);
   const [reviewRejected, setReviewRejected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const reopenRef = useRef<HTMLButtonElement>(null);
+  const uploadRef = useRef<HTMLButtonElement>(null);
   const requestVersion = useRef(0);
   // Prevent double submissions before React can disable the button.
   const inFlight = useRef(false);
+
+  useEffect(() => {
+    if (!reviewOpen) return;
+    // The portal keeps the wide CSV table out of the page layout. Restore the
+    // previous scroll state and focus even when success removes the trigger.
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const uploadButton = uploadRef.current;
+    const reopenButton = reopenRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    setPortalTarget(document.body);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      (previousFocus?.isConnected ? previousFocus
+        : reopenButton?.isConnected ? reopenButton : uploadButton)?.focus();
+    };
+  }, [reviewOpen]);
+
+  useEffect(() => {
+    if (portalTarget && reviewOpen) headingRef.current?.focus();
+  }, [portalTarget, reviewOpen]);
+
+  function closeDialog() {
+    // A pending confirmation may already have committed. Do not dismiss the
+    // only retry context before its response is known.
+    if (!inFlight.current) setReviewOpen(false);
+  }
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), [tabindex="0"]',
+    );
+    if (!controls?.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first
+      || document.activeElement === headingRef.current)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function clearReview() {
     // A pending response from an earlier file must never resurrect its
@@ -55,6 +113,7 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
     setDetailError(null);
     detailInFlight.current = false;
     setConfirmationAttempted(false);
+    setReviewOpen(false);
     inFlight.current = false;
   }
 
@@ -71,6 +130,7 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
       const result = await confirmDonationCsv(file, preview.review_token, acknowledged);
       if (version === requestVersion.current) {
         setConfirmation(result);
+        setReviewOpen(false);
         setSelectedImportId(result.donation_ids[0]);
         // A retry that returns an existing batch is still a successful receipt:
         // refresh the active list rather than assuming its cached rows include it.
@@ -127,7 +187,10 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
     setLoading(true);
     try {
       const next = await previewDonationCsv(file);
-      if (version === requestVersion.current) setPreview(next);
+      if (version === requestVersion.current) {
+        setPreview(next);
+        setReviewOpen(true);
+      }
     } catch {
       if (version === requestVersion.current) {
         setError('Unable to review the CSV. Check your finance access and try again.');
@@ -157,7 +220,7 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
           setFile(event.target.files?.[0] ?? null);
         }} />
       <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <button type="button" disabled={!file || loading || confirming ||
+        <button ref={uploadRef} type="button" disabled={!file || loading || confirming ||
           (confirmationAttempted && !reviewRejected && !confirmation)}
           onClick={() => void upload()}
           className="w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
@@ -169,92 +232,31 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
           Cancel review
         </button>}
       </div>
-      {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
-      {preview && <div className="mt-6 min-w-0 max-w-full [overflow-wrap:anywhere]">
-        <p>Donation preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
-        {preview.errors.length > 0 && <div role="alert" className="mt-3">
-          {/* Only the source CSV can be corrected; do not permit editing a
-              browser copy of facts that the backend has not revalidated. */}
-          <h3>Errors: correct the source CSV and re-upload it.</h3>
-          <ul className="list-disc pl-5">{preview.errors.map((issue, index) => (
-            <li key={`${issue.row}-${issue.field}-${index}`}>
-              Row {issue.row}, {issue.field}: {issue.message}
-            </li>
-          ))}</ul>
-        </div>}
-        {preview.warnings.length > 0 && <div className="mt-3">
-          <h3>Potential duplicates (not confirmed matches)</h3>
-          <ul className="list-disc pl-5">{preview.warnings.map((issue, index) => (
-            <li key={`${issue.row}-${issue.reason}-${index}`}>Row {issue.row}: {issue.message}</li>
-          ))}</ul>
-          <label className="mt-3 flex gap-2">
-            <input type="checkbox" checked={acknowledged}
-              disabled={confirming || (confirmationAttempted && !reviewRejected && !confirmation)}
-              onChange={(event) => setAcknowledged(event.target.checked)} />
-            I have reviewed these donation warnings.
-          </label>
-        </div>}
-        {/* The ten columns cannot fit on a phone. Let the table grow to its
-            readable intrinsic width and scroll ONLY this bounded region; min-w-full
-            alone squeezed each header into a one-letter-wide vertical column.
-            React renders uploaded contact text literally, never as HTML or links. */}
-        <p id="donation-csv-scroll-hint" className="mt-4 text-body-sm">
-          Scroll sideways to review all donation columns.
-        </p>
-        <div role="region" aria-label="Donation CSV proposals" tabIndex={0}
-          aria-describedby="donation-csv-scroll-hint"
-          className="mt-2 w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain">
-          <table className="w-max min-w-full border-collapse text-left text-body-sm">
-            <caption className="whitespace-nowrap text-left">
-              Backend-validated donation proposals (read only)
-            </caption>
-            <thead><tr><th scope="col" className="whitespace-nowrap p-2">CSV row</th>{HEADERS.map((field) => (
-              <th scope="col" key={field} className="whitespace-nowrap p-2">{field}</th>
-            ))}</tr></thead>
-            <tbody>{preview.proposed_records.map((proposal) => (
-              <tr key={proposal.row} className="border-t border-msscc-gray-light">
-                <th scope="row" className="p-2">{proposal.row}</th>
-                {HEADERS.map((field) => (
-                  <td key={field} className="max-w-64 whitespace-pre-wrap break-words p-2">
-                    {proposal.values[field] === null || proposal.values[field] === undefined
-                      ? 'Unknown' : String(proposal.values[field])}
-                  </td>
-                ))}
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-        {!confirmation && <p role="status" className="mt-4">
-          {reviewRejected ? 'This review did not save donations. Upload and review again.'
-            : confirmationAttempted ? 'Confirmation may have saved donations; retry with the same file to check.'
-              : 'Review only; no donations have been saved.'}
-          {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
-          {preview.warnings.length > 0 && !acknowledged
-            ? ' Acknowledge warnings before confirmation.' : ''}
-        </p>}
-        {/* The signed review is only a prerequisite. The backend rechecks the
-            file, reviewer, warnings and all financial facts before saving. */}
-        {!confirmation && !reviewRejected && preview.review_token && preview.errors.length === 0 && (
-          <button type="button" onClick={() => void confirm()} disabled={confirming ||
-            (preview.warnings.length > 0 && !acknowledged)}
-            className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
-            {confirming ? 'Confirming…' : 'Confirm donation import'}
-          </button>
-        )}
-        {confirmation && <p role="status" className="mt-4">
+      {error && !reviewOpen && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
+      {preview && !confirmation && !reviewOpen && <div className="mt-4 flex flex-col items-start gap-2">
+        <p role="status">{reviewRejected ? 'Review rejected; upload and review the file again.'
+          : confirmationAttempted ? 'Confirmation may have saved donations; reopen the review to retry.'
+            : 'Review paused; no donations have been saved.'}</p>
+        {!reviewRejected && <button ref={reopenRef} type="button" onClick={() => setReviewOpen(true)}
+          className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink">
+          Reopen CSV review
+        </button>}
+      </div>}
+      {/* Keep the committed receipt outside the dialog so viewing saved details
+          never stacks two overlays or depends on the filtered donations list. */}
+      {confirmation && <div className="mt-4 min-w-0 [overflow-wrap:anywhere]">
+        <p role="status">
           {confirmation.already_imported ? 'This batch was already imported.' : 'Donation batch saved.'}
           {' '}Batch {confirmation.batch_id}: {confirmation.created_count} donations.
-        </p>}
-        {confirmation && <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
+        </p>
+        <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
           <div className="min-w-0">
             <label htmlFor="donation-csv-saved-id" className="block text-body-sm">Saved donation ID</label>
-            <select id="donation-csv-saved-id" value={selectedImportId ?? ''}
-              disabled={loadingDetail}
+            <select id="donation-csv-saved-id" value={selectedImportId ?? ''} disabled={loadingDetail}
               onChange={(event) => {
                 setSelectedImportId(Number(event.target.value));
                 setDetailError(null);
-              }}
-              className="mt-1 w-full max-w-full rounded-md border border-msscc-gray-light px-3 py-2">
+              }} className="mt-1 w-full max-w-full rounded-md border border-msscc-gray-light px-3 py-2">
               {confirmation.donation_ids.map((id) => <option key={id} value={id}>Donation {id}</option>)}
             </select>
           </div>
@@ -262,9 +264,101 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
             className="rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
             {loadingDetail ? 'Loading imported donation…' : 'View imported donation'}
           </button>
-        </div>}
+        </div>
         {detailError && <p role="alert" className="mt-2 text-msscc-danger">{detailError}</p>}
       </div>}
+      {preview && reviewOpen && portalTarget && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="donation-csv-dialog-title"
+            onKeyDown={handleDialogKeyDown}
+            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-6xl flex-col overflow-hidden rounded-md bg-msscc-white shadow-xl sm:max-h-[calc(100dvh-3rem)]">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-msscc-gray-light p-3 sm:p-5">
+              <h2 ref={headingRef} tabIndex={-1} id="donation-csv-dialog-title"
+                className="font-heading text-xl text-msscc-teal">Donation CSV review</h2>
+              <button type="button" disabled={confirming} onClick={closeDialog}
+                className="rounded-md border border-msscc-gray-light px-3 py-1.5 disabled:opacity-50">
+                Close review
+              </button>
+            </header>
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="min-w-0 p-3 [overflow-wrap:anywhere] sm:p-5">
+                {error && <p role="alert" className="mb-3 text-msscc-danger">{error}</p>}
+                <p>Donation preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
+                {preview.errors.length > 0 && <div role="alert" className="mt-3">
+                  {/* Only the source CSV can be corrected; do not permit editing a
+                      browser copy of facts that the backend has not revalidated. */}
+                  <h3>Errors: correct the source CSV and re-upload it.</h3>
+                  <ul className="list-disc pl-5">{preview.errors.map((issue, index) => (
+                    <li key={`${issue.row}-${issue.field}-${index}`}>
+                      Row {issue.row}, {issue.field}: {issue.message}
+                    </li>
+                  ))}</ul>
+                </div>}
+                {preview.warnings.length > 0 && <div className="mt-3">
+                  <h3>Potential duplicates (not confirmed matches)</h3>
+                  <ul className="list-disc pl-5">{preview.warnings.map((issue, index) => (
+                    <li key={`${issue.row}-${issue.reason}-${index}`}>Row {issue.row}: {issue.message}</li>
+                  ))}</ul>
+                  <label className="mt-3 flex gap-2">
+                    <input type="checkbox" checked={acknowledged}
+                      disabled={confirming || (confirmationAttempted && !reviewRejected && !confirmation)}
+                      onChange={(event) => setAcknowledged(event.target.checked)} />
+                    I have reviewed these donation warnings.
+                  </label>
+                </div>}
+                {/* The ten columns cannot fit on a phone. Give the table readable
+                    widths and scroll only this region. React renders uploaded
+                    contact text literally, never as HTML or links. */}
+                <p id="donation-csv-scroll-hint" className="mt-4 text-body-sm">
+                  Scroll sideways to review all donation columns.
+                </p>
+                <div role="region" aria-label="Donation CSV proposals" tabIndex={0}
+                  aria-describedby="donation-csv-scroll-hint"
+                  className="mt-2 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-msscc-gray-light">
+                  <table className="w-max min-w-full border-collapse text-left text-body-sm">
+                    <caption className="whitespace-nowrap text-left">
+                      Backend-validated donation proposals (read only)
+                    </caption>
+                    <thead><tr><th scope="col" className="min-w-20 whitespace-nowrap bg-msscc-gray-faint p-3 sm:sticky sm:left-0 sm:z-10">CSV row</th>{HEADERS.map((field) => (
+                      <th scope="col" key={field} className="min-w-36 whitespace-nowrap bg-msscc-gray-faint p-3">{field}</th>
+                    ))}</tr></thead>
+                    <tbody>{preview.proposed_records.map((proposal) => (
+                      <tr key={proposal.row} className="border-t border-msscc-gray-light">
+                        <th scope="row" className="bg-msscc-white p-3 sm:sticky sm:left-0 sm:z-10">{proposal.row}</th>
+                        {HEADERS.map((field) => (
+                          <td key={field} className="max-w-64 whitespace-pre-wrap break-words p-3">
+                            {proposal.values[field] === null || proposal.values[field] === undefined
+                              ? 'Unknown' : String(proposal.values[field])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white p-3 sm:p-5">
+              <p role="status" className="text-body-sm">
+                {reviewRejected ? 'This review did not save donations. Upload and review again.'
+                  : confirmationAttempted ? 'Confirmation may have saved donations; retry with the same file to check.'
+                    : 'Review only; no donations have been saved.'}
+                {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
+                {preview.warnings.length > 0 && !acknowledged
+                  ? ' Acknowledge warnings before confirmation.' : ''}
+              </p>
+              {/* The signed review is only a prerequisite. The backend rechecks
+                  the file, reviewer, warnings and all financial facts. */}
+              {!reviewRejected && preview.review_token && preview.errors.length === 0 && (
+                <button type="button" onClick={() => void confirm()} disabled={confirming ||
+                  (preview.warnings.length > 0 && !acknowledged)}
+                  className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
+                  {confirming ? 'Confirming…' : 'Confirm donation import'}
+                </button>
+              )}
+            </footer>
+          </div>
+        </div>, portalTarget,
+      )}
     </section>
   );
 }

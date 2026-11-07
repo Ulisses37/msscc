@@ -213,6 +213,9 @@ describe('donation page manual-entry dialog', () => {
     expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View imported donation' }));
     expect(await screen.findByRole('dialog', { name: 'Not provided' })).toBeInTheDocument();
+    // Successful confirmation closes CSV review before opening the existing
+    // authorized detail drawer; two modal dialogs must not compete for focus.
+    expect(screen.queryByRole('dialog', { name: 'Donation CSV review' })).toBeNull();
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/donations/42/'),
       expect.objectContaining({ cache: 'no-store', headers: expect.objectContaining({

@@ -88,7 +88,11 @@ describe('donation CSV review and signed confirmation', () => {
     expect(region).toHaveAttribute('aria-describedby', 'donation-csv-scroll-hint');
     expect(screen.getByText('Scroll sideways to review all donation columns.'))
       .toBeInTheDocument();
-    expect(region).toHaveClass('w-full', 'min-w-0', 'max-w-full', 'overflow-x-auto');
+    expect(region).toHaveClass('max-w-full', 'overflow-x-auto');
+    const dialog = screen.getByRole('dialog', { name: 'Donation CSV review' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveClass('min-w-0', 'max-w-6xl', 'overflow-hidden');
+    expect(region.parentElement?.parentElement).toHaveClass('overflow-y-auto', 'min-h-0');
     expect(screen.getByRole('table').parentElement).toBe(region);
     expect(screen.getByRole('table')).toHaveClass('w-max', 'min-w-full');
     expect(within(region).getByText('Backend-validated donation proposals (read only)'))
@@ -99,6 +103,29 @@ describe('donation CSV review and signed confirmation', () => {
     }
     expect(within(region).getByText('<img src=x onerror=alert(1)>'))
       .toHaveClass('max-w-64', 'break-words');
+  });
+
+  it('closes and reopens the same preview, restores focus and traps keyboard navigation', async () => {
+    render(<Review />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    const upload = screen.getByRole('button', { name: 'Upload and review CSV' });
+    upload.focus();
+    fireEvent.click(upload);
+    const dialog = await screen.findByRole('dialog', { name: 'Donation CSV review' });
+    expect(document.body).toHaveStyle({ overflow: 'hidden' });
+    const heading = within(dialog).getByRole('heading', { name: 'Donation CSV review' });
+    expect(heading).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(within(dialog).getByRole('region', { name: 'Donation CSV proposals' })).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(within(dialog).getByRole('button', { name: 'Close review' })).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Donation CSV review' })).toBeNull();
+    expect(upload).toHaveFocus();
+    expect(document.body).not.toHaveStyle({ overflow: 'hidden' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    expect(screen.getByRole('dialog', { name: 'Donation CSV review' })).toBeInTheDocument();
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
   });
 
   it('resets acknowledgment and proposals on selection, re-upload, and cancel', async () => {
@@ -160,11 +187,41 @@ describe('donation CSV review and signed confirmation', () => {
     fireEvent.click(confirm);
     expect(await screen.findByText(/Donation batch saved. Batch test-batch: 2 donations/))
       .toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Donation CSV review' })).toBeNull();
     expect(confirmDonationCsv).toHaveBeenCalledWith(file, 'signed-review', true);
     expect(screen.queryByText(/no donations have been saved/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirm donation import' })).toBeNull();
     expect(onConfirmed).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Saved donation ID')).toHaveValue('7');
+  });
+
+  it('cannot dismiss an in-flight confirmation and reopens an uncertain reply with its signed review', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    let rejectRequest!: (error: Error) => void;
+    jest.mocked(confirmDonationCsv).mockImplementationOnce(() => new Promise((_, reject) => {
+      rejectRequest = reject;
+    }));
+    render(<Review />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Donation CSV review' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm donation import' }));
+    expect(within(dialog).getByRole('button', { name: 'Close review' })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: 'Donation CSV review' })).toBeInTheDocument();
+    await act(async () => rejectRequest(new Error('private response')));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('status is uncertain');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close review' }));
+    expect(screen.queryByRole('dialog', { name: 'Donation CSV review' })).toBeNull();
+    expect(screen.getByText(/Confirmation may have saved donations; reopen/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Donation CSV review' }))
+      .getByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByText(/Batch test-batch: 2 donations/)).toBeInTheDocument();
+    expect(confirmDonationCsv).toHaveBeenNthCalledWith(2, file, 'signed-review', false);
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
   });
 
   it.each([false, true])('opens an authorized saved ID outside the list, retry receipt %p', async (alreadyImported) => {

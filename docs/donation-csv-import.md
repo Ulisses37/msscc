@@ -90,8 +90,11 @@ select **Upload and review CSV**. Review is read-only: even a valid review
 does not create donations. The preview displays backend-normalized amounts,
 dates, anonymity and payment methods, with unknown optional contacts left
 unknown. Correct row/field errors in the original CSV and re-upload it; there
-is no inline editor or column mapping. Close the review with **Cancel review**
-without saving anything.
+is no inline editor or column mapping. The review opens in a dialog; scroll
+the proposal table sideways on narrow screens. **Close review** or Escape
+pauses a read-only review without discarding its file; **Reopen CSV review**
+returns to the same proposals without another upload. **Cancel review**
+discards the review (and its warning acknowledgment) without saving anything.
 
 Warnings are possible matches for a human to assess, not automatic duplicate
 decisions. A later row with identical validated facts is flagged as repeated.
@@ -107,16 +110,19 @@ review, entire original file and current warnings before saving all rows or
 none. An expired review cannot save anything; upload again. A retry with the
 same reviewed file after an uncertain response returns the original batch if
 it was already committed. **Do not select a new file after an uncertain
-response**; retry the existing review to learn whether it saved. An identical
-normalized batch is imported at most once, even when its CSV formatting differs.
+response**; if the dialog was closed after the uncertain response, reopen it
+and retry the existing review to learn whether it saved. The dialog cannot be
+closed while confirmation is still in flight. An identical normalized batch is
+imported at most once, even when its CSV formatting differs.
 Confirmation returns a batch ID and count, not an editable upload or a payment
 receipt. Do not use real donor data for testing and do not confirm on production.
 
 ## Saved results (SCRUM-885)
 
 A successful confirmation, including a retry that finds an existing batch,
-shows the batch ID and created count. The donations list refreshes using its
-current search without resetting sorting or pagination. A historical donation
+closes the review dialog and shows the batch ID and created count on the page.
+The donations list refreshes using its current search without resetting sorting
+or pagination. A historical donation
 may not appear in those results: choose its ID under **Saved donation ID** and
 select **View imported donation** to load the saved facts through the authorized
 detail endpoint. A failed detail read can be retried without importing again.
