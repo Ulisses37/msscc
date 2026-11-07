@@ -21,7 +21,7 @@ const permissionCategories: Record<string, CategoryData> = {
     tooltip: "Allows managing of board members names, images, and descriptions:\nBoard of Directors"
   },
   Events: {
-    pages: ["Events", "Volunteers"],
+    pages: ["Events"],
     tooltip: "Allows creation and editing of Events and Volunteers:\nEvents"
   },
   Permissions: {

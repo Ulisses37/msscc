@@ -19,9 +19,7 @@ export const adminNavLinks: NavLink[] = [
 export const adminSubPages: NavLink[] = [
   // Label must match a category in permissionCategories from
   // frontend\components\admin\AdminPermssionHandler.tsx
+  // When adding a new sub-page, the label is the related Permission title and the href is the link
   // feel free to update Pages: list of a category or just use an existing one.
-  // I would recommend finding a existing category if you can, otherwise the new category will need to be added to each individual admin via the database
-  // I am not adding a feature to do it through the website because I do not think the permissions should be so easily changeable
-  // i,e, /admin/volunteer can fall under new category Volunteer or existing category Events
-  { label: 'Volunteers', href: '/admin/volunteer/'},
+  { label: 'Events', href: '/admin/volunteer/'},
 ]
