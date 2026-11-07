@@ -364,6 +364,13 @@ from another location, pass `--placeholder <path-or-filename>` and
 `--banner <path-or-filename>`. The extension may be omitted; the command searches the accepted
 image extensions (`jpg`, `jpeg`, `jfif`, `png`, `webp`, `bmp`, `tif`, `tiff`, and `gif`).
 
+Example: Provides Initialization for static images under path: 
+placeholder:'frontend\assets\NewBanner.webp' , banner:'frontend\assets\NewPlaceholder.png'
+
+```bash
+backend/manage.py seed_static_media --placeholder "frontend\assets\NewBanner.webp" --banner "frontend\assets\NewPlaceholder.png"
+```
+
 ### Populate the initial public page content
 
 After running `seed_pages`, use the page-content importer to add the bilingual text and images
