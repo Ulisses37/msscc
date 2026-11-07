@@ -20,6 +20,7 @@ import {
   MediaUploadError,
   parseMediaUploadError,
 } from '@/utils/mediaUploadError';
+import { FULL_CROP } from '@/utils/thumbnailCrop';
 
 type EventFilter = 'upcoming' | 'past';
 
@@ -708,6 +709,22 @@ export default function EventsPage() {
           ) : (
             <EventForm
               key={`create-${formVersion}`}
+              initialData={
+                duplicateSource
+                  ? {
+                      titleEn: `Copy of ${duplicateSource.titleEn}`,
+                      titleJa: duplicateSource.titleJa,
+                      descriptionEn: duplicateSource.descriptionEn,
+                      descriptionJa: duplicateSource.descriptionJa,
+                      locationEn: duplicateSource.locationEn,
+                      locationJa: duplicateSource.locationJa,
+                      startDatetime: '',
+                      endDatetime: '',
+                      sendVolunteerReminders: duplicateSource.sendVolunteerReminders,
+                      thumbnailCrop: FULL_CROP,
+                    }
+                  : undefined
+              }
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel="Save"
