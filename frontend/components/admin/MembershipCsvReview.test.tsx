@@ -78,9 +78,20 @@ describe('membership CSV review only', () => {
     expect(cancel).toHaveClass('w-full', 'sm:w-auto');
     const dialog = screen.getByRole('dialog', { name: 'Review membership CSV' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveClass('w-full', 'max-w-7xl', 'overflow-hidden');
+    // Phones scroll the entire dialog, freeing the data from a fixed title and
+    // footer. Wider screens retain a fixed header/footer and scroll the body.
+    expect(dialog).toHaveClass('w-full', 'max-w-7xl', 'overflow-y-auto', 'overflow-x-hidden', 'sm:overflow-hidden');
     expect(dialog).toHaveClass('max-h-[calc(100dvh-1rem)]');
+    // Stacking the heading and full-width Close button on phones prevents the
+    // long title from pushing the only dismissal control beyond the viewport.
+    const heading = within(dialog).getByRole('heading', { name: 'Review membership CSV' });
+    const close = within(dialog).getByRole('button', { name: 'Close review' });
+    expect(heading.closest('header')).toHaveClass('flex-col', 'items-stretch', 'sm:flex-row');
+    expect(close).toHaveClass('w-full', 'min-w-0', 'sm:w-auto');
     expect(within(dialog).getByRole('status').closest('footer')).toHaveClass('shrink-0');
+    const reviewBody = within(dialog).getByText(/Membership preview: 2 data rows/).parentElement;
+    expect(reviewBody?.parentElement).toHaveClass('shrink-0', 'sm:flex-1', 'sm:shrink', 'sm:overflow-y-auto');
+    expect(reviewBody?.parentElement).not.toHaveClass('overflow-y-auto');
     const scroll = within(dialog).getByRole('region', { name: 'Membership CSV proposals' });
     expect(scroll).toHaveClass('overflow-x-auto', 'max-w-full');
     expect(scroll).toHaveAttribute('tabindex', '0');
@@ -88,7 +99,14 @@ describe('membership CSV review only', () => {
     expect(table).toHaveClass('w-max');
     expect(within(table).getByRole('columnheader', { name: 'membership_type' }))
       .toHaveClass('whitespace-nowrap', 'min-w-36');
-    expect(within(table).getByRole('rowheader', { name: '2' })).toHaveClass('sticky', 'left-0');
+    // On phones the row label must scroll away rather than covering names;
+    // the sticky position is useful only at the wider breakpoint.
+    const rowLabel = within(table).getByRole('rowheader', { name: '2' });
+    const columnLabel = within(table).getByRole('columnheader', { name: 'CSV row' });
+    for (const label of [rowLabel, columnLabel]) {
+      expect(label).not.toHaveClass('sticky', 'left-0');
+      expect(label).toHaveClass('sm:sticky', 'sm:left-0', 'sm:z-10');
+    }
     expect(within(dialog).getByText('Scroll sideways to view all columns.')).toBeInTheDocument();
   });
 

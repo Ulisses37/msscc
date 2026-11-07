@@ -243,16 +243,22 @@ export function MembershipCsvReview({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-msscc-gray-dark/40 p-2 sm:p-6">
           <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="csv-preview-title"
             onKeyDown={handleDialogKeyDown}
-            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-7xl flex-col overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-white shadow-lg sm:max-h-[calc(100dvh-3rem)]">
-            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-msscc-gray-light p-3 sm:p-5">
+            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-7xl flex-col overflow-x-hidden overflow-y-auto rounded-md border border-msscc-gray-light bg-msscc-white shadow-lg sm:max-h-[calc(100dvh-3rem)] sm:overflow-hidden">
+            {/* A long heading and Close cannot share a phone-width row without
+                clipping the button. The whole dialog scrolls on phones, so
+                stacking them does not permanently take space from the table. */}
+            <header className="flex min-w-0 shrink-0 flex-col items-stretch gap-3 border-b border-msscc-gray-light p-3 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <h2 id="csv-preview-title" ref={headingRef} tabIndex={-1}
                 className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
               <button type="button" disabled={confirming} onClick={closeDialog}
-                className="shrink-0 rounded-md border border-msscc-gray-light px-3 py-2 focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
+                className="w-full min-w-0 rounded-md border border-msscc-gray-light px-3 py-2 focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50 sm:w-auto sm:shrink-0">
                 Close review
               </button>
             </header>
-            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-5">
+            {/* On phones the entire dialog scrolls so the tall title and save
+                controls can move away from the data. At wider widths only the
+                review body scrolls, keeping the actions visible. */}
+            <div className="min-w-0 shrink-0 p-3 sm:min-h-0 sm:flex-1 sm:shrink sm:overflow-y-auto sm:p-5">
               <div className="min-w-0 max-w-full [overflow-wrap:anywhere]">
           <p>Membership preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
           {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
@@ -283,12 +289,14 @@ export function MembershipCsvReview({
                 use innerHTML or let CSV values become links or executable markup. */}
             <table className="w-max min-w-full border-collapse text-left text-body-sm">
               <caption className="text-left">Backend-validated membership proposals (read only)</caption>
-              <thead><tr><th scope="col" className="sticky left-0 z-10 min-w-20 bg-msscc-gray-faint p-3 whitespace-nowrap">CSV row</th>{HEADERS.map((field) => (
+              {/* A sticky row label hides the first data column on phones; only
+                  pin it once the viewport has room for both columns. */}
+              <thead><tr><th scope="col" className="min-w-20 bg-msscc-gray-faint p-3 whitespace-nowrap sm:sticky sm:left-0 sm:z-10">CSV row</th>{HEADERS.map((field) => (
                 <th scope="col" key={field} className="min-w-36 bg-msscc-gray-faint p-3 whitespace-nowrap">{field}</th>
               ))}</tr></thead>
               <tbody>{preview.proposed_records.map((proposal) => (
                 <tr key={proposal.row} className="border-t border-msscc-gray-light">
-                  <th scope="row" className="sticky left-0 z-10 bg-msscc-white p-3">{proposal.row}</th>
+                  <th scope="row" className="bg-msscc-white p-3 sm:sticky sm:left-0 sm:z-10">{proposal.row}</th>
                   {HEADERS.map((field) => (
                     <td key={field} className="max-w-64 p-3 whitespace-pre-wrap break-words">{proposal.values[field] ?? 'Unknown'}</td>
                   ))}
@@ -298,9 +306,9 @@ export function MembershipCsvReview({
           </div>
               </div>
             </div>
-            {/* Keep the save decision reachable even with hundreds of rows.
-                Only the table and warnings scroll; the server still enforces
-                file binding and acknowledgment independently of this footer. */}
+            {/* On phones this footer scrolls with the review; on wider screens
+                it stays visible. The server enforces file binding and warning
+                acknowledgment independently of either layout. */}
             <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white p-3 sm:p-5">
               <p role="status" className="text-body-sm">
                 {reviewRejected ? 'This review did not save records. Upload and review the file again.'
