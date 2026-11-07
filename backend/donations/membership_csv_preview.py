@@ -1,5 +1,6 @@
 import csv
 import re
+from datetime import date
 from io import StringIO
 
 from rest_framework.exceptions import ValidationError
@@ -9,15 +10,29 @@ from donations.membership_csv_contract import (
     MAX_MEMBERSHIP_CSV_ROWS,
     MEMBERSHIP_CSV_FIELD_LIMITS,
     MEMBERSHIP_CSV_HEADERS,
+    MEMBERSHIP_CSV_PAYMENT_METHODS,
+    MEMBERSHIP_CSV_PAYMENT_STATUSES,
+    MEMBERSHIP_CSV_STATUSES,
     membership_csv_manual_input,
 )
 from donations.serializers import ManualMembershipCreateSerializer
 
 DATE_FIELDS = frozenset({"start_date", "end_date", "renewal_date"})
 MONEY_FIELDS = frozenset({"membership_price", "amount_paid"})
+CHOICE_FIELDS = {
+    "status": MEMBERSHIP_CSV_STATUSES,
+    "payment_status": MEMBERSHIP_CSV_PAYMENT_STATUSES,
+    "payment_method": MEMBERSHIP_CSV_PAYMENT_METHODS,
+}
+# Choice errors can show short, simple tokens for correction. Never echo
+# arbitrary CSV content: it could be contact data pasted into the wrong cell.
+DISPLAYABLE_CHOICE = re.compile(r"^[A-Za-z_]{1,20}$")
 # Reject currency symbols, separators, signs and exponent notation even when
 # the manual JSON serializer might accept an alternate representation.
 DECIMAL_CSV_PATTERN = re.compile(r"^(?:0|[1-9][0-9]{0,7})(?:\.[0-9]{1,2})?$")
+# A spreadsheet may turn a payment into date-shaped text before exporting.
+# Never reverse-engineer the amount from that date: its original value is lost.
+SPREADSHEET_DATE_SHAPE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 # Excel often exports US dates; accept both orders with either consistent
 # separator, but canonicalize to ISO before the manual serializer validates
 # real calendar dates. Never guess the meaning of ambiguous mixed formats.
@@ -37,8 +52,43 @@ def _normalized_csv_date(value: str) -> str | None:
 
 
 def _error(row: int, field: str, message: str) -> dict:
-    """Use fixed feedback, never echo uploaded values or DRF exception text."""
+    """Return a field location and controlled guidance, never raw DRF text."""
     return {"row": row, "field": field, "message": message}
+
+
+def _choice_error(field: str, raw: str) -> str:
+    """Explain allowed choices without reflecting long or sensitive cells."""
+    choices = ", ".join(CHOICE_FIELDS[field])
+    prefix = (
+        f'"{raw.strip()}" is not recognized. '
+        if DISPLAYABLE_CHOICE.fullmatch(raw.strip()) else ""
+    )
+    optional = " Leave blank if unknown." if field != "status" else ""
+    return f"{prefix}Use one of: {choices}.{optional}"
+
+
+def _serializer_error(field: str, codes: list[str]) -> str:
+    """Translate validation codes to user actions without returning input or exception text."""
+    if field in CHOICE_FIELDS:
+        if field == "status" and any(code in ("blank", "required", "null") for code in codes):
+            return f"Status is required. Use one of: {', '.join(CHOICE_FIELDS[field])}."
+        return _choice_error(field, "")
+    if field == "email":
+        return "Enter a valid email address or leave blank if unknown."
+    if field in DATE_FIELDS:
+        # Syntax and calendar validity are checked before DRF; an end_date
+        # error here can only mean it precedes a supplied start_date.
+        if field == "end_date":
+            return "End date cannot precede start date."
+        return ("Use a real date in YYYY-MM-DD, YYYY/MM/DD, MM/DD/YYYY "
+                "or MM-DD-YYYY; or leave blank.")
+    if field in MONEY_FIELDS:
+        return "Use a nonnegative amount with at most two decimal places; or leave blank."
+    if field in ("first_name", "last_name", "membership_type"):
+        return "This field is required; enter a nonblank value."
+    if field == "row":
+        return "Check the dates and required fields in this row."
+    return "Check this field's format or leave it blank if unknown."
 
 
 def _safe_proposal(validated: dict) -> dict:
@@ -107,9 +157,22 @@ def parse_membership_csv(raw: bytes) -> dict:
             for field, value in row.items():
                 if len(value) > MEMBERSHIP_CSV_FIELD_LIMITS[field]:
                     result["errors"].append(_error(
-                        row_number, field, "Cell exceeds its character limit.",
+                        row_number, field,
+                        f"Use at most {MEMBERSHIP_CSV_FIELD_LIMITS[field]} characters.",
                     ))
                     invalid_fields.add(field)
+                elif field in CHOICE_FIELDS and value.strip():
+                    # Only CSV choice labels are case-insensitive. Normalize before
+                    # serializer validation and fingerprinting, so re-uploading
+                    # 'Active' cannot create another batch for 'active'.
+                    candidate = value.strip().lower()
+                    if candidate in CHOICE_FIELDS[field]:
+                        normalized_row[field] = candidate
+                    else:
+                        result["errors"].append(_error(
+                            row_number, field, _choice_error(field, value),
+                        ))
+                        invalid_fields.add(field)
                 elif field in DATE_FIELDS and value.strip():
                     normalized_date = _normalized_csv_date(value)
                     if normalized_date is None:
@@ -119,11 +182,26 @@ def parse_membership_csv(raw: bytes) -> dict:
                         ))
                         invalid_fields.add(field)
                     else:
+                        try:
+                            date.fromisoformat(normalized_date)
+                        except ValueError:
+                            result["errors"].append(_error(
+                                row_number, field, "Use a real calendar date; or leave blank.",
+                            ))
+                            invalid_fields.add(field)
+                            continue
                         normalized_row[field] = normalized_date
                 elif (field in MONEY_FIELDS and value.strip()
                       and not DECIMAL_CSV_PATTERN.fullmatch(value)):
+                    guidance = (
+                        "This amount looks like a spreadsheet date. Restore the intended numeric "
+                        "amount in the source file, or leave blank if unknown."
+                        if SPREADSHEET_DATE_SHAPE.fullmatch(value.strip()) else
+                        "Use a nonnegative amount with at most two decimal places; "
+                        "no symbols, separators or signs. Leave blank if unknown."
+                    )
                     result["errors"].append(_error(
-                        row_number, field, "Use a nonnegative decimal without separators.",
+                        row_number, field, guidance,
                     ))
                     invalid_fields.add(field)
             # Validate other cells even if a CSV-format check already failed.
@@ -139,12 +217,19 @@ def parse_membership_csv(raw: bytes) -> dict:
                 data=membership_csv_manual_input(diagnostic_row),
             )
             if not serializer.is_valid():
-                for field in serializer.errors:
-                    # Report the location, not submitted contact data or arbitrary error strings.
+                for field, details in serializer.errors.items():
+                    # DRF's free-text messages can contain uploaded values. Use
+                    # only stable error codes to choose safe, actionable guidance.
                     safe_field = field if field in MEMBERSHIP_CSV_HEADERS else "row"
                     if safe_field not in invalid_fields:
+                        codes = (
+                            [str(item.code) for item in details]
+                            if isinstance(details, list) else []
+                        )
+                        if safe_field == "status" and not row["status"].strip():
+                            codes.append("required")
                         result["errors"].append(_error(
-                            row_number, safe_field, "Invalid or missing value.",
+                            row_number, safe_field, _serializer_error(safe_field, codes),
                         ))
                 continue
             if invalid_fields:

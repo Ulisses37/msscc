@@ -63,6 +63,21 @@ describe('membership CSV review only', () => {
     expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
   });
 
+  it('labels CSV errors for admins while displaying backend guidance as text', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [{ row: 2, field: 'payment_status',
+        message: '"Unpaid" is not recognized. Use one of: pending, completed.' }],
+      warnings: [],
+    });
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Row 2, payment status: "Unpaid" is not recognized.',
+    );
+    expect(screen.queryByRole('button', { name: 'Confirm membership import' })).toBeNull();
+  });
+
   it('keeps narrow-screen upload controls and the wide table inside the dialog', async () => {
     // jsdom does not calculate layout; assert the viewport and scroll boundaries
     // that prevent 16 columns from expanding the page on a phone.

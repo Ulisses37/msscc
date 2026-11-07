@@ -102,6 +102,22 @@ class MembershipCsvConfirmationTests(TestCase):
         self.assertEqual(repeated.data["batch_id"], saved.data["batch_id"])
         self.assertEqual(Membership.objects.count(), 1)
 
+    def test_choice_capitalization_and_whitespace_use_the_same_committed_batch(self):
+        canonical = csv_file(row(status="active", payment_status="completed",
+                                 payment_method="bank_transfer"))
+        changed = csv_file(row(status=" ACTIVE ", payment_status="Completed",
+                               payment_method="BANK_TRANSFER"))
+        first = self.review(canonical)
+        saved = self.confirm(first["review_token"], canonical)
+        self.assertEqual(saved.status_code, 201, saved.data)
+        second = self.review(changed)
+        self.assertEqual(second["errors"], [])
+        repeated = self.confirm(second["review_token"], changed)
+        self.assertEqual(repeated.status_code, 200, repeated.data)
+        self.assertTrue(repeated.data["already_imported"])
+        self.assertEqual(repeated.data["batch_id"], saved.data["batch_id"])
+        self.assertEqual(Membership.objects.count(), 1)
+
     def test_rejects_other_admin_inactive_unauthorized_tampered_and_changed_file(self):
         token = self.review()["review_token"]
         other = get_user_model().objects.create_user(

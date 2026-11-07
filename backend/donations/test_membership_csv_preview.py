@@ -131,8 +131,51 @@ class MembershipCsvParserTests(TestCase):
         self.assertIn({"row": 4, "field": "row",
                        "message": "Row must have exactly 16 columns and cannot be blank."},
                       result["errors"])
-        self.assertIn({"row": 5, "field": "notes", "message": "Cell exceeds its character limit."},
+        self.assertIn({"row": 5, "field": "notes", "message": "Use at most 500 characters."},
                       result["errors"])
+
+    def test_csv_choice_case_and_whitespace_normalize_without_inferring_payment(self):
+        result = parse_membership_csv(csv_file(
+            row(status=" Active ", payment_status=" COMPLETED ", payment_method=" Bank_Transfer "),
+            row(status="INACTIVE", payment_status=" ", payment_method=""),
+        ))
+        self.assertEqual(result["errors"], [])
+        first, second = (proposal["values"] for proposal in result["proposed_records"])
+        self.assertEqual((first["status"], first["payment_status"], first["payment_method"]),
+                         ("active", "completed", "bank_transfer"))
+        self.assertEqual((second["status"], second["payment_status"], second["payment_method"]),
+                         ("inactive", None, None))
+
+    def test_choice_errors_offer_allowed_values_but_do_not_echo_private_or_unsafe_cells(self):
+        result = parse_membership_csv(csv_file(
+            row(status="Active", payment_status="Unpaid", payment_method="Coins"),
+            row(status="Paid", payment_status="private@example.test",
+                email="private-invalid-email"),
+            row(status="", first_name="", start_date="2024-02-30", amount_paid="$1.00"),
+        ))
+        errors = {(item["row"], item["field"]): item["message"] for item in result["errors"]}
+        self.assertIn('"Unpaid" is not recognized', errors[2, "payment_status"])
+        self.assertIn("pending, completed, failed, canceled, waived", errors[2, "payment_status"])
+        self.assertIn("Leave blank if unknown", errors[2, "payment_status"])
+        self.assertIn('"Coins" is not recognized', errors[2, "payment_method"])
+        self.assertIn('"Paid" is not recognized', errors[3, "status"])
+        self.assertNotIn("private@example.test", str(result["errors"]))
+        self.assertNotIn("private-invalid-email", str(result["errors"]))
+        self.assertIn("valid email", errors[3, "email"])
+        self.assertIn("required", errors[4, "status"])
+        self.assertIn("required", errors[4, "first_name"])
+        self.assertIn("real calendar date", errors[4, "start_date"])
+        self.assertIn("two decimal places", errors[4, "amount_paid"])
+        self.assertEqual(result["proposed_records"], [])
+
+    def test_end_date_errors_distinguish_calendar_dates_from_date_order(self):
+        invalid_calendar = parse_membership_csv(csv_file(row(end_date="2024-02-30")))
+        self.assertIn("real calendar date", invalid_calendar["errors"][0]["message"])
+        self.assertNotIn("precede", invalid_calendar["errors"][0]["message"])
+        out_of_order = parse_membership_csv(csv_file(row(
+            start_date="2024-03-01", end_date="2024-02-01",
+        )))
+        self.assertIn("cannot precede", out_of_order["errors"][0]["message"])
 
     def test_each_cell_limit_is_enforced_without_echoing_private_content(self):
         for field, limit in MEMBERSHIP_CSV_FIELD_LIMITS.items():
@@ -150,6 +193,35 @@ class MembershipCsvParserTests(TestCase):
             with self.subTest(date=value):
                 result = parse_membership_csv(csv_file(row(start_date=value)))
                 self.assertTrue(any(e["field"] == "start_date" for e in result["errors"]))
+
+    def test_whole_one_and_two_decimal_amounts_normalize_in_both_columns(self):
+        # Excel's numeric cells commonly export 50.5 or 0 instead of 50.50
+        # or 0.00; those values must remain valid known amounts.
+        for price, paid, normalized_price, normalized_paid in (
+            ("50.5", "0", "50.50", "0.00"),
+            ("12", "1.2", "12.00", "1.20"),
+            ("0.00", "99.99", "0.00", "99.99"),
+        ):
+            with self.subTest(price=price, paid=paid):
+                result = parse_membership_csv(csv_file(row(
+                    membership_price=price, amount_paid=paid,
+                )))
+                self.assertEqual(result["errors"], [])
+                values = result["proposed_records"][0]["values"]
+                self.assertEqual(values["membership_price"], normalized_price)
+                self.assertEqual(values["amount_paid"], normalized_paid)
+
+    def test_date_shaped_amounts_give_safe_spreadsheet_repair_guidance(self):
+        result = parse_membership_csv(csv_file(row(
+            membership_price="1900-01-10", amount_paid="1900-01-00",
+        )))
+        self.assertEqual(result["proposed_records"], [])
+        self.assertEqual({e["field"] for e in result["errors"]},
+                         {"membership_price", "amount_paid"})
+        for error in result["errors"]:
+            self.assertIn("spreadsheet date", error["message"])
+            self.assertIn("leave blank if unknown", error["message"])
+            self.assertNotIn("1900", error["message"])
 
     def test_manual_validation_dates_amounts_and_unsupported_choices(self):
         result = parse_membership_csv(csv_file(

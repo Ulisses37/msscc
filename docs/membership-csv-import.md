@@ -43,6 +43,16 @@ prices, dates, payment statuses, or payment methods from older records.
 | Dates | Blank, `YYYY-MM-DD`, `YYYY/MM/DD`, `MM/DD/YYYY`, or `MM-DD-YYYY`; preview normalizes to `YYYY-MM-DD`. Use two-digit month/day and a consistent separator; end date cannot precede a known start date |
 | Amounts | Blank or nonnegative decimal, up to two places; no symbols, commas, signs, or exponent notation |
 
+Amounts such as `50`, `50.5`, and `50.50` are all valid; preview displays
+them with two decimal places. If Excel changes a money cell into a date, the
+CSV cannot recover the original payment. Correct it in the source spreadsheet
+and export again, or leave it blank when the original amount is unknown.
+
+CSV choice values accept any capitalization and surrounding whitespace; the
+preview displays their canonical lowercase values. `Paid` and `Unpaid` are not
+supported aliases: choose an explicit payment status, or leave it blank when
+the historical status is unknown. The manual single-entry form is unchanged.
+
 Use UTF-8 CSV, up to **1,048,576 bytes** and **500 data rows**. Character
 limits: names, membership type, status, phone, payment status and reference ID
 255; email 254; address and notes 500; payment method 20; dates 10; amounts

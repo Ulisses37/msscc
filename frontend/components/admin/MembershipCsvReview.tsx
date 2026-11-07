@@ -263,10 +263,11 @@ export function MembershipCsvReview({
           <p>Membership preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
           {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
           {preview.errors.length > 0 && <div role="alert" className="mt-3">
-            {/* Errors are locations only; the admin fixes and re-uploads the source CSV. */}
+            {/* The backend supplies controlled guidance without echoing private
+                free-text cells. Still render it as text, never as HTML. */}
             <h3>Errors: correct the source CSV and re-upload it.</h3>
             <ul className="list-disc pl-5">{preview.errors.map((issue, index) => (
-              <li key={`${issue.row}-${issue.field}-${index}`}>Row {issue.row}, {issue.field}: {issue.message}</li>
+              <li key={`${issue.row}-${issue.field}-${index}`}>Row {issue.row}, {issue.field?.replaceAll('_', ' ')}: {issue.message}</li>
             ))}</ul>
           </div>}
           {preview.warnings.length > 0 && <div className="mt-3">
