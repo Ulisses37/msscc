@@ -23,7 +23,7 @@ export const pageList: AdminPageInfo[] = [
     ]
   },
   {
-    ...getPage("Board of Directors"),
+    ...getPage("Directors"),
     pageInstructions: [
       "The Board of Directors page features the MSSCC Officers and Directors.",
       "It's user-side related page is the About|Board page.",
@@ -55,7 +55,7 @@ export const pageList: AdminPageInfo[] = [
     ]
   },
   {
-    ...getPage("Permissions Pages"),
+    ...getPage("Permissions"),
     pageInstructions: [
       "The admin Permissions Page is where Executive Admins can limit the access that Normal Admins have throughout the site.",
       "The left sidebox shows the Name, and Email of the currently logged in Executive Admin.",

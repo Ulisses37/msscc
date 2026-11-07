@@ -17,16 +17,16 @@ const permissionCategories: Record<string, CategoryData> = {
     tooltip: "Allows editing of common page text, translation, and images:\nEdit Pages"
   },
   Board_Members: {
-    pages:  ["Board of Directors"],
-    tooltip: "Allows managing of board members names, images, and descriptions:\nBoard of Directors"
+    pages:  ["Directors"],
+    tooltip: "Allows managing of board members names, images, and descriptions:\nDirectors"
   },
   Events: {
     pages: ["Events"],
     tooltip: "Allows creation and editing of Events and Volunteers:\nEvents"
   },
   Permissions: {
-    pages: ["Permissions Pages"],
-    tooltip: "Allows for editing of admin permissions:\nPermissions Pages"
+    pages: ["Permissions"],
+    tooltip: "Allows for editing of admin permissions:\nPermissions"
   },
   Media_Management: {
     pages: ["Media"],
@@ -58,6 +58,7 @@ export function hasPermission(
   }): boolean {
     if (isExecutive) return true;
     if (!adminPermissions) return false;
+    if (permissionNeeded == "Permissions") return false;
 
     const Permission = getPagePermission(permissionNeeded);
     if(!Permission) return true;

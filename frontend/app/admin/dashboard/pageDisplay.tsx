@@ -22,8 +22,8 @@ const pageDescriptions: Record<string, string>={
   Donations: "Manage donation data records.",
   Partners: "Manage MSSCC partner data records.",
   'Edit Pages': "Manage public page text, translation, and images.",
-  'Board of Directors': "Manage board member list.",
-  'Permissions Pages': "Manage the information and permissions of MSSCC Admins.",
+  'Directors': "Manage board member list.",
+  'Permissions': "Manage the information and permissions of MSSCC Admins.",
   Media: "Manage media images across the website",
 }
 
