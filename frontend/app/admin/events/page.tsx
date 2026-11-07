@@ -20,7 +20,6 @@ import {
   MediaUploadError,
   parseMediaUploadError,
 } from '@/utils/mediaUploadError';
-import { FULL_CROP } from '@/utils/thumbnailCrop';
 
 type EventFilter = 'upcoming' | 'past';
 
@@ -216,7 +215,8 @@ export default function EventsPage() {
     setSaveError('');
 
     try {
-      let mediaAssetId = null;
+      // A copy reuses the source image unless the admin picks a new one.
+      let mediaAssetId = duplicateSource?.mediaAssetId ?? null;
       if (imageFile) {
         mediaAssetId = await uploadMediaAsset(imageFile);
       }
@@ -494,14 +494,27 @@ export default function EventsPage() {
   ): boolean => !showForm || window.confirm(message);
 
   /** Open a fresh create form for an event copy. */
-  const handleDuplicateEvent = (event: Event) => {
+  const handleDuplicateEvent = async (event: Event) => {
     if (!confirmReplaceForm()) return;
+
+    // Load the main image so the copy can show it and reuse it.
+    const media = event.mediaAssetId
+      ? await getMediaAssetById(event.mediaAssetId).catch((error) => {
+          console.error('Failed to load primary event image:', error);
+          return undefined;
+        })
+      : undefined;
 
     setSelectedEvent(null);
     // Photos from a previously edited event must not leak into the copy.
     setSelectedEventImages([]);
     setIsEditing(false);
-    setDuplicateSource(event);
+    setDuplicateSource({
+      ...event,
+      media: media?.file_url
+        ? { fileUrl: media.file_url, altText: media.alt_text_en }
+        : undefined,
+    });
     // Remount the create form so it starts fresh for this copy.
     setFormVersion((currentVersion) => currentVersion + 1);
     setShowForm(true);
@@ -721,10 +734,11 @@ export default function EventsPage() {
                       startDatetime: '',
                       endDatetime: '',
                       sendVolunteerReminders: duplicateSource.sendVolunteerReminders,
-                      thumbnailCrop: FULL_CROP,
+                      thumbnailCrop: duplicateSource.thumbnailCrop,
                     }
                   : undefined
               }
+              initialImageUrl={duplicateSource?.media?.fileUrl ?? null}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel="Save"
