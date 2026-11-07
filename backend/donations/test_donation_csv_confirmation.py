@@ -50,6 +50,22 @@ class DonationCsvConfirmationTests(TestCase):
         return self.send(self.confirm_url, raw, review_token=token,
                          acknowledge_warnings=str(acknowledged).lower())
 
+    def test_choice_and_decimal_spelling_variants_resolve_to_the_same_batch(self):
+        """Case/spacing and one-decimal spelling must not evade idempotency."""
+        original = csv_file(row(amount="2.5", payment_method="Cash", is_anonymous="FALSE"))
+        canonical = csv_file(row(amount="2.50", payment_method="cash", is_anonymous="false"))
+        first = self.review(original)
+        self.assertEqual(first["errors"], [])
+        saved = self.confirm(first["review_token"], original)
+        self.assertEqual(saved.status_code, 201, saved.data)
+        second = self.review(canonical)
+        self.assertEqual(second["errors"], [])
+        retry = self.confirm(second["review_token"], canonical)
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertTrue(retry.data["already_imported"])
+        self.assertEqual(retry.data["batch_id"], saved.data["batch_id"])
+        self.assertEqual(Donation.objects.count(), 1)
+
     def test_atomic_received_save_encryption_anonymity_and_idempotent_retry(self):
         preview = self.review()
         self.assertTrue(preview["review_token"])

@@ -40,10 +40,10 @@ amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_nam
 
 | Field | Required | Allowed input and meaning |
 | --- | --- | --- |
-| `amount` | Yes | Known, positive USD decimal from `0.01` through `99999999.99`, with at most two decimal places. No currency symbol, thousands separator, sign, or exponent. Blank and zero are invalid. |
+| `amount` | Yes | Known, positive USD decimal from `0.01` through `99999999.99`, with zero, one or two decimal places (for example `2`, `2.5`, `2.50`). No currency symbol, thousands separator, sign, or exponent. Blank and zero are invalid. If Excel converts an amount to a date, restore the original number; the importer cannot infer it. |
 | `donation_date` | Yes | Known calendar date in `YYYY-MM-DD` or US month-first `MM-DD-YYYY` or `MM/DD/YYYY` format, no later than the date of recording. The review normalizes all three to `YYYY-MM-DD`. Mixed separators, shortened dates, and year-first dates with slashes are not accepted. Never substitute today's date for an unknown historical date. |
 | `is_anonymous` | Yes | `true` or `false` in any letter case; surrounding spaces are ignored. Blank, `yes`, `no`, and `unknown` remain invalid. |
-| `payment_method` | No | `cash`, `check`, or blank if the historical method is unknown. Do not guess from an external reference. |
+| `payment_method` | No | `cash`, `check`, or blank if the historical method is unknown. Letter case and surrounding spaces are ignored (for example `Cash` and ` check ` become `cash` and `check`). Do not guess from an external reference; card, paid and unpaid are not payment methods for this import. |
 | `donor_first_name`, `donor_last_name` | No | Historical names, or blank if unknown. Both must be blank when `is_anonymous` is `true`. |
 | `donor_email` | No | A valid email, or blank if unknown. An anonymous donation may retain an optional email internally. |
 | `address` | No | Historical address, or blank if unknown. Must be blank when `is_anonymous` is `true`. |
@@ -73,6 +73,13 @@ rewrites a known date as `MM-DD-YYYY` or `MM/DD/YYYY`, the importer accepts it
 as month-first and shows the normalized ISO date in review. A missing historical date must be looked up in
 the source records, not replaced with today's date. Re-export as UTF-8 CSV
 before uploading the corrected file.
+
+Validation errors point to the CSV row and field, explain supported choices,
+and sometimes quote a short standard choice such as `paid`. Arbitrary cell
+text is deliberately not repeated in errors because a donor name or address
+may have been pasted into the wrong column. Amounts `2`, `2.5` and `2.50`
+all review as `2.50`; payment method capitalization cannot create a second
+batch of the same normalized gifts.
 
 ## Review and confirmation (SCRUM-883 / SCRUM-884)
 

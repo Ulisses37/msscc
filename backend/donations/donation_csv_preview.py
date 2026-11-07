@@ -9,6 +9,7 @@ from donations.donation_csv_contract import (
     DONATION_CSV_ANONYMITY_VALUES,
     DONATION_CSV_FIELD_LIMITS,
     DONATION_CSV_HEADERS,
+    DONATION_CSV_PAYMENT_METHODS,
     MAX_DONATION_CSV_BYTES,
     MAX_DONATION_CSV_ROWS,
     donation_csv_manual_input,
@@ -24,6 +25,17 @@ DATE_CSV_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 # Excel can export the same US date with either separator. Require a single
 # consistent separator so an ambiguous/mixed spelling is never guessed.
 US_DATE_CSV_PATTERN = re.compile(r"^[0-9]{2}(?P<separator>[-/])[0-9]{2}(?P=separator)[0-9]{4}$")
+# Date-looking amounts sometimes come from spreadsheet auto-formatting. The
+# numeric original cannot be reconstructed reliably from the exported CSV.
+SPREADSHEET_AMOUNT_DATE = re.compile(
+    r"^(?:[0-9]{4}[-/][0-9]{2}[-/][0-9]{2}|[0-9]{2}[-/][0-9]{2}[-/][0-9]{4})$",
+)
+# Echo only these fixed, non-identifying choice tokens. A name or address
+# pasted into a choice column must never be reflected in an error response.
+DISPLAYABLE_CHOICE_TOKENS = frozenset({"paid", "unpaid", "card", "yes", "no", "unknown"})
+AMOUNT_GUIDANCE = (
+    "Amount must be positive USD, at most 99,999,999.99 with up to two decimal places."
+)
 CONTACT_STORAGE_FIELDS = {
     "donor_first_name": "donor_first_name_encrypted",
     "donor_last_name": "donor_last_name_encrypted",
@@ -36,6 +48,31 @@ ANONYMOUS_IDENTITY_FIELDS = ("donor_first_name", "donor_last_name", "address")
 def _error(row: int, field: str, message: str) -> dict:
     """Return a fixed diagnostic, never a CSV value or DRF exception string."""
     return {"row": row, "field": field, "message": message}
+
+
+def _choice_error(raw: str, allowed: tuple[str, ...], *, optional: bool) -> str:
+    """Explain choices while showing only predetermined non-private mistakes."""
+    choice = raw.strip().casefold()
+    prefix = f'"{choice}" is not recognized. ' if choice in DISPLAYABLE_CHOICE_TOKENS else ""
+    suffix = " Leave blank if unknown." if optional else ""
+    return f"{prefix}Use one of: {', '.join(allowed)}.{suffix}"
+
+
+def _serializer_error(field: str, codes: list[str]) -> str:
+    """Translate DRF validation codes to fixed guidance instead of reflecting input."""
+    if field == "amount":
+        if "required" in codes or "blank" in codes:
+            return "A known positive USD amount is required; do not leave blank."
+        return AMOUNT_GUIDANCE
+    if field == "donation_date":
+        if "required" in codes or "blank" in codes:
+            return "A known donation date is required."
+        return "Enter a real, non-future donation date in YYYY-MM-DD, MM-DD-YYYY or MM/DD/YYYY."
+    if field == "donor_email":
+        return "Enter a valid email address or leave blank if unknown."
+    if field == "row":
+        return "Check this row's donation facts and required fields."
+    return "Check this field's format or leave it blank if unknown."
 
 
 def _safe_proposal(validated: dict) -> dict:
@@ -60,7 +97,11 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
     # Normalize the explicit boolean and the supported Excel date spellings
     # before manual validation. Never guess a blank date or boolean.
     raw_anonymity_length = len(row["is_anonymous"])
-    row = {**row, "is_anonymous": row["is_anonymous"].strip().casefold()}
+    raw_method_length = len(row["payment_method"])
+    # Match the spreadsheet-friendly boolean rule for the other CSV choice.
+    # Normalized proposals/fingerprints must not differ for Cash vs cash.
+    row = {**row, "is_anonymous": row["is_anonymous"].strip().casefold(),
+           "payment_method": row["payment_method"].strip().casefold()}
     us_date = row["donation_date"]
     us_date_match = US_DATE_CSV_PATTERN.fullmatch(us_date)
     if us_date_match:
@@ -77,13 +118,28 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
     for field, value in row.items():
         # Enforce the published bound on the original cell before trimming;
         # otherwise arbitrarily large whitespace would bypass the cell limit.
-        length = raw_anonymity_length if field == "is_anonymous" else len(value)
+        length = (raw_anonymity_length if field == "is_anonymous" else
+                  raw_method_length if field == "payment_method" else len(value))
         if length > DONATION_CSV_FIELD_LIMITS[field]:
             # Keep diagnostics independent of private uploaded cell contents.
-            errors.append(_error(row_number, field, "Cell exceeds its character limit."))
+            guidance = (AMOUNT_GUIDANCE if field == "amount" else
+                        f"Use at most {DONATION_CSV_FIELD_LIMITS[field]} characters.")
+            errors.append(_error(row_number, field, guidance))
             invalid.add(field)
         elif field == "amount" and value and not DECIMAL_CSV_PATTERN.fullmatch(value):
-            errors.append(_error(row_number, field, "Use a positive decimal without separators."))
+            guidance = ("This amount looks like a spreadsheet date. Restore the original numeric "
+                        "amount in the CSV; the original cannot be inferred."
+                        if SPREADSHEET_AMOUNT_DATE.fullmatch(value) else
+                        "Use a positive USD amount with up to two decimal places, without symbols, "
+                        "separators or signs.")
+            errors.append(_error(row_number, field, guidance))
+            invalid.add(field)
+        elif field == "amount" and not value:
+            # Empty CSV cells become an invalid Decimal, not DRF's `required`
+            # code; report the missing historical fact explicitly instead.
+            errors.append(_error(
+                row_number, field, "A known positive USD amount is required; do not leave blank.",
+            ))
             invalid.add(field)
         elif field == "donation_date" and value and not (
             DATE_CSV_PATTERN.fullmatch(value) or US_DATE_CSV_PATTERN.fullmatch(value)
@@ -94,12 +150,20 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
             ))
             invalid.add(field)
         elif field == "is_anonymous" and value not in DONATION_CSV_ANONYMITY_VALUES:
-            errors.append(_error(row_number, field, "Use true or false, not an unknown value."))
+            errors.append(_error(row_number, field, _choice_error(
+                value, DONATION_CSV_ANONYMITY_VALUES, optional=False,
+            ) if value else "An explicit true or false is required; do not leave blank."))
+            invalid.add(field)
+        elif field == "payment_method" and value and value not in DONATION_CSV_PAYMENT_METHODS:
+            errors.append(_error(row_number, field, _choice_error(
+                value, DONATION_CSV_PAYMENT_METHODS, optional=True,
+            )))
             invalid.add(field)
         elif field == "donation_date" and not value:
             # Never fill a historical donation's unknown date with today.
             errors.append(_error(
-                row_number, field, "A known donation date is required (YYYY-MM-DD).",
+                row_number, field,
+                "A known donation date is required (YYYY-MM-DD, MM-DD-YYYY or MM/DD/YYYY).",
             ))
             invalid.add(field)
 
@@ -128,7 +192,8 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
             # only a known CSV field or a row-level marker with fixed text.
             safe_field = field if field in DONATION_CSV_HEADERS else "row"
             if safe_field not in invalid:
-                errors.append(_error(row_number, safe_field, "Invalid or missing value."))
+                codes = [detail.code for detail in serializer.errors[field]]
+                errors.append(_error(row_number, safe_field, _serializer_error(safe_field, codes)))
     return errors, _safe_proposal(serializer.validated_data) if not errors else None
 
 

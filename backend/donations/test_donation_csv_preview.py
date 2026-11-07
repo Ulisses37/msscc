@@ -40,6 +40,40 @@ def row(**overrides):
 class DonationCsvParserTests(TestCase):
     """Validate structure and received facts without touching persistent data."""
 
+    def test_money_and_choice_variants_normalize_without_inventing_facts(self):
+        """Excel's one-decimal amounts and case changes retain their financial meaning."""
+        preview = parse_donation_csv(csv_file(
+            row(amount="1", payment_method="Cash", is_anonymous=" FALSE "),
+            row(amount="2.5", payment_method=" check ", is_anonymous="TRUE"),
+            row(amount="3.50", payment_method="", is_anonymous="TrUe"),
+        ))
+        self.assertEqual(preview["errors"], [])
+        self.assertEqual([p["values"]["amount"] for p in preview["proposed_records"]],
+                         ["1.00", "2.50", "3.50"])
+        self.assertEqual([p["values"]["payment_method"] for p in preview["proposed_records"]],
+                         ["cash", "check", None])
+        self.assertFalse(Donation.objects.exists())
+
+    def test_errors_distinguish_missing_invalid_and_private_values(self):
+        """Show safe corrections, but never a private value pasted in the wrong cell."""
+        preview = parse_donation_csv(csv_file(
+            row(amount="", payment_method="Paid"),
+            row(amount="2020-10-11", donation_date="", is_anonymous="yes"),
+            row(amount="0", donation_date="02/29/2025", payment_method="card"),
+            row(payment_method="Private Donor", donor_email="private-invalid-email"),
+        ))
+        messages = {(e["row"], e["field"]): e["message"] for e in preview["errors"]}
+        self.assertIn("required", messages[2, "amount"])
+        self.assertIn("spreadsheet date", messages[3, "amount"])
+        self.assertIn("known donation date", messages[3, "donation_date"])
+        self.assertIn("real, non-future", messages[4, "donation_date"])
+        self.assertIn("cash, check", messages[2, "payment_method"])
+        self.assertIn('"paid"', messages[2, "payment_method"])
+        self.assertIn("valid email", messages[5, "donor_email"])
+        self.assertNotIn("Private Donor", str(preview["errors"]))
+        self.assertNotIn("private-invalid-email", str(preview["errors"]))
+        self.assertEqual(preview["proposed_records"], [])
+
     def test_bom_quoting_line_endings_and_normalized_values(self):
         for newline, bom in (("\r\n", b""), ("\n", b"\xef\xbb\xbf")):
             with self.subTest(newline=newline, bom=bool(bom)):
@@ -142,7 +176,7 @@ class DonationCsvParserTests(TestCase):
             ("donation_date", ("", "2025-02-29", "2020-13-01", "not-a-date",
                                "2026-11-05", "2026-11-04T00:00:00Z")),
             ("is_anonymous", ("", " ", "yes", "0", "private-unknown-choice")),
-            ("payment_method", ("card", "unknown", "cash ")),
+            ("payment_method", ("card", "unknown", "Paid")),
             ("donor_email", ("private-invalid-email",)),
         ):
             for value in values:
@@ -153,7 +187,9 @@ class DonationCsvParserTests(TestCase):
                     self.assertIn(field, {error["field"] for error in preview["errors"]})
                     # A single space is normal in fixed error prose; the
                     # privacy assertion is meaningful for nonblank cell text.
-                    if value.strip():
+                    if value.strip() and value.strip().casefold() not in {
+                        "card", "unknown", "paid", "yes",
+                    }:
                         self.assertNotIn(value, str(preview["errors"]))
                     self.assertEqual(preview["proposed_records"], [])
 
@@ -170,20 +206,21 @@ class DonationCsvParserTests(TestCase):
         for csv_row in (2, 3, 4):
             self.assertEqual({(issue["field"], issue["message"])
                               for issue in preview["errors"] if issue["row"] == csv_row}, {
-                ("donation_date", "A known donation date is required (YYYY-MM-DD)."),
+                ("donation_date", "A known donation date is required "
+                 "(YYYY-MM-DD, MM-DD-YYYY or MM/DD/YYYY)."),
             })
         # Other overlong/unknown strings must retain their generic safe
         # diagnostics; we must not expose uploaded values in an error reply.
         oversized = parse_donation_csv(csv_file(row(is_anonymous="private-" * 5)))
         self.assertEqual(oversized["errors"][0]["message"],
-                         "Cell exceeds its character limit.")
+                         "Use at most 32 characters.")
         self.assertNotIn("private-", str(oversized["errors"]))
         padded = parse_donation_csv(csv_file(row(is_anonymous=" " * 32 + "true")))
         self.assertEqual(padded["errors"][0]["message"],
-                         "Cell exceeds its character limit.")
+                         "Use at most 32 characters.")
         unknown = parse_donation_csv(csv_file(row(is_anonymous="yes")))
         self.assertEqual(unknown["errors"][0]["message"],
-                         "Use true or false, not an unknown value.")
+                         '"yes" is not recognized. Use one of: true, false.')
         # Diagnostics do not soften validation: only an explicit boolean and
         # actual received date can produce a reviewable proposal.
         fixed = parse_donation_csv(csv_file(row(donation_date="1990-01-02",
