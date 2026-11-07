@@ -62,6 +62,39 @@ class MembershipCsvParserTests(TestCase):
                 self.assertNotIn("record_source", values)
                 self.assertNotIn("membership_id", values)
 
+    def test_excel_and_iso_dates_with_slashes_or_dashes_normalize_to_iso(self):
+        # Excel's US ordering is accepted only for CSV imports; all proposals
+        # use ISO dates so review, fingerprinting and persistence agree.
+        for start, end, renewal in (
+            ("2024-01-02", "2024-02-03", "2024-03-04"),
+            ("2024/01/02", "2024/02/03", "2024/03/04"),
+            ("01/02/2024", "02/03/2024", "03/04/2024"),
+            ("01-02-2024", "02-03-2024", "03-04-2024"),
+            ("2024-01-02", "02/03/2024", "2024/03/04"),
+        ):
+            with self.subTest(start=start, end=end, renewal=renewal):
+                result = parse_membership_csv(csv_file(row(
+                    start_date=start, end_date=end, renewal_date=renewal,
+                )))
+                self.assertEqual(result["errors"], [])
+                self.assertEqual(result["proposed_records"][0]["values"]["start_date"],
+                                 "2024-01-02")
+                self.assertEqual(result["proposed_records"][0]["values"]["end_date"],
+                                 "2024-02-03")
+                self.assertEqual(result["proposed_records"][0]["values"]["renewal_date"],
+                                 "2024-03-04")
+
+    def test_rejects_ambiguous_or_invalid_calendar_dates_without_reflecting_values(self):
+        for value in ("2024-1-02", "1/02/2024", "2024/01-02", "01-02/2024",
+                      "2024-02-30", "02/30/2024", "13/02/2024", "11/31/2024",
+                      "2024/00/01", "00-01-2024", "01/02/24", "45293"):
+            with self.subTest(date=value):
+                result = parse_membership_csv(csv_file(row(start_date=value)))
+                self.assertTrue(any(error["row"] == 2 and error["field"] == "start_date"
+                                    for error in result["errors"]))
+                self.assertEqual(result["proposed_records"], [])
+                self.assertNotIn(value, str(result["errors"]))
+
     def test_rejects_missing_or_wrong_headers_and_empty_files(self):
         for raw in (b"", b"garbage", membership_csv_template().encode(),
                     csv_file(row(), headers=MEMBERSHIP_CSV_HEADERS[::-1]),
@@ -113,7 +146,7 @@ class MembershipCsvParserTests(TestCase):
             with self.subTest(amount=value):
                 result = parse_membership_csv(csv_file(row(amount_paid=value)))
                 self.assertTrue(any(e["field"] == "amount_paid" for e in result["errors"]))
-        for value in ("2020-1-01", "2020/01/01", "2020-02-30"):
+        for value in ("2020-1-01", "2020/01-01", "2020-02-30"):
             with self.subTest(date=value):
                 result = parse_membership_csv(csv_file(row(start_date=value)))
                 self.assertTrue(any(e["field"] == "start_date" for e in result["errors"]))

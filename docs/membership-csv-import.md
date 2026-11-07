@@ -40,7 +40,7 @@ prices, dates, payment statuses, or payment methods from older records.
 | `status` | `unknown`, `active`, `inactive`, `pending`, `expired`, `canceled` |
 | `payment_status` | Blank, `pending`, `completed`, `failed`, `canceled`, `waived` |
 | `payment_method` | Blank, `cash`, `check`, `card`, `bank_transfer`, `other` |
-| Dates | Blank or `YYYY-MM-DD`; end date cannot precede a known start date |
+| Dates | Blank, `YYYY-MM-DD`, `YYYY/MM/DD`, `MM/DD/YYYY`, or `MM-DD-YYYY`; preview normalizes to `YYYY-MM-DD`. Use two-digit month/day and a consistent separator; end date cannot precede a known start date |
 | Amounts | Blank or nonnegative decimal, up to two places; no symbols, commas, signs, or exponent notation |
 
 Use UTF-8 CSV, up to **1,048,576 bytes** and **500 data rows**. Character

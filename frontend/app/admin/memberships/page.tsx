@@ -378,7 +378,8 @@ export default function AdminMembershipsPage() {
           <p className="mt-2 text-body-sm">
             Status: unknown, active, inactive, pending, expired, canceled. Payment status (optional):
             pending, completed, failed, canceled, waived. Payment method (optional): cash, check, card,
-            bank_transfer, other. Dates use YYYY-MM-DD; amounts use nonnegative decimal values with up to
+            bank_transfer, other. Dates use YYYY-MM-DD or YYYY/MM/DD, or Excel-style MM/DD/YYYY or
+            MM-DD-YYYY; preview shows dates as YYYY-MM-DD. Amounts use nonnegative decimals with up to
             two decimal places, no currency symbols or thousands separators.
           </p>
           <p className="mt-2 text-body-sm">

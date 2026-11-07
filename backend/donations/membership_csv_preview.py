@@ -18,7 +18,22 @@ MONEY_FIELDS = frozenset({"membership_price", "amount_paid"})
 # Reject currency symbols, separators, signs and exponent notation even when
 # the manual JSON serializer might accept an alternate representation.
 DECIMAL_CSV_PATTERN = re.compile(r"^(?:0|[1-9][0-9]{0,7})(?:\.[0-9]{1,2})?$")
-DATE_CSV_PATTERN = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+# Excel often exports US dates; accept both orders with either consistent
+# separator, but canonicalize to ISO before the manual serializer validates
+# real calendar dates. Never guess the meaning of ambiguous mixed formats.
+ISO_DATE_CSV_PATTERN = re.compile(r"^([0-9]{4})([-/])([0-9]{2})\2([0-9]{2})$")
+US_DATE_CSV_PATTERN = re.compile(r"^([0-9]{2})([-/])([0-9]{2})\2([0-9]{4})$")
+
+
+def _normalized_csv_date(value: str) -> str | None:
+    """Return an ISO-formatted date candidate or None for unsupported syntax."""
+    iso = ISO_DATE_CSV_PATTERN.fullmatch(value)
+    if iso:
+        return f"{iso[1]}-{iso[3]}-{iso[4]}"
+    us = US_DATE_CSV_PATTERN.fullmatch(value)
+    if us:
+        return f"{us[4]}-{us[1]}-{us[3]}"
+    return None
 
 
 def _error(row: int, field: str, message: str) -> dict:
@@ -86,18 +101,25 @@ def parse_membership_csv(raw: bytes) -> dict:
                 continue
             row = dict(zip(MEMBERSHIP_CSV_HEADERS, cells, strict=True))
             invalid_fields = set()
+            # A separate normalized row leaves the original CSV untouched; the
+            # serializer and batch fingerprint see identical facts for Excel/ISO dates.
+            normalized_row = row.copy()
             for field, value in row.items():
                 if len(value) > MEMBERSHIP_CSV_FIELD_LIMITS[field]:
                     result["errors"].append(_error(
                         row_number, field, "Cell exceeds its character limit.",
                     ))
                     invalid_fields.add(field)
-                elif (field in DATE_FIELDS and value.strip()
-                      and not DATE_CSV_PATTERN.fullmatch(value)):
-                    result["errors"].append(_error(
-                        row_number, field, "Use YYYY-MM-DD or leave blank.",
-                    ))
-                    invalid_fields.add(field)
+                elif field in DATE_FIELDS and value.strip():
+                    normalized_date = _normalized_csv_date(value)
+                    if normalized_date is None:
+                        result["errors"].append(_error(
+                            row_number, field,
+                            "Use YYYY-MM-DD, YYYY/MM/DD, MM/DD/YYYY or MM-DD-YYYY; or leave blank.",
+                        ))
+                        invalid_fields.add(field)
+                    else:
+                        normalized_row[field] = normalized_date
                 elif (field in MONEY_FIELDS and value.strip()
                       and not DECIMAL_CSV_PATTERN.fullmatch(value)):
                     result["errors"].append(_error(
@@ -110,7 +132,7 @@ def parse_membership_csv(raw: bytes) -> dict:
             diagnostic_row = {
                 key: ("valid" if key in invalid_fields and key in
                       ("first_name", "last_name", "membership_type") else value)
-                for key, value in row.items() if key not in invalid_fields or key in
+                for key, value in normalized_row.items() if key not in invalid_fields or key in
                 ("first_name", "last_name", "membership_type")
             }
             serializer = ManualMembershipCreateSerializer(

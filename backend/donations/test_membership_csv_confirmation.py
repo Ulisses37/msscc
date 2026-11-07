@@ -85,6 +85,23 @@ class MembershipCsvConfirmationTests(TestCase):
         self.assertEqual(result.data["batch_id"], saved.data["batch_id"])
         self.assertEqual(Membership.objects.count(), 2)
 
+    def test_excel_date_format_uses_same_batch_as_iso_date(self):
+        # Formatting is not a new membership fact. Re-uploading Excel's US
+        # display of the same date must find the committed batch, not duplicate it.
+        iso = csv_file(row(first_name="Maya", start_date="2024-01-02"))
+        us = csv_file(row(first_name="Maya", start_date="01/02/2024"))
+        first = self.review(iso)
+        saved = self.confirm(first["review_token"], iso)
+        self.assertEqual(saved.status_code, 201, saved.data)
+        second = self.review(us)
+        self.assertEqual(second["errors"], [])
+        self.assertEqual(second["proposed_records"][0]["values"]["start_date"], "2024-01-02")
+        repeated = self.confirm(second["review_token"], us)
+        self.assertEqual(repeated.status_code, 200, repeated.data)
+        self.assertTrue(repeated.data["already_imported"])
+        self.assertEqual(repeated.data["batch_id"], saved.data["batch_id"])
+        self.assertEqual(Membership.objects.count(), 1)
+
     def test_rejects_other_admin_inactive_unauthorized_tampered_and_changed_file(self):
         token = self.review()["review_token"]
         other = get_user_model().objects.create_user(

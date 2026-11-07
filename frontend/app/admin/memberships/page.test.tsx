@@ -149,6 +149,7 @@ describe('membership table nullable values', () => {
     const button = screen.getByRole('button', { name: 'Download membership CSV template' });
     expect(screen.getByText(/Required: first_name, last_name, membership_type/)).toBeInTheDocument();
     expect(screen.getByText(/1,048,576 UTF-8 bytes and 500 data rows/)).toBeInTheDocument();
+    expect(screen.getByText(/Dates use YYYY-MM-DD or YYYY\/MM\/DD, or Excel-style MM\/DD\/YYYY/)).toBeInTheDocument();
     expect(screen.getByText(/docs\/membership-csv-import\.md/)).toBeInTheDocument();
     expect(button).toHaveClass('w-full', 'sm:w-auto');
     fireEvent.click(button);
