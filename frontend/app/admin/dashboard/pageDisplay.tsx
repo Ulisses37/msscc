@@ -14,16 +14,16 @@ import { useRef } from "react";
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 
 const GAP = 16; // gap-4 = 1rem = 16px
+const MAX_CAROUSEL_ITEMS = 10;
 
 const pageDescriptions: Record<string, string>={
-  Events: "Manage MSSCC events.",
-  Volunteers: "Manage event volunteers.",
+  Events: "Manage MSSCC events and volunteers.",
   Members: "Manage membership data records.",
   Donations: "Manage donation data records.",
   Partners: "Manage MSSCC partner data records.",
   'Edit Pages': "Manage public page text, translation, and images.",
-  'Board of Directors': "Manage board member list.",
-  'Permissions Pages': "Manage the information and permissions of MSSCC Admins.",
+  'Directors': "Manage board member list.",
+  'Permissions': "Manage the information and permissions of MSSCC Admins.",
   Media: "Manage media images across the website",
 }
 
@@ -103,29 +103,29 @@ export function EventCarousel({ data }:{ data: Event[] }) {
       Events
     </h2>
     <div className="flex items-stretch bg-msscc-pink-light rounded-md">
-<button
-  onClick={() => scroll("left")}
-  aria-label="Scroll left"
-  className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ‹
-</button>
+      <button
+        onClick={() => scroll("left")}
+        aria-label="Scroll left"
+        className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+        >
+          ‹
+        </button>
 
         <div
           ref={scrollRef}
           className="flex-1 min-w-0 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-1 scroll-pl-1"
         >
-          {data.map((event) => (
-          <EventCard key={event.id} event={event} />
-         ))}
+          {data.slice(0, MAX_CAROUSEL_ITEMS).map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
         </div>
-<button
-  onClick={() => scroll("right")}
-  aria-label="Scroll right"
-  className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ›
-</button>
+        <button
+          onClick={() => scroll("right")}
+          aria-label="Scroll right"
+          className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+        >
+          ›
+        </button>
       </div>
     </div>
   );
@@ -159,17 +159,17 @@ function EventCard({ event }: { event: Event }) {
 
         {/* Title + date overlay */}
         <div
-  className="absolute bottom-[var(--space-2)] left-[var(--space-2)] max-w-[90%] flex flex-col items-start gap-1 font-body text-xs sm:text-body-sm font-bold text-white"
->
-  <div className="bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1">
-    {title}
-  </div>
-  <div className="sm:whitespace-nowrap bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1 text-[0.65rem] sm:text-label sm:tracking-label">
-    {isPastEvent
-      ? `Event Ended: ${formatDate(event.endDatetime)}`
-      : formatDate(event.startDatetime)}
-  </div>
-</div>
+          className="absolute bottom-[var(--space-2)] left-[var(--space-2)] max-w-[90%] flex flex-col items-start gap-1 font-body text-xs sm:text-body-sm font-bold text-white"
+        >
+          <div className="bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1">
+            {title}
+          </div>
+          <div className="sm:whitespace-nowrap bg-[rgba(38,70,83,0.85)] rounded-[var(--radius-sm)] px-1.5 py-0.5 sm:px-2 sm:py-1 text-[0.65rem] sm:text-label sm:tracking-label">
+            {isPastEvent
+              ? (<>Event Ended:<br />{formatDate(event.endDatetime)}</>)
+              : formatDate(event.startDatetime)}
+          </div>
+        </div>
       </Link>
     </div>
   );
@@ -195,33 +195,33 @@ export function DonationCarousel({ data }:{ data: DonationEntry[] }) {
 
   return (
     <div>
-    <h2 className="font-heading text-heading-2 text-msscc-teal">
-      Donations
-    </h2>
-    <div className="flex items-stretch bg-msscc-pink-light rounded-md">
-<button
-  onClick={() => scroll("left")}
-  aria-label="Scroll left"
-  className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ‹
-</button>
-
-        <div
-          ref={scrollRef}
-          className="flex-1 min-w-0 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-1 scroll-pl-1"
-        >
-          {data.map((donation) => (
+      <h2 className="font-heading text-heading-2 text-msscc-teal">
+        Donations
+      </h2>
+      <div className="flex items-stretch bg-msscc-pink-light rounded-md">
+      <button
+        onClick={() => scroll("left")}
+        aria-label="Scroll left"
+        className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+      >
+        ‹
+      </button>
+      <div
+        ref={scrollRef}
+        className="flex-1 min-w-0 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-1 scroll-pl-1"
+      >
+        {data.slice(0, MAX_CAROUSEL_ITEMS).map((donation) => (
           <DonationCard key={donation.donation_id} donation={donation} />
-         ))}
-        </div>
-<button
-  onClick={() => scroll("right")}
-  aria-label="Scroll right"
-  className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ›
-</button>
+        ))}
+
+      </div>
+      <button
+        onClick={() => scroll("right")}
+        aria-label="Scroll right"
+        className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+      >
+        ›
+      </button>
       </div>
     </div>
   );
@@ -266,33 +266,32 @@ export function MembershipCarousel({ data }:{ data: MembershipEntry[] }) {
 
   return (
     <div>
-    <h2 className="font-heading text-heading-2 text-msscc-teal">
-      Membership
-    </h2>
-    <div className="flex items-stretch bg-msscc-pink-light rounded-md">
-<button
-  onClick={() => scroll("left")}
-  aria-label="Scroll left"
-  className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ‹
-</button>
-
+      <h2 className="font-heading text-heading-2 text-msscc-teal">
+        Membership
+      </h2>
+      <div className="flex items-stretch bg-msscc-pink-light rounded-md">
+        <button
+          onClick={() => scroll("left")}
+          aria-label="Scroll left"
+          className="rounded-l-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+        >
+          ‹
+        </button>
         <div
           ref={scrollRef}
           className="flex-1 min-w-0 flex gap-4 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-1 scroll-pl-1"
         >
-          {data.map((membership) => (
-          <MembershipCard key={membership.membership_id} membership={membership} />
-         ))}
+          {data.slice(0, MAX_CAROUSEL_ITEMS).map((membership) => (
+            <MembershipCard key={membership.membership_id} membership={membership} />
+          ))}
         </div>
-<button
-  onClick={() => scroll("right")}
-  aria-label="Scroll right"
-  className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
->
-  ›
-</button>
+        <button
+          onClick={() => scroll("right")}
+          aria-label="Scroll right"
+          className="rounded-r-md flex-shrink-0 w-5 sm:w-10 flex items-center justify-center bg-msscc-pink-light hover:bg-msscc-pink text-lg sm:text-2xl"
+        >
+          ›
+        </button>
       </div>
     </div>
   );
@@ -302,17 +301,17 @@ function MembershipCard({ membership}: {membership: MembershipEntry}){
   const name = `${membership.first_name} ${membership.last_name}`.trim();
 
   return (
-<div className="snap-start flex-shrink-0 w-full sm:w-48 border border-msscc-pink rounded-sm bg-msscc-white px-3 py-2 sm:p-3 flex flex-col gap-0.5 sm:gap-2 sm:justify-between font-body">
-  <div className="font-heading text-body-sm sm:text-base text-msscc-teal break-words">
-    {name}
-  </div>
-  <div className="font-heading text-base sm:text-heading-2 text-msscc-teal first-letter:uppercase">
-    {membership.membership_type}
-  </div>
-  <div className="text-label sm:text-body-sm text-msscc-gray-mid">
-    {formatDate(membership.created_at)}
-  </div>
-</div>
+    <div className="snap-start flex-shrink-0 w-full sm:w-48 border border-msscc-pink rounded-sm bg-msscc-white px-3 py-2 sm:p-3 flex flex-col gap-0.5 sm:gap-2 sm:justify-between font-body">
+      <div className="font-heading text-body-sm sm:text-base text-msscc-teal break-words">
+        {name}
+      </div>
+      <div className="font-heading text-base sm:text-heading-2 text-msscc-teal first-letter:uppercase">
+        {membership.membership_type}
+      </div>
+      <div className="text-label sm:text-body-sm text-msscc-gray-mid">
+        {formatDate(membership.created_at)}
+      </div>
+    </div>
   );
 }
 

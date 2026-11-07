@@ -62,7 +62,7 @@ export function DeepLUsageMeter() {
   const roundedPercentage = Math.round(usage.usagePercentage);
 
   return (
-    <div className="flex flex-col items-center bg-msscc-pink px-4 py-4 text-white">
+    <div className="flex flex-col items-center bg-msscc-pink px-4 py-4 text-white rounded-sm">
       <div className="mb-3 flex items-center justify-center gap-3">
         <UsageProgressBar percent={usage.usagePercentage} />
         <div className="flex flex-col items-center">

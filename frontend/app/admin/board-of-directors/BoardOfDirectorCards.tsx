@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
@@ -9,7 +9,11 @@ import { requestDeepLTranslation } from '@/services/deeplService';
 import type { BoardMember } from './page';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
-const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
+const inputClass =
+  "mt-1 w-full rounded-md border border-msscc-gray-light bg-msscc-white px-3 py-2 text-base font-normal text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin";
+
+const labelClass = "text-label tracking-label text-msscc-gray-mid";
+
 
 type BoardMemberTranslationField = 'name' | 'role' | 'caption';
 
@@ -144,128 +148,140 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     }
   };
 
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose(null);
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          {type === "officer" ? "Edit Officer" : "Edit Director"}
-        </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={() => onClose(null)}
+    >
+      <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-md bg-msscc-white p-4 font-body text-msscc-gray-dark sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+    >
+      <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
+        {type === "officer" ? "Edit Officer" : "Edit Director"}
+      </h2>
 
-        <div className="flex justify-center mb-4">
-          <label className="cursor-pointer">
-            {edited?.boardMemberImageURL ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={edited.boardMemberImageURL}
-                alt="portrait"
-                className="h-32 w-32 sm:h-48 sm:w-48 hover:opacity-70 transition-opacity"
-              />
-            ) : (
-              <div className="h-24 w-24 bg-slate-200 flex items-center justify-center text-sm text-gray-500 hover:opacity-70 transition-opacity">
-                Add photo
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const url = URL.createObjectURL(file);
-                  setEditedFile(file);
-                  setEdited(prev => prev ? { ...prev, boardMemberImageURL: url } : prev);
-                }
-              }}
+      <div className="mb-4 flex justify-center">
+        <label className="cursor-pointer">
+          {edited?.boardMemberImageURL ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={edited.boardMemberImageURL}
+              alt="portrait"
+              className="h-32 w-32 transition-opacity hover:opacity-70 sm:h-48 sm:w-48"
             />
-          </label>
-        </div>
-
-          {/* Editable fields */}
-        <div className="flex flex-col gap-3">
-          {nameReviewNotice.showNotice && (
-            <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
-          )}
-          <label className="text-sm font-semibold">Name (English)
-            <input
-              type="text"
-              value={edited?.boardMemberNameEn ?? ""}
-              onChange={(event) =>
-                updateEnglishField(
-                  'boardMemberNameEn',
-                  event.target.value,
-                  nameReviewNotice.markEnglishChanged,
-                )
-              }
-              className={inputClass}
-            />
-          </label>
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor="board-member-name-ja" className="text-sm font-semibold">
-                Name (Japanese)
-              </label>
-              <BoardMemberTranslationButton
-                fieldLabel="board member name"
-                isTranslating={translatingFields.includes('name')}
-                disabled={!edited?.boardMemberNameEn.trim()}
-                onClick={() => handleTranslation('name')}
-              />
+          ) : (
+            <div className="flex h-24 w-24 items-center justify-center bg-msscc-gray-light text-sm text-msscc-gray-mid transition-opacity hover:opacity-70">
+              Add photo
             </div>
-            <input
-              id="board-member-name-ja"
-              type="text"
-              value={edited?.boardMemberNameJa ?? ""}
-              onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameJa: e.target.value } : prev)}
-              className={inputClass}
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const url = URL.createObjectURL(file);
+                setEditedFile(file);
+                setEdited(prev => prev ? { ...prev, boardMemberImageURL: url } : prev);
+              }
+            }}
+          />
+        </label>
+      </div>
+
+      {/* Editable fields */}
+      <div className="flex flex-col gap-3">
+        {nameReviewNotice.showNotice && (
+          <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
+        )}
+        <label className={labelClass}>Name (English)
+          <input
+            type="text"
+            value={edited?.boardMemberNameEn ?? ""}
+            onChange={(event) =>
+              updateEnglishField(
+                'boardMemberNameEn',
+                event.target.value,
+                nameReviewNotice.markEnglishChanged,
+              )
+            }
+            className={inputClass}
+          />
+        </label>
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="board-member-name-ja" className={labelClass}>
+              Name (Japanese)
+            </label>
+            <BoardMemberTranslationButton
+              fieldLabel="board member name"
+              isTranslating={translatingFields.includes('name')}
+              disabled={!edited?.boardMemberNameEn.trim()}
+              onClick={() => handleTranslation('name')}
             />
           </div>
+          <input
+            id="board-member-name-ja"
+            type="text"
+            value={edited?.boardMemberNameJa ?? ""}
+            onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberNameJa: e.target.value } : prev)}
+            className={inputClass}
+          />
+        </div>
 
-          {/* Officer*/}
-          {type === "officer" && (
-            <>
-              {roleReviewNotice.showNotice && (
-                <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
-              )}
-              <label className="text-sm font-semibold">Role (English)
-                <input
-                  type="text"
-                  value={edited?.boardMemberRoleEn ?? ""}
-                  onChange={(event) =>
-                    updateEnglishField(
-                      'boardMemberRoleEn',
-                      event.target.value,
-                      roleReviewNotice.markEnglishChanged,
-                    )
-                  }
-                  className={inputClass}
-                />
-              </label>
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="board-member-role-ja" className="text-sm font-semibold">
-                    Role (Japanese)
-                  </label>
-                  <BoardMemberTranslationButton
-                    fieldLabel="board member role"
-                    isTranslating={translatingFields.includes('role')}
-                    disabled={!edited?.boardMemberRoleEn.trim()}
-                    onClick={() => handleTranslation('role')}
-                  />
-                </div>
-                <input
-                  id="board-member-role-ja"
-                  type="text"
-                  value={edited?.boardMemberRoleJa ?? ""}
-                  onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleJa: e.target.value } : prev)}
-                  className={inputClass}
+        {/* Officer*/}
+        {type === "officer" && (
+          <>
+            {roleReviewNotice.showNotice && (
+              <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
+            )}
+            <label className={labelClass}>Role (English)
+              <input
+                type="text"
+                value={edited?.boardMemberRoleEn ?? ""}
+                onChange={(event) =>
+                  updateEnglishField(
+                    'boardMemberRoleEn',
+                    event.target.value,
+                    roleReviewNotice.markEnglishChanged,
+                  )
+                }
+                className={inputClass}
+              />
+            </label>
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="board-member-role-ja" className={labelClass}>
+                  Role (Japanese)
+                </label>
+                <BoardMemberTranslationButton
+                  fieldLabel="board member role"
+                  isTranslating={translatingFields.includes('role')}
+                  disabled={!edited?.boardMemberRoleEn.trim()}
+                  onClick={() => handleTranslation('role')}
                 />
               </div>
-              {captionReviewNotice.showNotice && (
-                <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
-              )}
-              <label className="text-sm font-semibold">Caption (English)
-                <textarea
+              <input
+                id="board-member-role-ja"
+                type="text"
+                value={edited?.boardMemberRoleJa ?? ""}
+                onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberRoleJa: e.target.value } : prev)}
+                className={inputClass}
+              />
+            </div>
+            {captionReviewNotice.showNotice && (
+              <TranslationReviewNotice onDismiss={captionReviewNotice.dismissNotice} />
+            )}
+            <label className={labelClass}>Caption (English)
+              <textarea
                 value={edited?.boardMemberCaptionEn ?? ""}
                 onChange={(event) =>
                   updateEnglishField(
@@ -276,62 +292,66 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
                 }
                 className={`${inputClass} resize-none`}
                 rows={4}
+              />
+            </label>
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="board-member-caption-ja" className={labelClass}>
+                  Caption (Japanese)
+                </label>
+                <BoardMemberTranslationButton
+                  fieldLabel="board member caption"
+                  isTranslating={translatingFields.includes('caption')}
+                  disabled={!edited?.boardMemberCaptionEn.trim()}
+                  onClick={() => handleTranslation('caption')}
                 />
-              </label>
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor="board-member-caption-ja" className="text-sm font-semibold">
-                    Caption (Japanese)
-                  </label>
-                  <BoardMemberTranslationButton
-                    fieldLabel="board member caption"
-                    isTranslating={translatingFields.includes('caption')}
-                    disabled={!edited?.boardMemberCaptionEn.trim()}
-                    onClick={() => handleTranslation('caption')}
-                  />
-                </div>
-                <textarea
+              </div>
+              <textarea
                 id="board-member-caption-ja"
                 value={edited?.boardMemberCaptionJa ?? ""}
                 onChange={(e) => setEdited(prev => prev ? { ...prev, boardMemberCaptionJa: e.target.value } : prev)}
                 className={`${inputClass} resize-none`}
                 rows={4}
-                />
-              </div>
-            </>
-          )}
-        </div>
+              />
+            </div>
+          </>
+        )}
+      </div>
 
-        <div className="flex gap-2 mt-4">
-          <button onClick={() => onClose(null)} className="flex-1 px-2 sm:px-4 py-2 bg-gray-500 text-white rounded">
-            Close
-          </button>
-          {/* An unsaved draft has no database record to delete. */}
-          {!isNewMember && (
-            <button
-              onClick={() => {
-                onDelete(member);
-                onClose(null);
-              }}
-              className="flex-1 rounded bg-red-500 px-2 py-2 text-white sm:px-4"
-            >
-              Delete
-            </button>
-          )}
+      {/* Actions: stacked on phones, a row from sm up */}
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <button
+          onClick={() => onClose(null)}
+          className="w-full rounded-sm border border-msscc-gray-light bg-msscc-white px-4 py-2 text-btn tracking-btn text-msscc-gray-dark transition-colors hover:border-msscc-pink hover:text-msscc-pink"
+        >
+          Close
+        </button>
+        {/* An unsaved draft has no database record to delete. */}
+        {!isNewMember && (
           <button
             onClick={() => {
-              if (!edited?.boardMemberNameEn?.trim()) {
-                alert("English name cannot be empty");
-                return;
-              }
-              onUpdate(edited, editedFile);
+              onDelete(member);
               onClose(null);
             }}
-            className="flex-1 px-2 sm:px-4 py-2 bg-green-500 text-white rounded"
+            className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
           >
-            {isNewMember ? "Add" : "Update"}
+            Delete
           </button>
-        </div>
+        )}
+        <button
+          onClick={() => {
+            if (!edited?.boardMemberNameEn?.trim()) {
+              alert("English name cannot be empty");
+              return;
+            }
+            onUpdate(edited, editedFile);
+            onClose(null);
+          }}
+          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
+        >
+          {isNewMember ? "Add" : "Update"}
+        </button>
+      </div>
       </div>
     </div>
   );

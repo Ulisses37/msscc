@@ -65,7 +65,6 @@ export default function AdminPermissionPage(){
               Admin List
             </h2>
 <div className="flex flex-1 justify-end gap-2 sm:gap-4">
-  {logInType === "Developer Admin" && (
     <button
       type="button"
       className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
@@ -73,7 +72,6 @@ export default function AdminPermissionPage(){
     >
       Add
     </button>
-  )}
   <button
     type="button"
     className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
