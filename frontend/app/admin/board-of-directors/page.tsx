@@ -37,7 +37,6 @@ export default function BoardOfDirectors() {
   const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
   const [isOpen, setIsOpen] = useState<"director" | "officer" | null>(null);
 
-
     useEffect(() => {
       Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/board-members/`).then(res => res.json()),
@@ -95,12 +94,9 @@ export default function BoardOfDirectors() {
               setSelectedMember(createBoardMemberDraft('officer'));
               setIsOpen('officer');
             }}
-            className={
-              'flex h-10 w-10 items-center justify-center rounded bg-green-400 font-bold ' +
-              'text-white hover:bg-green-600 sm:h-8 sm:w-8'
-            }
+            className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
           >
-            +
+            Add
           </button>
         </div>
         {/* CSS Grid automatically creates additional rows as new officers are added. */}
@@ -131,8 +127,9 @@ export default function BoardOfDirectors() {
               setSelectedMember(createBoardMemberDraft('director'));
               setIsOpen('director');
             }}
-            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center bg-green-400 text-white font-bold rounded hover:bg-green-600">
-            +
+            className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+          >
+            Add
           </button>
         </div>
 

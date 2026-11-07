@@ -32,22 +32,14 @@ export function PermissionCard(
     setSelectedAdmin: (selectedAdmin: AdminRecord) => void
     setAdminPopUpType: (pType: string) => void
   }){
-  const visiblePermissions = Object.entries(adminInformation.permissions).filter(
-    ([permissionName]) => !(logInType === "Admin" && permissionName === "Permissions")
-  );
-  const canEdit = logInType !== "Admin";
   return(
   <div
-    className={`mx-2 my-2 flex flex-1 flex-col rounded-sm border border-msscc-gray-light bg-msscc-white font-body text-msscc-gray-dark sm:flex-row ${
-      canEdit ? "cursor-pointer hover:bg-msscc-pink-faint" : ""
-    }`}
+    className="mx-2 my-2 flex flex-1 flex-col rounded-sm border border-msscc-gray-light bg-msscc-white font-body text-msscc-gray-dark sm:flex-row cursor-pointer hover:bg-msscc-pink-faint"
     onClick={
-      canEdit
-       ? () => {
+      () => {
           setSelectedAdmin(adminInformation);
           setAdminPopUpType("update");
         }
-      : undefined
     }
   >
       {/* Name / email / rank: on top on phones, left column from sm up */}
@@ -98,7 +90,7 @@ export function PermissionCard(
 
       {/* Permission icons: 2 columns on phones, 3 from sm up */}
       <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 p-2 sm:grid-cols-3">
-        {visiblePermissions.map(([permissionName, hasPermission]) => (
+        {Object.entries(adminInformation.permissions).map(([permissionName, hasPermission]) => (
           <div key={permissionName} className="min-w-0" onClick={(e) => e.stopPropagation()}>
             <PermissionIcon
               currentPermission={{ permissionName, hasPermission }}

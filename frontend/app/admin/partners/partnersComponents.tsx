@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ImportImage } from '@/components/ui/ImportImage'
 import PostImage from '@/components/ui/PostImage'
 import { parseMediaUploadError } from '@/utils/mediaUploadError'
+import Image from 'next/image'
 
 export interface PartnerProp{
   DisplayOrder: number;
@@ -19,32 +20,76 @@ export interface PartnerProp{
   isVisible: boolean;
 }
 
-// text-base keeps iOS Safari from zooming in when an input is focused
-const inputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base";
-const disabledInputClass = "w-full border rounded px-2 py-1 mt-1 font-normal text-base bg-gray-100 text-gray-500 cursor-not-allowed";
+// Shared styles, matched to the memberships admin page.
+// text-base keeps iOS Safari from zooming in when an input is focused.
+const labelClass = "block text-label uppercase tracking-label text-msscc-gray-mid";
+const inputClass = "mt-1 w-full rounded-md border border-msscc-gray-light bg-msscc-white px-3 py-2.5 text-base font-normal normal-case tracking-normal text-msscc-gray-dark outline-none placeholder:text-msscc-gray-mid focus:border-msscc-pink focus:shadow-focus-admin";
+const disabledInputClass = "mt-1 w-full cursor-not-allowed rounded-md border border-msscc-gray-light bg-msscc-gray-faint px-3 py-2.5 text-base font-normal normal-case tracking-normal text-msscc-gray-mid";
+const checkboxClass = "h-4 w-4 accent-msscc-pink";
+const checkboxLabelClass = "flex items-center gap-2 text-body-sm text-msscc-gray-dark";
+const errorTextClass = "mt-1 text-body-sm text-msscc-danger";
+const primaryButtonClass = "w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryButtonClass = "w-full rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink";
+const dangerButtonClass = "w-full rounded-md bg-msscc-danger px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-danger";
+const modalOverlayClass = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4";
+const modalTitleClass = "mb-4 font-heading text-xl text-msscc-teal sm:text-2xl";
 
-// Columns: Order | Name | Image | Contribution | (Website, partners only, md+)
+// Columns: Order | Name | Image | Contribution | (Website, md+) | Page (prev/next controls)
 // Class names must be written out in full so Tailwind can find them.
-export function getGridCols(showWebsite: boolean) {
-  return showWebsite
-    ? 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px] md:grid-cols-[60px_minmax(0,1fr)_120px_200px_minmax(0,1fr)]'
-    : 'grid grid-cols-[56px_minmax(0,1fr)_80px] sm:grid-cols-[60px_minmax(0,1fr)_120px_200px]';
+export function getGridCols() {
+  return 'grid grid-cols-[minmax(0,1fr)_152px] sm:grid-cols-[60px_minmax(0,1fr)_120px_220px_152px] md:grid-cols-[60px_minmax(0,1fr)_120px_220px_minmax(0,1fr)_152px]';
 }
 
-export function PartnerTableHeader({ showWebsite = false }: { showWebsite?: boolean }) {
+export function PartnerTableHeader(
+  {
+    currentPage,
+    totalPages,
+    firstEntry,
+    shownEntries,
+    totalEntries,
+    onPrevious,
+    onNext,
+  } : {
+    currentPage: number;
+    totalPages: number;
+    firstEntry: number;
+    shownEntries: number;
+    totalEntries: number;
+    onPrevious: () => void;
+    onNext: () => void;
+  }){
+  const pageButtonClass = "rounded-md border border-msscc-pink px-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:cursor-not-allowed disabled:opacity-50";
+  const headerCell = "flex items-center py-3 text-label uppercase tracking-label text-msscc-gray-mid";
   return (
-    <div className={getGridCols(showWebsite)}>
-      <div className="px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Order</div>
-      <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid">Name</div>
-      <div className="hidden sm:block px-2 py-2 text-sm font-semibold text-msscc-gray-mid text-center">Image</div>
-      <div className="px-3 py-2 text-sm font-semibold text-msscc-gray-mid text-right">
-        <span className="hidden sm:inline">Contribution </span>Amount
+    <div className={`${getGridCols()} border-b border-msscc-gray-light bg-msscc-gray-faint items-center`}>
+    <div className={`${headerCell} hidden justify-center px-2 text-center sm:flex`}>Order</div>
+    <div className={`${headerCell} px-3`}>Name</div>
+    <div className={`${headerCell} hidden justify-center px-2 text-center sm:flex`}>Image</div>
+    <div className={`${headerCell} hidden justify-end whitespace-nowrap px-3 text-right sm:flex`}>Contribution Amount</div>
+    <div className={`${headerCell} hidden px-3 pl-8 md:flex`}>Website</div>
+      <div className="flex items-center justify-end gap-1 px-2 py-2 normal-case tracking-normal">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={currentPage <= 1}
+          aria-label="Previous page"
+          className={pageButtonClass}
+        >
+          ‹
+        </button>
+        <span className="min-w-[5rem] whitespace-nowrap text-center text-body-sm text-msscc-gray-mid" aria-live="polite">
+          {firstEntry}–{shownEntries}/{totalEntries}
+        </span>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={currentPage >= totalPages}
+          aria-label="Next page"
+          className={pageButtonClass}
+        >
+          ›
+        </button>
       </div>
-      {showWebsite && (
-        <div className="hidden md:block px-3 py-2 pl-8 text-sm font-semibold text-msscc-gray-mid">
-          Website
-        </div>
-      )}
     </div>
   );
 }
@@ -82,36 +127,33 @@ function DisplayRow({
   partnerInfo: PartnerProp;
   setEditPopUp: (value: PartnerProp) => void;
 }){
-  const isPartner = partnerInfo.Category === "partner";
-
   return (
     <div
-      className={`${getGridCols(isPartner)}
-       border-b border-gray-200 last:border-b-0 cursor-pointer
-       bg-white hover:bg-msscc-pink-faint`}
+      className={`${getGridCols()}
+       cursor-pointer items-center border-b border-msscc-gray-light bg-msscc-white
+       text-body-sm text-msscc-gray-dark last:border-b-0 hover:bg-msscc-pink-faint`}
       onClick={() => setEditPopUp(partnerInfo)}
     >
-      <div className="px-2 py-3 text-sm font-semibold text-center">{partnerInfo.DisplayOrder}</div>
-      <div className="px-3 py-3 text-sm font-semibold truncate">{partnerInfo.Name}</div>
-<div className="hidden sm:flex items-center justify-center px-3 py-2">
-  {partnerInfo.MediaAsset !== null ? (
-    <div className="relative h-16 w-16 overflow-hidden rounded border bg-gray-50">
-      <PostImage
-        mediaID={partnerInfo.MediaAsset}
-        configVariant="thumbnail"
-        className="h-full w-full object-cover"
-      />
-    </div>
-  ) : (
-    <span className="text-xs text-gray-400">No image</span>
-  )}
+      <div className="hidden px-2 py-3 text-center sm:block">{partnerInfo.DisplayOrder}</div>
+      <div className="truncate px-3 py-3 font-semibold">{partnerInfo.Name}</div>
+      <div className="hidden items-center justify-center px-3 py-1.5 sm:flex">
+        {partnerInfo.MediaAsset !== null ? (
+          <div className="relative h-10 w-10 overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
+            <PostImage
+              mediaID={partnerInfo.MediaAsset}
+              configVariant="thumbnail"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <span className="text-body-sm text-msscc-gray-mid">No image</span>
+        )}
+      </div>
+<div className="whitespace-nowrap px-2 py-3 text-right sm:px-3">${partnerInfo.ContributionAmount}</div>
+<div className="hidden truncate px-3 py-3 pl-8 md:block">
+  {partnerInfo.Website}
 </div>
-      <div className="px-3 py-3 text-sm font-semibold text-right">${partnerInfo.ContributionAmount}</div>
-      {isPartner && (
-        <div className="hidden md:block px-3 py-3 pl-8 text-sm font-semibold truncate">
-          {partnerInfo.Website}
-        </div>
-      )}
+<div aria-hidden="true" className="hidden sm:block" />
     </div>
   );
 }
@@ -213,20 +255,20 @@ export function CreatePartnerProp(
 
   return(
     <div
-    className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+    className={modalOverlayClass}
     onClick={() => onChange(null)}
     >
       <div
-      className="bg-white rounded p-4 sm:p-6 w-full max-w-sm max-h-[90dvh] overflow-y-auto"
+      className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-md bg-msscc-white p-4 text-msscc-gray-dark shadow-lg sm:p-6"
       onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold mb-4">
+        <h2 className={modalTitleClass}>
           Create {CategoryTitle}
         </h2>
 
         {/* Editable fields */}
-        <div className="flex flex-col gap-3">
-          <label className="text-sm font-semibold">Name (English)
+        <div className="flex flex-col gap-4">
+          <label className={labelClass}>Name (English)
             <input
               type="text"
               value={partnerInfo?.Name ?? ""}
@@ -234,7 +276,7 @@ export function CreatePartnerProp(
               className={inputClass}
             />
           </label>
-          <label className="text-sm font-semibold">Name (Japanese)
+          <label className={labelClass}>Name (Japanese)
             <input
               type="text"
               value={partnerInfo?.NameJP ?? ""}
@@ -242,60 +284,67 @@ export function CreatePartnerProp(
               className={inputClass}
             />
           </label>
-          {PType === "partner" && <label className="text-sm font-semibold">Website
-            <input
-              type="text"
-              value={partnerInfo?.Website ?? ""}
-              onChange={(e) => setInfo(prev => ({ ...prev, Website: e.target.value || null }))}
-              className={inputClass}
-            />
-          </label>}
-          {websiteError && <p className="text-red-500 text-xs mt-1">{websiteError}</p>}
-          <label className="text-sm font-semibold">Display Order
-            <input
-              type="number"
-              value={partnerInfo?.DisplayOrder ?? 0}
-              onChange={(e) => handleOrderChange(
-                  {
-                    value: e.target.value,
-                    UsedDisplayOrders :  UsedDisplayOrders,
-                    setOrderError: setOrderError,
-                    setInfo: setInfo,
-                    CategoryTitle: CategoryTitle,
-                    currentDisplayOrder: -1,
-                  })}
-              className={inputClass}
-            />
-            {orderError && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
-          </label>
-          <div className="text-sm font-semibold">
-            <label className="text-sm font-semibold">Upload Image</label>
+          <div>
+            <label className={labelClass}>Website
+              <input
+                type="text"
+                value={partnerInfo?.Website ?? ""}
+                onChange={(e) => setInfo(prev => ({ ...prev, Website: e.target.value || null }))}
+                className={inputClass}
+              />
+            </label>
+            {websiteError && <p className={errorTextClass}>{websiteError}</p>}
+          </div>
+          <div>
+            <label className={labelClass}>Display Order
+              <input
+                type="number"
+                value={partnerInfo?.DisplayOrder ?? 0}
+                onChange={(e) => handleOrderChange(
+                    {
+                      value: e.target.value,
+                      UsedDisplayOrders :  UsedDisplayOrders,
+                      setOrderError: setOrderError,
+                      setInfo: setInfo,
+                      CategoryTitle: CategoryTitle,
+                      currentDisplayOrder: -1,
+                    })}
+                className={inputClass}
+              />
+            </label>
+            {orderError && <p className={errorTextClass}>{orderError}</p>}
+          </div>
+          <div>
+            <label className={labelClass}>Upload Image</label>
             <ImportImage
               id="create-partner-media"
               onChange={handleMediaChange}
             />
-            {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
+            {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
             {previewUrl && (
-              <div className="mt-2 h-40 w-full overflow-hidden rounded border bg-gray-50">
-                <img
-                  src={previewUrl}
-                  alt="Selected partner image preview"
-                  className="h-full w-full object-contain"
-                />
-              </div>
+            <div className="relative mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
+              <Image
+                src={previewUrl}
+                alt="Selected partner image preview"
+                fill
+                unoptimized
+                className="object-contain"
+              />
+            </div>
             )}
-            <label className="mt-2 flex items-center gap-2 text-sm font-normal">
+            <label className={`${checkboxLabelClass} mt-2`}>
               <input
                 type="checkbox"
                 checked={mediaVisible}
                 onChange={(e) => setMediaVisible(e.target.checked)}
-                className="h-4 w-4"
+                className={checkboxClass}
               />
               Image visible on the public site
             </label>
-            {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
+            {mediaError && <p className={errorTextClass}>{mediaError}</p>}
           </div>
-          <label className="text-sm font-semibold">Contribution Amount
+          <div>
+            <label className={labelClass}>Contribution Amount
               <input
                 type="number"
                 value={currentContribution}
@@ -308,29 +357,32 @@ export function CreatePartnerProp(
                   })}
                 className={inputClass}
               />
-            {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
-          </label>
-          <label className="text-sm font-semibold flex items-center gap-2">
+            </label>
+            {contributionError !== "" && <p className={errorTextClass}>{contributionError}</p>}
+          </div>
+          <label className={checkboxLabelClass}>
             <input
               type="checkbox"
               checked={partnerInfo.isVisible}
               onChange={(e) => setInfo(prev => ({ ...prev, isVisible: e.target.checked }))}
-              className="w-4 h-4"
-              />
-              Visible
-            </label>
+              className={checkboxClass}
+            />
+            Visible
+          </label>
         </div>
-        <div className="flex gap-3 mt-4">
+        <div className="mt-6 flex gap-3">
           <button
+            type="button"
             onClick={handleCreateSubmit}
             disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
-            className="flex-1 bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+            className={primaryButtonClass}
           >
             Save
           </button>
           <button
+            type="button"
             onClick={() => onChange(null)}
-            className="flex-1 bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+            className={secondaryButtonClass}
           >
             Cancel
           </button>
@@ -425,19 +477,19 @@ export function EditPartnerProp(
 
   return(
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      className={modalOverlayClass}
       onClick={() => onChange(null)}
     >
       <div
-        className="bg-white rounded p-4 sm:p-6 w-full max-w-3xl max-h-[90dvh] overflow-y-auto"
+        className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-md bg-msscc-white p-4 text-msscc-gray-dark shadow-lg sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-bold mb-4"> Update {CategoryTitle}</h2>
+        <h2 className={modalTitleClass}>Update {CategoryTitle}</h2>
 
         {/* Editable fields */}
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Partner ID & Display Order*/}
-            <label className="text-sm font-semibold sm:flex-1"> Partner ID
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row"> {/*Partner ID & Display Order*/}
+            <label className={`${labelClass} sm:flex-1`}>Partner ID
               <input
                 type="number"
                 value={partnerInfo?.PartnerID}
@@ -445,27 +497,29 @@ export function EditPartnerProp(
                 disabled
               />
             </label>
-            <label className="text-sm font-semibold sm:flex-1">Display Order
-              <input
-                type="number"
-                value={currentDisplayOrder}
-                onChange={(e)=>setCurrentDisplayOrder(e.target.value)}
-                onBlur={(e) => handleOrderChange(
-                  {
-                    value: e.target.value,
-                    UsedDisplayOrders :  UsedDisplayOrders,
-                    setOrderError: setOrderError,
-                    setInfo: setInfo,
-                    CategoryTitle: CategoryTitle,
-                    currentDisplayOrder: partnerInfo.DisplayOrder
-                  })}
-                className={inputClass}
-              />
-            {orderError !== "" && <p className="text-red-500 text-xs mt-1">{orderError}</p>}
-            </label>
+            <div className="sm:flex-1">
+              <label className={labelClass}>Display Order
+                <input
+                  type="number"
+                  value={currentDisplayOrder}
+                  onChange={(e)=>setCurrentDisplayOrder(e.target.value)}
+                  onBlur={(e) => handleOrderChange(
+                    {
+                      value: e.target.value,
+                      UsedDisplayOrders :  UsedDisplayOrders,
+                      setOrderError: setOrderError,
+                      setInfo: setInfo,
+                      CategoryTitle: CategoryTitle,
+                      currentDisplayOrder: partnerInfo.DisplayOrder
+                    })}
+                  className={inputClass}
+                />
+              </label>
+              {orderError !== "" && <p className={errorTextClass}>{orderError}</p>}
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Name pair*/}
-            <label className="text-sm font-semibold sm:flex-1">Name (English)
+          <div className="flex flex-col gap-4 sm:flex-row"> {/*Name pair*/}
+            <label className={`${labelClass} sm:flex-1`}>Name (English)
               <input
                 type="text"
                 value={partnerInfo?.Name ?? ""}
@@ -473,7 +527,7 @@ export function EditPartnerProp(
                 className={inputClass}
               />
             </label>
-            <label className="text-sm font-semibold sm:flex-1">Name (Japanese)
+            <label className={`${labelClass} sm:flex-1`}>Name (Japanese)
               <input
                 type="text"
                 value={partnerInfo?.NameJP ?? ""}
@@ -482,8 +536,8 @@ export function EditPartnerProp(
               />
             </label>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Category Pair*/}
-            <label className="text-sm font-semibold sm:flex-1">
+          <div className="flex flex-col gap-4 sm:flex-row"> {/*Category Pair*/}
+            <label className={`${labelClass} sm:flex-1`}>
               Category (English)
               <select
                 value={categoryOptions.find(opt => opt.en === partnerInfo?.Category)?.value ?? partnerInfo.Category}
@@ -496,7 +550,7 @@ export function EditPartnerProp(
                 ))}
               </select>
             </label>
-            <label className="text-sm font-semibold sm:flex-1">
+            <label className={`${labelClass} sm:flex-1`}>
               Category (Japanese)
               <input
                 type="text"
@@ -507,45 +561,49 @@ export function EditPartnerProp(
               />
             </label>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Contribution*/}
-            <label className="text-sm font-semibold sm:flex-1"> Contribution Amount
-              <input
-                type="number"
-                value={currentContribution}
-                onChange={(e) => setCurrentContribution(e.target.value)}
-                onBlur={(e) => validateContribution(
-                  {
-                    contributionAmount: e.target.value,
-                    setContributionError: setContributionError,
-                    setInfo: setInfo,
-                  })}
-                className={inputClass}
-              />
-            {contributionError !== "" && <p className="text-red-500 text-xs mt-1">{contributionError}</p>}
-            </label>
+          <div className="flex flex-col gap-4 sm:flex-row"> {/*Contribution*/}
+            <div className="sm:flex-1">
+              <label className={labelClass}>Contribution Amount
+                <input
+                  type="number"
+                  value={currentContribution}
+                  onChange={(e) => setCurrentContribution(e.target.value)}
+                  onBlur={(e) => validateContribution(
+                    {
+                      contributionAmount: e.target.value,
+                      setContributionError: setContributionError,
+                      setInfo: setInfo,
+                    })}
+                  className={inputClass}
+                />
+              </label>
+              {contributionError !== "" && <p className={errorTextClass}>{contributionError}</p>}
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3"> {/*Media asset: Upload & Existing*/}
+          <div className="flex flex-col gap-4 sm:flex-row"> {/*Media asset: Upload & Existing*/}
             <div className="sm:flex-1">
-              <label className="text-sm font-semibold">Upload Image</label>
+              <label className={labelClass}>Upload Image</label>
               <ImportImage
                 id="edit-partner-media"
                 onChange={handleMediaChange}
               />
-              {isUploadingMedia && <p className="text-xs text-gray-500 mt-1">Uploading image…</p>}
+              {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
               {previewUrl && (
-                <div className="mt-2 h-40 w-full overflow-hidden rounded border bg-gray-50">
-                  <img
+                <div className="relative mt-2 h-40 w-full overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
+                  <Image
                     src={previewUrl}
                     alt="New partner image preview"
-                    className="h-full w-full object-contain"
+                    fill
+                    unoptimized
+                    className="object-contain"
                   />
                 </div>
               )}
-              {mediaError && <p className="text-red-500 text-xs mt-1">{mediaError}</p>}
+              {mediaError && <p className={errorTextClass}>{mediaError}</p>}
             </div>
             <div className="sm:flex-1">
-              <label className="text-sm font-semibold"> Existing Media Asset ID
+              <label className={labelClass}>Existing Media Asset ID
                 <input
                   type="number"
                   value={partnerInfo?.MediaAsset ?? ""}
@@ -554,7 +612,7 @@ export function EditPartnerProp(
                 />
               </label>
               {!previewUrl && partnerInfo.MediaAsset !== null && (
-                <div className="relative mt-2 h-40 overflow-hidden rounded border bg-gray-50">
+                <div className="relative mt-2 h-40 overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-gray-faint">
                   <PostImage
                     mediaID={partnerInfo.MediaAsset}
                     configVariant="banner"
@@ -562,12 +620,12 @@ export function EditPartnerProp(
                   />
                 </div>
               )}
-              <label className="mt-2 flex items-center gap-2 text-sm font-normal">
+              <label className={`${checkboxLabelClass} mt-2`}>
                 <input
                   type="checkbox"
                   checked={mediaVisible}
                   onChange={(e) => setMediaVisible(e.target.checked)}
-                  className="h-4 w-4"
+                  className={checkboxClass}
                 />
                 Image visible on the public site
               </label>
@@ -575,7 +633,7 @@ export function EditPartnerProp(
           </div>
 
           <div> {/*Website URL & Visible*/}
-            <label className="text-sm font-semibold">Website URL
+            <label className={labelClass}>Website URL
               <input
                 type="text"
                 value={partnerInfo?.Website ?? ""}
@@ -583,40 +641,43 @@ export function EditPartnerProp(
                 className={inputClass}
               />
             </label>
-            <label className="text-sm font-semibold flex items-center gap-2 mt-2">
+            <label className={`${checkboxLabelClass} mt-3`}>
               <input
                 type="checkbox"
                 checked={partnerInfo.isVisible}
                 onChange={(e) => setInfo(prev => ({ ...prev, isVisible: e.target.checked }))}
-                className="w-4 h-4"
-                />
-                Visible
+                className={checkboxClass}
+              />
+              Visible
             </label>
           </div>
         </div>
         {/* On phones: Save on top, Delete at the bottom */}
-        <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4">
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
           <button
-              onClick={async() => await validateAndSubmit(
+            type="button"
+            onClick={async() => await validateAndSubmit(
               {
                 partnerInfo: partnerInfo,
                 setWebsiteError: setWebsiteError,
                 type: "delete",
               })}
-               className="w-full bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600"
-            >
+            className={dangerButtonClass}
+          >
             Delete
           </button>
           <button
+            type="button"
             onClick={() => onChange(null)}
-            className="w-full bg-gray-500 text-white font-semibold px-4 py-2 rounded hover:bg-gray-600"
+            className={secondaryButtonClass}
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleUpdateSubmit}
             disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
-            className="w-full bg-blue-500 text-white font-semibold px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300"
+            className={primaryButtonClass}
           >
             Save
           </button>
@@ -749,7 +810,6 @@ async function validateAndSubmit(
     setWebsiteError: (value: string) => void;
     type: string;
   }){
-  let websiteURL: string = "";
 
   if (type === "delete"){
     const confirmed = window.confirm(
@@ -775,35 +835,25 @@ async function validateAndSubmit(
     return;
   };
 
-  if (partnerInfo.ContributionAmount < 0){
-    return;
-  }
+  if (partnerInfo.ContributionAmount < 0) return;
 
-  if (partnerInfo.Website != null && partnerInfo.Category == "partner"){
-    websiteURL = partnerInfo.Website
-   } else if (partnerInfo.Category != "partner"){
-    await updatePartnerTable({
-      partner: partnerInfo,
-      submissionType: type,
-      mediaFile,
-      mediaVisible: mediaVisible ?? true,
-    })
-    return;
-  }else {
+  const website = partnerInfo.Website?.trim() ?? "";
+
+  // Website is required for partners, optional for donors/sponsors
+  if (partnerInfo.Category === "partner" && website === "") {
     setWebsiteError("Please enter a valid URL");
     return;
   }
 
-  if (!(/^https?:\/\//i.test(websiteURL))) {
-    partnerInfo.Website = `https://${websiteURL}`;
-  }
+  partnerInfo.Website =
+    website === "" ? null : /^https?:\/\//i.test(website) ? website : `https://${website}`;
 
   await updatePartnerTable({
     partner: partnerInfo,
     submissionType: type,
     mediaFile,
     mediaVisible: mediaVisible ?? true,
-  })
+  });
 }
 
 function validateContribution(
