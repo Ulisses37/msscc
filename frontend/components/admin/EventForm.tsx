@@ -76,6 +76,10 @@ interface EventFormProps {
   errorMessage?: string;
   requireImage?: boolean;
   eventId?: number;
+  // True when the form is filling in a copy of another event.
+  isDuplicate?: boolean;
+  // Reports whether the form has unsaved changes.
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /**
@@ -106,6 +110,8 @@ export default function EventForm({
   errorMessage = '',
   requireImage = false,
   eventId,
+  isDuplicate = false,
+  onDirtyChange,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -136,6 +142,23 @@ export default function EventForm({
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const thumbnailUrlRef = useRef<string | null>(null);
+
+  // The first render is the saved or newly created form state. Any later difference is unsaved work.
+  const currentSnapshot = JSON.stringify({
+    formData,
+    photos: eventPhotos.map(({ file, ...photo }) => ({ ...photo, hasFile: file !== null })),
+    deletedEventPhotoIds,
+    hasNewMainImage: selectedFile !== null,
+  });
+  const initialSnapshotRef = useRef<string | null>(null);
+  if (initialSnapshotRef.current === null) {
+    initialSnapshotRef.current = currentSnapshot;
+  }
+  const isDirty = currentSnapshot !== initialSnapshotRef.current;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Free the preview URL when the form closes
   useEffect(() => {
@@ -441,11 +464,37 @@ export default function EventForm({
                   Add Volunteer Shifts
                 </button>
                 <p className="text-caption text-msscc-gray-mid mt-1">
-                  Save the event first to add volunteer shifts.
+                  {isDuplicate
+                    ? 'Volunteer shifts and signups are not copied. Save the event first, then add shifts to this copy.'
+                    : 'Save the event first to add volunteer shifts.'}
                 </p>
               </div>
             )}
           </div>
+
+          {volunteerSlots > 0 && (
+            <div className="mt-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.sendVolunteerReminders}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sendVolunteerReminders: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-msscc-teal"
+                />
+                <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+                  Send volunteer reminder emails
+                </span>
+              </label>
+              <p className="mt-1 ml-7 text-caption text-msscc-gray-mid">
+                Volunteers will receive a reminder email before the event starts.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Title + Datetimes + Location */}
@@ -738,31 +787,6 @@ export default function EventForm({
           )}
         </div>
       </section>
-
-      {/* Send Volunteer Reminders Checkbox (hidden when there are no volunteer slots) */}
-      {volunteerSlots > 0 && (
-        <div className="mt-6">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.sendVolunteerReminders}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  sendVolunteerReminders: e.target.checked,
-                }))
-              }
-              className="w-4 h-4 accent-msscc-teal"
-            />
-            <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
-              Send volunteer reminder emails
-            </span>
-          </label>
-          <p className="text-caption text-msscc-gray-mid mt-1 ml-7">
-            Volunteers will receive a reminder email before the event starts.
-          </p>
-        </div>
-      )}
 
       {/* Sticky save bar: stays pinned to the bottom of the viewport while scrolling.
           Messages live inside the bar so they're visible without scrolling down. */}
