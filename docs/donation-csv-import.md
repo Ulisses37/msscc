@@ -85,8 +85,11 @@ batch of the same normalized gifts.
 
 ## Review and confirmation (SCRUM-883 / SCRUM-884)
 
-On Admin > Donations, choose the filled CSV under **Review donation CSV**, then
-select **Upload and review CSV**. Review is read-only: even a valid review
+On Admin > Donations, open the compact **Import from CSV** section above the
+donations table, choose the filled CSV under **Review donation CSV**, then
+select **Upload and review CSV**. You can hide and reopen the section without
+discarding a paused review or an uncertain confirmation; keep the same browser
+page open when retrying. Review is read-only: even a valid review
 does not create donations. The preview displays backend-normalized amounts,
 dates, anonymity and payment methods, with unknown optional contacts left
 unknown. Correct row/field errors in the original CSV and re-upload it; there

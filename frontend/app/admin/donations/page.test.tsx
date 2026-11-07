@@ -47,6 +47,10 @@ function saveDonation() {
   fireEvent.click(screen.getByRole('button', { name: 'Confirm and save donation' }));
 }
 
+function openCsvImport() {
+  fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
+}
+
 describe('donation page manual-entry dialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -76,7 +80,13 @@ describe('donation page manual-entry dialog', () => {
       .mockRejectedValueOnce(new Error('private response'));
     render(<AdminDonationsPage />);
     const entry = screen.getByRole('region', { name: 'Add donations' });
+    // Routine list viewing should not start with a full import form above the table.
+    const toggle = screen.getByRole('button', { name: 'Import from CSV' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByLabelText('Donation CSV file')).not.toBeVisible();
+    openCsvImport();
     const csv = screen.getByRole('group', { name: 'Import from CSV' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(entry).toContainElement(csv);
     expect(entry).toContainElement(screen.getByRole('button', { name: 'Add donation' }));
     expect(csv).toContainElement(screen.getByRole('button', { name: 'Download donation CSV template' }));
@@ -96,8 +106,25 @@ describe('donation page manual-entry dialog', () => {
     expect(screen.queryByText('private response')).not.toBeInTheDocument();
   });
 
+  it('shows the donations table with a compact entry toolbar before import is opened', async () => {
+    jest.mocked(fetchFinancialRecords).mockResolvedValue([savedDonation]);
+    render(<AdminDonationsPage />);
+    const table = await screen.findByRole('table');
+    const entry = screen.getByRole('region', { name: 'Add donations' });
+    expect(entry.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('searchbox')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Add donation' })).toHaveClass('py-1.5');
+    expect(screen.getByRole('button', { name: 'Import from CSV' })).toHaveClass('py-1.5');
+    expect(screen.getByRole('button', { name: 'Download donation CSV template', hidden: true }))
+      .not.toBeVisible();
+    openCsvImport();
+    expect(screen.getByRole('button', { name: 'Download donation CSV template' })).toBeVisible();
+    expect(table).toBeVisible();
+  });
+
   it('places read-only CSV review alongside the existing manual donation workflow', async () => {
     render(<AdminDonationsPage />);
+    openCsvImport();
     expect(screen.getByRole('button', { name: 'Download donation CSV template' }))
       .toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add donation' })).toBeInTheDocument();
@@ -109,6 +136,32 @@ describe('donation page manual-entry dialog', () => {
     expect(previewDonationCsv).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: /confirm donation import/i })).toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the reviewed file and signed decision when the CSV section is collapsed', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+      review_token: 'signed-review',
+    });
+    render(<AdminDonationsPage />);
+    openCsvImport();
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const review = await screen.findByRole('dialog', { name: 'Donation CSV review' });
+    fireEvent.click(within(review).getByRole('button', { name: 'Close review' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide CSV import' }));
+    expect(screen.getByRole('button', { name: 'Import from CSV' }))
+      .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Reopen CSV review', hidden: true }))
+      .not.toBeVisible();
+    openCsvImport();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    expect(await screen.findByRole('dialog', { name: 'Donation CSV review' })).toBeInTheDocument();
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
+    expect(within(screen.getByRole('dialog', { name: 'Donation CSV review' }))
+      .getByRole('button', { name: 'Confirm donation import' })).toBeEnabled();
   });
 
   it('opens on an empty list, pauses polling, and resumes it when canceled', async () => {
@@ -195,6 +248,7 @@ describe('donation page manual-entry dialog', () => {
     })));
     jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => savedDonation } as Response);
     render(<AdminDonationsPage />);
+    openCsvImport();
     await screen.findByRole('table');
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Existing' } });
     await waitFor(() => expect(fetchFinancialRecords).toHaveBeenLastCalledWith('donations', 'Existing'));
@@ -234,6 +288,7 @@ describe('donation page manual-entry dialog', () => {
       .mockRejectedValueOnce(new Error('List unavailable'))
       .mockResolvedValue([]);
     render(<AdminDonationsPage />);
+    openCsvImport();
     await waitFor(() => expect(fetchFinancialRecords).toHaveBeenCalledTimes(1));
     fireEvent.change(screen.getByLabelText('Donation CSV file'), {
       target: { files: [new File(['fictional'], 'review.csv')] },

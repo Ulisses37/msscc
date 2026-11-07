@@ -132,6 +132,7 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
   //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminDonationsPage() {
   const [isAddingDonation, setIsAddingDonation] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   // Template failures belong to the import section, not the existing table or
   // single-record form; keep their loading/error state independent.
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
@@ -355,13 +356,23 @@ export default function AdminDonationsPage() {
 
       <main className="min-w-0 w-full">
         <section aria-labelledby="donation-entry-title"
-          className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
-          <h2 id="donation-entry-title" className="font-heading text-heading-3 text-msscc-teal">
-            Add donations
-          </h2>
-          <p className="mt-2 text-body-sm">
-            Add one already-received donation manually, or use a CSV to review and import a batch.
-          </p>
+          className="mb-4 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 id="donation-entry-title" className="mr-auto font-heading text-lg text-msscc-teal">
+              Add donations
+            </h2>
+            {!isAddingDonation && (
+              <button type="button" onClick={() => setIsAddingDonation(true)}
+                className="rounded-md bg-msscc-pink px-3 py-1.5 text-body-sm text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
+                Add donation
+              </button>
+            )}
+            <button type="button" aria-expanded={isImportOpen} aria-controls="donation-csv-group"
+              onClick={() => setIsImportOpen((open) => !open)}
+              className="rounded-md border border-msscc-pink px-3 py-1.5 text-body-sm text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink">
+              {isImportOpen ? 'Hide CSV import' : 'Import from CSV'}
+            </button>
+          </div>
           {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
           {savedDonationId !== null && (
             <button type="button" onClick={() => void viewSavedDonation()}
@@ -371,13 +382,8 @@ export default function AdminDonationsPage() {
             </button>
           )}
           {detailError && <p role="alert" className="mt-2 text-msscc-danger">{detailError}</p>}
-          <div className="mt-4">
-            {!isAddingDonation ? (
-              <button type="button" onClick={() => setIsAddingDonation(true)}
-                className="rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
-                Add donation
-              </button>
-            ) : (
+          {isAddingDonation && (
+            <div className="mt-4">
               <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
                 onCreated={({ donationId }) => {
                   setIsAddingDonation(false);
@@ -386,13 +392,16 @@ export default function AdminDonationsPage() {
                   setDetailError(null);
                   void fetchDonations();
                 }} />
-            )}
-          </div>
+            </div>
+          )}
           {/* Download, review and confirmation belong to one CSV workflow;
-              single-record entry and the table's configurable export do not. */}
-          <div role="group" aria-labelledby="donation-csv-group-title"
-            className="mt-6 min-w-0 border-t border-msscc-gray-light pt-5">
-            <h3 id="donation-csv-group-title" className="font-heading text-heading-3 text-msscc-teal">
+              single-record entry and the table's configurable export do not.
+              Hide rather than unmount: an uncertain confirmation must retain
+              its original file and signed review for the safe retry path. */}
+          <div id="donation-csv-group" role="group" aria-labelledby="donation-csv-group-title"
+            hidden={!isImportOpen}
+            className="mt-4 min-w-0 border-t border-msscc-gray-light pt-4">
+            <h3 id="donation-csv-group-title" className="font-heading text-lg text-msscc-teal">
               Import from CSV
             </h3>
             <p className="mt-2 text-body-sm">
