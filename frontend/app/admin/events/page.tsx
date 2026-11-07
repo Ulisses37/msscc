@@ -749,6 +749,7 @@ export default function EventsPage() {
               }
               initialImageUrl={duplicateSource?.media?.fileUrl ?? null}
               initialEventPhotos={duplicateSource ? selectedEventImages : []}
+              isDuplicate={Boolean(duplicateSource)}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel="Save"

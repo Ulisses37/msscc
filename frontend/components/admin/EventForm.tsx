@@ -76,6 +76,8 @@ interface EventFormProps {
   errorMessage?: string;
   requireImage?: boolean;
   eventId?: number;
+  // True when the form is filling in a copy of another event.
+  isDuplicate?: boolean;
 }
 
 /**
@@ -106,6 +108,7 @@ export default function EventForm({
   errorMessage = '',
   requireImage = false,
   eventId,
+  isDuplicate = false,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -441,7 +444,9 @@ export default function EventForm({
                   Add Volunteer Shifts
                 </button>
                 <p className="text-caption text-msscc-gray-mid mt-1">
-                  Save the event first to add volunteer shifts.
+                  {isDuplicate
+                    ? 'Volunteer shifts and signups are not copied. Save the event first, then add shifts to this copy.'
+                    : 'Save the event first to add volunteer shifts.'}
                 </p>
               </div>
             )}
