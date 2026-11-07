@@ -72,6 +72,7 @@ describe('membership table nullable values', () => {
       fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'other member' } });
       await waitFor(() => expect(fetchFinancialRecords).toHaveBeenLastCalledWith('memberships', 'other member'));
       const previousCalls = jest.mocked(fetchFinancialRecords).mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
       fireEvent.change(screen.getByLabelText('Membership CSV file'), {
         target: { files: [new File(['csv'], 'membership.csv')] },
       });
@@ -120,6 +121,7 @@ describe('membership table nullable values', () => {
     const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       render(<AdminMembershipsPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
       fireEvent.change(screen.getByLabelText('Membership CSV file'), {
         target: { files: [new File(['csv'], 'membership.csv')] },
       });
@@ -146,10 +148,19 @@ describe('membership table nullable values', () => {
 
   it('keeps the membership-only template separate from record export', async () => {
     render(<AdminMembershipsPage />);
-    // All creation paths belong together; table export stays outside this section.
+    // Everyday table work must be visible without opening the infrequent import form.
+    const table = await screen.findByRole('table');
     const entry = screen.getByRole('region', { name: 'Add memberships' });
-    const csvGroup = within(entry).getByRole('group', { name: 'Import from CSV' });
     expect(within(entry).getByRole('button', { name: 'Add membership' })).toBeInTheDocument();
+    const toggle = within(entry).getByRole('button', { name: 'Import from CSV' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('group', { name: 'Import from CSV' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox')).toBeVisible();
+    expect(table).toBeVisible();
+    fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Hide CSV import' })).toHaveAttribute('aria-expanded', 'true');
+    const csvGroup = within(entry).getByRole('group', { name: 'Import from CSV' });
+    expect(csvGroup).toBeVisible();
     expect(within(csvGroup).getByRole('heading', { name: 'Review membership CSV' })).toBeInTheDocument();
     expect(within(csvGroup).getByRole('button', { name: 'Upload and review CSV' })).toBeInTheDocument();
     expect(within(csvGroup).getByRole('button', { name: 'Download membership CSV template' })).toBeInTheDocument();
@@ -164,14 +175,39 @@ describe('membership table nullable values', () => {
     await waitFor(() => expect(downloadMembershipImportTemplate).toHaveBeenCalledTimes(1));
     expect(downloadCsv).not.toHaveBeenCalled();
     expect(downloadXlsx).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide CSV import' }));
+    expect(screen.queryByRole('group', { name: 'Import from CSV' })).not.toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeVisible();
   });
 
   it('reports template download failures without claiming records were created', async () => {
     jest.mocked(downloadMembershipImportTemplate).mockRejectedValue(new Error('denied'));
     render(<AdminMembershipsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
     fireEvent.click(screen.getByRole('button', { name: 'Download membership CSV template' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
     expect(screen.queryByText('Membership record saved.')).not.toBeInTheDocument();
+  });
+
+  it('preserves a paused CSV review across collapsing the action group', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      record_type: 'membership', row_count: 1, proposed_records: [],
+      errors: [], warnings: [], review_token: 'signed-review',
+    });
+    render(<AdminMembershipsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), {
+      target: { files: [new File(['csv'], 'membership.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    expect(await screen.findByRole('dialog', { name: 'Review membership CSV' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close review' }));
+    expect(screen.getByText('Review paused; no records have been saved.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide CSV import' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    expect(await screen.findByRole('dialog', { name: 'Review membership CSV' })).toBeInTheDocument();
+    expect(previewMembershipCsv).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes the filtered list and retrieves saved details outside its results', async () => {

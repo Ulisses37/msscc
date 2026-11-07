@@ -87,6 +87,7 @@ const membershipExportColumnWidths: Partial<Record<keyof MembershipEntry, number
 //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminMembershipsPage() {
   const [isAddingMembership, setIsAddingMembership] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [savedMembershipId, setSavedMembershipId] = useState<number | null>(null);
   const [isOpeningSavedMembership, setIsOpeningSavedMembership] = useState(false);
@@ -363,9 +364,19 @@ export default function AdminMembershipsPage() {
       </header>
 
       <main className="min-w-0 w-full">
-        <section aria-labelledby="membership-entry-title" className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
-          <h2 id="membership-entry-title" className="font-heading text-heading-3 text-msscc-teal">Add memberships</h2>
-          <p className="mt-2 text-body-sm">Add one membership manually, or download a template to review and import multiple memberships.</p>
+        <section aria-labelledby="membership-entry-title" className="mb-4 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 id="membership-entry-title" className="mr-auto font-heading text-lg text-msscc-teal">Add memberships</h2>
+            {!isAddingMembership && (
+              <button type="button" className="rounded-md bg-msscc-pink px-3 py-1.5 text-body-sm text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+                onClick={() => setIsAddingMembership(true)}>Add membership</button>
+            )}
+            <button type="button" aria-expanded={isImportOpen} aria-controls="membership-csv-group"
+              onClick={() => setIsImportOpen((open) => !open)}
+              className="rounded-md border border-msscc-pink px-3 py-1.5 text-body-sm text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink">
+              {isImportOpen ? 'Hide CSV import' : 'Import from CSV'}
+            </button>
+          </div>
           {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
           {savedMembershipId !== null && (
             <div className="mt-4">
@@ -379,10 +390,7 @@ export default function AdminMembershipsPage() {
               )}
             </div>
           )}
-          {!isAddingMembership ? (
-            <button type="button" className="mt-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
-              onClick={() => setIsAddingMembership(true)}>Add membership</button>
-          ) : (
+          {isAddingMembership && (
             <ManualMembershipForm
               onCancel={() => setIsAddingMembership(false)}
               onCreated={({ membershipId }) => {
@@ -395,10 +403,10 @@ export default function AdminMembershipsPage() {
               }}
             />
           )}
-          {/* These are one CSV workflow, separate from both single-entry saving
-              and the table's record-export menu. Preview alone never writes. */}
-          <div role="group" aria-labelledby="membership-csv-group-title"
-            className="mt-6 min-w-0 border-t border-msscc-gray-light pt-5">
+          {/* A closed import section stays mounted: unmounting would discard the
+              reviewed file/token needed to safely retry an uncertain save. */}
+          <div id="membership-csv-group" role="group" aria-labelledby="membership-csv-group-title"
+            hidden={!isImportOpen} className="mt-4 min-w-0 border-t border-msscc-gray-light pt-4">
             <h3 id="membership-csv-group-title" className="font-heading text-heading-3 text-msscc-teal">Import from CSV</h3>
             <p className="mt-2 text-body-sm">
               Download the template, fill one membership per row, then upload it to review.
@@ -409,7 +417,7 @@ export default function AdminMembershipsPage() {
               Need field formats or supported values? See <Link href="/admin/documentation"
                 className="text-msscc-pink underline">Documentation &amp; Help</Link> under Finances.
             </p>
-            <button type="button" className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+            <button type="button" className="mt-4 w-full rounded-md border border-msscc-pink px-3 py-1.5 text-body-sm text-msscc-pink disabled:opacity-50 sm:w-auto"
               disabled={isDownloadingTemplate}
               onClick={async () => {
                 setTemplateError(null);
