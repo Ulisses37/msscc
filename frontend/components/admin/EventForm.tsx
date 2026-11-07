@@ -78,6 +78,8 @@ interface EventFormProps {
   eventId?: number;
   // True when the form is filling in a copy of another event.
   isDuplicate?: boolean;
+  // Reports whether the form has unsaved changes.
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /**
@@ -109,6 +111,7 @@ export default function EventForm({
   requireImage = false,
   eventId,
   isDuplicate = false,
+  onDirtyChange,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -139,6 +142,23 @@ export default function EventForm({
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const thumbnailUrlRef = useRef<string | null>(null);
+
+  // The first render is the saved or newly created form state. Any later difference is unsaved work.
+  const currentSnapshot = JSON.stringify({
+    formData,
+    photos: eventPhotos.map(({ file, ...photo }) => ({ ...photo, hasFile: file !== null })),
+    deletedEventPhotoIds,
+    hasNewMainImage: selectedFile !== null,
+  });
+  const initialSnapshotRef = useRef<string | null>(null);
+  if (initialSnapshotRef.current === null) {
+    initialSnapshotRef.current = currentSnapshot;
+  }
+  const isDirty = currentSnapshot !== initialSnapshotRef.current;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Free the preview URL when the form closes
   useEffect(() => {

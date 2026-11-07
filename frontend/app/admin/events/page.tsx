@@ -54,6 +54,8 @@ export default function EventsPage() {
   const [isEditing, setIsEditing] = useState(false);
   // The event being copied, or null when creating a normal event or editing.
   const [duplicateSource, setDuplicateSource] = useState<Event | null>(null);
+  // Set by EventForm when it has changes that have not been saved.
+  const [isFormDirty, setIsFormDirty] = useState(false);
   const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const searchParams = useSearchParams();
@@ -491,7 +493,7 @@ export default function EventsPage() {
   /** Confirm before replacing an open form whose unsaved state is owned by EventForm. */
   const confirmReplaceForm = (
     message = 'Start a new form? Anything in the current form that has not been saved will be lost.',
-  ): boolean => !showForm || window.confirm(message);
+  ): boolean => !showForm || !isFormDirty || window.confirm(message);
 
   /** Open a fresh create form for an event copy. */
   const handleDuplicateEvent = async (event: Event) => {
@@ -651,10 +653,9 @@ export default function EventsPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        // A create or copy form holds work that is not saved anywhere yet.
+                        // Only asks when the open form has unsaved changes.
                         if (
-                          !isEditing
-                          && !confirmReplaceForm(
+                          !confirmReplaceForm(
                             'Leave this form? Anything you have entered that has not been saved will be lost.',
                           )
                         ) {
@@ -723,6 +724,7 @@ export default function EventsPage() {
               initialImageUrl={selectedEvent.media?.fileUrl ?? null}
               initialEventPhotos={selectedEventImages}
               onSubmit={handleUpdateEvent}
+              onDirtyChange={setIsFormDirty}
               isSubmitting={isSubmitting}
               submitLabel="Save Changes"
               successMessage={saveMessage}
@@ -751,6 +753,7 @@ export default function EventsPage() {
               initialEventPhotos={duplicateSource ? selectedEventImages : []}
               isDuplicate={Boolean(duplicateSource)}
               onSubmit={handleSubmit}
+              onDirtyChange={setIsFormDirty}
               isSubmitting={isSubmitting}
               submitLabel="Save"
               successMessage={saveMessage}
