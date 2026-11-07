@@ -20,7 +20,7 @@ export interface AdminPageInfo {
 
 // Name and Description pulled from frontend\app\admin\dashboard\pageDisplay.tsx for consistency
 // Array of pageInstructions allows for easy multi line explanations
-export const pageList: AdminPageInfo[] = [
+export const adminPageList: AdminPageInfo[] = [
   {
     ...getPage("Partners"),
     pageInstructions: [
@@ -136,6 +136,86 @@ export const pageList: AdminPageInfo[] = [
       {
         text: "This page only affects content **dynamically added** by this editor. It cannot edit existing static content that is hardcoded in the website itself.",
         variant: 'warning',
+      },
+    ],
+  },
+];
+
+// User-side (public-facing) pages. Same shape as the admin entries, so the
+// same inline markup works: **bold**, *italic*, {teal|text}, {green|text}, etc.
+// Unlike the admin list, these pages are not pulled from getPage() because
+// they are not admin dashboard pages, so name and description are written here.
+export const userPageList: AdminPageInfo[] = [
+  {
+    pageName: "Home",
+    pageDescription: "The landing page visitors see first",
+    pageInstructions: [
+      "The **Home** page is the first page most visitors see when they arrive at the MSSCC website.",
+      "It introduces MSSCC and points visitors toward the programs, events, donation options, and supporters found on the other pages.",
+      {
+        text: "Text and image content can be added to this page from the **Edit Pages** admin page.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    pageName: "Program|Events",
+    pageDescription: "MSSCC programs and upcoming events",
+    pageInstructions: [
+      "The **Program|Events** page is where visitors can see MSSCC programs and events.",
+      "Each event has its own user-side page. Clicking an event on the admin **Dashboard** carousel will take you there.",
+      {
+        text: "Additional text and images can be added to this page from the **Edit Pages** admin page.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    pageName: "Support",
+    pageDescription: "Donation options for supporters",
+    pageInstructions: [
+      "The **Support** page is where visitors can find the ways they can donate to MSSCC.",
+      "Donations made through the site appear in the **Donations** carousel on the admin Dashboard.",
+      {
+        text: "Additional text and images can be added to this page from the **Edit Pages** admin page.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    pageName: "Membership",
+    pageDescription: "Information about becoming a member",
+    pageInstructions: [
+      "The **Membership** page is where visitors can learn about joining MSSCC.",
+      "New memberships appear in the **Memberships** carousel on the admin Dashboard.",
+      {
+        text: "Additional text and images can be added to this page from the **Edit Pages** admin page.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    pageName: "About|Board",
+    pageDescription: "MSSCC Officers and Directors",
+    pageInstructions: [
+      "The **About|Board** page shows the MSSCC Officers and Directors.",
+      "Its content is managed from the **Board of Directors** admin page, and updates there are reflected here.",
+      {
+        text: "Additional text and images can be added to this page from the **Edit Pages** admin page.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    pageName: "Partners",
+    pageDescription: "Partners, donors, and sponsors",
+    pageInstructions: [
+      "The **Partners** page displays MSSCC's Partners, Donors, and Sponsors.",
+      "Its entries are managed from the **Partners** admin page.",
+      "Entries with a **Website URL** are clickable and link to that page.",
+      {
+        text: "Entries with the **Visible** checkbox unchecked on the admin side will not appear here.",
+        variant: 'note',
       },
     ],
   },

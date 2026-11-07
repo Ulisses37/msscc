@@ -3,13 +3,27 @@
 import React, { useState } from 'react';
 import type { Instruction, InstructionVariant } from './pageDocumentation';
 
+type AccordionColor = 'pink' | 'teal';
+
 interface PageAccordionProps {
   pageName: string;
   pageDescription: string;
   pageInstructions: Instruction[];
+  color?: AccordionColor; // pink = admin side (default), teal = user side
 }
 
 // Full class names so Tailwind can detect them
+const THEMES: Record<AccordionColor, { title: string; hover: string }> = {
+  pink: {
+    title: 'text-msscc-pink',
+    hover: 'hover:bg-msscc-pink-light/40',
+  },
+  teal: {
+    title: 'text-msscc-teal',
+    hover: 'hover:bg-msscc-teal-light/40',
+  },
+};
+
 const COLOR_CLASSES: Record<string, string> = {
   pink: 'text-msscc-pink font-semibold',
   teal: 'text-msscc-teal font-semibold',
@@ -51,8 +65,10 @@ export default function PageAccordion({
   pageName,
   pageDescription,
   pageInstructions,
+  color = 'pink',
 }: PageAccordionProps) {
   const [open, setOpen] = useState(false);
+  const theme = THEMES[color];
 
   return (
     <div className="border-b border-msscc-gray-light last:border-b-0">
@@ -60,10 +76,10 @@ export default function PageAccordion({
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-msscc-pink-light/40 sm:gap-4 sm:py-4"
+        className={`flex w-full items-center justify-between gap-3 rounded-md px-2 py-3 text-left transition-colors sm:gap-4 sm:py-4 ${theme.hover}`}
       >
         <div className="min-w-0">
-          <div className="break-words text-sm font-semibold text-msscc-pink sm:text-base">{pageName}</div>
+          <div className={`break-words text-sm font-semibold sm:text-base ${theme.title}`}>{pageName}</div>
           <div className="break-words text-xs text-gray-600 sm:text-sm">{pageDescription}</div>
         </div>
         <svg
