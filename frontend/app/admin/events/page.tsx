@@ -52,6 +52,8 @@ export default function EventsPage() {
   // Remount the form after saving so local photo IDs are replaced with database IDs.
   const [formVersion, setFormVersion] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  // The event being copied, or null when creating a normal event or editing.
+  const [duplicateSource, setDuplicateSource] = useState<Event | null>(null);
   const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const searchParams = useSearchParams();
@@ -129,7 +131,7 @@ export default function EventsPage() {
     if (showForm && mainRef.current) {
       mainRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [showForm, selectedEvent?.id]);
+  }, [showForm, selectedEvent?.id, duplicateSource?.id]);
 
   // Auto-dismiss save feedback so it doesn't linger in the sticky save bar
   useEffect(() => {
@@ -480,7 +482,27 @@ export default function EventsPage() {
         : undefined,
     });
 
+    setDuplicateSource(null);
     setIsEditing(true);
+    setShowForm(true);
+  };
+
+  /** Confirm before replacing an open form whose unsaved state is owned by EventForm. */
+  const confirmReplaceForm = (
+    message = 'Start a new form? Anything in the current form that has not been saved will be lost.',
+  ): boolean => !showForm || window.confirm(message);
+
+  /** Open a fresh create form for an event copy. */
+  const handleDuplicateEvent = (event: Event) => {
+    if (!confirmReplaceForm()) return;
+
+    setSelectedEvent(null);
+    // Photos from a previously edited event must not leak into the copy.
+    setSelectedEventImages([]);
+    setIsEditing(false);
+    setDuplicateSource(event);
+    // Remount the create form so it starts fresh for this copy.
+    setFormVersion((currentVersion) => currentVersion + 1);
     setShowForm(true);
   };
 
@@ -494,10 +516,17 @@ export default function EventsPage() {
         <button
           type="button"
           onClick={() => {
+            // Only a copy needs clearing. A plain create form keeps what was typed.
+            if (duplicateSource && !confirmReplaceForm()) return;
+
             setSelectedEvent(null);
             // Prevent photos from the previously edited event appearing in the create form.
             setSelectedEventImages([]);
             setIsEditing(false);
+            if (duplicateSource) {
+              setDuplicateSource(null);
+              setFormVersion((currentVersion) => currentVersion + 1);
+            }
             setShowForm(true);
           }}
           className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors text-left"
@@ -598,10 +627,29 @@ export default function EventsPage() {
                   <div className="mt-2 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => handleEditEvent(event)}
+                      onClick={() => {
+                        // A create or copy form holds work that is not saved anywhere yet.
+                        if (
+                          !isEditing
+                          && !confirmReplaceForm(
+                            'Leave this form? Anything you have entered that has not been saved will be lost.',
+                          )
+                        ) {
+                          return;
+                        }
+                        handleEditEvent(event);
+                      }}
                       className="text-body-sm text-msscc-teal underline"
                     >
                       Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDuplicateEvent(event)}
+                      className="text-body-sm text-msscc-teal underline"
+                    >
+                      Duplicate
                     </button>
 
                     <button
@@ -624,7 +672,11 @@ export default function EventsPage() {
       <main ref={mainRef} className="flex-1 p-4 sm:p-10 max-w-content mx-auto w-full">
 
         <h1 className="font-heading text-display text-msscc-teal border-b border-msscc-gray-light pb-4 mb-10">
-          {isEditing ? 'Edit Event' : 'Create Event'}
+          {isEditing
+            ? 'Edit Event'
+            : duplicateSource
+              ? `Create Event (copy of ${duplicateSource.titleEn})`
+              : 'Create Event'}
         </h1>
 
         {showForm ? (
@@ -655,6 +707,7 @@ export default function EventsPage() {
             />
           ) : (
             <EventForm
+              key={`create-${formVersion}`}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel="Save"
