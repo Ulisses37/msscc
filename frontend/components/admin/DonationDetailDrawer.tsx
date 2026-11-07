@@ -15,7 +15,7 @@ export type DonationEntry = {
   donor_first_name: string | null;
   donor_last_name: string | null;
   donor_email: string | null;
-  record_source?: 'manual' | 'checkout' | 'unknown';
+  record_source?: 'manual' | 'checkout' | 'csv_import' | 'unknown';
   payment_method?: 'cash' | 'check' | null;
   external_reference?: string;
   address?: string | null;
@@ -113,6 +113,9 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const isManual = donation.record_source === 'manual';
+  // CSV imports record already-received gifts, not online charges. Preserve
+  // the manual/offline amount presentation while identifying their true origin.
+  const isOffline = isManual || donation.record_source === 'csv_import';
   const email = donation.donor_email?.trim() ?? '';
   const emailHref = z.email().safeParse(email).success ? `mailto:${encodeURIComponent(email)}` : null;
 
@@ -228,7 +231,7 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
 
           <DetailSection title="Donation">
             <DetailField label="Date" value={formatDate(donation.donation_date)} />
-            <DetailField label={isManual ? 'Donation amount' : 'Base donation'}
+            <DetailField label={isOffline ? 'Donation amount' : 'Base donation'}
               value={formatCurrency(Number(donation.amount))} />
             <DetailField label="Message" value={donation.message} preserveWhitespace />
           </DetailSection>
@@ -236,7 +239,7 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
           {/* The existing amount means the base donation, not the Stripe
               charge; show the saved contribution and total for reconciliation. */}
           <DetailSection title="Payment">
-            {isManual ? (
+            {isOffline ? (
               <p className="py-3 text-body-sm text-msscc-gray-dark">
                 Recorded offline donation. No online processing-cost contribution was added.
               </p>
@@ -244,7 +247,7 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
               <DetailField label="Processing-cost contribution"
                 value={formatCurrency(Number(donation.processing_cost_contribution))} />
             )}
-            <DetailField label={isManual ? 'Recorded total' : 'Total payment'}
+            <DetailField label={isOffline ? 'Recorded total' : 'Total payment'}
               value={formatCurrency(Number(donation.total_amount))} />
             <DetailField label="Payment status" value={donation.payment_status} />
             <DetailField label="Payment method" value={donation.payment_method === 'cash'
@@ -256,7 +259,8 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
           <DetailSection title="Record information">
             <DetailField label="Donation ID" value={donation.donation_id} />
             <DetailField label="Record origin" value={isManual ? 'Manual'
-              : donation.record_source === 'checkout' ? 'Online checkout' : 'Unknown'} />
+              : donation.record_source === 'csv_import' ? 'CSV import'
+                : donation.record_source === 'checkout' ? 'Online checkout' : 'Unknown'} />
             <DetailField label="Created" value={formatDateTime(donation.created_at)} />
           </DetailSection>
         </div>

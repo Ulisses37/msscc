@@ -138,6 +138,7 @@ export default function AdminDonationsPage() {
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [savedDonationId, setSavedDonationId] = useState<number | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [hasImportReceipt, setHasImportReceipt] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const detailRequestStarted = useRef(false);
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
@@ -425,9 +426,16 @@ export default function AdminDonationsPage() {
           </button>
           {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
         </section>
-        {/* Review is read-only and stays separate from the existing single-record
-            form and configurable exports. No callback here can save a batch. */}
-        <DonationCsvReview />
+        {/* Refresh the current search on either a new receipt or an idempotent
+            retry. Saved IDs can open the drawer even when the table hides them. */}
+        <DonationCsvReview onConfirmed={() => {
+          setHasImportReceipt(true);
+          void fetchDonations();
+        }} onViewSavedDonation={setSelectedDonation} />
+        {hasImportReceipt && error && <button type="button" onClick={() => void fetchDonations()}
+          className="mb-4 rounded-md border border-msscc-gray-light px-4 py-2">
+          Retry donation list refresh
+        </button>}
         {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
         {savedDonationId !== null && (
           <button type="button" onClick={() => void viewSavedDonation()}

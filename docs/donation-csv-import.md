@@ -103,10 +103,21 @@ normalized batch is imported at most once, even when its CSV formatting differs.
 Confirmation returns a batch ID and count, not an editable upload or a payment
 receipt. Do not use real donor data for testing and do not confirm on production.
 
-## Remaining result navigation (SCRUM-885)
+## Saved results (SCRUM-885)
 
-The current receipt identifies the batch and created count. SCRUM-885 will
-refresh the donation list and offer access to its saved donations, even
-if the current list search hides them. A lost confirmation response must be
-resolved by a safe retry or authorized batch lookup, not by assuming no rows
-were saved. No payment, receipt email or mailing-list actions occur on import.
+A successful confirmation, including a retry that finds an existing batch,
+shows the batch ID and created count. The donations list refreshes using its
+current search without resetting sorting or pagination. A historical donation
+may not appear in those results: choose its ID under **Saved donation ID** and
+select **View imported donation** to load the saved facts through the authorized
+detail endpoint. A failed detail read can be retried without importing again.
+If the list refresh fails, use **Retry donation list refresh**; the batch receipt
+remains visible. The drawer identifies CSV import as the origin and presents
+its already-received amount without online processing costs.
+
+After an uncertain confirmation response, keep the same browser page, file and
+review and retry confirmation to recover the original receipt. Closing or
+refreshing the page loses the in-memory file and signed review; there is no
+standalone batch lookup. Do not assume a lost response means no records saved,
+and do not submit a different file to test for success. No payment, receipt
+email or mailing-list actions occur on import.

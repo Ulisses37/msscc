@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { confirmDonationCsv, DonationCsvReviewRejected, previewDonationCsv } from '@/services/donationImportPreview';
+import { fetchSavedDonation } from '@/services/manualDonation';
 
 import { DonationCsvReview } from './DonationCsvReview';
 
@@ -12,6 +13,7 @@ jest.mock('@/services/donationImportPreview', () => ({
     constructor(public reason: 'review' | 'access') { super('Review again.'); }
   },
 }));
+jest.mock('@/services/manualDonation', () => ({ fetchSavedDonation: jest.fn() }));
 
 const file = new File(['fictional rows'], 'donations.csv', { type: 'text/csv' });
 const proposed = {
@@ -28,9 +30,18 @@ const reviewed = {
   warnings: [{ row: 2, reason: 'existing_reference_amount_date',
     message: 'A saved donation shares the ledger reference, amount and date; review it.' }],
 };
+const onConfirmed = jest.fn();
+const onViewSavedDonation = jest.fn();
+
+function Review() {
+  return <DonationCsvReview onConfirmed={onConfirmed} onViewSavedDonation={onViewSavedDonation} />;
+}
 
 describe('donation CSV review and signed confirmation', () => {
   beforeEach(() => {
+    onConfirmed.mockClear();
+    onViewSavedDonation.mockClear();
+    jest.mocked(fetchSavedDonation).mockReset().mockResolvedValue({ donation_id: 8 } as never);
     jest.mocked(previewDonationCsv).mockReset().mockResolvedValue(reviewed);
     jest.mocked(confirmDonationCsv).mockReset().mockResolvedValue({
       record_type: 'donation', batch_id: 'test-batch', created_count: 2,
@@ -39,7 +50,7 @@ describe('donation CSV review and signed confirmation', () => {
   });
 
   it('renders normalized facts, anonymous correction and warnings as safe text', async () => {
-    const { container } = render(<DonationCsvReview />);
+    const { container } = render(<Review />);
     fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
     expect(await screen.findByText(/Donation preview: 2 data rows/)).toBeInTheDocument();
@@ -61,7 +72,7 @@ describe('donation CSV review and signed confirmation', () => {
   });
 
   it('keeps ten columns readable in a keyboard-accessible mobile scroll region', async () => {
-    render(<DonationCsvReview />);
+    render(<Review />);
     const picker = screen.getByLabelText('Donation CSV file');
     expect(picker).toHaveClass('w-full', 'min-w-0', 'max-w-full');
     fireEvent.change(picker, { target: { files: [file] } });
@@ -91,7 +102,7 @@ describe('donation CSV review and signed confirmation', () => {
   });
 
   it('resets acknowledgment and proposals on selection, re-upload, and cancel', async () => {
-    render(<DonationCsvReview />);
+    render(<Review />);
     const picker = screen.getByLabelText('Donation CSV file');
     fireEvent.change(picker, { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
@@ -110,7 +121,7 @@ describe('donation CSV review and signed confirmation', () => {
     jest.mocked(previewDonationCsv).mockImplementation(() => new Promise((_, reject) => {
       rejectRequest = reject;
     }));
-    render(<DonationCsvReview />);
+    render(<Review />);
     fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
     expect(screen.getByRole('button', { name: 'Reviewing CSV…' })).toBeDisabled();
@@ -126,7 +137,7 @@ describe('donation CSV review and signed confirmation', () => {
     jest.mocked(previewDonationCsv).mockImplementation(() => new Promise((resolve) => {
       resolveRequest = resolve;
     }));
-    render(<DonationCsvReview />);
+    render(<Review />);
     const picker = screen.getByLabelText('Donation CSV file');
     fireEvent.change(picker, { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
@@ -140,7 +151,7 @@ describe('donation CSV review and signed confirmation', () => {
     jest.mocked(previewDonationCsv).mockResolvedValue({
       ...reviewed, errors: [], review_token: 'signed-review',
     });
-    render(<DonationCsvReview />);
+    render(<Review />);
     fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
     const confirm = await screen.findByRole('button', { name: 'Confirm donation import' });
@@ -152,6 +163,54 @@ describe('donation CSV review and signed confirmation', () => {
     expect(confirmDonationCsv).toHaveBeenCalledWith(file, 'signed-review', true);
     expect(screen.queryByText(/no donations have been saved/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Confirm donation import' })).toBeNull();
+    expect(onConfirmed).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Saved donation ID')).toHaveValue('7');
+  });
+
+  it.each([false, true])('opens an authorized saved ID outside the list, retry receipt %p', async (alreadyImported) => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmDonationCsv).mockResolvedValue({
+      record_type: 'donation', batch_id: 'batch-1', created_count: 2,
+      donation_ids: [7, 8], already_imported: alreadyImported,
+    });
+    render(<Review />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByText(/Batch batch-1: 2 donations/)).toBeInTheDocument();
+    expect(onConfirmed).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByLabelText('Saved donation ID'), { target: { value: '8' } });
+    fireEvent.click(screen.getByRole('button', { name: 'View imported donation' }));
+    await act(async () => {});
+    expect(fetchSavedDonation).toHaveBeenCalledWith(8);
+    expect(onViewSavedDonation).toHaveBeenCalledWith(expect.objectContaining({ donation_id: 8 }));
+  });
+
+  it('retains the receipt when detail read fails and prevents repeated requests', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    let rejectDetail!: (error: Error) => void;
+    jest.mocked(fetchSavedDonation).mockImplementationOnce(() => new Promise((_, reject) => {
+      rejectDetail = reject;
+    }));
+    render(<Review />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));
+    await screen.findByText(/Batch test-batch: 2 donations/);
+    fireEvent.click(screen.getByRole('button', { name: 'View imported donation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Loading imported donation…' }));
+    expect(fetchSavedDonation).toHaveBeenCalledTimes(1);
+    await act(async () => rejectDetail(new Error('private error')));
+    expect(screen.getByRole('alert')).toHaveTextContent('batch was saved');
+    expect(screen.getByText(/Batch test-batch: 2 donations/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View imported donation' }));
+    await act(async () => {});
+    expect(fetchSavedDonation).toHaveBeenCalledTimes(2);
+    expect(confirmDonationCsv).toHaveBeenCalledTimes(1);
   });
 
   it('keeps same file and token after uncertain reply for safe retry, without duplicate clicks', async () => {
@@ -162,7 +221,7 @@ describe('donation CSV review and signed confirmation', () => {
     jest.mocked(confirmDonationCsv).mockImplementationOnce(() => new Promise((_, reject) => {
       rejectRequest = reject;
     }));
-    render(<DonationCsvReview />);
+    render(<Review />);
     fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
     const confirm = await screen.findByRole('button', { name: 'Confirm donation import' });
@@ -186,7 +245,7 @@ describe('donation CSV review and signed confirmation', () => {
       ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
     });
     jest.mocked(confirmDonationCsv).mockRejectedValue(new DonationCsvReviewRejected('review'));
-    render(<DonationCsvReview />);
+    render(<Review />);
     fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
     fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));

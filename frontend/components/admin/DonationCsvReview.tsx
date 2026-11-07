@@ -3,7 +3,9 @@
 import { useRef, useState } from 'react';
 
 import { confirmDonationCsv, DonationCsvReviewRejected, previewDonationCsv } from '@/services/donationImportPreview';
+import { fetchSavedDonation } from '@/services/manualDonation';
 import type { DonationCsvConfirmation, DonationCsvPreview } from '@/services/donationImportPreview';
+import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 
 // The server owns parsing; this order only labels normalized, authorized data.
 // It must stay aligned with the donation-only template and contract tests.
@@ -13,8 +15,13 @@ const HEADERS = [
   'external_reference', 'message',
 ] as const;
 
-/** Review donation proposals and warnings without exposing a save action. */
-export function DonationCsvReview() {
+interface DonationCsvReviewProps {
+  onConfirmed: () => void;
+  onViewSavedDonation: (donation: DonationEntry) => void;
+}
+
+/** Review donations and use the server's receipt to inspect saved records. */
+export function DonationCsvReview({ onConfirmed, onViewSavedDonation }: DonationCsvReviewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<DonationCsvPreview | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -22,6 +29,10 @@ export function DonationCsvReview() {
   const [confirming, setConfirming] = useState(false);
   const [confirmationAttempted, setConfirmationAttempted] = useState(false);
   const [confirmation, setConfirmation] = useState<DonationCsvConfirmation | null>(null);
+  const [selectedImportId, setSelectedImportId] = useState<number | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const detailInFlight = useRef(false);
   const [reviewRejected, setReviewRejected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestVersion = useRef(0);
@@ -38,6 +49,10 @@ export function DonationCsvReview() {
     setError(null);
     setReviewRejected(false);
     setConfirmation(null);
+    setSelectedImportId(null);
+    setLoadingDetail(false);
+    setDetailError(null);
+    detailInFlight.current = false;
     setConfirmationAttempted(false);
     inFlight.current = false;
   }
@@ -53,7 +68,13 @@ export function DonationCsvReview() {
     setError(null);
     try {
       const result = await confirmDonationCsv(file, preview.review_token, acknowledged);
-      if (version === requestVersion.current) setConfirmation(result);
+      if (version === requestVersion.current) {
+        setConfirmation(result);
+        setSelectedImportId(result.donation_ids[0]);
+        // A retry that returns an existing batch is still a successful receipt:
+        // refresh the active list rather than assuming its cached rows include it.
+        onConfirmed();
+      }
     } catch (failure) {
       if (version === requestVersion.current) {
         if (failure instanceof DonationCsvReviewRejected) {
@@ -67,6 +88,30 @@ export function DonationCsvReview() {
       if (version === requestVersion.current) {
         inFlight.current = false;
         setConfirming(false);
+      }
+    }
+  }
+
+  async function viewImportedDonation() {
+    if (!confirmation || selectedImportId === null || detailInFlight.current
+      || !confirmation.donation_ids.includes(selectedImportId)) return;
+    detailInFlight.current = true;
+    const version = requestVersion.current;
+    setLoadingDetail(true);
+    setDetailError(null);
+    try {
+      // A receipt contains IDs, not display data. The authorized detail API
+      // returns current saved facts even if search/pagination hides this row.
+      const donation = await fetchSavedDonation(selectedImportId);
+      if (version === requestVersion.current) onViewSavedDonation(donation);
+    } catch {
+      if (version === requestVersion.current) {
+        setDetailError('The batch was saved, but its donation details could not be loaded. Try viewing it again.');
+      }
+    } finally {
+      if (version === requestVersion.current) {
+        detailInFlight.current = false;
+        setLoadingDetail(false);
       }
     }
   }
@@ -201,6 +246,25 @@ export function DonationCsvReview() {
           {confirmation.already_imported ? 'This batch was already imported.' : 'Donation batch saved.'}
           {' '}Batch {confirmation.batch_id}: {confirmation.created_count} donations.
         </p>}
+        {confirmation && <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0">
+            <label htmlFor="donation-csv-saved-id" className="block text-body-sm">Saved donation ID</label>
+            <select id="donation-csv-saved-id" value={selectedImportId ?? ''}
+              disabled={loadingDetail}
+              onChange={(event) => {
+                setSelectedImportId(Number(event.target.value));
+                setDetailError(null);
+              }}
+              className="mt-1 w-full max-w-full rounded-md border border-msscc-gray-light px-3 py-2">
+              {confirmation.donation_ids.map((id) => <option key={id} value={id}>Donation {id}</option>)}
+            </select>
+          </div>
+          <button type="button" disabled={loadingDetail} onClick={() => void viewImportedDonation()}
+            className="rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
+            {loadingDetail ? 'Loading imported donation…' : 'View imported donation'}
+          </button>
+        </div>}
+        {detailError && <p role="alert" className="mt-2 text-msscc-danger">{detailError}</p>}
       </div>}
     </section>
   );

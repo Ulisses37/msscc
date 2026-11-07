@@ -70,6 +70,19 @@ describe('DonationDetailDrawer addresses', () => {
     expect(screen.getByText('Record origin').closest('div')).toHaveTextContent('Online checkout');
   });
 
+  it('shows CSV import provenance as an offline received donation', () => {
+    render(<DonationDetailDrawer donation={{
+      ...donation, record_source: 'csv_import', amount: '35.00', total_amount: '35.00',
+      payment_method: 'check', external_reference: 'Ledger entry',
+    }} onClose={jest.fn()} />);
+    expect(screen.getByText('Record origin').closest('div')).toHaveTextContent('CSV import');
+    expect(screen.getByText('Donation amount').closest('div')).toHaveTextContent('$35.00');
+    expect(screen.getByText('Recorded total').closest('div')).toHaveTextContent('$35.00');
+    expect(screen.getByText(/No online processing-cost contribution was added/)).toBeInTheDocument();
+    expect(screen.queryByText('Processing-cost contribution')).not.toBeInTheDocument();
+    expect(screen.getByText('External reference').closest('div')).toHaveTextContent('Ledger entry');
+  });
+
   it('hides supplied names as well as the address when anonymous', () => {
     render(<DonationDetailDrawer donation={{
       ...donation, is_anonymous: true, donor_first_name: 'Private first',
