@@ -22,7 +22,7 @@ export function SiteAnalytics(){
   },[])
 
     return(
-      <div className="bg-msscc-pink text-msscc-white py-2">
+      <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm">
         <div className="text-center font-body font-bold"> MSSCC Site Visits</div>
         <div className="grid grid-cols-2 sm:flex-1 lg:flex-none">
           <div className="rounded-sm py-2 text-center ">

@@ -4,16 +4,29 @@ import { useState, useEffect } from 'react';
 
 import { PartnerProp, PartnerTable, PartnerTableHeader, CreatePartnerProp, EditPartnerProp } from "./partnersComponents"
 
+const SECTIONS = [
+  { category: "partner", title: "Partners", addLabel: "Add partner", emptyLabel: "No partners found." },
+  { category: "donor", title: "Donors", addLabel: "Add donor", emptyLabel: "No donors found." },
+  { category: "sponsor", title: "Sponsors", addLabel: "Add sponsor", emptyLabel: "No sponsors found." },
+] as const;
+
+// Each table shows at most this many rows at a time.
+const PAGE_SIZE = 20;
 
 export default function Partners(){
   const [partners, setPartners] = useState<PartnerProp[]>([]);
   const [popUp, setPopUp] = useState<"partner" | "donor" | "sponsor" | null>(null);
   const [editPopUp, setEditPopUp] = useState<PartnerProp | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // fetch partners from database
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Unable to load partners (${res.status}).`);
+        return res.json();
+      })
       .then((partnerRecords: {
           partner_id: number;
           display_name_en: string;
@@ -45,53 +58,35 @@ export default function Partners(){
 
         setPartners(mappedPartners);
       })
-      .catch(error => console.error('Error fetching partners:', error));
+      .catch(err => {
+        console.error('Error fetching partners:', err);
+        setError(err instanceof Error ? err.message : 'Unable to load partners.');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   return(
-    <div className="min-h-dvh bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
+    <div className="min-h-dvh bg-msscc-white p-0 font-body text-msscc-gray-dark sm:p-6 md:p-10">
       <header className="mb-6 border-b border-msscc-gray-light pb-4 md:mb-8">
-        <h1 className="font-heading text-2xl text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
+        <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">Partners, Donors, & Sponsors</h1>
       </header>
 
-      {/* Partners */}
-      <div className="w-full rounded border border-gray-300 bg-msscc-gray-faint p-2 my-2">
-        <div className="flex justify-between items-center">
-          <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Partners</div>
-          <AddButton label="Add partner" onClick={() => setPopUp("partner")} />
-        </div>
-        <PartnerTableHeader showWebsite />
-        <PartnerTable
-          rowData={partners.filter(p => p.Category === "partner")}
-          setEditPop={setEditPopUp}
-        />
-      </div>
+      <main className="w-full">
+        {error && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{error}</div>}
+        {isLoading && !error && <div className="mb-4 border border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">Loading partners...</div>}
 
-      {/* Donors */}
-      <div className="w-full rounded border border-gray-300 bg-msscc-gray-faint p-2 my-2">
-        <div className="flex justify-between items-center">
-          <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Donors</div>
-          <AddButton label="Add donor" onClick={() => setPopUp("donor")} />
-        </div>
-        <PartnerTableHeader />
-        <PartnerTable
-          rowData={partners.filter(p => p.Category === "donor")}
-          setEditPop={setEditPopUp}
-        />
-      </div>
-
-      {/* Sponsors */}
-      <div className="w-full rounded border border-gray-300 bg-msscc-gray-faint p-2 my-2">
-        <div className="flex justify-between items-center">
-          <div className="text-2xl sm:text-3xl text-left font-bold ml-2 text-msscc-gray">Sponsors</div>
-          <AddButton label="Add sponsor" onClick={() => setPopUp("sponsor")} />
-        </div>
-        <PartnerTableHeader />
-        <PartnerTable
-          rowData={partners.filter(p => p.Category === "sponsor")}
-          setEditPop={setEditPopUp}
-        />
-      </div>
+        {!isLoading && !error && SECTIONS.map(({ category, title, addLabel, emptyLabel }) => (
+          <PartnerSection
+            key={category}
+            title={title}
+            addLabel={addLabel}
+            emptyLabel={emptyLabel}
+            rows={partners.filter(p => p.Category === category)}
+            onAdd={() => setPopUp(category)}
+            onEdit={setEditPopUp}
+          />
+        ))}
+      </main>
 
       {/* Pop-ups */}
       {popUp !== null && (
@@ -114,15 +109,73 @@ export default function Partners(){
   )
 }
 
+// Each section owns its own page number and page size, so paging one table never affects the others.
+function PartnerSection({
+  title,
+  addLabel,
+  emptyLabel,
+  rows,
+  onAdd,
+  onEdit,
+}: {
+  title: string;
+  addLabel: string;
+  emptyLabel: string;
+  rows: PartnerProp[];
+  onAdd: () => void;
+  onEdit: (value: PartnerProp) => void;
+}) {
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const sortedRows = rows.slice().sort((a, b) => a.DisplayOrder - b.DisplayOrder);
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
+
+  // Deleting or moving rows can leave the current page past the end; clamp it back into range.
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+    if (currentPage < 1) setCurrentPage(1);
+  }, [currentPage, totalPages]);
+
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const pageRows = sortedRows.slice(startIndex, startIndex + PAGE_SIZE);
+
+  return (
+    <section className="mb-10">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-heading text-xl text-msscc-teal sm:text-2xl">{title}</h2>
+        <AddButton label={addLabel} onClick={onAdd} />
+      </div>
+
+      {sortedRows.length > 0 ? (
+        <div className="border border-msscc-gray-light">
+          <PartnerTableHeader
+            currentPage={currentPage}
+            totalPages={totalPages}
+            firstEntry={startIndex + 1}
+            shownEntries={Math.min(startIndex + PAGE_SIZE, sortedRows.length)}
+            totalEntries={sortedRows.length}
+            onPrevious={() => setCurrentPage(page => Math.max(1, page - 1))}
+            onNext={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+          />
+          <PartnerTable rowData={pageRows} setEditPop={onEdit} />
+        </div>
+      ) : (
+        <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">
+          {emptyLabel}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
-      className="w-10 h-10 sm:w-8 sm:h-8 mx-2 sm:mx-4 bg-green-400 text-white font-bold rounded hover:bg-green-600 flex items-center justify-center"
+      className="rounded-md bg-msscc-pink px-3 py-1 text-body-sm text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
     >
-      +
+      {label}
     </button>
   );
 }
