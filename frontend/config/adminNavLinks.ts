@@ -11,7 +11,7 @@ export const adminNavLinks: NavLink[] = [
   { label: 'Edit Pages', href: '/admin/editpages' },
   { label: 'Permissions Pages', href: '/admin/permissions' },
   { label: 'Documentation Pages', href: '/admin/documentation' },
-  { label: 'Board of Directors', href: '/admin/board-of-directors'},
+  { label: 'Directors', href: '/admin/board-of-directors'},
   { label: 'Partners', href: '/admin/partners'},
   { label: 'Media', href: '/admin/media-manage' },
 ];
