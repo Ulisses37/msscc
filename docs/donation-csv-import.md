@@ -15,8 +15,8 @@ existing configurable CSV/XLSX donation exports are **not** import templates.
   `POST /api/donations/import/preview/`. Send one multipart `file` containing
   the fixed CSV. The authorized response reports validated proposed rows and
   safe row/field errors. **SCRUM-883 adds** the admin upload/review controls and
-  possible-duplicate warnings. Preview creates no donations; confirmation and
-  batch results remain for later subtasks. The existing Add donation form
+  possible-duplicate warnings. SCRUM-884 adds signed, all-or-none confirmation
+  and a basic batch receipt. Preview creates no donations. The existing Add donation form
   creates one record, not a CSV batch.
 - Run a frontend and backend version that both include the donation template
   and preview endpoints. Sign in as an active executive admin or an active
@@ -74,10 +74,10 @@ as month-first and shows the normalized ISO date in review. A missing historical
 the source records, not replaced with today's date. Re-export as UTF-8 CSV
 before uploading the corrected file.
 
-## Review-only upload (SCRUM-883)
+## Review and confirmation (SCRUM-883 / SCRUM-884)
 
 On Admin > Donations, choose the filled CSV under **Review donation CSV**, then
-select **Upload and review CSV**. This is a read-only step: even a valid review
+select **Upload and review CSV**. Review is read-only: even a valid review
 does not create donations. The preview displays backend-normalized amounts,
 dates, anonymity and payment methods, with unknown optional contacts left
 unknown. Correct row/field errors in the original CSV and re-upload it; there
@@ -91,19 +91,22 @@ either a supplied nonblank external ledger reference or a known non-anonymous
 first and last name also match. Email alone is never sufficient. Warnings do
 not merge, discard or edit donations. Check **I have reviewed these donation
 warnings** after examining them. Selecting a different file or re-uploading
-starts a fresh review and clears that acknowledgment. **There is no Confirm
-button or server-bound acknowledgment in SCRUM-883; reviewing warnings does
-not authorize a save.**
+starts a fresh review and clears that acknowledgment. Only an error-free review
+offers **Confirm donation import**; warnings require acknowledgment before it
+can be used. Confirmation rechecks the finance permission, signed short-lived
+review, entire original file and current warnings before saving all rows or
+none. An expired review cannot save anything; upload again. A retry with the
+same reviewed file after an uncertain response returns the original batch if
+it was already committed. **Do not select a new file after an uncertain
+response**; retry the existing review to learn whether it saved. An identical
+normalized batch is imported at most once, even when its CSV formatting differs.
+Confirmation returns a batch ID and count, not an editable upload or a payment
+receipt. Do not use real donor data for testing and do not confirm on production.
 
-## Planned workflow after later subtasks
+## Remaining result navigation (SCRUM-885)
 
-Once the remaining donation-import subtasks are delivered, the intended flow
-is: fill the fixed template, upload it for backend-validated read-only review,
-correct any errors in the source CSV and re-upload, review possible duplicate
-warnings and acknowledge them explicitly, then confirm the whole batch or
-none. A matching email alone will not prove that two donations are duplicates.
-Results will identify the batch and offer access to its saved donations, even
+The current receipt identifies the batch and created count. SCRUM-885 will
+refresh the donation list and offer access to its saved donations, even
 if the current list search hides them. A lost confirmation response must be
 resolved by a safe retry or authorized batch lookup, not by assuming no rows
-were saved. **The SCRUM-883 review cannot save; confirmation and result controls
-do not exist yet.**
+were saved. No payment, receipt email or mailing-list actions occur on import.

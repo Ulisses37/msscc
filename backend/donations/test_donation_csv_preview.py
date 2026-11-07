@@ -292,10 +292,12 @@ class DonationCsvPreviewEndpointTests(TestCase):
         self.assertEqual(response.data["errors"], [])
         self.assertEqual(response.data["proposed_records"][0]["values"]["donor_email"],
                          "test@example.test")
-        self.assertNotIn("review_token", response.data)
+        # A valid, finance-authorized review now includes a signed prerequisite;
+        # merely issuing it still cannot persist any donation.
         # SCRUM-883 adds warning results; a single valid row without existing
         # evidence must return an empty list, not invent a duplicate.
         self.assertEqual(response.data["warnings"], [])
+        self.assertTrue(response.data["review_token"])
         self.assertFalse(Donation.objects.exists())
         save.assert_not_called()
         create.assert_not_called()

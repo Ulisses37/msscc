@@ -2,11 +2,16 @@
 import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
-import { previewDonationCsv } from '@/services/donationImportPreview';
+import { confirmDonationCsv, DonationCsvReviewRejected, previewDonationCsv } from '@/services/donationImportPreview';
 
 import { DonationCsvReview } from './DonationCsvReview';
 
-jest.mock('@/services/donationImportPreview', () => ({ previewDonationCsv: jest.fn() }));
+jest.mock('@/services/donationImportPreview', () => ({
+  previewDonationCsv: jest.fn(), confirmDonationCsv: jest.fn(),
+  DonationCsvReviewRejected: class extends Error {
+    constructor(public reason: 'review' | 'access') { super('Review again.'); }
+  },
+}));
 
 const file = new File(['fictional rows'], 'donations.csv', { type: 'text/csv' });
 const proposed = {
@@ -24,9 +29,13 @@ const reviewed = {
     message: 'A saved donation shares the ledger reference, amount and date; review it.' }],
 };
 
-describe('donation CSV review only', () => {
+describe('donation CSV review and signed confirmation', () => {
   beforeEach(() => {
     jest.mocked(previewDonationCsv).mockReset().mockResolvedValue(reviewed);
+    jest.mocked(confirmDonationCsv).mockReset().mockResolvedValue({
+      record_type: 'donation', batch_id: 'test-batch', created_count: 2,
+      donation_ids: [7, 8], already_imported: false,
+    });
   });
 
   it('renders normalized facts, anonymous correction and warnings as safe text', async () => {
@@ -48,7 +57,7 @@ describe('donation CSV review only', () => {
     expect(screen.getByText(/Review only; no donations have been saved/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
     fireEvent.click(screen.getByRole('checkbox'));
-    expect(screen.queryByText(/Acknowledge warnings before future confirmation/)).toBeNull();
+    expect(screen.queryByText(/Acknowledge warnings before confirmation/)).toBeNull();
   });
 
   it('keeps ten columns readable in a keyboard-accessible mobile scroll region', async () => {
@@ -124,6 +133,65 @@ describe('donation CSV review only', () => {
     fireEvent.change(picker, { target: { files: [new File(['changed'], 'fixed.csv')] } });
     await act(async () => resolveRequest(reviewed));
     expect(screen.queryByText(/Donation preview:/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Upload and review CSV' })).toBeEnabled();
+  });
+
+  it('confirms only an error-free signed review with warnings acknowledged', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], review_token: 'signed-review',
+    });
+    render(<DonationCsvReview />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const confirm = await screen.findByRole('button', { name: 'Confirm donation import' });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(confirm);
+    expect(await screen.findByText(/Donation batch saved. Batch test-batch: 2 donations/))
+      .toBeInTheDocument();
+    expect(confirmDonationCsv).toHaveBeenCalledWith(file, 'signed-review', true);
+    expect(screen.queryByText(/no donations have been saved/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Confirm donation import' })).toBeNull();
+  });
+
+  it('keeps same file and token after uncertain reply for safe retry, without duplicate clicks', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    let rejectRequest: (error: Error) => void = () => undefined;
+    jest.mocked(confirmDonationCsv).mockImplementationOnce(() => new Promise((_, reject) => {
+      rejectRequest = reject;
+    }));
+    render(<DonationCsvReview />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const confirm = await screen.findByRole('button', { name: 'Confirm donation import' });
+    fireEvent.click(confirm);
+    expect(screen.getByRole('button', { name: 'Confirming…' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirming…' }));
+    expect(confirmDonationCsv).toHaveBeenCalledTimes(1);
+    await act(async () => rejectRequest(new Error('private response')));
+    expect(screen.getByRole('alert')).toHaveTextContent('status is uncertain');
+    expect(screen.getByText(/Confirmation may have saved donations/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Donation CSV file')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel review' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByText(/Donation batch saved/)).toBeInTheDocument();
+    expect(confirmDonationCsv).toHaveBeenNthCalledWith(2, file, 'signed-review', false);
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires a fresh review after a definite rejection', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmDonationCsv).mockRejectedValue(new DonationCsvReviewRejected('review'));
+    render(<DonationCsvReview />);
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByText(/This review did not save donations/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm donation import' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Upload and review CSV' })).toBeEnabled();
   });
 });

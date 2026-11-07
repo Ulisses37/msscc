@@ -118,7 +118,9 @@ class DonationCsvDuplicateEndpointTests(TestCase):
         self.assertEqual(response.data["row_count"], 2)
         self.assertEqual({item["reason"] for item in response.data["warnings"]},
                          {"repeated_row", "existing_reference_amount_date"})
-        self.assertNotIn("review_token", response.data)
+        # A valid review can be confirmed only with its signed warning set;
+        # issuing that token does not save the existing or proposed donations.
+        self.assertTrue(response.data["review_token"])
         self.assertEqual(Donation.objects.count(), 1)
 
     def test_invalid_rows_are_never_compared_and_email_alone_is_not_evidence(self):

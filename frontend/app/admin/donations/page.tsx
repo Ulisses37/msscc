@@ -396,7 +396,7 @@ export default function AdminDonationsPage() {
             Fill the template and upload it below for a read-only review. Correct errors in the
             source CSV and re-upload; warnings may indicate repeated or possible existing gifts,
             but an email match alone is not proof. Review and acknowledge warnings explicitly.
-            Confirmation and saving are not available yet; the manual donation form below is for
+            Only Confirm saves the entire reviewed batch. The manual donation form below is for
             a single record, not a CSV upload.
           </p>
           <p className="mt-2 text-body-sm">
