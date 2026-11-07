@@ -725,7 +725,7 @@ export default function EventsPage() {
               initialData={
                 duplicateSource
                   ? {
-                      titleEn: `Copy of ${duplicateSource.titleEn}`,
+                      titleEn: duplicateSource.titleEn,
                       titleJa: duplicateSource.titleJa,
                       descriptionEn: duplicateSource.descriptionEn,
                       descriptionJa: duplicateSource.descriptionJa,
