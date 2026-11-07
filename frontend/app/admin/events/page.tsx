@@ -208,7 +208,6 @@ export default function EventsPage() {
     data: EventFormData,
     imageFile: File | null,
     eventPhotos: EventPhotoFormData[],
-    deletedEventPhotoIds: number[],
   ) => {
     setIsSubmitting(true);
     setSaveMessage('');
@@ -253,11 +252,12 @@ export default function EventsPage() {
       }
 
       const createdEvent = await res.json();
-      // The event must exist before additional photos can reference its database ID.
+      // A create form never owns saved photo records. For a copy, the photos it shows
+      // belong to the original, so saving creates new records without deleting originals.
       await saveEventPhotos(
         createdEvent.event_id,
-        eventPhotos,
-        deletedEventPhotoIds,
+        eventPhotos.map((photo) => ({ ...photo, eventImageId: null })),
+        [],
       );
 
       // Reload the list, then open the new event in the edit form so the admin can keep
@@ -497,17 +497,26 @@ export default function EventsPage() {
   const handleDuplicateEvent = async (event: Event) => {
     if (!confirmReplaceForm()) return;
 
-    // Load the main image so the copy can show it and reuse it.
-    const media = event.mediaAssetId
-      ? await getMediaAssetById(event.mediaAssetId).catch((error) => {
-          console.error('Failed to load primary event image:', error);
-          return undefined;
-        })
-      : undefined;
+    // Load the main image and additional photos so the copy can show and reuse them.
+    const [media, eventImages] = await Promise.all([
+      event.mediaAssetId
+        ? getMediaAssetById(event.mediaAssetId).catch((error) => {
+            console.error('Failed to load primary event image:', error);
+            return undefined;
+          })
+        : Promise.resolve(undefined),
+      getEventImages(event.id).catch((error) => {
+        console.error('Failed to load additional event photos:', error);
+        setSaveError(
+          'The original event’s photos could not be loaded, so this copy starts without them.',
+        );
+        return [];
+      }),
+    ]);
 
     setSelectedEvent(null);
-    // Photos from a previously edited event must not leak into the copy.
-    setSelectedEventImages([]);
+    // The copy starts with the source's photos and nothing from any earlier event.
+    setSelectedEventImages(eventImages);
     setIsEditing(false);
     setDuplicateSource({
       ...event,
@@ -739,6 +748,7 @@ export default function EventsPage() {
                   : undefined
               }
               initialImageUrl={duplicateSource?.media?.fileUrl ?? null}
+              initialEventPhotos={duplicateSource ? selectedEventImages : []}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel="Save"
