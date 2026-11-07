@@ -97,6 +97,9 @@ class Command(BaseCommand):
             if slots.get(seed.static_image_id) is None
             or slots[seed.static_image_id].media_asset_id is None
         ]
+        already_linked_count = sum(
+            slot is not None and slot.media_asset_id is not None for slot in slots.values()
+        )
 
         if options["dry_run"]:
             self._dry_run(slots, pending_seeds, paths)
@@ -106,7 +109,7 @@ class Command(BaseCommand):
             seed.static_image_id: self._prepare_media(seed, paths[seed.static_image_id])
             for seed in pending_seeds
         }
-        self._seed(slots, pending_seeds, prepared_media)
+        self._seed(slots, pending_seeds, prepared_media, already_linked_count)
 
     def _resolve_path(self, supplied_path: Path | None, seed: StaticMediaSeed) -> Path:
         """Resolve a CLI path or filename, trying accepted image extensions."""
@@ -217,12 +220,13 @@ class Command(BaseCommand):
         slots: dict[int, StaticImage],
         pending_seeds: list[StaticMediaSeed],
         prepared_media: dict[int, SanitizedMedia],
+        already_linked_count: int,
     ) -> None:
         """Persist pending media and associations, cleaning storage on failure."""
         created_media: list[MediaAsset] = []
         created_slots = 0
         linked_slots = 0
-        skipped_slots = 0
+        skipped_slots = already_linked_count
 
         try:
             with transaction.atomic():
@@ -254,6 +258,7 @@ class Command(BaseCommand):
                             media_asset=media_asset,
                         )
                         created_slots += 1
+                        linked_slots += 1
                         self.stdout.write(
                             f"Created static media: {seed.display_name} "
                             f"({seed.static_image_id})"

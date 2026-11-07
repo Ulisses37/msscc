@@ -1,3 +1,4 @@
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -50,7 +51,8 @@ class SeedStaticMediaCommandTests(TestCase):
         ]
 
     def test_command_creates_reserved_slots_and_uploads_assets(self) -> None:
-        call_command("seed_static_media", *self.command_args())
+        output = StringIO()
+        call_command("seed_static_media", *self.command_args(), stdout=output)
 
         self.assertEqual(
             list(
@@ -68,13 +70,16 @@ class SeedStaticMediaCommandTests(TestCase):
 
         for media_asset in MediaAsset.objects.all():
             self.assertTrue(media_asset.file.storage.exists(media_asset.file.name))
+        self.assertIn("Created: 2; linked: 2; skipped: 0.", output.getvalue())
 
     def test_command_is_idempotent(self) -> None:
-        call_command("seed_static_media", *self.command_args())
-        call_command("seed_static_media", *self.command_args())
+        call_command("seed_static_media", *self.command_args(), stdout=StringIO())
+        output = StringIO()
+        call_command("seed_static_media", *self.command_args(), stdout=output)
 
         self.assertEqual(StaticImage.objects.count(), 2)
         self.assertEqual(MediaAsset.objects.count(), 2)
+        self.assertIn("Created: 0; linked: 0; skipped: 2.", output.getvalue())
 
     def test_command_accepts_filename_stems_and_supported_extensions(self) -> None:
         with TemporaryDirectory() as temporary_directory:
@@ -114,7 +119,8 @@ class SeedStaticMediaCommandTests(TestCase):
             media_asset=existing,
         )
 
-        call_command("seed_static_media", *self.command_args())
+        output = StringIO()
+        call_command("seed_static_media", *self.command_args(), stdout=output)
 
         placeholder = StaticImage.objects.get(static_image_id=0)
         banner = StaticImage.objects.get(static_image_id=1)
@@ -122,6 +128,24 @@ class SeedStaticMediaCommandTests(TestCase):
         self.assertEqual(placeholder.media_asset_id, existing.pk)
         self.assertIsNotNone(banner.media_asset_id)
         self.assertEqual(MediaAsset.objects.count(), 2)
+        self.assertIn("Created: 1; linked: 1; skipped: 1.", output.getvalue())
+
+    def test_command_links_existing_unlinked_slot_and_creates_missing_slot(self) -> None:
+        StaticImage.objects.create(
+            static_image_id=0,
+            display_name="Custom Placeholder",
+        )
+
+        output = StringIO()
+        call_command("seed_static_media", *self.command_args(), stdout=output)
+
+        placeholder = StaticImage.objects.get(static_image_id=0)
+        banner = StaticImage.objects.get(static_image_id=1)
+        self.assertEqual(placeholder.display_name, "Custom Placeholder")
+        self.assertIsNotNone(placeholder.media_asset_id)
+        self.assertIsNotNone(banner.media_asset_id)
+        self.assertEqual(MediaAsset.objects.count(), 2)
+        self.assertIn("Created: 1; linked: 2; skipped: 0.", output.getvalue())
 
     def test_dry_run_validates_without_writing(self) -> None:
         call_command("seed_static_media", *self.command_args("--dry-run"))
