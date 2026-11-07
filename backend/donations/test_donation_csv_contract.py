@@ -64,20 +64,23 @@ class DonationCsvContractTests(TestCase):
             "address": 500, "external_reference": 255, "message": 500,
         })
 
-    def test_page_instructions_match_server_headers_limits_and_allowed_values(self):
-        # Keep the independently maintained admin copy from drifting away from
-        # the only server contract that will parse and validate uploaded files.
+    def test_admin_help_matches_server_contract_while_page_stays_short(self):
+        # Detailed field rules belong in permission-filtered admin help, not
+        # in the entry panel. Keep the essential save boundary on the page.
         page = (Path(__file__).resolve().parents[2]
                 / "frontend/app/admin/donations/page.tsx").read_text(encoding="utf-8")
-        self.assertIn(",".join(DONATION_CSV_HEADERS), page)
-        self.assertIn("cash or check, or blank if unknown", page)
-        self.assertIn("true or false in any letter case", page)
-        self.assertIn("always completed", page)
-        self.assertIn("1,048,576 bytes and 500 data rows", page)
-        self.assertIn("YYYY-MM-DD", page)
-        self.assertIn("MM-DD-YYYY", page)
-        self.assertIn("MM/DD/YYYY", page)
-        self.assertIn("donor_email 254, address 500, external_reference 255, and message 500", page)
+        help_text = (Path(__file__).resolve().parents[2]
+                     / "frontend/app/admin/documentation/pageDocumentation.tsx")
+        help_text = help_text.read_text(encoding="utf-8")
+        self.assertIn('pageName: "Finances"', help_text)
+        self.assertIn("Review does not save", page)
+        self.assertIn("Payment status is set to completed", page)
+        self.assertNotIn(",".join(DONATION_CSV_HEADERS), page)
+        for field in ("amount", "donation_date", "is_anonymous", "payment_method"):
+            self.assertIn(field, help_text)
+        for value in ("cash or check", "true or false", "1,048,576 bytes", "500 data rows",
+                      "YYYY-MM-DD", "MM-DD-YYYY", "MM/DD/YYYY", "completed"):
+            self.assertIn(value, help_text)
 
     def test_admin_guide_matches_contract_and_marks_later_work_as_planned(self):
         # Check the public-facing explanation against the server contract so

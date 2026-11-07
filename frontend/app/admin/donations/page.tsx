@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
@@ -352,114 +353,89 @@ export default function AdminDonationsPage() {
         <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Donations</h1>
       </header>
 
-      <main className="w-full">
-        {/* Put import instructions alongside the existing donation workflow,
-            but do not couple this header-only download to record export. */}
-        <section aria-labelledby="donation-import-template-title"
-          className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]">
-          <h2 id="donation-import-template-title" className="font-heading text-heading-3 text-msscc-teal">
-            Donation CSV import template
+      <main className="min-w-0 w-full">
+        <section aria-labelledby="donation-entry-title"
+          className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4">
+          <h2 id="donation-entry-title" className="font-heading text-heading-3 text-msscc-teal">
+            Add donations
           </h2>
           <p className="mt-2 text-body-sm">
-            Download the fixed, donation-only CSV template. Keep all ten columns in order; one data row
-            represents one already-received offline or historical donation. This is not the configurable
-            CSV/XLSX record export. Downloading the template does not save donations.
+            Add one already-received donation manually, or use a CSV to review and import a batch.
           </p>
-          <p className="mt-2 text-body-sm">Exact ordered columns:</p>
-          {/* The ten-column header is meant to be copied verbatim; horizontal
-              scrolling avoids wrapping commas into confusing mobile lines. */}
-          <p className="mt-1 max-w-full overflow-x-auto whitespace-nowrap text-body-sm">
-            <code>amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_name,donor_email,address,external_reference,message</code>
-          </p>
-          <p className="mt-2 text-body-sm">
-            Required: amount (known, positive USD decimal up to 99,999,999.99), donation_date
-            (YYYY-MM-DD, or US month-first MM-DD-YYYY or MM/DD/YYYY, not in the future), and is_anonymous
-            (true or false in any letter case; surrounding
-            spaces are ignored). Blank, yes, no, and unknown are not accepted. Amounts allow up to two
-            decimal places, without currency symbols, thousands separators, or exponent notation.
-            Payment status is always completed because these payments have already been received; it is
-            not a CSV column. Currency is USD. No online processing fees are calculated.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Optional: payment_method (cash or check, or blank if unknown), donor_first_name,
-            donor_last_name, donor_email, address, external_reference, and message. Blank historical
-            contact details remain unknown and do not make a non-anonymous donation anonymous.
-            Anonymous donations retain no donor names or address, so leave those cells blank; an
-            optional email may still be retained internally. The template contains no example people.
-          </p>
-          <p className="mt-2 text-body-sm">
-            UTF-8 CSV limit: 1,048,576 bytes and 500 data rows. Cell character limits: amount 11,
-            donation_date 10, is_anonymous 32 before normalization, payment_method 20, donor names 255 each,
-            donor_email 254, address 500, external_reference 255, and message 500.
-            This import does not charge payments, send receipts, or enroll anyone in a mailing list.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Fill the template and upload it below for a read-only review. Correct errors in the
-            source CSV and re-upload; warnings may indicate repeated or possible existing gifts,
-            but an email match alone is not proof. Review and acknowledge warnings explicitly.
-            Only Confirm saves the entire reviewed batch. The manual donation form below is for
-            a single record, not a CSV upload.
-          </p>
-          <p className="mt-2 text-body-sm">
-            Team setup, the complete CSV field guide, and the planned workflow are tracked in
-            docs/donation-csv-import.md. This page and the CSV template are supplied by application
-            code, not seeded database content.
-          </p>
-          {/* The backend owns both the header order and the authorization check;
-              never build a template from the unrelated configurable export. */}
-          <button type="button" disabled={isDownloadingTemplate}
-            className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
-            onClick={async () => {
-              // A failed private request should clear only this section's
-              // message; it must not disturb a saved donation or table filter.
-              setTemplateError(null);
-              setIsDownloadingTemplate(true);
-              try {
-                await downloadDonationImportTemplate();
-              } catch {
-                setTemplateError('Unable to download the template. Check your finance access and try again.');
-              } finally {
-                setIsDownloadingTemplate(false);
-              }
-            }}>
-            {isDownloadingTemplate ? 'Downloading template…' : 'Download donation CSV template'}
-          </button>
-          {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
-        </section>
-        {/* Refresh the current search on either a new receipt or an idempotent
-            retry. Saved IDs can open the drawer even when the table hides them. */}
-        <DonationCsvReview onConfirmed={() => {
-          setHasImportReceipt(true);
-          void fetchDonations();
-        }} onViewSavedDonation={setSelectedDonation} />
-        {hasImportReceipt && error && <button type="button" onClick={() => void fetchDonations()}
-          className="mb-4 rounded-md border border-msscc-gray-light px-4 py-2">
-          Retry donation list refresh
-        </button>}
-        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
-        {savedDonationId !== null && (
-          <button type="button" onClick={() => void viewSavedDonation()}
-            disabled={isLoadingSaved}
-            className="mb-4 rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
-            {isLoadingSaved ? 'Loading saved donation…' : 'View saved donation'}
-          </button>
-        )}
-        {detailError && <p role="alert" className="mb-4 text-msscc-danger">{detailError}</p>}
-        {!isAddingDonation ? (
-          <button type="button" onClick={() => setIsAddingDonation(true)}
-            className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
-            Add donation
-          </button>
-        ) : (
-          <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
-            onCreated={({ donationId }) => {
-              setIsAddingDonation(false);
-              setCreationMessage('Donation record saved.');
-              setSavedDonationId(donationId);
-              setDetailError(null);
+          {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
+          {savedDonationId !== null && (
+            <button type="button" onClick={() => void viewSavedDonation()}
+              disabled={isLoadingSaved}
+              className="mt-4 rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
+              {isLoadingSaved ? 'Loading saved donation…' : 'View saved donation'}
+            </button>
+          )}
+          {detailError && <p role="alert" className="mt-2 text-msscc-danger">{detailError}</p>}
+          <div className="mt-4">
+            {!isAddingDonation ? (
+              <button type="button" onClick={() => setIsAddingDonation(true)}
+                className="rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
+                Add donation
+              </button>
+            ) : (
+              <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
+                onCreated={({ donationId }) => {
+                  setIsAddingDonation(false);
+                  setCreationMessage('Donation record saved.');
+                  setSavedDonationId(donationId);
+                  setDetailError(null);
+                  void fetchDonations();
+                }} />
+            )}
+          </div>
+          {/* Download, review and confirmation belong to one CSV workflow;
+              single-record entry and the table's configurable export do not. */}
+          <div role="group" aria-labelledby="donation-csv-group-title"
+            className="mt-6 min-w-0 border-t border-msscc-gray-light pt-5">
+            <h3 id="donation-csv-group-title" className="font-heading text-heading-3 text-msscc-teal">
+              Import from CSV
+            </h3>
+            <p className="mt-2 text-body-sm">
+              Download the template and enter one already-received donation per row. Upload to review;
+              fix errors in the file and acknowledge warnings before confirming. Review does not save;
+              Confirm saves the entire batch or none. Payment status is set to completed by the server.
+            </p>
+            <p className="mt-2 text-body-sm">
+              Need field formats or supported values? See <Link href="/admin/documentation"
+                className="text-msscc-pink underline">Documentation &amp; Help</Link> under Finances.
+            </p>
+            {/* The server supplies the strict header; never use the unrelated
+                configurable donation export as an import template. */}
+            <button type="button" disabled={isDownloadingTemplate}
+              className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+              onClick={async () => {
+                // A failed private request should clear only this section's
+                // message; it must not disturb a saved donation or table filter.
+                setTemplateError(null);
+                setIsDownloadingTemplate(true);
+                try {
+                  await downloadDonationImportTemplate();
+                } catch {
+                  setTemplateError('Unable to download the template. Check your finance access and try again.');
+                } finally {
+                  setIsDownloadingTemplate(false);
+                }
+              }}>
+              {isDownloadingTemplate ? 'Downloading template…' : 'Download donation CSV template'}
+            </button>
+            {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+            {/* A receipt refreshes the active search without assuming its
+                historical rows are currently visible in the donation table. */}
+            <DonationCsvReview embedded onConfirmed={() => {
+              setHasImportReceipt(true);
               void fetchDonations();
-            }} />
-        )}
+            }} onViewSavedDonation={setSelectedDonation} />
+            {hasImportReceipt && error && <button type="button" onClick={() => void fetchDonations()}
+              className="mt-4 rounded-md border border-msscc-gray-light px-4 py-2">
+              Retry donation list refresh
+            </button>}
+          </div>
+        </section>
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
                 {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
                 {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}

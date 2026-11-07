@@ -1,17 +1,30 @@
-import { pageList } from './pageDocumentation';
+import { adminPageList } from './pageDocumentation';
 
-describe('admin membership import help', () => {
-  it('provides the important CSV rules without exposing tester setup on the membership page', () => {
-    // Non-executive financial admins need this entry to survive the help page's
-    // permission-key filter; there is no separate Members permission.
-    const members = pageList.find((page) => page.pageName === 'Finances');
-    expect(members).toBeDefined();
-    const instructions = members?.pageInstructions.join(' ') ?? '';
+describe('admin financial import help', () => {
+  // The help page filters by permission key; both workflows must be present
+  // under Finances for non-executive financial admins.
+  const finances = adminPageList.find((page) => page.pageName === 'Finances');
+  const instructions = finances?.pageInstructions.join(' ') ?? '';
+
+  it('preserves the membership CSV rules', () => {
+    expect(finances).toBeDefined();
     expect(instructions).toContain('first_name, last_name, membership_type and status');
     expect(instructions).toContain('0.00 means a known zero');
     expect(instructions).toContain('MM/DD/YYYY');
     expect(instructions).toContain('500 data rows');
     expect(instructions).toContain('Preview does not save records');
     expect(instructions).toContain('retry the same reviewed file');
+  });
+
+  it('preserves donation-specific rules alongside membership help', () => {
+    expect(finances).toBeDefined();
+    expect(instructions).toContain('amount, donation_date and is_anonymous');
+    expect(instructions).toContain('2, 2.5 or 2.50');
+    expect(instructions).toContain('MM/DD/YYYY');
+    expect(instructions).toContain('cash or check');
+    expect(instructions).toContain('500 data rows');
+    expect(instructions).toContain('Preview does not save records');
+    expect(instructions).toContain('retry with the same reviewed file');
+    expect(instructions).not.toContain('Team setup');
   });
 });

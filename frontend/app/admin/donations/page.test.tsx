@@ -69,15 +69,23 @@ describe('donation page manual-entry dialog', () => {
     localStorage.clear();
   });
 
-  it('offers the separate donation template and reports download access failures', async () => {
+  it('groups the template with entry and review and reports download access failures', async () => {
     // The service is mocked so this test proves page wiring without hitting
     // the backend or downloading a real file in the DOM test environment.
     jest.mocked(downloadDonationImportTemplate).mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('private response'));
     render(<AdminDonationsPage />);
-    expect(screen.getByText(/payment status is always completed/i)).toBeInTheDocument();
-    expect(screen.getByText(/anonymous donations retain no donor names or address/i))
-      .toBeInTheDocument();
+    const entry = screen.getByRole('region', { name: 'Add donations' });
+    const csv = screen.getByRole('group', { name: 'Import from CSV' });
+    expect(entry).toContainElement(csv);
+    expect(entry).toContainElement(screen.getByRole('button', { name: 'Add donation' }));
+    expect(csv).toContainElement(screen.getByRole('button', { name: 'Download donation CSV template' }));
+    expect(csv).toContainElement(screen.getByLabelText('Donation CSV file'));
+    expect(screen.getByText(/payment status is set to completed/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Documentation & Help' }))
+      .toHaveAttribute('href', '/admin/documentation');
+    expect(screen.queryByText(/team setup/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/exact ordered columns/i)).not.toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'Download donation CSV template' });
     fireEvent.click(button);
     await waitFor(() => expect(downloadDonationImportTemplate).toHaveBeenCalledTimes(1));

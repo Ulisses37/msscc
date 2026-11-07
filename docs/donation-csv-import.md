@@ -1,7 +1,9 @@
 # Donation CSV import (SCRUM-843)
 
-This guide is tracked in Git for admins and testers. The donation admin page
-provides a template download and a summary of the rules. The ordered contract
+This guide is tracked in Git for maintainers and testers. The donation admin page
+groups single entry, template download, and CSV review; Documentation & Help
+under Finances provides field rules that admins can access in the application.
+The ordered contract
 in `backend/donations/donation_csv_contract.py` generates the actual CSV; neither
 the download nor the page instructions are seeded database content. The
 existing configurable CSV/XLSX donation exports are **not** import templates.

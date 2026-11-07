@@ -16,12 +16,13 @@ const HEADERS = [
 ] as const;
 
 interface DonationCsvReviewProps {
+  embedded?: boolean;
   onConfirmed: () => void;
   onViewSavedDonation: (donation: DonationEntry) => void;
 }
 
 /** Review donations and use the server's receipt to inspect saved records. */
-export function DonationCsvReview({ onConfirmed, onViewSavedDonation }: DonationCsvReviewProps) {
+export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDonation }: DonationCsvReviewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<DonationCsvPreview | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -141,13 +142,11 @@ export function DonationCsvReview({ onConfirmed, onViewSavedDonation }: Donation
 
   return (
     <section aria-labelledby="donation-csv-review-title"
-      className="mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]">
-      <h2 id="donation-csv-review-title" className="font-heading text-heading-3 text-msscc-teal">
+      className={embedded ? 'mt-5 min-w-0 max-w-full [overflow-wrap:anywhere]'
+        : 'mb-6 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-4 [overflow-wrap:anywhere]'}>
+      <h4 id="donation-csv-review-title" className="font-heading text-lg text-msscc-teal">
         Review donation CSV
-      </h2>
-      <p className="mt-2 text-body-sm">
-        Upload the fixed donation template to review proposed records. Only Confirm saves a batch.
-      </p>
+      </h4>
       <label htmlFor="donation-csv-file" className="mt-4 block text-body-sm">Donation CSV file</label>
       <input id="donation-csv-file" type="file" accept=".csv,text/csv"
         className="mt-2 block w-full min-w-0 max-w-full text-body-sm"
