@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import SupportForm from '@/components/ui/SupportForm';
 
-import { pageList } from './pageDocumentation';
+import { adminPageList, userPageList } from './pageDocumentation';
 import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import PageAccordion from './PageAccordion';
 
@@ -61,14 +61,22 @@ export default function AdminDocumentationPage() {
   {/* User-Side Information */}
   <div className="rounded-md border-2 border-msscc-teal-light bg-msscc-teal-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">User-Side Information</div>
-    More text to come.
+      {userPageList.map((page) => (
+        <PageAccordion
+          key={page.pageName}
+          pageName={page.pageName}
+          pageDescription={page.pageDescription}
+          pageInstructions={page.pageInstructions}
+          color="teal"
+        />
+     ))}
   </div>
 
   {/* Admin-Side Information */}
   <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-pink-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">Admin-Side Information</div>
           {localAdmin &&
-            pageList
+            adminPageList
               .filter(
                 (page) => localAdmin.permissionData[page.pageName] || localAdmin.isExecutive
               )
@@ -78,6 +86,7 @@ export default function AdminDocumentationPage() {
                 pageName={page.pageName}
                 pageDescription={page.pageDescription}
                 pageInstructions={page.pageInstructions}
+                color="pink"
               />
         ))}
       </div>
