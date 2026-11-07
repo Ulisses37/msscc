@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   confirmMembershipCsv, MembershipCsvReviewRejected, previewMembershipCsv,
@@ -37,10 +38,71 @@ export function MembershipCsvReview({
   const [confirmation, setConfirmation] = useState<MembershipCsvConfirmation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewRejected, setReviewRejected] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const reopenRef = useRef<HTMLButtonElement>(null);
+  const uploadRef = useRef<HTMLButtonElement>(null);
   const requestVersion = useRef(0);
   // The ref closes the double-click window before React re-renders the
   // disabled button; requestVersion independently rejects obsolete results.
   const inFlight = useRef(false);
+
+  useEffect(() => {
+    if (!reviewOpen) return;
+    // Use a portal so a wide CSV table cannot stretch the membership page.
+    // Restore the prior scroll state and focus after dismissal, including when
+    // a successful confirmation replaces the dialog with a saved-batch result.
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+    const uploadButton = uploadRef.current;
+    const reopenButton = reopenRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    setPortalTarget(document.body);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      // The review trigger can disappear after a successful save. Fall back
+      // to the upload action, which remains mounted outside the dialog.
+      (previouslyFocused?.isConnected ? previouslyFocused
+        : reopenButton?.isConnected ? reopenButton : uploadButton)?.focus();
+    };
+  }, [reviewOpen]);
+
+  useEffect(() => {
+    if (portalTarget && reviewOpen) headingRef.current?.focus();
+  }, [portalTarget, reviewOpen]);
+
+  function closeDialog() {
+    // A confirmation may have committed even before its response arrives.
+    // Never hide the only retry context while that request is unresolved.
+    if (!confirming) setReviewOpen(false);
+  }
+
+  function handleDialogKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), [tabindex="0"]',
+    );
+    if (!controls?.length) return;
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first
+      || document.activeElement === headingRef.current)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function clearReview() {
     // A pending response cannot resurrect an old review after cancel/file change.
@@ -53,6 +115,7 @@ export function MembershipCsvReview({
     setLoading(false);
     setConfirmation(null);
     setConfirmationAttempted(false);
+    setReviewOpen(false);
     inFlight.current = false;
   }
 
@@ -70,6 +133,7 @@ export function MembershipCsvReview({
       const result = await confirmMembershipCsv(file, preview.review_token, acknowledged);
       if (version === requestVersion.current) {
         setConfirmation(result);
+        setReviewOpen(false);
         onConfirmed?.(result);
       }
     } catch (failure) {
@@ -103,7 +167,10 @@ export function MembershipCsvReview({
     setLoading(true);
     try {
       const next = await previewMembershipCsv(file);
-      if (version === requestVersion.current) setPreview(next);
+      if (version === requestVersion.current) {
+        setPreview(next);
+        setReviewOpen(true);
+      }
     } catch {
       if (version === requestVersion.current) {
         setError('Unable to review the CSV. Check your finance access and try again.');
@@ -132,17 +199,63 @@ export function MembershipCsvReview({
       {/* A native file picker can have an intrinsic width wider than a phone.
           Stack the actions until there is room; never squeeze labels into columns. */}
       <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <button type="button" disabled={!file || loading || confirming} onClick={() => void upload()}
+        <button ref={uploadRef} type="button" disabled={!file || loading || confirming} onClick={() => void upload()}
           className="w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
           {loading ? 'Reviewing CSV…' : 'Upload and review CSV'}
         </button>
-        {(preview || error) && <button type="button" disabled={confirming} onClick={clearReview}
+        {(preview || error || confirmation) && <button type="button" disabled={confirming} onClick={clearReview}
           className="w-full rounded-md border border-msscc-gray-light px-4 py-2 sm:w-auto">Cancel review</button>}
       </div>
-      {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
-      {preview && (
-        <div className="mt-6 min-w-0 max-w-full [overflow-wrap:anywhere]">
+      {error && !reviewOpen && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
+      {preview && !confirmation && !reviewOpen && (
+        <div className="mt-4 flex flex-col items-start gap-2">
+          <p role="status">
+            {reviewRejected ? 'Review rejected; upload and review the file again.'
+              : confirmationAttempted ? 'Confirmation may have saved records; reopen the review to retry.'
+              : 'Review paused; no records have been saved.'}
+          </p>
+          {!reviewRejected && <button ref={reopenRef} type="button"
+            onClick={() => setReviewOpen(true)}
+            className="rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink">
+            Reopen CSV review
+          </button>}
+        </div>
+      )}
+      {/* A committed receipt stays outside the modal: saved-record buttons can
+          open the existing detail drawer without creating stacked dialogs. */}
+      {confirmation && <div role="status" className="mt-4 [overflow-wrap:anywhere]">
+        <p>{confirmation.already_imported ? 'This batch was already imported.' : 'Membership batch saved.'}
+          {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.</p>
+        {/* IDs come from the committed batch receipt, not the filtered or
+            paginated table. Load private saved details only on demand. */}
+        {onOpenSavedMembership && <ul className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {confirmation.membership_ids.map((id) => (
+            <li key={id}><button type="button" disabled={openingMembershipId !== null && openingMembershipId !== undefined}
+              onClick={() => onOpenSavedMembership(id)}
+              className="w-full rounded-md border border-msscc-pink px-3 py-2 text-msscc-pink disabled:opacity-50 sm:w-auto">
+              {openingMembershipId === id ? 'Loading membership…' : `View saved membership ${id}`}
+            </button></li>
+          ))}
+        </ul>}
+        {savedDetailsError && <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>}
+      </div>}
+      {preview && reviewOpen && portalTarget && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-msscc-gray-dark/40 p-2 sm:p-6">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="csv-preview-title"
+            onKeyDown={handleDialogKeyDown}
+            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-7xl flex-col overflow-hidden rounded-md border border-msscc-gray-light bg-msscc-white shadow-lg sm:max-h-[calc(100dvh-3rem)]">
+            <header className="flex shrink-0 items-center justify-between gap-3 border-b border-msscc-gray-light p-3 sm:p-5">
+              <h2 id="csv-preview-title" ref={headingRef} tabIndex={-1}
+                className="font-heading text-heading-3 text-msscc-teal">Review membership CSV</h2>
+              <button type="button" disabled={confirming} onClick={closeDialog}
+                className="shrink-0 rounded-md border border-msscc-gray-light px-3 py-2 focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:opacity-50">
+                Close review
+              </button>
+            </header>
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-5">
+              <div className="min-w-0 max-w-full [overflow-wrap:anywhere]">
           <p>Membership preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
+          {error && <p role="alert" className="mt-3 text-msscc-danger">{error}</p>}
           {preview.errors.length > 0 && <div role="alert" className="mt-3">
             {/* Errors are locations only; the admin fixes and re-uploads the source CSV. */}
             <h3>Errors: correct the source CSV and re-upload it.</h3>
@@ -161,60 +274,55 @@ export function MembershipCsvReview({
               I have reviewed these warnings and still want to confirm this import.
             </label>
           </div>}
-          {/* The 16-column preview scrolls inside the panel, not the whole page. */}
-          <div className="mt-4 max-w-full overflow-x-auto">
+          {/* A wide, fixed-layout CSV needs its own scroll container: the
+              surrounding dialog and page must never expand to table width. */}
+          <p id="csv-scroll-hint" className="mt-4 text-body-sm text-msscc-gray-mid">Scroll sideways to view all columns.</p>
+          <div role="region" aria-label="Membership CSV proposals" aria-describedby="csv-scroll-hint"
+            tabIndex={0} className="mt-2 max-w-full overflow-x-auto rounded-md border border-msscc-gray-light">
             {/* React escapes uploaded text, including tags in names/notes. Do not
                 use innerHTML or let CSV values become links or executable markup. */}
-            <table className="min-w-full border-collapse text-left text-body-sm">
+            <table className="w-max min-w-full border-collapse text-left text-body-sm">
               <caption className="text-left">Backend-validated membership proposals (read only)</caption>
-              <thead><tr><th scope="col" className="p-2">CSV row</th>{HEADERS.map((field) => (
-                <th scope="col" key={field} className="p-2">{field}</th>
+              <thead><tr><th scope="col" className="sticky left-0 z-10 min-w-20 bg-msscc-gray-faint p-3 whitespace-nowrap">CSV row</th>{HEADERS.map((field) => (
+                <th scope="col" key={field} className="min-w-36 bg-msscc-gray-faint p-3 whitespace-nowrap">{field}</th>
               ))}</tr></thead>
               <tbody>{preview.proposed_records.map((proposal) => (
                 <tr key={proposal.row} className="border-t border-msscc-gray-light">
-                  <th scope="row" className="p-2">{proposal.row}</th>
+                  <th scope="row" className="sticky left-0 z-10 bg-msscc-white p-3">{proposal.row}</th>
                   {HEADERS.map((field) => (
-                    <td key={field} className="p-2 whitespace-pre-wrap">{proposal.values[field] ?? 'Unknown'}</td>
+                    <td key={field} className="max-w-64 p-3 whitespace-pre-wrap break-words">{proposal.values[field] ?? 'Unknown'}</td>
                   ))}
                 </tr>
               ))}</tbody>
             </table>
           </div>
-          {!confirmation && <p role="status" className="mt-4">
-            {reviewRejected ? 'This review did not save records. Upload and review the file again.'
-              : confirmationAttempted ? 'Confirmation may have saved records; retry with the same file to check.'
-              : 'Review only; no records have been saved.'}
-            {/* Confirmation needs a separately authorized, server-bound batch;
-                preview acknowledgment alone cannot create financial records. */}
-            {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
-            {preview.warnings.length > 0 && !acknowledged ? ' Acknowledge warnings before future confirmation.' : ''}
-          </p>}
-          {/* The signed review token is only a prerequisite: the backend checks
-              its owner, original file, current warnings and every row again. */}
-          {!confirmation && !reviewRejected && preview.review_token && preview.errors.length === 0 && (
-            <button type="button" onClick={() => void confirm()} disabled={confirming ||
-              (preview.warnings.length > 0 && !acknowledged)}
-              className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
-              {confirming ? 'Confirming…' : 'Confirm membership import'}
-            </button>
-          )}
-          {confirmation && <div role="status" className="mt-4">
-            <p>{confirmation.already_imported ? 'This batch was already imported.' : 'Membership batch saved.'}
-              {' '}Batch {confirmation.batch_id}: {confirmation.created_count} memberships.</p>
-            {/* IDs come from the committed batch receipt, not the filtered or
-                paginated table. Load private saved details only on demand. */}
-            {onOpenSavedMembership && <ul className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {confirmation.membership_ids.map((id) => (
-                <li key={id}><button type="button" disabled={openingMembershipId !== null && openingMembershipId !== undefined}
-                  onClick={() => onOpenSavedMembership(id)}
-                  className="w-full rounded-md border border-msscc-pink px-3 py-2 text-msscc-pink disabled:opacity-50 sm:w-auto">
-                  {openingMembershipId === id ? 'Loading membership…' : `View saved membership ${id}`}
-                </button></li>
-              ))}
-            </ul>}
-            {savedDetailsError && <p role="alert" className="mt-2 text-msscc-danger">{savedDetailsError}</p>}
-          </div>}
-        </div>
+              </div>
+            </div>
+            {/* Keep the save decision reachable even with hundreds of rows.
+                Only the table and warnings scroll; the server still enforces
+                file binding and acknowledgment independently of this footer. */}
+            <footer className="shrink-0 border-t border-msscc-gray-light bg-msscc-white p-3 sm:p-5">
+              <p role="status" className="text-body-sm">
+                {reviewRejected ? 'This review did not save records. Upload and review the file again.'
+                  : confirmationAttempted ? 'Confirmation may have saved records; retry with the same file to check.'
+                    : 'Review only; no records have been saved.'}
+                {/* Confirmation needs a separately authorized, server-bound batch;
+                    preview acknowledgment alone cannot create financial records. */}
+                {preview.errors.length > 0 ? ' Errors require correction and re-upload.' : ''}
+                {preview.warnings.length > 0 && !acknowledged ? ' Acknowledge warnings before future confirmation.' : ''}
+              </p>
+              {/* The signed review token is only a prerequisite: the backend checks
+                  its owner, original file, current warnings and every row again. */}
+              {!reviewRejected && preview.review_token && preview.errors.length === 0 && (
+                <button type="button" onClick={() => void confirm()} disabled={confirming ||
+                  (preview.warnings.length > 0 && !acknowledged)}
+                  className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto">
+                  {confirming ? 'Confirming…' : 'Confirm membership import'}
+                </button>
+              )}
+            </footer>
+          </div>
+        </div>, portalTarget,
       )}
     </section>
   );

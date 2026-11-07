@@ -63,9 +63,9 @@ describe('membership CSV review only', () => {
     expect(screen.queryByRole('button', { name: /confirm/i })).toBeNull();
   });
 
-  it('keeps narrow-screen upload controls and the wide proposal table inside the panel', async () => {
-    // jsdom does not calculate layout; assert the responsive classes that
-    // prevent intrinsic file-input and 16-column table widths escaping a phone.
+  it('keeps narrow-screen upload controls and the wide table inside the dialog', async () => {
+    // jsdom does not calculate layout; assert the viewport and scroll boundaries
+    // that prevent 16 columns from expanding the page on a phone.
     render(<MembershipCsvReview />);
     const picker = screen.getByLabelText('Membership CSV file');
     expect(picker).toHaveClass('w-full', 'min-w-0', 'max-w-full');
@@ -76,7 +76,89 @@ describe('membership CSV review only', () => {
     expect(upload.parentElement).toHaveClass('flex-col', 'sm:flex-row');
     expect(upload).toHaveClass('w-full', 'sm:w-auto');
     expect(cancel).toHaveClass('w-full', 'sm:w-auto');
-    expect(screen.getByRole('table').parentElement).toHaveClass('max-w-full', 'overflow-x-auto');
+    const dialog = screen.getByRole('dialog', { name: 'Review membership CSV' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveClass('w-full', 'max-w-7xl', 'overflow-hidden');
+    expect(dialog).toHaveClass('max-h-[calc(100dvh-1rem)]');
+    expect(within(dialog).getByRole('status').closest('footer')).toHaveClass('shrink-0');
+    const scroll = within(dialog).getByRole('region', { name: 'Membership CSV proposals' });
+    expect(scroll).toHaveClass('overflow-x-auto', 'max-w-full');
+    expect(scroll).toHaveAttribute('tabindex', '0');
+    const table = within(scroll).getByRole('table');
+    expect(table).toHaveClass('w-max');
+    expect(within(table).getByRole('columnheader', { name: 'membership_type' }))
+      .toHaveClass('whitespace-nowrap', 'min-w-36');
+    expect(within(table).getByRole('rowheader', { name: '2' })).toHaveClass('sticky', 'left-0');
+    expect(within(dialog).getByText('Scroll sideways to view all columns.')).toBeInTheDocument();
+  });
+
+  it('dismisses on Escape, restores focus and reopens the same review without saving', async () => {
+    render(<MembershipCsvReview />);
+    const choose = screen.getByLabelText('Membership CSV file');
+    fireEvent.change(choose, { target: { files: [file] } });
+    const upload = screen.getByRole('button', { name: 'Upload and review CSV' });
+    upload.focus();
+    fireEvent.click(upload);
+    const dialog = await screen.findByRole('dialog', { name: 'Review membership CSV' });
+    expect(within(dialog).getByRole('heading', { name: 'Review membership CSV' }))
+      .toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Review membership CSV' })).toBeNull();
+    expect(upload).toHaveFocus();
+    expect(screen.getByText(/Review paused; no records have been saved/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    expect(screen.getByRole('dialog', { name: 'Review membership CSV' })).toBeInTheDocument();
+    expect(previewMembershipCsv).toHaveBeenCalledTimes(1);
+    expect(confirmMembershipCsv).not.toHaveBeenCalled();
+  });
+
+  it('contains keyboard focus and keeps an in-flight confirmation review open', async () => {
+    let resolveConfirmation: (value: {
+      record_type: 'membership'; batch_id: string; created_count: number;
+      membership_ids: number[]; already_imported: boolean;
+    }) => void = () => undefined;
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockImplementation(() => new Promise((resolve) => {
+      resolveConfirmation = resolve;
+    }));
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Review membership CSV' });
+    const close = within(dialog).getByRole('button', { name: 'Close review' });
+    const confirm = within(dialog).getByRole('button', { name: 'Confirm membership import' });
+    confirm.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(confirm).toHaveFocus();
+    fireEvent.click(confirm);
+    expect(close).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(dialog).toBeInTheDocument();
+    resolveConfirmation({
+      record_type: 'membership', batch_id: 'batch-1', created_count: 1,
+      membership_ids: [2], already_imported: false,
+    });
+    expect(await screen.findByText(/Membership batch saved/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Review membership CSV' })).toBeNull();
+  });
+
+  it('shows uncertain confirmation feedback inside the review dialog for a safe retry', async () => {
+    jest.mocked(previewMembershipCsv).mockResolvedValue({
+      ...reviewed, errors: [], warnings: [], review_token: 'signed-review',
+    });
+    jest.mocked(confirmMembershipCsv).mockRejectedValueOnce(new Error('network'));
+    render(<MembershipCsvReview />);
+    fireEvent.change(screen.getByLabelText('Membership CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Review membership CSV' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm membership import' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Retry with the same reviewed file');
+    expect(within(dialog).getByRole('button', { name: 'Close review' })).toBeEnabled();
+    expect(within(dialog).getByRole('button', { name: 'Confirm membership import' })).toBeEnabled();
   });
 
   it('clears acknowledgment and prior review on file change, cancel and re-upload', async () => {

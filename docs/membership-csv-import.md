@@ -53,7 +53,8 @@ payments, issue receipts, or record mailing-list consent.
 ## Review, save, and recover
 
 1. Fill the downloaded template and choose it in **Review membership CSV**.
-   Select **Upload and review CSV**. Preview does not create records.
+   Select **Upload and review CSV** to open the review dialog. Preview does not
+   create records; closing the dialog leaves the review available to reopen.
 2. Check normalized proposed values and row/field errors. Correct errors in
    the source file and upload it again; there is no inline editing. Repeated
    rows and possible existing-record matches produce warnings, not automatic
@@ -72,5 +73,6 @@ payments, issue receipts, or record mailing-list consent.
    the file while resolving an uncertain confirmation.
 
 For mobile testing, the file picker and actions should stay within the viewport;
-the 16-column proposal table scrolls **inside** the review panel. Cross-browser
+the 16-column proposal table scrolls horizontally **inside** the review dialog.
+The saved batch result remains on the membership page after confirmation. Cross-browser
 testing is deferred to a separate task.

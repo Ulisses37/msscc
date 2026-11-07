@@ -82,7 +82,10 @@ describe('membership table nullable values', () => {
         .toBeGreaterThan(previousCalls));
       expect(fetchFinancialRecords).toHaveBeenLastCalledWith('memberships', 'other member');
       expect(screen.getByRole('searchbox')).toHaveValue('other member');
-      expect(within(screen.getAllByRole('table')[1]).queryByText('Imported')).toBeNull();
+      // The preview table lives in a dialog only while reviewing; the saved
+      // result stays visible even when the current list filter hides its rows.
+      expect(screen.queryByRole('dialog', { name: 'Review membership CSV' })).toBeNull();
+      expect(within(screen.getByRole('table')).queryByText('Imported')).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'View saved membership 42' }));
       const drawer = await screen.findByRole('dialog', { name: 'Imported Member' });
       expect(within(drawer).getByText('CSV import')).toBeInTheDocument();
