@@ -1,24 +1,32 @@
 'use client'
 
 import { useEffect, useState } from "react";
+import { getAdminRequestHeaders } from "@/services/adminRequestHeaders";
 
 type StorageInfo = {
-  total_size_bytes: number;
-  file_count: number;
-  files_with_size: number;
+  used_bytes: number;
+  capacity_bytes: number;
+  remaining_bytes: number;
+  usage_percentage: number;
+  object_count: number;
+  last_synced_at: string | null;
+  sync_state: "ok" | "stale";
+  sync_error: string | null;
 };
 
 export function ImageStorage(){
-  const [usedStorage, setUsedStorage] = useState<StorageInfo | null>();
+  const [usedStorage, setUsedStorage] = useState<StorageInfo | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
-  const STORAGE_CAPACITY_BYTES = 10 * 1024 ** 3; // 10 GB, change to your actual limit
-  const usedBytes = usedStorage?.total_size_bytes ?? 0;
-  const remainingBytes = Math.max(STORAGE_CAPACITY_BYTES - usedBytes, 0);
-  const usagePercentage = Math.min((usedBytes / STORAGE_CAPACITY_BYTES) * 100, 100);
+  const usedBytes = usedStorage?.used_bytes ?? 0;
+  const remainingBytes = usedStorage?.remaining_bytes ?? 0;
+  const usagePercentage = usedStorage?.usage_percentage ?? 0;
   const roundedPercentage = Math.round(usagePercentage);
 
   useEffect(() => {
-    fetchStorage().then(setUsedStorage);
+    fetchStorage()
+      .then(setUsedStorage)
+      .catch((error: Error) => setRequestError(error.message));
   },[])
 
   const formatBytes = (bytes: number) => {
@@ -29,6 +37,11 @@ export function ImageStorage(){
   };
   return(
     <div className="flex flex-col items-center rounded-sm bg-msscc-pink py-4 sm:flex-1 lg:flex-none">
+            {requestError && (
+              <div className="mb-2 px-3 text-center text-xs text-white" role="alert">
+                Storage usage unavailable.
+              </div>
+            )}
             <div className="mb-3 flex flex-row items-center justify-center gap-3">
               <ProgressBar percent={usagePercentage} />
               <div className="flex flex-col items-center">
@@ -43,9 +56,14 @@ export function ImageStorage(){
             <div className="text-center text-gray-200">Image Storage Usage</div>
             <div className="mt-1 text-center text-xs text-gray-200">
               {usedStorage
-                ? `${formatBytes(usedBytes)} / ${formatBytes(STORAGE_CAPACITY_BYTES)}`
+                ? `${formatBytes(usedBytes)} / ${formatBytes(usedStorage.capacity_bytes)}`
                 : "--"}
             </div>
+            {usedStorage?.sync_state === "stale" && (
+              <div className="mt-1 px-3 text-center text-xs text-yellow-100" role="status">
+                Usage may be out of date.
+              </div>
+            )}
           </div>
   )
 }
@@ -69,16 +87,13 @@ function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
-async function fetchStorage(): Promise<StorageInfo | null> {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/total-size/`);
-    if (!res.ok) {
-      throw new Error(`Request failed: ${res.status}`);
-    }
-    const data: StorageInfo = await res.json();
-    return data;
-  } catch (err) {
-    console.error("Failed to fetch storage usage:", err);
-    return null;
+async function fetchStorage(): Promise<StorageInfo> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/total-size/`, {
+    headers: getAdminRequestHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
   }
+  return res.json();
 }

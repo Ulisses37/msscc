@@ -1,4 +1,4 @@
-export const MANUAL_DONATION_PAYMENT_METHODS = ['cash', 'check'] as const;
+export const MANUAL_DONATION_PAYMENT_METHODS = ['cash', 'check', 'card', 'bank_transfer'] as const;
 
 export type ManualDonationPaymentMethod = typeof MANUAL_DONATION_PAYMENT_METHODS[number];
 

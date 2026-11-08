@@ -201,6 +201,8 @@ export function ManualDonationForm({ onCancel, onCreated }: ManualDonationFormPr
                           <option value="">Unknown / not recorded</option>
                           <option value="cash">Cash</option>
                           <option value="check">Check</option>
+                          <option value="card">Card (already received)</option>
+                          <option value="bank_transfer">Bank transfer</option>
                         </select>
                       ) : field.type === 'textarea' ? (
                         <textarea {...controlProps} maxLength={field.maxLength} rows={3} />
@@ -232,7 +234,10 @@ export function ManualDonationForm({ onCancel, onCreated }: ManualDonationFormPr
                     ? 'Not retained for anonymous donations'
                     : value === null || value === '' ? 'Unknown / not provided'
                       : field.key === 'amount' ? `${value} USD`
-                        : field.key === 'paymentMethod' ? value === 'cash' ? 'Cash' : 'Check' : value;
+                        : field.key === 'paymentMethod' ? ({
+                          cash: 'Cash', check: 'Check', card: 'Card',
+                          bank_transfer: 'Bank transfer',
+                        }[value as string] ?? value) : value;
                   return (
                     <div key={field.key}
                       className={field.fullWidth ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
