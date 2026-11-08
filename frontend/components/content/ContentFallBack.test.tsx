@@ -12,6 +12,47 @@ import {
   FallBack,
 } from '@/components/content/ContentFallBack';
 
+// next-intl ships an ESM-only build that jest does not transform, so the real
+// provider cannot be imported here. This mock runs the component against the
+// real en/ja message bundles, which is what this suite verifies.
+jest.mock('next-intl', () => {
+  // jest hoists this factory above the imports, so the bundles are required
+  // here rather than referenced from the module scope.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const enMessages = require('@/messages/en.json');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const jaMessages = require('@/messages/ja.json');
+  const bundles: Record<string, unknown> = { en: enMessages, ja: jaMessages };
+
+  let activeMessages: unknown = enMessages;
+
+  return {
+    NextIntlClientProvider: ({
+      locale,
+      children,
+    }: {
+      locale: string;
+      children: React.ReactNode;
+    }) => {
+      activeMessages = bundles[locale] ?? enMessages;
+      return children;
+    },
+    useTranslations: (namespace: string) => (key: string) => {
+      const value = `${namespace}.${key}`
+        .split('.')
+        .reduce<unknown>((current, segment) => {
+          if (current === null || typeof current !== 'object') {
+            return undefined;
+          }
+
+          return (current as Record<string, unknown>)[segment];
+        }, activeMessages);
+
+      return typeof value === 'string' ? value : `${namespace}.${key}`;
+    },
+  };
+});
+
 type Locale = 'en' | 'ja';
 type FallbackSource = 'home' | 'about' | 'partners' | 'membership' | 'events' | 'support';
 
