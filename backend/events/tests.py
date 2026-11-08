@@ -2,10 +2,12 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
+from rest_framework.throttling import AnonRateThrottle
 
 from events import services
 from events.models import Event, VolunteerSignup, VolunteerSlot
@@ -78,6 +80,8 @@ class VolunteerSignupEmailTests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        # Throttle history is cache-backed, so keep tests independent.
+        cache.clear()
         self.event = Event.objects.create(
             title_en="Cultural Exchange",
             title_ja="文化交流",
@@ -113,6 +117,94 @@ class VolunteerSignupEmailTests(TestCase):
         self.assertEqual(signup.status, "approved")
         self.slot.refresh_from_db()
         self.assertEqual(self.slot.filled_count, 1)
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_honeypot_signup_is_accepted_without_saving_or_sending_email(self, mock_send_email):
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": self.slot.volunteer_slot_id,
+                "first_name": "Aiko",
+                "last_name": "Tanaka",
+                "email": "aiko@example.com",
+                "phone": "916-555-0100",
+                "website": "https://spam.example",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["volunteer_signup_id"], 0)
+        self.assertEqual(response.json()["email"], "aiko@example.com")
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_unknown_slot_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Return a validation error rather than a database error for an unknown shift."""
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": 999_999,
+                "first_name": "Aiko",
+                "last_name": "Tanaka",
+                "email": "aiko@example.com",
+                "phone": "916-555-0100",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["slot_id"], ["This shift does not exist."])
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_unsafe_name_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Reject link-like and markup-like text that could be emailed to volunteers."""
+        for field, value in (
+            ("first_name", "Visit https://spam.example"),
+            ("last_name", "<script>"),
+        ):
+            with self.subTest(field=field):
+                payload = {
+                    "slot_id": self.slot.volunteer_slot_id,
+                    "first_name": "Aiko",
+                    "last_name": "Tanaka",
+                    "email": "aiko@example.com",
+                    "phone": "916-555-0100",
+                }
+                payload[field] = value
+
+                response = self.client.post("/api/events/signups/", payload, format="json")
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()[field], ["Enter a valid name."])
+
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_rapid_signups_from_one_ip_are_throttled(self, mock_send_email):
+        """Reject a request once the per-IP volunteer-signup limit is exceeded."""
+        payload = {
+            "slot_id": self.slot.volunteer_slot_id,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+
+        with patch.dict(AnonRateThrottle.THROTTLE_RATES, {"volunteer_signup": "2/hour"}):
+            responses = [
+                self.client.post("/api/events/signups/", payload, format="json") for _ in range(3)
+            ]
+
+        self.assertEqual(responses[0].status_code, 201)
+        self.assertEqual(responses[1].status_code, 201)
+        self.assertEqual(responses[2].status_code, 429)
+        self.assertEqual(VolunteerSignup.objects.count(), 2)
+        self.assertEqual(mock_send_email.call_count, 2)
 
     @patch("emails.messages.send_email")
     def test_confirmation_email_includes_unique_cancellation_url(self, mock_send_email):

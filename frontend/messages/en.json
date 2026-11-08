@@ -149,6 +149,7 @@
     "processing": "Processing...",
     "register": "Register Now",
     "submitError": "Unable to complete the volunteer registration. Please try again.",
+    "rateLimitError": "Too many signup attempts from your connection. Please wait a while and try again.",
     "commentsLabel": "Comments (optional)",
     "commentsPlaceholder": "Anything the organizers should know? For example, questions or when you're available.",
     "commentsCount": "{count} / {max} characters",
