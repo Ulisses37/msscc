@@ -119,7 +119,7 @@ class ManualDonationInputTests(TestCase):
         self.assertIsNone(serializer.validated_data["donor_email_encrypted"])
 
     def test_payment_method_and_external_reference_remain_independent(self):
-        for method in (None, "cash", "check"):
+        for method in (None, "cash", "check", "card", "bank_transfer"):
             serializer = self.serializer(
                 payment_method=method, external_reference=" check mentioned here ",
                 message=" Historical note ",
@@ -130,7 +130,7 @@ class ManualDonationInputTests(TestCase):
                 serializer.validated_data["external_reference"], "check mentioned here",
             )
             self.assertEqual(serializer.validated_data["message"], "Historical note")
-        for method in ("", "unknown", "card", "unsupported"):
+        for method in ("", "unknown", "credit_card", "unsupported"):
             serializer = self.serializer(payment_method=method)
             self.assertFalse(serializer.is_valid())
             self.assertIn("payment_method", serializer.errors)

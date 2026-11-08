@@ -29,7 +29,7 @@ function addressValue(): HTMLElement {
 }
 
 describe('DonationDetailDrawer addresses', () => {
-  it.each(['cash', 'check', null] as const)(
+  it.each(['cash', 'check', 'card', 'bank_transfer', null] as const)(
     'shows saved offline facts independently of contacts with method %p', (method) => {
       render(<DonationDetailDrawer donation={{
         ...donation, donor_first_name: null, donor_last_name: null, donor_email: null,
@@ -45,7 +45,9 @@ describe('DonationDetailDrawer addresses', () => {
       expect(fieldValue('Payment status')).toHaveTextContent('completed');
       expect(fieldValue('Record origin')).toHaveTextContent('Manual');
       expect(fieldValue('Payment method')).toHaveTextContent(
-        method === 'cash' ? 'Cash' : method === 'check' ? 'Check' : 'Not provided',
+        method === 'cash' ? 'Cash' : method === 'check' ? 'Check'
+          : method === 'card' ? 'Card' : method === 'bank_transfer' ? 'Bank transfer'
+            : 'Not provided',
       );
       expect(fieldValue('Reference ID')).toHaveTextContent('DON-MANUAL-00000001');
       expect(fieldValue('External reference')).toHaveTextContent('Ledger 42');
@@ -68,6 +70,19 @@ describe('DonationDetailDrawer addresses', () => {
       .toHaveTextContent('$0.60');
     expect(screen.getByText('Total payment').closest('div')).toHaveTextContent('$10.60');
     expect(screen.getByText('Record origin').closest('div')).toHaveTextContent('Online checkout');
+  });
+
+  it('shows CSV import provenance as an offline received donation', () => {
+    render(<DonationDetailDrawer donation={{
+      ...donation, record_source: 'csv_import', amount: '35.00', total_amount: '35.00',
+      payment_method: 'check', external_reference: 'Ledger entry',
+    }} onClose={jest.fn()} />);
+    expect(screen.getByText('Record origin').closest('div')).toHaveTextContent('CSV import');
+    expect(screen.getByText('Donation amount').closest('div')).toHaveTextContent('$35.00');
+    expect(screen.getByText('Recorded total').closest('div')).toHaveTextContent('$35.00');
+    expect(screen.getByText(/No online processing-cost contribution was added/)).toBeInTheDocument();
+    expect(screen.queryByText('Processing-cost contribution')).not.toBeInTheDocument();
+    expect(screen.getByText('External reference').closest('div')).toHaveTextContent('Ledger entry');
   });
 
   it('hides supplied names as well as the address when anonymous', () => {

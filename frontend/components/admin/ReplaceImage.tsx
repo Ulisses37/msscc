@@ -5,6 +5,7 @@ import { ImportImage } from "@/components/ui/ImportImage";
 import { RetrieveImageList } from "@/components/ui/RetrieveImageList";
 import PostImage from "@/components/ui/PostImage";
 import Image from "next/image";
+import { parseMediaUploadError } from '@/utils/mediaUploadError';
 
 type ModelType = "media" | "events" | "board-members" | "partners" | "static-images";
 
@@ -79,7 +80,7 @@ export default function ReplaceImage() {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error || 'Upload failed');
+      throw parseMediaUploadError(errorData, 'Upload failed');
     }
 
     return response.json();

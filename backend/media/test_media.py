@@ -4,9 +4,11 @@ from unittest.mock import patch
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.models import AdminUser
 from media.classification import classify_media
 from media.models import MediaAsset
 from media.persistence import MediaPersistenceError, persist_media_asset
@@ -448,6 +450,43 @@ class MediaUploadApiTests(TestCase):
         self.assertGreater(media.file_size, 0)
         self.assertEqual(media.file_size, default_storage.size(media.file.name))
 
+    def test_upload_rejects_file_that_exceeds_fresh_quota(self) -> None:
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(pk=1).update(
+            used_bytes=0,
+            reserved_bytes=0,
+            capacity_bytes=1,
+            sync_state=StorageUsageSnapshot.SYNC_OK,
+            last_synced_at=timezone.now(),
+        )
+        upload = SimpleUploadedFile("quota.png", image_bytes(), content_type="image/png")
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 507)
+        self.assertEqual(response.data["code"], "storage_quota_exceeded")
+        self.assertFalse(response.data["safety_margin_applied"])
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        self.assertFalse(default_storage.exists("public/quota.png"))
+
+    def test_upload_uses_safety_margin_when_usage_is_stale(self) -> None:
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(pk=1).update(
+            used_bytes=80,
+            reserved_bytes=0,
+            capacity_bytes=100,
+            sync_state=StorageUsageSnapshot.SYNC_STALE,
+            last_synced_at=None,
+        )
+        upload = SimpleUploadedFile("stale.png", image_bytes(), content_type="image/png")
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 507)
+        self.assertTrue(response.data["safety_margin_applied"])
+
 def make_asset(name: str, size: int | None) -> MediaAsset:
     return MediaAsset.objects.create(
         file_name=name,
@@ -460,20 +499,35 @@ def make_asset(name: str, size: int | None) -> MediaAsset:
 class MediaTotalSizeViewTests(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
+        self.client.force_authenticate(
+            user=AdminUser.objects.create_user(email="storage@example.com")
+        )
 
     def test_empty_table_returns_zero(self) -> None:
         response = self.client.get("/api/media/total-size/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["total_size_bytes"], 0)
+        self.assertEqual(response.data["used_bytes"], 0)
+        self.assertEqual(response.data["object_count"], 0)
+        self.assertEqual(response.data["capacity_bytes"], 10 * 1024**3)
 
     def test_sums_sizes_and_ignores_nulls(self) -> None:
-        make_asset("a.png", 100)
-        make_asset("b.png", 250)
-        make_asset("old.png", None)
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(id=1).update(
+            used_bytes=350,
+            object_count=2,
+        )
 
         response = self.client.get("/api/media/total-size/")
 
-        self.assertEqual(response.data["total_size_bytes"], 350)
-        self.assertEqual(response.data["file_count"], 3)
-        self.assertEqual(response.data["files_with_size"], 2)
+        self.assertEqual(response.data["used_bytes"], 350)
+        self.assertEqual(response.data["object_count"], 2)
+        self.assertEqual(response.data["remaining_bytes"], 10 * 1024**3 - 350)
+
+    def test_requires_authentication(self) -> None:
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get("/api/media/total-size/")
+
+        self.assertEqual(response.status_code, 401)
