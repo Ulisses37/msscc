@@ -34,7 +34,7 @@ class DonationCsvContractTests(TestCase):
             "donor_first_name", "donor_last_name", "donor_email", "address",
             "external_reference", "message",
         ))
-        self.assertEqual(REQUIRED_DONATION_CSV_FIELDS, DONATION_CSV_HEADERS[:3])
+        self.assertEqual(REQUIRED_DONATION_CSV_FIELDS, DONATION_CSV_HEADERS[:2])
         self.assertEqual(set(DONATION_CSV_FIELD_LIMITS), set(DONATION_CSV_HEADERS))
         self.assertEqual(len(set(DONATION_CSV_HEADERS)), len(DONATION_CSV_HEADERS))
         self.assertTrue(set(DONATION_CSV_HEADERS).isdisjoint({
@@ -78,8 +78,9 @@ class DonationCsvContractTests(TestCase):
         self.assertNotIn(",".join(DONATION_CSV_HEADERS), page)
         for field in ("amount", "donation_date", "is_anonymous", "payment_method"):
             self.assertIn(field, help_text)
-        for value in ("cash or check", "true or false", "1,048,576 bytes", "500 data rows",
-                      "YYYY-MM-DD", "MM-DD-YYYY", "MM/DD/YYYY", "completed"):
+        for value in ("cash, check, card or bank_transfer", "true or false",
+                      "1,048,576 bytes", "500 data rows", "YYYY-MM-DD",
+                      "MM-DD-YYYY", "MM/DD/YYYY", "completed"):
             self.assertIn(value, help_text)
 
     def test_admin_guide_matches_contract_and_marks_later_work_as_planned(self):
@@ -130,7 +131,7 @@ class DonationCsvContractTests(TestCase):
     def test_unknown_anonymity_never_becomes_false(self):
         # A typo should be corrected by the uploader in C2, not quietly turned
         # into a saved non-anonymous record by Python's bool conversion.
-        for value in ("", " ", "unknown", "yes", "0"):
+        for value in ("unknown", "yes", "0"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 donation_csv_manual_input({"is_anonymous": value})
 
@@ -138,10 +139,18 @@ class DonationCsvContractTests(TestCase):
         # The mapping helper must be safe even if called separately from the
         # preview parser; an unknown value must never default to false.
         for value, expected in (("TRUE", True), (" true ", True), ("FaLsE", False),
-                                ("  FALSE  ", False)):
+                                ("  FALSE  ", False), ("", False), (" ", False)):
             with self.subTest(value=value):
                 self.assertIs(donation_csv_manual_input({"is_anonymous": value})["is_anonymous"],
                               expected)
+
+    def test_anonymous_manual_mapping_never_passes_identity_to_serializer(self):
+        normalized = donation_csv_manual_input({
+            "is_anonymous": "true", "donor_first_name": "Private",
+            "donor_last_name": "Identity", "address": "Private street",
+        })
+        for field in ("donor_first_name", "donor_last_name", "address"):
+            self.assertIsNone(normalized[field])
 
 
 class DonationCsvTemplateEndpointTests(TestCase):

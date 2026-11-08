@@ -14,21 +14,22 @@ DONATION_CSV_HEADERS = (
     "donor_first_name", "donor_last_name", "donor_email", "address",
     "external_reference", "message",
 )
-# Amount and date are facts a received donation cannot infer. Anonymity is
-# explicit so missing contact information does not silently imply anonymity.
-REQUIRED_DONATION_CSV_FIELDS = ("amount", "donation_date", "is_anonymous")
+# Amount and date cannot be inferred. Blank anonymity means an ordinary,
+# non-anonymous record even when historical contact details are unavailable.
+REQUIRED_DONATION_CSV_FIELDS = ("amount", "donation_date")
 # CSV carries text rather than JSON booleans. Normalize case and surrounding
-# whitespace, but never treat "unknown", "yes", or blank as a false donation.
+# whitespace; only an empty cell defaults to false, never an unknown word.
 DONATION_CSV_ANONYMITY_VALUES = ("true", "false")
-# Keep available methods in sync with manual entry, not checkout's card methods.
+# CSV also accepts the familiar credit_card spelling; persist its canonical
+# card value so manual entry, duplicate matching and retries agree.
 DONATION_CSV_PAYMENT_METHODS = tuple(ManualDonationInputSerializer.PAYMENT_METHODS)
+DONATION_CSV_PAYMENT_ALIASES = {"credit_card": Donation.PaymentMethod.CARD}
 # Neither value is an upload column: the server records already-received USD
 # donations as completed instead of trusting a CSV to choose payment state.
 DONATION_CSV_RECEIVED_STATUS = Donation.PaymentStatus.COMPLETED
 DONATION_CSV_CURRENCY = "usd"
 
-# Keep the membership import's file/row bounds; C2 will enforce these and the
-# per-cell bounds during parsing, before passing values to manual validation.
+# Bound uploaded bytes and rows before validating the retained CSV facts.
 MAX_DONATION_CSV_BYTES = 1_048_576
 MAX_DONATION_CSV_ROWS = 500
 # Match the storage/manual-input limits, while keeping money at the largest
@@ -46,21 +47,28 @@ DONATION_CSV_FIELD_LIMITS = {
 def donation_csv_manual_input(row: dict[str, str]) -> dict[str, str | bool | None]:
     """Map optional unknowns and explicit anonymity to the manual input contract.
 
-    Reject unknown anonymity instead of silently interpreting it as false.
-    C2 also checks required cells and format before calling this helper.
+    Reject unknown nonblank anonymity instead of silently interpreting it as false.
+    The upload parser checks required cells and format before calling this helper.
     """
     anonymity = row.get("is_anonymous", "").strip().casefold()
-    if anonymity not in DONATION_CSV_ANONYMITY_VALUES:
+    if anonymity and anonymity not in DONATION_CSV_ANONYMITY_VALUES:
         raise ValueError("Unsupported donation anonymity value.")
     # DRF treats an omitted optional choice differently from an empty string.
     # Convert only nullable optional facts; leave required amount/date untouched
     # so missing values cannot be mistaken for zero or today's date.
     nullable = {"payment_method", "donor_first_name", "donor_last_name", "donor_email", "address"}
-    return {
+    result = {
         key: (anonymity == "true" if key == "is_anonymous" else
               None if key in nullable and not value.strip() else value)
         for key, value in row.items()
     }
+    if anonymity == "true":
+        # Strip identifying cells before manual validation and review, not just
+        # at persistence: otherwise malformed names or addresses can leak in
+        # preview diagnostics or make an intentionally anonymous row unsaveable.
+        for key in ("donor_first_name", "donor_last_name", "address"):
+            result[key] = None
+    return result
 
 
 def donation_csv_template() -> str:

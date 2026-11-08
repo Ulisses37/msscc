@@ -66,6 +66,25 @@ class DonationCsvConfirmationTests(TestCase):
         self.assertEqual(retry.data["batch_id"], saved.data["batch_id"])
         self.assertEqual(Donation.objects.count(), 1)
 
+    def test_payment_alias_blank_anonymity_and_discarded_names_cannot_change_batch(self):
+        raw = csv_file(row(payment_method="credit_card", is_anonymous="TRUE",
+                           donor_first_name="Not saved", address="Private street"))
+        first = self.review(raw)
+        self.assertEqual(first["errors"], [])
+        self.assertNotIn("Not saved", str(first))
+        saved = self.confirm(first["review_token"], raw)
+        self.assertEqual(saved.status_code, 201, saved.data)
+        donation = Donation.objects.get()
+        self.assertEqual(donation.payment_method, "card")
+        self.assertIsNone(donation.donor_first_name_encrypted)
+        self.assertIsNone(donation.donor_address_encrypted)
+        canonical = csv_file(row(payment_method="CARD", is_anonymous="true"))
+        second = self.review(canonical)
+        retry = self.confirm(second["review_token"], canonical)
+        self.assertEqual(retry.status_code, 200, retry.data)
+        self.assertEqual(retry.data["batch_id"], saved.data["batch_id"])
+        self.assertEqual(Donation.objects.count(), 1)
+
     def test_atomic_received_save_encryption_anonymity_and_idempotent_retry(self):
         preview = self.review()
         self.assertTrue(preview["review_token"])

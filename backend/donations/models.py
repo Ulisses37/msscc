@@ -20,10 +20,12 @@ class Donation(models.Model):
         CSV_IMPORT = "csv_import", "CSV import"
 
     class PaymentMethod(models.TextChoices):
-        """Explicit offline payment facts, independent of provenance."""
+        """Recorded method of an already-received gift, not a charge request."""
 
         CASH = "cash", "Cash"
         CHECK = "check", "Check"
+        CARD = "card", "Card"
+        BANK_TRANSFER = "bank_transfer", "Bank transfer"
 
     class PaymentStatus(models.TextChoices):
         """Payment states that may be stored for a donation."""
@@ -100,7 +102,7 @@ class Donation(models.Model):
             ),
             models.CheckConstraint(
                 condition=models.Q(payment_method__isnull=True)
-                | models.Q(payment_method__in=["cash", "check"]),
+                | models.Q(payment_method__in=["cash", "check", "card", "bank_transfer"]),
                 name="donation_valid_payment_method",
             ),
         ]

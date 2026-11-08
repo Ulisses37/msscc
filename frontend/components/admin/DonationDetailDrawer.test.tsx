@@ -29,7 +29,7 @@ function addressValue(): HTMLElement {
 }
 
 describe('DonationDetailDrawer addresses', () => {
-  it.each(['cash', 'check', null] as const)(
+  it.each(['cash', 'check', 'card', 'bank_transfer', null] as const)(
     'shows saved offline facts independently of contacts with method %p', (method) => {
       render(<DonationDetailDrawer donation={{
         ...donation, donor_first_name: null, donor_last_name: null, donor_email: null,
@@ -45,7 +45,9 @@ describe('DonationDetailDrawer addresses', () => {
       expect(fieldValue('Payment status')).toHaveTextContent('completed');
       expect(fieldValue('Record origin')).toHaveTextContent('Manual');
       expect(fieldValue('Payment method')).toHaveTextContent(
-        method === 'cash' ? 'Cash' : method === 'check' ? 'Check' : 'Not provided',
+        method === 'cash' ? 'Cash' : method === 'check' ? 'Check'
+          : method === 'card' ? 'Card' : method === 'bank_transfer' ? 'Bank transfer'
+            : 'Not provided',
       );
       expect(fieldValue('Reference ID')).toHaveTextContent('DON-MANUAL-00000001');
       expect(fieldValue('External reference')).toHaveTextContent('Ledger 42');

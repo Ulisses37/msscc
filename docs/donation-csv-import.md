@@ -26,6 +26,8 @@ existing configurable CSV/XLSX donation exports are **not** import templates.
   anonymous, inactive, and unprivileged accounts cannot use them.
 - The template has no donor details. Use only fictional data in test systems.
   Downloading it does not write financial records or require a new migration.
+  Saving card or bank-transfer methods requires donation migration
+  `0021_donation_payment_methods` in the destination environment.
   Do not use production data or apply migrations to a shared development
   database without coordinating with the team.
 
@@ -44,17 +46,17 @@ amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_nam
 | --- | --- | --- |
 | `amount` | Yes | Known, positive USD decimal from `0.01` through `99999999.99`, with zero, one or two decimal places (for example `2`, `2.5`, `2.50`). No currency symbol, thousands separator, sign, or exponent. Blank and zero are invalid. If Excel converts an amount to a date, restore the original number; the importer cannot infer it. |
 | `donation_date` | Yes | Known calendar date in `YYYY-MM-DD` or US month-first `MM-DD-YYYY` or `MM/DD/YYYY` format, no later than the date of recording. The review normalizes all three to `YYYY-MM-DD`. Mixed separators, shortened dates, and year-first dates with slashes are not accepted. Never substitute today's date for an unknown historical date. |
-| `is_anonymous` | Yes | `true` or `false` in any letter case; surrounding spaces are ignored. Blank, `yes`, `no`, and `unknown` remain invalid. |
-| `payment_method` | No | `cash`, `check`, or blank if the historical method is unknown. Letter case and surrounding spaces are ignored (for example `Cash` and ` check ` become `cash` and `check`). Do not guess from an external reference; card, paid and unpaid are not payment methods for this import. |
-| `donor_first_name`, `donor_last_name` | No | Historical names, or blank if unknown. Both must be blank when `is_anonymous` is `true`. |
+| `is_anonymous` | No | `true` or `false` in any letter case; surrounding spaces are ignored. Blank means `false`; `yes`, `no`, and `unknown` remain invalid. |
+| `payment_method` | No | `cash`, `check`, `card`, `bank_transfer`, `credit_card` (normalized to `card`), or blank if unknown. Case and surrounding spaces are ignored. These are records of already-received payments, not instructions to charge a card. |
+| `donor_first_name`, `donor_last_name` | No | Historical names, or blank if unknown. Supplied names are discarded before review and save when `is_anonymous` is `true`. |
 | `donor_email` | No | A valid email, or blank if unknown. An anonymous donation may retain an optional email internally. |
-| `address` | No | Historical address, or blank if unknown. Must be blank when `is_anonymous` is `true`. |
+| `address` | No | Historical address, or blank if unknown. Supplied address is discarded before review and save when `is_anonymous` is `true`. |
 | `external_reference`, `message` | No | Historical reference/note, or blank. Neither controls the generated database reference. |
 
 Blank optional contact fields mean **unknown**, not anonymous; a
 non-anonymous donation can have no known contact details. Anonymous records
-retain no donor names or address. Do not place identifying names or address in
-anonymous rows, including in free-text notes.
+retain no donor names or address. Do not place identifying details in free-text
+notes on anonymous rows: notes are not automatically redacted.
 
 These are **received** donations. Their status is server-set to `completed`,
 and currency is USD. Neither is a CSV column. The importer does not charge a
@@ -70,7 +72,7 @@ columns, even when optional cells are blank. The backend preview enforces
 these limits before showing proposed records in the admin upload interface.
 If you edit the CSV in a spreadsheet, check that required date cells did not
 become blank. The parser accepts `TRUE`, `False`, and surrounding spaces in
-the `is_anonymous` column, but not a blank or an unknown value. If Excel
+the `is_anonymous` column; blank means false, but an unknown value is invalid. If Excel
 rewrites a known date as `MM-DD-YYYY` or `MM/DD/YYYY`, the importer accepts it
 as month-first and shows the normalized ISO date in review. A missing historical date must be looked up in
 the source records, not replaced with today's date. Re-export as UTF-8 CSV

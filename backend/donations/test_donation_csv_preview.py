@@ -54,6 +54,21 @@ class DonationCsvParserTests(TestCase):
                          ["cash", "check", None])
         self.assertFalse(Donation.objects.exists())
 
+    def test_reviewed_payment_alias_and_blank_anonymity_use_canonical_facts(self):
+        preview = parse_donation_csv(csv_file(
+            row(payment_method=" CREDIT_CARD ", is_anonymous=""),
+            row(payment_method="Bank_Transfer", is_anonymous=" "),
+            row(payment_method="card", is_anonymous="true",
+                donor_first_name="Private", address="a" * 600),
+        ))
+        self.assertEqual(preview["errors"], [])
+        self.assertEqual([p["values"]["payment_method"] for p in preview["proposed_records"]],
+                         ["card", "bank_transfer", "card"])
+        self.assertEqual([p["values"]["is_anonymous"] for p in preview["proposed_records"]],
+                         [False, False, True])
+        self.assertNotIn("Private", str(preview))
+        self.assertNotIn("a" * 600, str(preview))
+
     def test_errors_distinguish_missing_invalid_and_private_values(self):
         """Show safe corrections, but never a private value pasted in the wrong cell."""
         preview = parse_donation_csv(csv_file(
@@ -175,8 +190,8 @@ class DonationCsvParserTests(TestCase):
                         "100000000.00", "NaN")),
             ("donation_date", ("", "2025-02-29", "2020-13-01", "not-a-date",
                                "2026-11-05", "2026-11-04T00:00:00Z")),
-            ("is_anonymous", ("", " ", "yes", "0", "private-unknown-choice")),
-            ("payment_method", ("card", "unknown", "Paid")),
+            ("is_anonymous", ("yes", "0", "private-unknown-choice")),
+            ("payment_method", ("unknown", "Paid")),
             ("donor_email", ("private-invalid-email",)),
         ):
             for value in values:
@@ -221,31 +236,32 @@ class DonationCsvParserTests(TestCase):
         unknown = parse_donation_csv(csv_file(row(is_anonymous="yes")))
         self.assertEqual(unknown["errors"][0]["message"],
                          '"yes" is not recognized. Use one of: true, false.')
-        # Diagnostics do not soften validation: only an explicit boolean and
-        # actual received date can produce a reviewable proposal.
+        # Diagnostics do not soften validation: only a blank or recognized
+        # boolean and an actual received date produce a reviewable proposal.
         fixed = parse_donation_csv(csv_file(row(donation_date="1990-01-02",
                                                    is_anonymous=" FALSE ")))
         self.assertEqual(fixed["errors"], [])
         self.assertEqual(len(fixed["proposed_records"]), 1)
         self.assertIs(fixed["proposed_records"][0]["values"]["is_anonymous"], False)
 
-    def test_normalized_true_still_blocks_anonymous_names_and_address(self):
+    def test_normalized_true_discards_anonymous_names_and_address(self):
         preview = parse_donation_csv(csv_file(row(
             is_anonymous=" TRUE ", donor_first_name="Private", address="Private street",
         )))
-        self.assertEqual({error["field"] for error in preview["errors"]},
-                         {"donor_first_name", "address"})
-        self.assertEqual(preview["proposed_records"], [])
+        self.assertEqual(preview["errors"], [])
+        self.assertIsNone(preview["proposed_records"][0]["values"]["donor_first_name"])
+        self.assertIsNone(preview["proposed_records"][0]["values"]["address"])
 
-    def test_anonymous_names_and_address_require_correction_not_silent_discard(self):
+    def test_anonymous_names_and_address_are_discarded_before_review(self):
         preview = parse_donation_csv(csv_file(row(
             is_anonymous="true", donor_first_name="Private", donor_last_name="Identity",
             address="Private street", donor_email="ANON@EXAMPLE.TEST",
         )))
-        self.assertEqual({error["field"] for error in preview["errors"]},
-                         {"donor_first_name", "donor_last_name", "address"})
-        self.assertEqual(preview["proposed_records"], [])
-        self.assertNotIn("Private", str(preview["errors"]))
+        self.assertEqual(preview["errors"], [])
+        self.assertNotIn("Private", str(preview))
+        self.assertNotIn("Identity", str(preview))
+        self.assertEqual(preview["proposed_records"][0]["values"]["donor_email"],
+                         "anon@example.test")
         allowed = parse_donation_csv(csv_file(row(
             is_anonymous="true", donor_email="ANON@EXAMPLE.TEST",
         )))

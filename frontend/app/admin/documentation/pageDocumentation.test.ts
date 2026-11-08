@@ -18,10 +18,10 @@ describe('admin financial import help', () => {
 
   it('preserves donation-specific rules alongside membership help', () => {
     expect(finances).toBeDefined();
-    expect(instructions).toContain('amount, donation_date and is_anonymous');
+    expect(instructions).toContain('amount and donation_date');
     expect(instructions).toContain('2, 2.5 or 2.50');
     expect(instructions).toContain('MM/DD/YYYY');
-    expect(instructions).toContain('cash or check');
+    expect(instructions).toContain('cash, check, card or bank_transfer');
     expect(instructions).toContain('500 data rows');
     expect(instructions).toContain('Preview does not save records');
     expect(instructions).toContain('retry with the same reviewed file');

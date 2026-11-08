@@ -93,8 +93,8 @@ describe('manual donation input validation', () => {
     }
   });
 
-  it('records cash/check or unknown without inferring a method from reference text', () => {
-    for (const paymentMethod of [undefined, null, 'cash', 'check']) {
+  it('records received methods or unknown without inferring a method from reference text', () => {
+    for (const paymentMethod of [undefined, null, 'cash', 'check', 'card', 'bank_transfer']) {
       const result = validateManualDonation({
         ...minimum, paymentMethod, externalReference: ' cash receipt ', message: ' Historical note ',
       });
@@ -102,7 +102,7 @@ describe('manual donation input validation', () => {
       expect(result.externalReference).toBe('cash receipt');
       expect(result.message).toBe('Historical note');
     }
-    for (const paymentMethod of ['', 'unknown', 'card', 'unsupported']) {
+    for (const paymentMethod of ['', 'unknown', 'credit_card', 'unsupported']) {
       expect(manualDonationSchema.safeParse({ ...minimum, paymentMethod }).success).toBe(false);
     }
   });

@@ -16,7 +16,7 @@ export type DonationEntry = {
   donor_last_name: string | null;
   donor_email: string | null;
   record_source?: 'manual' | 'checkout' | 'csv_import' | 'unknown';
-  payment_method?: 'cash' | 'check' | null;
+  payment_method?: 'cash' | 'check' | 'card' | 'bank_transfer' | null;
   external_reference?: string;
   address?: string | null;
   amount: number | string;
@@ -251,7 +251,9 @@ export function DonationDetailDrawer({ donation, onClose }: DonationDetailDrawer
               value={formatCurrency(Number(donation.total_amount))} />
             <DetailField label="Payment status" value={donation.payment_status} />
             <DetailField label="Payment method" value={donation.payment_method === 'cash'
-              ? 'Cash' : donation.payment_method === 'check' ? 'Check' : null} />
+              ? 'Cash' : donation.payment_method === 'check' ? 'Check'
+                : donation.payment_method === 'card' ? 'Card'
+                  : donation.payment_method === 'bank_transfer' ? 'Bank transfer' : null} />
             <DetailField label="Reference ID" value={donation.reference_id} />
             <DetailField label="External reference" value={donation.external_reference} />
           </DetailSection>

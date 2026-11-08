@@ -9,6 +9,7 @@ from donations.donation_csv_contract import (
     DONATION_CSV_ANONYMITY_VALUES,
     DONATION_CSV_FIELD_LIMITS,
     DONATION_CSV_HEADERS,
+    DONATION_CSV_PAYMENT_ALIASES,
     DONATION_CSV_PAYMENT_METHODS,
     MAX_DONATION_CSV_BYTES,
     MAX_DONATION_CSV_ROWS,
@@ -42,7 +43,6 @@ CONTACT_STORAGE_FIELDS = {
     "donor_email": "donor_email_encrypted",
     "address": "donor_address_encrypted",
 }
-ANONYMOUS_IDENTITY_FIELDS = ("donor_first_name", "donor_last_name", "address")
 
 
 def _error(row: int, field: str, message: str) -> dict:
@@ -94,14 +94,20 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
     """Check CSV-specific rules before reusing manual-entry validation."""
     errors = []
     invalid = set()
-    # Normalize the explicit boolean and the supported Excel date spellings
-    # before manual validation. Never guess a blank date or boolean.
+    # Normalize explicit choices before manual validation. Blank anonymity
+    # means false; unknown nonblank words still require correction.
     raw_anonymity_length = len(row["is_anonymous"])
     raw_method_length = len(row["payment_method"])
-    # Match the spreadsheet-friendly boolean rule for the other CSV choice.
-    # Normalized proposals/fingerprints must not differ for Cash vs cash.
+    # Normalize the optional method and its credit_card alias before computing
+    # review facts; equivalent spellings must share a batch fingerprint.
+    method = row["payment_method"].strip().casefold()
     row = {**row, "is_anonymous": row["is_anonymous"].strip().casefold(),
-           "payment_method": row["payment_method"].strip().casefold()}
+           "payment_method": DONATION_CSV_PAYMENT_ALIASES.get(method, method)}
+    if row["is_anonymous"] == "true":
+        # Raw names/address do not enter validation or normalized proposals.
+        # The file-size limit still bounds even discarded uploaded cells.
+        for field in ("donor_first_name", "donor_last_name", "address"):
+            row[field] = ""
     us_date = row["donation_date"]
     us_date_match = US_DATE_CSV_PATTERN.fullmatch(us_date)
     if us_date_match:
@@ -149,14 +155,15 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
                 "Use YYYY-MM-DD, MM-DD-YYYY, or MM/DD/YYYY for a received donation.",
             ))
             invalid.add(field)
-        elif field == "is_anonymous" and value not in DONATION_CSV_ANONYMITY_VALUES:
+        elif field == "is_anonymous" and value and value not in DONATION_CSV_ANONYMITY_VALUES:
             errors.append(_error(row_number, field, _choice_error(
                 value, DONATION_CSV_ANONYMITY_VALUES, optional=False,
-            ) if value else "An explicit true or false is required; do not leave blank."))
+            )))
             invalid.add(field)
         elif field == "payment_method" and value and value not in DONATION_CSV_PAYMENT_METHODS:
             errors.append(_error(row_number, field, _choice_error(
-                value, DONATION_CSV_PAYMENT_METHODS, optional=True,
+                value, (*DONATION_CSV_PAYMENT_METHODS, *DONATION_CSV_PAYMENT_ALIASES),
+                optional=True,
             )))
             invalid.add(field)
         elif field == "donation_date" and not value:
@@ -166,15 +173,6 @@ def _validate_row(row: dict[str, str], row_number: int) -> tuple[list[dict], dic
                 "A known donation date is required (YYYY-MM-DD, MM-DD-YYYY or MM/DD/YYYY).",
             ))
             invalid.add(field)
-
-    if row["is_anonymous"] == "true":
-        # Manual entry intentionally discards names/address for anonymous
-        # records. An import must instead request correction so admins see the
-        # mistake before confirmation, even if a supplied cell is overlong.
-        for field in ANONYMOUS_IDENTITY_FIELDS:
-            if row[field].strip() and field not in invalid:
-                errors.append(_error(row_number, field, "Leave blank for an anonymous donation."))
-                invalid.add(field)
 
     # Keep collecting independent errors from DRF. Invalid optional cells are
     # omitted only for diagnostics, never to build a saveable proposal. Use
