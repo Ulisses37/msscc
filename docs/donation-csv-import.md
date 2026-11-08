@@ -1,0 +1,143 @@
+# Donation CSV import (SCRUM-843)
+
+This guide is tracked in Git for maintainers and testers. The donation admin page
+groups single entry, template download, and CSV review; Documentation & Help
+under Finances provides field rules that admins can access in the application.
+The ordered contract
+in `backend/donations/donation_csv_contract.py` generates the actual CSV; neither
+the download nor the page instructions are seeded database content. The
+existing configurable CSV/XLSX donation exports are **not** import templates.
+
+## Availability and safe testing
+
+- SCRUM-881 provides the template download only; it has no upload or save path.
+  The later SCRUM-882 endpoint adds backend-only validation without changing
+  what was delivered at that first checkpoint.
+- **SCRUM-882 added a read-only preview endpoint** at
+  `POST /api/donations/import/preview/`. Send one multipart `file` containing
+  the fixed CSV. The authorized response reports validated proposed rows and
+  safe row/field errors. **SCRUM-883 adds** the admin upload/review controls and
+  possible-duplicate warnings. SCRUM-884 adds signed, all-or-none confirmation
+  and a basic batch receipt. Preview creates no donations. The existing Add donation form
+  creates one record, not a CSV batch.
+- Run a frontend and backend version that both include the donation template
+  and preview endpoints. Sign in as an active executive admin or an active
+  admin with `Finances` access. Both endpoints independently check permission;
+  anonymous, inactive, and unprivileged accounts cannot use them.
+- The template has no donor details. Use only fictional data in test systems.
+  Downloading it does not write financial records or require a new migration.
+  Saving card or bank-transfer methods requires donation migration
+  `0021_donation_payment_methods` in the destination environment.
+  Do not use production data or apply migrations to a shared development
+  database without coordinating with the team.
+
+## Fixed donation CSV contract
+
+Choose **Download donation CSV template** on Admin > Donations. The downloaded
+`donation-import-template.csv` contains **one header row and no example donors**.
+Keep these ten columns in this exact order; each subsequent data row represents
+one already-received offline or historical donation:
+
+```text
+amount,donation_date,is_anonymous,payment_method,donor_first_name,donor_last_name,donor_email,address,external_reference,message
+```
+
+| Field | Required | Allowed input and meaning |
+| --- | --- | --- |
+| `amount` | Yes | Known, positive USD decimal from `0.01` through `99999999.99`, with zero, one or two decimal places (for example `2`, `2.5`, `2.50`). No currency symbol, thousands separator, sign, or exponent. Blank and zero are invalid. If Excel converts an amount to a date, restore the original number; the importer cannot infer it. |
+| `donation_date` | Yes | Known calendar date in `YYYY-MM-DD` or US month-first `MM-DD-YYYY` or `MM/DD/YYYY` format, no later than the date of recording. The review normalizes all three to `YYYY-MM-DD`. Mixed separators, shortened dates, and year-first dates with slashes are not accepted. Never substitute today's date for an unknown historical date. |
+| `is_anonymous` | No | `true` or `false` in any letter case; surrounding spaces are ignored. Blank means `false`; `yes`, `no`, and `unknown` remain invalid. |
+| `payment_method` | No | `cash`, `check`, `card`, `bank_transfer`, `credit_card` (normalized to `card`), or blank if unknown. Case and surrounding spaces are ignored. These are records of already-received payments, not instructions to charge a card. |
+| `donor_first_name`, `donor_last_name` | No | Historical names, or blank if unknown. Supplied names are discarded before review and save when `is_anonymous` is `true`. |
+| `donor_email` | No | A valid email, or blank if unknown. An anonymous donation may retain an optional email internally. |
+| `address` | No | Historical address, or blank if unknown. Supplied address is discarded before review and save when `is_anonymous` is `true`. |
+| `external_reference`, `message` | No | Historical reference/note, or blank. Neither controls the generated database reference. |
+
+Blank optional contact fields mean **unknown**, not anonymous; a
+non-anonymous donation can have no known contact details. Anonymous records
+retain no donor names or address. Do not place identifying details in free-text
+notes on anonymous rows: notes are not automatically redacted.
+
+These are **received** donations. Their status is server-set to `completed`,
+and currency is USD. Neither is a CSV column. The importer does not charge a
+card, calculate current online processing fees, send a receipt, or enroll a
+donor in a mailing list. The template also excludes database IDs, record
+origin, Stripe/checkout identifiers, and mailing-list consent.
+
+Use UTF-8 CSV with the downloaded header, at most **1,048,576 bytes** and
+**500 data rows**. Cell character limits: `amount` 11; `donation_date` 10;
+`is_anonymous` 32 before normalization; `payment_method` 20; each donor name 255; `donor_email`
+254; `address` 500; `external_reference` 255; `message` 500. Preserve all
+columns, even when optional cells are blank. The backend preview enforces
+these limits before showing proposed records in the admin upload interface.
+If you edit the CSV in a spreadsheet, check that required date cells did not
+become blank. The parser accepts `TRUE`, `False`, and surrounding spaces in
+the `is_anonymous` column; blank means false, but an unknown value is invalid. If Excel
+rewrites a known date as `MM-DD-YYYY` or `MM/DD/YYYY`, the importer accepts it
+as month-first and shows the normalized ISO date in review. A missing historical date must be looked up in
+the source records, not replaced with today's date. Re-export as UTF-8 CSV
+before uploading the corrected file.
+
+Validation errors point to the CSV row and field, explain supported choices,
+and sometimes quote a short standard choice such as `paid`. Arbitrary cell
+text is deliberately not repeated in errors because a donor name or address
+may have been pasted into the wrong column. Amounts `2`, `2.5` and `2.50`
+all review as `2.50`; payment method capitalization cannot create a second
+batch of the same normalized gifts.
+
+## Review and confirmation (SCRUM-883 / SCRUM-884)
+
+On Admin > Donations, open the compact **Import from CSV** section above the
+donations table, choose the filled CSV under **Review donation CSV**, then
+select **Upload and review CSV**. You can hide and reopen the section without
+discarding a paused review or an uncertain confirmation; keep the same browser
+page open when retrying. Review is read-only: even a valid review
+does not create donations. The preview displays backend-normalized amounts,
+dates, anonymity and payment methods, with unknown optional contacts left
+unknown. Correct row/field errors in the original CSV and re-upload it; there
+is no inline editor or column mapping. The review opens in a dialog; scroll
+the proposal table sideways on narrow screens. **Close review** or Escape
+pauses a read-only review without discarding its file; **Reopen CSV review**
+returns to the same proposals without another upload. **Cancel review**
+discards the review (and its warning acknowledgment) without saving anything.
+
+Warnings are possible matches for a human to assess, not automatic duplicate
+decisions. A later row with identical validated facts is flagged as repeated.
+An existing donation may be flagged when its amount and date match **and**
+either a supplied nonblank external ledger reference or a known non-anonymous
+first and last name also match. Email alone is never sufficient. Warnings do
+not merge, discard or edit donations. Check **I have reviewed these donation
+warnings** after examining them. Selecting a different file or re-uploading
+starts a fresh review and clears that acknowledgment. Only an error-free review
+offers **Confirm donation import**; warnings require acknowledgment before it
+can be used. Confirmation rechecks the finance permission, signed short-lived
+review, entire original file and current warnings before saving all rows or
+none. An expired review cannot save anything; upload again. A retry with the
+same reviewed file after an uncertain response returns the original batch if
+it was already committed. **Do not select a new file after an uncertain
+response**; if the dialog was closed after the uncertain response, reopen it
+and retry the existing review to learn whether it saved. The dialog cannot be
+closed while confirmation is still in flight. An identical normalized batch is
+imported at most once, even when its CSV formatting differs.
+Confirmation returns a batch ID and count, not an editable upload or a payment
+receipt. Do not use real donor data for testing and do not confirm on production.
+
+## Saved results (SCRUM-885)
+
+A successful confirmation, including a retry that finds an existing batch,
+closes the review dialog and shows the batch ID and created count on the page.
+The donations list refreshes using its current search without resetting sorting
+or pagination. A historical donation
+may not appear in those results: choose its ID under **Saved donation ID** and
+select **View imported donation** to load the saved facts through the authorized
+detail endpoint. A failed detail read can be retried without importing again.
+If the list refresh fails, use **Retry donation list refresh**; the batch receipt
+remains visible. The drawer identifies CSV import as the origin and presents
+its already-received amount without online processing costs.
+
+After an uncertain confirmation response, keep the same browser page, file and
+review and retry confirmation to recover the original receipt. Closing or
+refreshing the page loses the in-memory file and signed review; there is no
+standalone batch lookup. Do not assume a lost response means no records saved,
+and do not submit a different file to test for success. No payment, receipt
+email or mailing-list actions occur on import.

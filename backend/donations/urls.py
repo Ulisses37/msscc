@@ -1,5 +1,10 @@
 from django.urls import path
 
+from donations.donation_import_views import (
+    DonationCsvConfirmView,
+    DonationCsvPreviewView,
+    DonationCsvTemplateView,
+)
 from donations.membership_import_views import (
     MembershipCsvConfirmView,
     MembershipCsvPreviewView,
@@ -31,6 +36,13 @@ urlpatterns = [
     # create a record or accept client-supplied contribution/total fields.
     path("quote/", DonationQuoteView.as_view(), name="donation-quote"),
     path("manual/", ManualDonationCreateView.as_view(), name="manual-donation-create"),
+    # Import template has its own finance-protected route; it neither lists
+    # existing donors nor changes the public/manual donation creation paths.
+    path("import/template/", DonationCsvTemplateView.as_view(), name="donation-import-template"),
+    # Preview is read-only; only the separately authorized, signed confirmation
+    # route can persist a complete received donation batch.
+    path("import/preview/", DonationCsvPreviewView.as_view(), name="donation-import-preview"),
+    path("import/confirm/", DonationCsvConfirmView.as_view(), name="donation-import-confirm"),
     path(
         "table-revisions/",
         AdminTableRevisionView.as_view(),

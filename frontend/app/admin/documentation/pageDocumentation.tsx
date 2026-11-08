@@ -22,18 +22,27 @@ export interface AdminPageInfo {
 // Array of pageInstructions allows for easy multi line explanations
 export const adminPageList: AdminPageInfo[] = [
   {
-    // The help page filters by permission key; membership record access is
-    // controlled by Finances, not a separate Members permission.
+    // The help page filters by permission key. Both membership and donation
+    // imports require Finances, so keep their instructions in the same entry.
     pageName: "Finances",
-    pageDescription: "Membership CSV import and single-record entry",
+    pageDescription: "Membership and donation CSV imports and single-record entry",
     pageInstructions: [
-      "On View Memberships, use Add membership to save a single record. For multiple records, download the membership CSV template and keep its columns in order.",
+      "Memberships: On View Memberships, use Add membership to save a single record. For multiple records, download the membership CSV template and keep its columns in order.",
       "Each CSV row needs first_name, last_name, membership_type and status. Other columns can be left blank when unknown; 0.00 means a known zero, not an unknown amount.",
       "Status: unknown, active, inactive, pending, expired or canceled. Optional payment status: pending, completed, failed, canceled or waived. Optional payment method: cash, check, card, bank_transfer or other. CSV choices ignore capitalization; Paid and Unpaid are not supported aliases.",
-      "Dates may use YYYY-MM-DD, YYYY/MM/DD, MM/DD/YYYY or MM-DD-YYYY. Amounts must be nonnegative decimals with at most two places, without currency symbols or commas.",
+      "Dates may use YYYY-MM-DD, YYYY/MM/DD, MM-DD-YYYY or MM/DD/YYYY. Amounts must be nonnegative decimals with at most two places, without currency symbols or commas.",
       "Upload a UTF-8 CSV of at most 1,048,576 bytes and 500 data rows. Fix row errors in the source file and upload again. Possible duplicates are warnings, not automatic merges.",
       "Preview does not save records. Acknowledge warnings before confirming. Confirm saves the whole batch or none; the result shows the batch and its saved memberships.",
       "If a confirmation response is lost, retry the same reviewed file. After leaving the page, upload and confirm that same file again to retrieve the existing batch without duplicating records.",
+      "Donations:",
+      "On View Donations, use Add donation for one already-received gift. For several, download the donation CSV template and keep its ten columns in their original order; the record export is not an import template.",
+      "Each donation CSV row needs amount and donation_date. Amount is a positive USD number up to 99999999.99 with at most two decimal places, such as 2, 2.5 or 2.50. Do not include dollar signs or commas. Never invent an unknown historical amount or date.",
+      "Dates may use YYYY-MM-DD, MM-DD-YYYY or MM/DD/YYYY. Use a real known date no later than today; shortened dates and mixed separators are not accepted. is_anonymous may be true or false; blank means false. Choices ignore capitalization and surrounding spaces.",
+      "Optional payment_method is cash, check, card or bank_transfer, or blank if unknown; credit_card is accepted as card. Capitalization and surrounding spaces are ignored. Names, email, address, external_reference and message may be blank if unknown. Anonymous rows discard supplied donor names and address before review and save; email may still be retained internally. Do not put identifying details in notes.",
+      "These payments have already been received: payment status is set to completed and currency to USD by the server, not entered in the CSV. Import does not charge a card, calculate processing fees, send receipts or subscribe anyone to a mailing list.",
+      "Upload a UTF-8 CSV of at most 1,048,576 bytes and 500 data rows. Cell limits: amount 11 characters, date 10, anonymity 32 before normalization, method 20, each name 255, email 254, address 500, external reference 255 and message 500. Preserve blank optional columns.",
+      "Upload and review to see normalized donations. Preview does not save records. Correct errors in the source file and upload again; possible duplicates are warnings, not automatic merges. Acknowledge warnings before confirming; Confirm saves the entire batch or none.",
+      "The result shows a batch ID, created count and saved donation IDs. If a confirmation response is uncertain, retry with the same reviewed file while the page is open. If you leave the page, upload the same unchanged file again to recover an existing batch without creating more donations.",
     ]
   },
   {
