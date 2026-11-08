@@ -117,6 +117,8 @@ class VolunteerSlotSerializer(serializers.ModelSerializer):
 # Names are included in volunteer emails, so reject links, markup, email
 # addresses, and control characters such as line breaks.
 NAME_NOT_ALLOWED = re.compile(r"https?://|www\.|[<>@]|[\x00-\x1f]", re.IGNORECASE)
+DUPLICATE_SIGNUP_MESSAGE = "This email is already signed up for this shift."
+DUPLICATE_SIGNUP_CODE = "duplicate_signup"
 
 
 class VolunteerSignupSerializer(serializers.ModelSerializer):
@@ -159,6 +161,35 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
         if value is not None and not VolunteerSlot.objects.filter(pk=value).exists():
             raise serializers.ValidationError("This shift does not exist.")
         return value
+
+    def validate(self, attrs: dict) -> dict:
+        """Reject a second signup from the same email for the same shift."""
+        email = attrs.get("email", getattr(self.instance, "email", ""))
+
+        if "slot_id" in attrs:
+            slot_id = attrs["slot_id"]
+        elif "slot" in attrs:
+            slot_id = attrs["slot"].pk if attrs["slot"] else None
+        else:
+            slot_id = getattr(self.instance, "slot_id", None)
+
+        if slot_id is None or not email:
+            return attrs
+
+        if self.instance is not None and (
+            email.strip().lower() == self.instance.email.strip().lower()
+            and slot_id == self.instance.slot_id
+        ):
+            return attrs
+
+        if VolunteerSignup.objects.filter(slot_id=slot_id, email__iexact=email.strip()).exclude(
+            pk=getattr(self.instance, "pk", None)
+        ).exists():
+            raise serializers.ValidationError(
+                {"email": [DUPLICATE_SIGNUP_MESSAGE], "code": [DUPLICATE_SIGNUP_CODE]}
+            )
+
+        return attrs
 
 
 class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):

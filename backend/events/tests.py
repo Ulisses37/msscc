@@ -185,6 +185,64 @@ class VolunteerSignupEmailTests(TestCase):
         mock_send_email.assert_not_called()
 
     @patch("events.views.send_volunteer_thanks_email")
+    def test_duplicate_email_for_the_same_shift_is_rejected(self, mock_send_email):
+        """Prevent a second signup for the same shift, regardless of email case."""
+        payload = {
+            "slot_id": self.slot.volunteer_slot_id,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+        self.client.post("/api/events/signups/", payload, format="json")
+
+        response = self.client.post(
+            "/api/events/signups/",
+            {**payload, "email": "AIKO@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["email"], ["This email is already signed up for this shift."]
+        )
+        self.assertEqual(response.json()["code"], ["duplicate_signup"])
+        self.assertEqual(VolunteerSignup.objects.count(), 1)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_same_email_can_sign_up_for_a_different_shift(self, mock_send_email):
+        """Allow one email address to volunteer for more than one shift."""
+        second_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Guide",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        payload = {
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+
+        first = self.client.post(
+            "/api/events/signups/",
+            {**payload, "slot_id": self.slot.volunteer_slot_id},
+            format="json",
+        )
+        second = self.client.post(
+            "/api/events/signups/",
+            {**payload, "slot_id": second_slot.volunteer_slot_id},
+            format="json",
+        )
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.count(), 2)
+        self.assertEqual(mock_send_email.call_count, 2)
+
+    @patch("events.views.send_volunteer_thanks_email")
     def test_rapid_signups_from_one_ip_are_throttled(self, mock_send_email):
         """Reject a request once the per-IP volunteer-signup limit is exceeded."""
         payload = {
@@ -197,7 +255,12 @@ class VolunteerSignupEmailTests(TestCase):
 
         with patch.dict(AnonRateThrottle.THROTTLE_RATES, {"volunteer_signup": "2/hour"}):
             responses = [
-                self.client.post("/api/events/signups/", payload, format="json") for _ in range(3)
+                self.client.post(
+                    "/api/events/signups/",
+                    {**payload, "email": f"aiko{number}@example.com"},
+                    format="json",
+                )
+                for number in range(3)
             ]
 
         self.assertEqual(responses[0].status_code, 201)
