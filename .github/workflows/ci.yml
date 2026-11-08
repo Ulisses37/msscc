@@ -78,10 +78,13 @@ jobs:
     env:
       # Dummy values only. config.settings.test supplies the remaining service
       # credentials itself and swaps in in-memory SQLite, so no real secret and
-      # no database service are needed for this job.
+      # no database service are needed for this job. S3_BUCKET is set here
+      # because config.settings.test does not define it, and media URL
+      # generation in the content API tests needs it to build a bucket handle.
       DJANGO_SETTINGS_MODULE: config.settings.test
       DJANGO_SECRET_KEY: ci-dummy-secret-key
       FIELD_ENCRYPTION_KEYS: mCz0qNSJS2G3LzI4SXfTWaU0JwBkzY0lG9_29s1mHdA=
+      S3_BUCKET: ci-dummy-bucket
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -127,7 +130,8 @@ jobs:
           path: frontend/jest.json
           if-no-files-found: ignore
       - name: Type-check frontend
-        run: npx tsc --noEmit -p frontend
+        run: npm exec -- tsc --noEmit
+        working-directory: frontend
       - name: Lint frontend
         run: npm run lint
         working-directory: frontend
