@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSignupsBySlotId, VolunteerSignup } from '@/services/volunteerService';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 import {
   AdminVolunteerForm,
   type VolunteerFormData,
@@ -86,7 +87,7 @@ export default function VolunteerSignupsPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAdminRequestHeaders() },
           body: JSON.stringify({
             slot: Number(id),
             first_name: data.firstName,

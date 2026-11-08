@@ -150,6 +150,7 @@
     "processing": "処理中...",
     "register": "申し込む",
     "submitError": "ボランティア登録を完了できませんでした。もう一度お試しください。",
+    "rateLimitError": "お使いの接続からの申し込みが多すぎます。しばらくしてからもう一度お試しください。",
     "commentsLabel": "コメント（任意）",
     "commentsPlaceholder": "主催者にお伝えしたいことがあればご記入ください（ご質問や参加可能な時間帯など）。",
     "commentsCount": "{count} / {max}文字",
