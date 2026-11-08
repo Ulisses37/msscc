@@ -371,6 +371,40 @@ placeholder:'frontend\assets\NewBanner.webp' , banner:'frontend\assets\NewPlaceh
 backend/manage.py seed_static_media --placeholder "frontend\assets\NewBanner.webp" --banner "frontend\assets\NewPlaceholder.png"
 ```
 
+### Seed the Board of Directors template
+
+Initialize the preproduction Board of Directors records. On an empty board table, this creates
+four officer placeholders and eight generic Director records. If records already exist, the
+command only adds officer placeholders when fewer than four total BoardMember records exist.
+
+Validate the planned initialization without writing to the database:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_board_members --dry-run
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_board_members --dry-run
+```
+
+Run the initialization:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_board_members
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_board_members
+```
+
+The seed data is maintained in `backend/board_members/management/board_member_seed_data.py`.
+Existing BoardMember records are preserved, and the command does not replenish directors after
+the initial empty-table initialization.
+
 ### Populate the initial public page content
 
 After running `seed_pages`, use the page-content importer to add the bilingual text and images

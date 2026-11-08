@@ -8,6 +8,10 @@ const isMediaUploadError = (value: unknown): boolean => (
   isRecord(value) && value.code === 'invalid_media'
 );
 
+const isStorageQuotaError = (value: unknown): boolean => (
+  isRecord(value) && value.code === 'storage_quota_exceeded'
+);
+
 const getReasons = (value: unknown): string[] => {
   if (!isRecord(value) || !isRecord(value.details) || !Array.isArray(value.details.reasons)) {
     return [];
@@ -41,6 +45,12 @@ export function parseMediaUploadError(
   error: unknown,
   fallbackMessage: string,
 ): Error {
+  if (isStorageQuotaError(error)) {
+    return new MediaUploadError(
+      'Storage quota reached. Please remove media or ask an administrator to update the storage quota.',
+    );
+  }
+
   if (!isMediaUploadError(error)) {
     return new Error(fallbackMessage);
   }

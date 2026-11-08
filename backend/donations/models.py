@@ -17,12 +17,15 @@ class Donation(models.Model):
         UNKNOWN = "unknown", "Unknown"
         CHECKOUT = "checkout", "Checkout"
         MANUAL = "manual", "Manual entry"
+        CSV_IMPORT = "csv_import", "CSV import"
 
     class PaymentMethod(models.TextChoices):
-        """Explicit offline payment facts, independent of provenance."""
+        """Recorded method of an already-received gift, not a charge request."""
 
         CASH = "cash", "Cash"
         CHECK = "check", "Check"
+        CARD = "card", "Card"
+        BANK_TRANSFER = "bank_transfer", "Bank transfer"
 
     class PaymentStatus(models.TextChoices):
         """Payment states that may be stored for a donation."""
@@ -68,6 +71,12 @@ class Donation(models.Model):
     external_reference = models.CharField(max_length=255, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     receipt_sent_at = models.DateTimeField(null=True, blank=True)
+    # Historical and manually created donations have no batch; only an
+    # authorized CSV confirmation attaches the durable receipt.
+    import_batch = models.ForeignKey(
+        "DonationImportBatch", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="donations",
+    )
 
     class Meta:
         ordering = ["-donation_date", "-created_at", "donation_id"]
@@ -86,12 +95,14 @@ class Donation(models.Model):
                 name="donation_valid_payment_status",
             ),
             models.CheckConstraint(
-                condition=models.Q(record_source__in=["unknown", "checkout", "manual"]),
+                condition=models.Q(record_source__in=[
+                    "unknown", "checkout", "manual", "csv_import",
+                ]),
                 name="donation_valid_record_source",
             ),
             models.CheckConstraint(
                 condition=models.Q(payment_method__isnull=True)
-                | models.Q(payment_method__in=["cash", "check"]),
+                | models.Q(payment_method__in=["cash", "check", "card", "bank_transfer"]),
                 name="donation_valid_payment_method",
             ),
         ]
@@ -105,6 +116,21 @@ class Donation(models.Model):
         if self._state.adding and self.total_amount is None:
             self.total_amount = self.amount
         return super().save(*args, **kwargs)
+
+
+class DonationImportBatch(models.Model):
+    """Unique receipt for one committed set of normalized donation facts."""
+
+    batch_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # A unique database key, not a worker-local lock, arbitrates simultaneous
+    # confirmations. Its HMAC contains no plaintext contact details.
+    fingerprint = models.CharField(max_length=64, unique=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        """Avoid exposing uploaded contacts or fingerprint in incidental logs."""
+        return f"Donation import {self.pk}"
 
 
 class MembershipImportBatch(models.Model):
