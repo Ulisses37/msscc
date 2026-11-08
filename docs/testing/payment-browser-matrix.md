@@ -1,4 +1,4 @@
-# SCRUM-855 payment browser test matrix
+# Payment browser test matrix
 
 This is a **manual, test-mode** runbook and an observation log for the existing
 membership Payment Element and donation embedded Checkout journeys. Use it from
@@ -115,15 +115,89 @@ interfere with checkout; record exceptions. Use a fresh synthetic identity and
 the same pre-agreed test amount/option per comparable run. Never reuse a paid
 session. Record versions and locale in the tables below, not just in a summary.
 
-WebKit on Windows is a separate, optional A3 pass. **Do not install a new
-browser runner or dependency until the team approves its precise tool,
-version and scope.** When approved, pin and record the runner package version
-and WebKit revision/build, its reproducible install/launch commands, OS build,
-and whether the browser runs headed against this local site. Test both flows
-manually inside that headed window. A launch/navigation smoke check does not
-prove that hosted payment controls or payment completion worked. Label every
-row `WebKit on Windows`; do not turn these observations into a branded-browser
-result. If tooling is unavailable, mark WebKit scenarios blocked, not passed.
+### WebKit on Windows: first-time installation and manual launch
+
+This project pins the **Playwright library `1.65.0`** as a frontend development
+dependency; it expects **WebKit `27.2`, Playwright revision `2388`** on Windows.
+The library supplies a headed, temporary WebKit window, not a full automated
+payment-test framework. Its WebKit build is **not branded Safari**. Do not use
+`npm init playwright` (which generates a separate test project), install an
+unversioned `@latest`, or download an old browser from a third-party site.
+
+1. On a Windows 11+ PC, install the repository's requested Node `22.14.0`
+   (see `frontend/.nvmrc` and the developer setup guide), then open **Windows
+   PowerShell** and change directory to the root of your clone. Check the
+   version with `node --version` and `npm --version`. Record any mismatch and
+   verify that npm can access its package registry. The npm lockfile specifies
+   the exact dependency versions; the binary is downloaded separately.
+2. From the **repository root**, enter each command below separately. `npm ci`
+   installs frontend dependencies from the committed lockfile. The second
+   command downloads **only WebKit and its required support binaries** to
+   Playwright's per-user browser cache; it does not install Chromium, Firefox,
+   Safari, or a system-wide browser. A successful install prints `WebKit 27.2
+   (playwright webkit v2388) downloaded` (or exits successfully if cached).
+
+   ```powershell
+   npm --prefix frontend ci
+   & .\frontend\node_modules\.bin\playwright.cmd install webkit
+   & .\frontend\node_modules\.bin\playwright.cmd --version
+   & .\frontend\node_modules\.bin\playwright.cmd install --dry-run webkit
+   ```
+
+   The version command should print `Version 1.65.0`; the dry run should list
+   `WebKit 27.2 (playwright webkit v2388)` and the *local* installation location.
+   The dry run **does not** check that a working binary exists: run the smoke
+   command below to verify that. Do not paste local cache paths into the matrix.
+3. From the root, run this **non-payment launch-only** check. It opens a
+   temporary headed window on `about:blank` and closes automatically. Expect
+   `WebKit on Windows browser version: 27.2` and `Launch-only smoke check
+   passed; no payment flow was tested.` Nothing contacts the app or Stripe.
+
+   ```powershell
+   node frontend/scripts/paymentWebkit.cjs --smoke
+   ```
+
+4. Complete the safety gate above and start the local frontend and backend as
+   described under Repository setup. Confirm their **starting pages** load in
+   a normal browser. There is no VM: WebKit runs on the same Windows machine,
+   so its `localhost:3000` reaches the same frontend. Keep both servers open.
+5. Run **one** command below from the root for the flow/locale you will check;
+   wait for the window to open. It prints the browser-reported WebKit version
+   and the fixed local starting path. If the starting page fails to load, stop
+   and fix the local setup before any payment. Otherwise follow sections 2–4
+   manually **inside the WebKit window**. The command waits until you close
+   that window; closing it returns control to PowerShell. Run the next command
+   only after closing it, for a fresh isolated browser context. No card entry,
+   payment confirmation, screenshots or session traces are automated.
+
+   ```powershell
+   node frontend/scripts/paymentWebkit.cjs --flow membership --locale en
+   node frontend/scripts/paymentWebkit.cjs --flow membership --locale ja
+   node frontend/scripts/paymentWebkit.cjs --flow donation --locale en
+   node frontend/scripts/paymentWebkit.cjs --flow donation --locale ja
+   ```
+
+   **Run these individually, not as a batch:** a command waits for the window
+   to close. Use the existing scenario IDs and only test-mode Stripe methods.
+   Record Windows build/architecture, date/time zone, package version,
+   revision `2388`, the version printed by the launcher, and each attempted
+   scenario's result in a `WebKit on Windows` row. A blank-page smoke pass or
+   starting-page navigation is **not** payment compatibility evidence.
+
+**If something goes wrong:** `node`/`npm` not recognized: install the required
+Node version and reopen PowerShell; `playwright.cmd` missing: rerun `npm
+--prefix frontend ci` from the clone root; download failure: check network or
+team proxy access and retry `install webkit` (do not use a third-party binary);
+missing browser executable at launch: rerun `install webkit` with this same
+locked package version. If `--smoke` cannot start a window, record the error
+category only (not raw logs), Windows version and WebKit build; do not claim a
+browser result. If the page cannot be reached, check that `npm run dev` is
+running in `frontend/`, port 3000 is reachable, and the backend is running;
+verify API origin, non-production keys and webhook privately before proceeding.
+Do not change execution policy, bypass certificate or browser safeguards, or
+expose development ports publicly. If an attempt remains unavailable, record
+its precise `blocked` reason in the results table. Deleting the user cache is
+**not necessary**: each launcher run creates a new nonpersistent context.
 
 Environment record (fill in before running any scenarios):
 
@@ -137,7 +211,7 @@ Environment record (fill in before running any scenarios):
 | Shared-write coordination / database isolation | Not verified yet |
 | Test webhook route/delivery verified (no payloads) | Not verified yet |
 | Chrome Stable / Firefox Release / Edge Stable exact in-browser versions | Not recorded yet; executable preflight is not browser evidence |
-| WebKit runner version and build, if approved | Not approved or recorded yet |
+| WebKit library/binary and reported browser version | Pinned Playwright `1.65.0`, WebKit revision `2388`; tester reports launcher printed `27.2` during manual payment runs. Exact run date and Windows build at run time not recorded. |
 
 ## 2. Flows and authority
 
@@ -203,7 +277,7 @@ with the precise reason instead of deleting it.
 | Edge (pending version) | pending | M/D | en/ja | 01-08 | See section 3 | Not attempted | Not attempted |  |  |  |
 | WebKit on Windows (approval/build pending) | pending | M/D | en/ja | 01-08 | See section 3 | Not attempted | Not attempted |  |  |  |
 
-#### A2 reported English donation observations
+#### Reported English donations in Chrome, Firefox and Edge
 
 The tester reports that an anonymous donation using an email address was
 completed in each of Chrome, Firefox and Edge, and that `/en/support` displayed
@@ -235,13 +309,44 @@ scenarios** have not been attempted or reported. Do not convert them to passes
 or call them blocked until an actual attempt or prerequisite assessment is
 recorded. The template rows above remain planning placeholders only.
 
+#### Reported WebKit on Windows payment observations
+
+Tester reports two test-mode payments through the headed WebKit launcher, which
+printed browser version `27.2`. The first was a **support donation in English**:
+the public site displayed a green confirmation after payment, and the tester
+independently found a matching donation in the admin dashboard. The second was
+a **membership payment in Japanese**: the tester completed the payment and
+independently found a matching membership in the admin dashboard. The tester
+did **not** report the public membership result's exact status, an independently
+inspected status API response, or an admin payment-status value. Finding a
+membership record alone is not proof of backend-confirmed `complete`. The
+donation's green public confirmation is treated as a reported completed UI;
+the underlying status response was not independently inspected. No payment
+identifiers or private data were collected. Exact payment date/time, Windows
+build during the run, and full safety-gate verification were not recorded;
+the revision is inferred from the pinned installed binary, not separately
+read from the headed window. These observations do **not** cover both locales
+for each flow, nor the other scenario IDs.
+
+| Browser and reported version (pinned revision) | Windows build at run | Flow | Locale | ID | Expected | Observed UI / backend status (sanitized) | Status | Block reason or limitation | Tester/date | Safe evidence ID |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| WebKit on Windows `27.2` (expected revision `2388`) | Not recorded | D | en | 01 | Hosted checkout, quote/total and safe error display checked | Tester completed a payment using the donation interface; quote/total and error display were not separately checked. | blocked | Only payment interface usability observed; remaining 01 checks unverified. | Tester report; date not recorded | Verbal report only |
+| WebKit on Windows `27.2` (expected revision `2388`) | Not recorded | D | en | 03 | Backend-confirmed `completed`, not redirect alone | Tester reports green confirmation on the public support page and independently found the donation in the admin dashboard. No separate status response captured. | pass | Reported completed UI follows backend status lookup in current code; exact backend response and webhook not independently inspected. | Tester report; date not recorded | Verbal report only |
+| WebKit on Windows `27.2` (expected revision `2388`) | Not recorded | M | ja | 01 | Hosted Payment Element, quote/total and safe error display checked | Tester reports completing membership payment and finding the membership in the admin dashboard; quote/total and error display were not separately checked. | blocked | Only payment-interface usability observed; remaining 01 checks unverified. | Tester report; date not recorded | Verbal report only |
+| WebKit on Windows `27.2` (expected revision `2388`) | Not recorded | M | ja | 03 | Backend-confirmed `complete` on membership result page | Tester reports completing membership payment and independently finding a matching membership in the admin dashboard. Public result status and dashboard payment status not reported. | blocked | Membership record does not establish payment `complete`; result/status verification still needed. | Tester report; date not recorded | Verbal report only |
+
+The other WebKit scenario IDs, Japanese donation and English membership were
+not reported as attempted. Their template rows remain `Not attempted`, not
+passes or inferred failures. In particular, no decline, incomplete-input,
+pending, navigation or repeat-click behavior was verified in these runs.
+
 ### Defects and retests
 
 | ID | Browser/build, flow/locale | Safe reproduction steps and expected/observed behavior | Severity | Regression test / fix commit | Affected-browser retest | Other-browser smoke |
 | --- | --- | --- | --- | --- | --- | --- |
 | None recorded yet |  |  |  |  |  |  |
 
-### SCRUM-872: collecting Windows browser observations
+### Collecting Chrome, Firefox and Edge observations
 
 The tester runs the guided scenarios in **Chrome, Firefox and Edge**, for both
 flows and both supported locales. Record each browser's **in-app About page**
@@ -270,8 +375,8 @@ status, and which locale the return actually uses. For membership, distinguish
 Payment Element submission from `complete` on the result page. If a pending
 state, decline, or webhook confirmation cannot safely be observed, mark the
 specific scenario blocked; the mocked regression tests below are **not** a
-substitute for this browser observation. Confirm the recorded rows with the
-tester before the SCRUM-872 commit.
+substitute for this browser observation. Confirm recorded rows with the tester
+before reporting the results for review.
 
 ## 5. Automated checks (not browser compatibility evidence)
 
@@ -301,6 +406,8 @@ backend\venv\Scripts\python.exe -m ruff check backend
 | A2 preparation (before browser observations) | Six focused Jest suites, frontend lint, TypeScript, `git diff --check` | 6 suites, 111 tests passed (one new mocked pending-to-completed donation test); TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Application behavior only; browser results still unattempted. Recheck after adding actual observations and before commit. |
 | A2 browser version preflight | `& .\scripts\payment_browser_versions.ps1`; PowerShell parser | Script syntax valid; discovered candidate Chrome `156.0.8078.81`, Firefox `159.0.1`, Edge `157.0.4341.42` on Windows process-view build `10.0.26300.0`. | Discovery only, not in-browser version confirmation or payment observations. Versions may update before the manual run. |
 | A2 after limited English donation reports | Six focused Jest suites, frontend lint, TypeScript, `git diff --check` | 6 suites, 111 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Mocked checks only. Three tester-reported donation completions appear above; membership, other scenarios and exact in-browser versions remain unverified. Rerun after further observations before commit. |
+| A3 installation/preflight, before manual WebKit payments | `npm --prefix frontend install --save-dev --save-exact playwright@1.65.0`; project-local CLI `install webkit`, `--version`, `install --dry-run webkit`; `node frontend/scripts/paymentWebkit.cjs --smoke`; seven focused Jest suites, lint, TypeScript, `git diff --check` | Playwright `1.65.0` installed; WebKit `27.2` revision `2388` and support binaries downloaded; headed `about:blank` launch passed; final seven suites/123 tests passed, TypeScript and diff check passed, lint exited 0 with warnings in unchanged files. npm install reported 28 vulnerabilities across the current dependency tree; no audit fix was run. The documented fresh `npm ci` procedure and payment starting-page launch have not yet been tested on a clean machine. | Launch-only and mocked checks; **no WebKit payment scenario has been observed**. Node on this machine `v24.14.0` differs from requested `22.14.0`. |
+| A3 tester-reported WebKit runs | Headed WebKit manual payment checks; flow-level observations above | English donation public confirmation and matching admin record reported; Japanese membership payment and matching admin record reported. Browser version `27.2` reported. No other scenario result or exact run date reported. | These are limited manual observations; a membership record alone does not establish payment status `complete`. Automated checks are recorded separately. |
 
 Use the PR template at `.github/PULL_REQUEST_TEMPLATE.md` for the final review
 summary, commands, results, blockers and limitations. Keep known pre-existing
