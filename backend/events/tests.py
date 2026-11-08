@@ -93,6 +93,7 @@ class VolunteerSignupEmailTests(TestCase):
             position_name="Greeter",
             start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
             end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=50,
         )
 
     @patch("events.views.send_volunteer_thanks_email")
@@ -241,6 +242,44 @@ class VolunteerSignupEmailTests(TestCase):
         self.assertEqual(second.status_code, 201)
         self.assertEqual(VolunteerSignup.objects.count(), 2)
         self.assertEqual(mock_send_email.call_count, 2)
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_full_shift_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Reject signups once the live approved-signup count reaches capacity."""
+        full_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Guide",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=1,
+        )
+        VolunteerSignup.objects.create(
+            slot=full_slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.com",
+            phone="916-555-0100",
+            status="approved",
+        )
+
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": full_slot.volunteer_slot_id,
+                "first_name": "Kenji",
+                "last_name": "Sato",
+                "email": "kenji@example.com",
+                "phone": "916-555-0101",
+                "allow_full_shift": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["slot_id"], ["This shift is full."])
+        self.assertEqual(response.json()["code"], ["shift_full"])
+        self.assertEqual(VolunteerSignup.objects.filter(slot=full_slot).count(), 1)
+        mock_send_email.assert_not_called()
 
     @patch("events.views.send_volunteer_thanks_email")
     def test_rapid_signups_from_one_ip_are_throttled(self, mock_send_email):

@@ -1,11 +1,12 @@
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.db.models import QuerySet
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,6 +20,9 @@ from events.serializers import (
     VolunteerSlotSerializer,
 )
 from events.throttles import VolunteerSignupThrottle
+
+SHIFT_FULL_MESSAGE = "This shift is full."
+SHIFT_FULL_CODE = "shift_full"
 
 
 class EventListView(generics.ListCreateAPIView):
@@ -108,7 +112,30 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        signup = serializer.save(status="approved")
+        """Create an approved signup only while the selected shift has capacity."""
+        slot = serializer.validated_data.get("slot")
+        slot_id = serializer.validated_data.get("slot_id") or (slot.pk if slot else None)
+
+        with transaction.atomic():
+            if slot_id is not None:
+                # Serialize signups for a shift so another request rechecks capacity
+                # after this one commits.
+                locked_slot = VolunteerSlot.objects.select_for_update().get(pk=slot_id)
+
+                # A simultaneous identical request may have passed serializer
+                # validation before the first request saved its signup.
+                serializer.validate(serializer.validated_data)
+
+                taken = VolunteerSignup.objects.filter(slot=locked_slot, status="approved").count()
+                if taken >= locked_slot.capacity:
+                    raise ValidationError(
+                        {"slot_id": [SHIFT_FULL_MESSAGE], "code": [SHIFT_FULL_CODE]}
+                    )
+
+            signup = serializer.save(status="approved")
+
+        # Send email after releasing the database lock so provider latency does
+        # not delay other volunteers signing up for this shift.
         if signup.slot is not None:
             send_volunteer_thanks_email(signup)
 
