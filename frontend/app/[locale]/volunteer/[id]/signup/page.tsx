@@ -50,6 +50,7 @@ export default function VolunteerSignupPage() {
     email: '',
     phone: '',
     comments: '',
+    website: '',
   });
 
   useEffect(() => {
@@ -105,11 +106,16 @@ export default function VolunteerSignupPage() {
       email: formData.email,
       phone: formData.phone,
       comments: formData.comments.trim() || null,                     // A blank or whitespace-only comment is stored as no comment
+      website: formData.website,
       slot_id: selectedSlot ? selectedSlot.volunteer_slot_id : null,
     };
 
     try {
       const res = await submitVolunteerSignup(payload);
+      if (res.status === 429) {
+        setSubmitError(t('rateLimitError'));
+        return;
+      }
       if (!res.ok) {
         throw new Error('Volunteer signup request failed.');
       }
@@ -312,6 +318,21 @@ export default function VolunteerSignupPage() {
                 max: COMMENTS_MAX_LENGTH,
               })}
             </p>
+          </div>
+
+          {/* Honeypot: moved off-screen and hidden from assistive tech, so only bots fill it in. */}
+          <div
+            aria-hidden="true"
+            style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}
+          >
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={formData.website}
+              onChange={e => setFormData({ ...formData, website: e.target.value })}
+            />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center' }}>
