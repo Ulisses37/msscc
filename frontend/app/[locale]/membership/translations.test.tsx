@@ -59,7 +59,7 @@ jest.mock('@/components/content/ContentBlockRenderer', () => ({
 }));
 
 jest.mock('@/components/content/ContentFallBack', () => ({
-  FallBack: () => null,
+  ContentStateTransition: ({ children }: { children: ReactNode }) => children,
 }));
 
 describe('membership page translations with an older layout payload', () => {

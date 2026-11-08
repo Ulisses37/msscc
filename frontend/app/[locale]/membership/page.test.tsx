@@ -15,6 +15,7 @@ import { createMembershipPaymentSession, getMembershipQuote, type DonationQuote 
 import type { MembershipPaymentSession } from '@/types/payment';
 
 type MembershipMessages = typeof enMessages;
+type ContentState = 'loading' | 'fallback' | 'content';
 
 let mockMessages: MembershipMessages = enMessages;
 let mockLocale = 'en';
@@ -87,7 +88,17 @@ jest.mock('@/components/content/ContentBlockRenderer', () => ({
 }));
 
 jest.mock('@/components/content/ContentFallBack', () => ({
-  FallBack: () => null,
+  ContentStateTransition: ({
+    state,
+    children,
+  }: {
+    state: ContentState;
+    children: React.ReactNode;
+  }) => (
+    <div data-testid={`cms-${state}`}>
+      {state === 'loading' ? 'CMS loading' : state === 'fallback' ? 'CMS fallback' : children}
+    </div>
+  ),
 }));
 
 jest.mock('@/services/paymentService', () => ({
