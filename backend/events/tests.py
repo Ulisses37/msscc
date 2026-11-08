@@ -140,6 +140,51 @@ class VolunteerSignupEmailTests(TestCase):
         mock_send_email.assert_not_called()
 
     @patch("events.views.send_volunteer_thanks_email")
+    def test_unknown_slot_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Return a validation error rather than a database error for an unknown shift."""
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": 999_999,
+                "first_name": "Aiko",
+                "last_name": "Tanaka",
+                "email": "aiko@example.com",
+                "phone": "916-555-0100",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["slot_id"], ["This shift does not exist."])
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_unsafe_name_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Reject link-like and markup-like text that could be emailed to volunteers."""
+        for field, value in (
+            ("first_name", "Visit https://spam.example"),
+            ("last_name", "<script>"),
+        ):
+            with self.subTest(field=field):
+                payload = {
+                    "slot_id": self.slot.volunteer_slot_id,
+                    "first_name": "Aiko",
+                    "last_name": "Tanaka",
+                    "email": "aiko@example.com",
+                    "phone": "916-555-0100",
+                }
+                payload[field] = value
+
+                response = self.client.post("/api/events/signups/", payload, format="json")
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()[field], ["Enter a valid name."])
+
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
     def test_rapid_signups_from_one_ip_are_throttled(self, mock_send_email):
         """Reject a request once the per-IP volunteer-signup limit is exceeded."""
         payload = {

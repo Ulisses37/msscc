@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 
 from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
@@ -105,6 +107,11 @@ class VolunteerSlotSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+# Names are included in volunteer emails, so reject links, markup, email
+# addresses, and control characters such as line breaks.
+NAME_NOT_ALLOWED = re.compile(r"https?://|www\.|[<>@]|[\x00-\x1f]", re.IGNORECASE)
+
+
 class VolunteerSignupSerializer(serializers.ModelSerializer):
     slot_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
@@ -125,6 +132,26 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
         read_only_fields = ["volunteer_signup_id", "status", "submitted_at"]
         # Keep this in step with the character limit on the signup form
         extra_kwargs = {"comments": {"max_length": 500}}
+
+    def _validate_name(self, value: str) -> str:
+        """Reject names that contain links, markup, or control characters."""
+        if NAME_NOT_ALLOWED.search(value):
+            raise serializers.ValidationError("Enter a valid name.")
+        return value
+
+    def validate_first_name(self, value: str) -> str:
+        """Validate the volunteer's first name before it is emailed."""
+        return self._validate_name(value)
+
+    def validate_last_name(self, value: str) -> str:
+        """Validate the volunteer's last name before it is emailed."""
+        return self._validate_name(value)
+
+    def validate_slot_id(self, value: int | None) -> int | None:
+        """Turn an unknown shift into a clean validation error."""
+        if value is not None and not VolunteerSlot.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("This shift does not exist.")
+        return value
 
 
 class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):
