@@ -74,6 +74,120 @@ class EventListAPITests(TestCase):
         self.assertFalse(event.is_published)
 
 
+class AdminVolunteerSignupCreateTests(TestCase):
+    """Verify only authorized admins can add volunteers beyond shift capacity."""
+
+    url = "/api/events/admin/signups/"
+
+    def setUp(self):
+        self.client = APIClient()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=1,
+        )
+        self.payload = {
+            "slot_id": self.slot.volunteer_slot_id,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+
+    def create_user(self, **overrides):
+        """Create an active admin account with event access overrides."""
+        data = {
+            "email": "admin@example.com",
+            "password": "TestPass123!",
+            "first_name": "Admin",
+            "last_name": "User",
+            "permissions_data": {"Events": True},
+        }
+        data.update(overrides)
+        return User.objects.create_user(**data)
+
+    def fill_slot(self):
+        """Create an approved signup that fills the test shift."""
+        return VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Existing",
+            last_name="Volunteer",
+            email="existing@example.com",
+            phone="916-555-0199",
+            status="approved",
+        )
+
+    def test_unauthenticated_request_is_rejected(self):
+        """Require an authenticated admin account for the capacity override."""
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+
+    def test_admin_without_events_permission_is_rejected(self):
+        """Reject active admins that are not authorized to manage events."""
+        self.client.force_authenticate(user=self.create_user(permissions_data={"Events": False}))
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_events_admin_can_add_a_volunteer_to_a_full_shift(self, mock_send_email):
+        """Allow event-authorized admins to exceed capacity when needed."""
+        self.fill_slot()
+        self.client.force_authenticate(user=self.create_user())
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 2)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_executive_can_add_a_volunteer_to_a_full_shift(self, mock_send_email):
+        """Allow executives to override capacity without delegated event access."""
+        self.fill_slot()
+        self.client.force_authenticate(
+            user=self.create_user(is_executive=True, permissions_data={})
+        )
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 2)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_duplicate_email_is_still_rejected_for_admin_capacity_override(self, mock_send_email):
+        """Retain duplicate protection even when capacity enforcement is bypassed."""
+        self.fill_slot()
+        self.client.force_authenticate(user=self.create_user())
+
+        response = self.client.post(
+            self.url,
+            {**self.payload, "email": "EXISTING@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["email"], ["This email is already signed up for this shift."]
+        )
+        self.assertEqual(response.json()["code"], ["duplicate_signup"])
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 1)
+        mock_send_email.assert_not_called()
+
+
 @override_settings(FRONTEND_URL="https://example.test")
 class VolunteerSignupEmailTests(TestCase):
     """Verify volunteer signup confirmation emails include cancellation links."""
