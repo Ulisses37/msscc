@@ -347,9 +347,14 @@ pending, navigation or repeat-click behavior was verified in these runs.
 | None recorded yet |  |  |  |  |  |  |
 
 No reproducible browser defect has been reported in the attempted scenarios
-so far; **no application fix is justified by the current evidence**. This is
+so far. A code-review finding was separately confirmed by a failing mocked
+test: an **unavailable donation status** formerly offered a fresh donation
+attempt while the original outcome was unknown. The return page now offers
+only a repeat lookup of the **same session**, with rapid clicks guarded; a
+backend-confirmed failed or canceled payment still offers a fresh attempt.
+This is not a claim that the behavior was reproduced in a real browser. It is
 not a claim that all required scenarios passed: membership in Chrome, Firefox
-and Edge and most recovery/error checks remain unattempted. A focused mocked
+and Edge and most recovery/error checks remain unattempted. Focused mocked
 tests now cover donation status-lookup failure, malformed status, and the
 Stripe Checkout in-flight confirmation guard and error retry without claiming
 these cases were reproduced in a real browser. Record any later
@@ -393,7 +398,7 @@ before reporting the results for review.
 From the repository root on Windows, with `frontend/node_modules` installed:
 
 ```powershell
-npm --prefix frontend test -- --runInBand --runTestsByPath components/membership/MembershipPaymentElement.test.tsx components/membership/MembershipPaymentResult.test.tsx components/support/DonationForm.checkout.test.tsx components/support/DonationForm.receipt.test.tsx components/support/StripePaymentElement.test.tsx services/paymentService.test.ts
+npm --prefix frontend test -- --runInBand --runTestsByPath components/membership/MembershipPaymentElement.test.tsx components/membership/MembershipPaymentResult.test.tsx components/support/DonationForm.amountChoices.test.tsx components/support/DonationForm.checkout.test.tsx components/support/DonationForm.receipt.test.tsx components/support/StripePaymentElement.test.tsx components/payments/PaymentReceipt.test.tsx services/paymentService.test.ts services/paymentService.donation.test.ts scripts/paymentWebkit.test.ts
 npm --prefix frontend run lint
 npx --prefix frontend tsc --noEmit -p frontend
 ```
@@ -422,6 +427,28 @@ backend\venv\Scripts\python.exe -m ruff check backend
 | Donation return safety after test-only change | Seven focused Jest suites including WebKit launcher tests, frontend lint, TypeScript, `git diff --check` | 7 suites, 125 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Mocked application/launcher checks only. No production payment code changed, and missing Chrome/Firefox/Edge membership and recovery checks remain open. |
 | Donation Checkout confirmation coverage | `npm --prefix frontend test -- --runInBand --silent --runTestsByPath components/support/StripePaymentElement.test.tsx` | 1 suite, 6 tests passed, including an in-flight guard and safe retry after returned/thrown errors. | Mocked Stripe Checkout only; manual browser findings and full focused rerun tracked separately. |
 | Donation Checkout and return coverage after edits | Seven focused Jest suites including WebKit launcher tests; frontend lint, TypeScript; `git diff --check` | Initial seven-suite Jest run had 1 failure in the existing donation checkout suite and 127 passes; a separate checkout-suite rerun reported 39 passes, though the command wrapper did not confirm its exit. A fresh seven-suite run with `CI=true` passed: 7 suites, 128 tests. TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | The initial failure was not diagnosed from the truncated console output; do not claim it is resolved solely because the rerun passed. All are mocked checks, not payment-browser observations. No production code changed. |
+| Payment service and return edge-case baseline | `CI=true` with focused Jest coverage for donation form, Stripe Checkout element, receipt and service (six suites) | 6 suites, 103 tests passed. For the selected four production files: 84.65% statements, 74.67% branches, 86.59% lines; `paymentService.ts` 67.59% statements. | Coverage describes only the selected files and mocked suites, not all frontend code or browser compatibility. |
+| Payment service and return edge cases after test additions | Same focused Jest coverage plus `services/paymentService.donation.test.ts` (seven suites); lint, TypeScript | 7 suites, 127 tests passed; selected four production files: 92.07% statements, 91.11% branches, 93.57% lines; `paymentService.ts` 93.51% statements. TypeScript and lint exited 0; lint reported warnings in unchanged files. | Added mocked session/receipt validation, return refresh, late-response, and bounded pending-poll coverage. No production code, backend, shared infrastructure or payment-browser result changed. Full payment-suite rerun is recorded separately. |
+| Payment regression suite after edge-case additions | `CI=true` with the ten focused Jest suite paths listed above, TypeScript, lint and `git diff --check` | 10 suites, 166 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Mocked application/launcher tests only. Browser evidence and the missing required Windows membership scenarios must be reviewed separately. |
+| Uncertain-outcome recovery regression before fix | `CI=true` focused donation receipt suite with a new retry-original-session assertion | 1 suite failed as expected: the status-error UI offered `Start a New Donation Attempt`; 10 existing tests passed. | Code-review finding reproduced with a mock, not observed in a browser. The failed test was rerun after the code change. |
+| Payment safety checks after review fix | `CI=true` with the ten focused Jest suites listed above; frontend TypeScript and lint; `git diff --check` | 10 suites, 171 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Covers same-session retry on uncertain donation status, rapid retry clicks, stale membership status after reference change, and email-sync errors in addition to earlier receipt/service tests. These are mocked checks, not browser observations. A manual retest is still required before committing. |
+
+### Recovery behavior and locale follow-up
+
+If a returned donation's status cannot be read, the action labeled **Check
+Payment Status Again** retries the same session rather than starting a second
+payment. Test this by simulating a temporary unavailable status endpoint in an
+isolated environment; leave its returned session URL intact. A successful
+status check should then show the appropriate backend-confirmed result. Do not
+start another donation while the first outcome remains unknown. The automated
+test reproduces the old unsafe action before the fix; it does not substitute
+for an observed browser retest.
+
+The backend currently builds donation returns at `/en/support` regardless of
+the locale used to begin Checkout. A Japanese payment's locale on return has
+not been independently recorded. Verify and record it separately before
+planning a localized return-URL contract change; this PR does not claim that
+Japanese locale is preserved after donation Checkout.
 
 Use the PR template at `.github/PULL_REQUEST_TEMPLATE.md` for the final review
 summary, commands, results, blockers and limitations. Keep known pre-existing

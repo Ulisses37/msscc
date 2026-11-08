@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import '@testing-library/jest-dom';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import { DonationForm } from '@/components/support/DonationForm';
 import en from '@/messages/en.json';
@@ -119,3 +119,95 @@ it.each(['rejected request', 'malformed response'] as const)(
     expect(global.fetch).toHaveBeenCalledTimes(1);
   },
 );
+
+it('retries the original session after an uncertain lookup, never starting a second donation', async () => {
+  jest.mocked(global.fetch)
+    .mockRejectedValueOnce(new Error('private-provider-detail'))
+    .mockResolvedValueOnce({ ok: true, json: async () => ({
+      payment_status: 'completed', confirmation_reference: reference,
+    }) } as Response);
+  render(<DonationForm />);
+  expect(await screen.findByText(en.SupportPage.paymentResultUnavailable)).toBeInTheDocument();
+  // A failed network request is not a failed payment. Preserve the original
+  // session so a retry checks its backend status rather than creating a charge.
+  expect(screen.queryByRole('button', { name: en.SupportPage.startNewDonationAttempt })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: en.SupportPage.retryPaymentStatus }));
+  expect(await screen.findByTestId('receipt')).toHaveTextContent(reference);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect(jest.mocked(global.fetch).mock.calls[1]).toEqual(jest.mocked(global.fetch).mock.calls[0]);
+  expect(window.location.search).toBe('?session_id=cs_test_safe');
+});
+
+it('ignores rapid repeat status-retry clicks until the first lookup resolves', async () => {
+  let finish!: (value: Response) => void;
+  jest.mocked(global.fetch)
+    .mockRejectedValueOnce(new Error('private-provider-detail'))
+    .mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+  render(<DonationForm />);
+  expect(await screen.findByText(en.SupportPage.paymentResultUnavailable)).toBeInTheDocument();
+  const retry = screen.getByRole('button', { name: en.SupportPage.retryPaymentStatus });
+  fireEvent.click(retry);
+  fireEvent.click(retry);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect(retry).toBeDisabled();
+  expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
+  await act(async () => finish({ ok: true, json: async () => ({
+    payment_status: 'pending', confirmation_reference: reference,
+  }) } as Response));
+  expect(screen.getByText(en.SupportPage.paymentPending)).toBeInTheDocument();
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+});
+
+it('rechecks the same returned session on refresh without creating another donation', async () => {
+  // Remounting models a browser refresh: URL state survives, component state
+  // does not. Both mounts must ask the backend rather than trust the redirect.
+  jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+    payment_status: 'completed', confirmation_reference: reference,
+  }) } as Response);
+  const first = render(<DonationForm />);
+  expect(await screen.findByTestId('receipt')).toHaveTextContent(reference);
+  first.unmount();
+  render(<DonationForm />);
+  expect(await screen.findByTestId('receipt')).toHaveTextContent(reference);
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect(jest.mocked(global.fetch).mock.calls[1]).toEqual(jest.mocked(global.fetch).mock.calls[0]);
+  expect(jest.mocked(global.fetch).mock.calls[0][0]).toContain('/api/payments/status/');
+});
+
+it('stops pending polling after ten checks without claiming success or mounting a receipt', async () => {
+  jest.useFakeTimers();
+  try {
+    // Every mocked backend response remains pending. Advancing eleven polling
+    // intervals catches accidental retries beyond the documented ten-check cap.
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => ({
+      payment_status: 'pending', confirmation_reference: reference,
+    }) } as Response);
+    render(<DonationForm />);
+    await act(async () => { await Promise.resolve(); });
+    for (let check = 1; check < 10; check += 1) {
+      await act(async () => { jest.advanceTimersByTime(1500); await Promise.resolve(); });
+    }
+    await act(async () => { jest.advanceTimersByTime(3000); await Promise.resolve(); });
+    expect(global.fetch).toHaveBeenCalledTimes(10);
+    expect(screen.getByText(en.SupportPage.paymentPending)).toBeInTheDocument();
+    expect(screen.queryByText(en.SupportPage.paymentCompleted)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('ignores a late completed status after leaving the returned support page', async () => {
+  let finish!: (response: Response) => void;
+  jest.mocked(global.fetch).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  const view = render(<DonationForm />);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  view.unmount();
+  // This resolved promise must not create a receipt, trigger a second lookup,
+  // or update state for a page that is no longer mounted.
+  await act(async () => finish({ ok: true, json: async () => ({
+    payment_status: 'completed', confirmation_reference: reference,
+  }) } as Response));
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
+});

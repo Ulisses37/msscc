@@ -99,6 +99,26 @@ describe('StripePaymentElement localization', () => {
     expect(confirmButton).toBeDisabled();
   });
 
+  it.each(['provider rejection', 'thrown exception'] as const)(
+    'shows only a generic error when syncing donor email fails: %s', async (failure) => {
+      // An email-update failure must not silently initiate confirmation or
+      // expose a Stripe error, regardless of whether Stripe returns or throws.
+      mockCheckoutState = 'success';
+      mockCanConfirm = false;
+      if (failure === 'provider rejection') {
+        mockUpdateEmail.mockResolvedValue({ type: 'error', error: { message: 'private-provider-detail' } });
+      } else {
+        mockUpdateEmail.mockRejectedValue(new Error('private-provider-detail'));
+      }
+      render(<StripePaymentElement clientSecret="cs_test_example" email=" synthetic@example.com " onEditDonationDetails={jest.fn()} />);
+      expect(await screen.findByRole('alert')).toHaveTextContent('paymentConfirmationError');
+      expect(mockUpdateEmail).toHaveBeenCalledWith('synthetic@example.com');
+      expect(screen.queryByText('private-provider-detail')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'tryPaymentAgain' })).toBeDisabled();
+      expect(mockConfirm).not.toHaveBeenCalled();
+    },
+  );
+
   it('holds confirmation while Stripe is unresolved and never treats its response as payment completion', async () => {
     // Two rapid clicks must make only one provider request. Keep it unresolved
     // so the in-flight guard and disabled button can both be inspected without
