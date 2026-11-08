@@ -346,6 +346,16 @@ pending, navigation or repeat-click behavior was verified in these runs.
 | --- | --- | --- | --- | --- | --- | --- |
 | None recorded yet |  |  |  |  |  |  |
 
+No reproducible browser defect has been reported in the attempted scenarios
+so far; **no application fix is justified by the current evidence**. This is
+not a claim that all required scenarios passed: membership in Chrome, Firefox
+and Edge and most recovery/error checks remain unattempted. A focused mocked
+tests now cover donation status-lookup failure, malformed status, and the
+Stripe Checkout in-flight confirmation guard and error retry without claiming
+these cases were reproduced in a real browser. Record any later
+reproduced failure with browser/version, flow/locale, steps, expected versus
+observed behavior and severity here before changing payment application code.
+
 ### Collecting Chrome, Firefox and Edge observations
 
 The tester runs the guided scenarios in **Chrome, Firefox and Edge**, for both
@@ -408,6 +418,10 @@ backend\venv\Scripts\python.exe -m ruff check backend
 | A2 after limited English donation reports | Six focused Jest suites, frontend lint, TypeScript, `git diff --check` | 6 suites, 111 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Mocked checks only. Three tester-reported donation completions appear above; membership, other scenarios and exact in-browser versions remain unverified. Rerun after further observations before commit. |
 | A3 installation/preflight, before manual WebKit payments | `npm --prefix frontend install --save-dev --save-exact playwright@1.65.0`; project-local CLI `install webkit`, `--version`, `install --dry-run webkit`; `node frontend/scripts/paymentWebkit.cjs --smoke`; seven focused Jest suites, lint, TypeScript, `git diff --check` | Playwright `1.65.0` installed; WebKit `27.2` revision `2388` and support binaries downloaded; headed `about:blank` launch passed; final seven suites/123 tests passed, TypeScript and diff check passed, lint exited 0 with warnings in unchanged files. npm install reported 28 vulnerabilities across the current dependency tree; no audit fix was run. The documented fresh `npm ci` procedure and payment starting-page launch have not yet been tested on a clean machine. | Launch-only and mocked checks; **no WebKit payment scenario has been observed**. Node on this machine `v24.14.0` differs from requested `22.14.0`. |
 | A3 tester-reported WebKit runs | Headed WebKit manual payment checks; flow-level observations above | English donation public confirmation and matching admin record reported; Japanese membership payment and matching admin record reported. Browser version `27.2` reported. No other scenario result or exact run date reported. | These are limited manual observations; a membership record alone does not establish payment status `complete`. Automated checks are recorded separately. |
+| Donation return failure coverage | `npm --prefix frontend test -- --runInBand --silent --runTestsByPath components/support/DonationForm.receipt.test.tsx` | 1 suite, 7 tests passed, including two new cases for rejected and malformed status lookups. | Mocked return safety checks, not a browser failure or browser-compatibility result. |
+| Donation return safety after test-only change | Seven focused Jest suites including WebKit launcher tests, frontend lint, TypeScript, `git diff --check` | 7 suites, 125 tests passed; TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | Mocked application/launcher checks only. No production payment code changed, and missing Chrome/Firefox/Edge membership and recovery checks remain open. |
+| Donation Checkout confirmation coverage | `npm --prefix frontend test -- --runInBand --silent --runTestsByPath components/support/StripePaymentElement.test.tsx` | 1 suite, 6 tests passed, including an in-flight guard and safe retry after returned/thrown errors. | Mocked Stripe Checkout only; manual browser findings and full focused rerun tracked separately. |
+| Donation Checkout and return coverage after edits | Seven focused Jest suites including WebKit launcher tests; frontend lint, TypeScript; `git diff --check` | Initial seven-suite Jest run had 1 failure in the existing donation checkout suite and 127 passes; a separate checkout-suite rerun reported 39 passes, though the command wrapper did not confirm its exit. A fresh seven-suite run with `CI=true` passed: 7 suites, 128 tests. TypeScript and diff check passed; lint exited 0 with warnings in unchanged files. | The initial failure was not diagnosed from the truncated console output; do not claim it is resolved solely because the rerun passed. All are mocked checks, not payment-browser observations. No production code changed. |
 
 Use the PR template at `.github/PULL_REQUEST_TEMPLATE.md` for the final review
 summary, commands, results, blockers and limitations. Keep known pre-existing

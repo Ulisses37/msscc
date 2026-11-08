@@ -94,3 +94,28 @@ it('keeps the success message when the completed status has no safe receipt refe
   expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
   expect(screen.queryByText('pi_private')).not.toBeInTheDocument();
 });
+
+it.each(['rejected request', 'malformed response'] as const)(
+  'does not claim a completed donation when the returned status has a %s',
+  async (failure) => {
+    // A redirect is not proof of settlement. Model a backend/network failure
+    // without contacting Stripe or exposing the session identifier or provider
+    // error to the visitor. An ambiguous result must not render a receipt.
+    if (failure === 'rejected request') {
+      jest.mocked(global.fetch).mockRejectedValue(new Error('private-provider-detail'));
+    } else {
+      jest.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ payment_status: 'unknown', confirmation_reference: reference }),
+      } as Response);
+    }
+
+    render(<DonationForm />);
+    expect(await screen.findByText(en.SupportPage.paymentResultUnavailable)).toBeInTheDocument();
+    expect(screen.queryByText(en.SupportPage.paymentCompleted)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
+    expect(screen.queryByText(reference)).not.toBeInTheDocument();
+    expect(screen.queryByText('private-provider-detail')).not.toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  },
+);
