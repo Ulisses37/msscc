@@ -12,9 +12,9 @@ Repo: https://github.com/Ulisses37/msscc
 
 | Field | Value |
 |---|---|
-| Procedure version | 1.0 |
-| Verified against commit | `d110879` |
-| Verified on | 2026-10-25 |
+| Procedure version | 1.1 |
+| Verified against commit | `0090612` |
+| Verified on | 2026-11-08 |
 | Author | SCRUM Lords |
 
 Changes to this file are traceable through this table. Bump the version and add a
@@ -23,6 +23,7 @@ row whenever a step, a version pin, or a command changes.
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-10-25 | First version. Documents the pytest, jest, `tsc` and ruff runners and the recorded run layout. |
+| 1.1 | 2026-11-08 | Add section 9 (CI jobs, pre-push stage, branch protection) and section 10 (match a CI failure to a local command). Story SCRUM-897. |
 
 Related documents:
 
@@ -301,6 +302,97 @@ Because the run has to be captured before the commit that adds it, the baseline'
 That is expected, not a mistake. The baseline records the last committed state
 the run was taken from, and the commit that adds it changes no source file.
 
+## 9. CI and the pre-push stage
+
+CI is the enforced gate. The pre-push stage is fast and local only, so it stays
+quick to run before every push.
+
+### 9.1 What CI runs
+
+`.github/workflows/ci.yml` runs on every pull request and on every push to `main`.
+Jobs run in parallel, each on its own fresh runner.
+
+| Job | What it runs | Fails when |
+|---|---|---|
+| `check` | `echo "ok"` | Never. It is a placeholder kept so the workflow always reports a job. |
+| `lint-backend` | `ruff check backend` (Ruff 0.16.9) | Ruff reports any finding in `backend/`. |
+| `lint-frontend` | `npx eslint` on the frontend files changed against the base branch | ESLint reports an error in a changed file. |
+| `makemigrations-check` | `python manage.py makemigrations --check --dry-run` | A model change has no migration. |
+| `test-backend` | `python -m pytest . --junitxml=pytest.xml` | Any backend test fails. |
+| `test-frontend` | `npm test` (jest), `npx tsc --noEmit -p frontend`, `npm run lint` | Any jest test, type error or lint error. |
+
+`test-backend` and `test-frontend` use dummy environment values and in-memory
+SQLite through `config.settings.test`, so no repository secret is read and no
+database service is started. Each uploads its result file (`pytest.xml`,
+`jest.json`) as a build artifact even when the step fails, so a red run leaves the
+detail behind.
+
+### 9.2 What the pre-push stage runs
+
+`.pre-commit-config.yaml` defines both stages. Install them once per clone:
+
+```powershell
+backend\venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+backend\venv\Scripts\python.exe -m pre_commit install
+backend\venv\Scripts\python.exe -m pre_commit install --hook-type pre-push
+```
+
+```bash
+backend/venv/bin/python -m pip install -r backend/requirements-dev.txt
+backend/venv/bin/python -m pre_commit install
+backend/venv/bin/python -m pre_commit install --hook-type pre-push
+```
+
+| Stage | Hook | Runs |
+|---|---|---|
+| pre-commit | `ruff` | Ruff with `--fix` on staged backend Python files. |
+| pre-commit | `eslint` | `npm --prefix frontend run lint` whenever a frontend file is staged. |
+| pre-push | `makemigrations-check` | `makemigrations --check --dry-run` pinned to `config.settings.test` (needs `backend/.env`, no running database). |
+| pre-push | `ruff-check-backend` | `ruff check backend` over the whole backend. |
+
+The pre-push stage deliberately does **not** run pytest or jest. Most of the team
+is on Windows and a full pytest plus jest run before every push is slow and easy
+to skip with `git push --no-verify`, so the tests live in CI instead.
+
+### 9.3 Branch protection on `main`
+
+Branch protection is a repository setting, not code. It is set by hand by a
+repository admin under **Settings, Branches**. Enable:
+
+- Require a pull request before merging (one approval).
+- Require status checks to pass. Mark `test-backend` and `test-frontend` as
+  required. Keep the existing checks (`lint-backend`, `lint-frontend`,
+  `makemigrations-check`) required as well.
+- Require branches to be up to date before merging.
+
+The required-check list matches on **job name**, so rename a job in `ci.yml` only
+together with the branch-protection setting. Adding a job does not disturb the
+list.
+
+## 10. Match a CI failure to a local command
+
+Run these from the repo root. Column three is the command that reproduces the
+same failure on your machine.
+
+| Job | Step | Run locally |
+|---|---|---|
+| `test-backend` | Run backend tests | `backend\venv\Scripts\python.exe -m pytest backend` |
+| `test-backend` | Run backend tests | `backend/venv/bin/python -m pytest backend` (macOS/Linux) |
+| `test-frontend` | Run frontend tests | `npm --prefix frontend test` |
+| `test-frontend` | Type-check frontend | `npx --prefix frontend tsc --noEmit -p frontend` |
+| `test-frontend` | Lint frontend | `npm --prefix frontend run lint` |
+| `lint-backend` | Lint backend | `backend\venv\Scripts\python.exe -m ruff check backend` |
+| `makemigrations-check` | Check for missing migrations | `backend\venv\Scripts\python.exe backend\manage.py makemigrations --check --dry-run --settings=config.settings.test` |
+
+A single backend app, file, class or test also works locally, for example
+`backend\venv\Scripts\python.exe -m pytest backend\emails\tests.py::SubscribeEndpointTests`.
+
+The one-line version of everything at once is the recorded run in section 4:
+
+```powershell
+backend\venv\Scripts\python.exe scripts\run_tests.py
+```
+
 ---
 
-*Last updated October 2026 -- SCRUM Lords*
+*Last updated November 2026 -- SCRUM Lords*
