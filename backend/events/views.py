@@ -18,6 +18,7 @@ from events.serializers import (
     VolunteerSignupSerializer,
     VolunteerSlotSerializer,
 )
+from events.throttles import VolunteerSignupThrottle
 
 
 class EventListView(generics.ListCreateAPIView):
@@ -80,6 +81,12 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(slot_id=slot_id)
 
         return queryset
+
+    def get_throttles(self):
+        """Limit public signup creation without limiting management actions."""
+        if self.action == "create":
+            return [VolunteerSignupThrottle()]
+        return super().get_throttles()
 
     def create(self, request, *args, **kwargs):
         """Return a success response without saving a bot-filled signup form."""

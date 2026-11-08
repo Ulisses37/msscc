@@ -74,6 +74,12 @@ INSTALLED_APPS = [
     "volunteer_slots",
 ]
 
+# === API throttling ===
+# How many reverse proxies sit in front of Django. DRF uses this to read the
+# visitor IP from X-Forwarded-For instead of the proxy address. Leave unset
+# locally, where there is no proxy.
+_throttle_num_proxies = os.getenv("THROTTLE_NUM_PROXIES")
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -85,7 +91,10 @@ REST_FRAMEWORK = {
         "email_subscribe": "30/hour",
         "email_subscribe_confirm": "60/hour",
         "anon": "60/min",
+        # Public volunteer signups per IP. Deployments can tune this separately.
+        "volunteer_signup": os.getenv("VOLUNTEER_SIGNUP_THROTTLE_RATE", "5/hour"),
     },
+    "NUM_PROXIES": int(_throttle_num_proxies) if _throttle_num_proxies else None,
 }
 
 # Media uploads are checked before storage. These limits are intentionally
