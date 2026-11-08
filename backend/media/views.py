@@ -1,10 +1,10 @@
 # backend/media/views.py
 from django.db import transaction
-from django.db.models import Count, Sum
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,6 +13,7 @@ from .models import MediaAsset, StaticImage
 from .persistence import MediaPersistenceError, persist_media_asset
 from .sanitization import MediaSanitizationError, sanitize_media
 from .serializers import MediaFileSerializer, StaticImageSerializer
+from .storage_usage import schedule_storage_usage_sync
 from .validation import validate_media
 
 
@@ -178,6 +179,8 @@ class MediaDetailView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        schedule_storage_usage_sync()
+
         return Response(
             {
                 "deleted_media_asset_id": media.pk,
@@ -220,18 +223,29 @@ class StaticImageDetailView(generics.RetrieveUpdateAPIView):
     lookup_field = "static_image_id"
 
 class MediaTotalSizeView(APIView):
-    """Return the combined size of all media assets, in bytes."""
+    """Return the synchronized object-storage usage snapshot."""
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        result = MediaAsset.objects.aggregate(
-            total_size=Sum("file_size"),
-            file_count=Count("id"),
-            sized_count=Count("file_size"),  # Count ignores NULLs
+        from site_analytics.models import StorageUsageSnapshot
+
+        snapshot, _ = StorageUsageSnapshot.objects.get_or_create(id=1)
+        remaining_bytes = max(snapshot.capacity_bytes - snapshot.used_bytes, 0)
+        usage_percentage = (
+            min(snapshot.used_bytes / snapshot.capacity_bytes * 100, 100)
+            if snapshot.capacity_bytes > 0
+            else 0
         )
         return Response(
             {
-                "total_size_bytes": result["total_size"] or 0,
-                "file_count": result["file_count"],
-                "files_with_size": result["sized_count"],
+                "used_bytes": snapshot.used_bytes,
+                "capacity_bytes": snapshot.capacity_bytes,
+                "remaining_bytes": remaining_bytes,
+                "usage_percentage": usage_percentage,
+                "object_count": snapshot.object_count,
+                "last_synced_at": snapshot.last_synced_at,
+                "sync_state": snapshot.sync_state,
+                "sync_error": snapshot.sync_error or None,
             }
         )

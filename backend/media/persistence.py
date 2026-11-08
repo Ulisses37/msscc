@@ -6,6 +6,7 @@ from django.db import transaction
 
 from .models import MediaAsset
 from .sanitization import SanitizedMedia
+from .storage_usage import schedule_storage_usage_sync
 
 logger = logging.getLogger(__name__)
 
@@ -50,4 +51,5 @@ def persist_media_asset(
                 )
         raise MediaPersistenceError("media_persistence_failed") from exc
 
+    schedule_storage_usage_sync()
     return media

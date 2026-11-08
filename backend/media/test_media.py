@@ -7,6 +7,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.models import AdminUser
 from media.classification import classify_media
 from media.models import MediaAsset
 from media.persistence import MediaPersistenceError, persist_media_asset
@@ -460,20 +461,35 @@ def make_asset(name: str, size: int | None) -> MediaAsset:
 class MediaTotalSizeViewTests(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
+        self.client.force_authenticate(
+            user=AdminUser.objects.create_user(email="storage@example.com")
+        )
 
     def test_empty_table_returns_zero(self) -> None:
         response = self.client.get("/api/media/total-size/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["total_size_bytes"], 0)
+        self.assertEqual(response.data["used_bytes"], 0)
+        self.assertEqual(response.data["object_count"], 0)
+        self.assertEqual(response.data["capacity_bytes"], 10 * 1024**3)
 
     def test_sums_sizes_and_ignores_nulls(self) -> None:
-        make_asset("a.png", 100)
-        make_asset("b.png", 250)
-        make_asset("old.png", None)
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(id=1).update(
+            used_bytes=350,
+            object_count=2,
+        )
 
         response = self.client.get("/api/media/total-size/")
 
-        self.assertEqual(response.data["total_size_bytes"], 350)
-        self.assertEqual(response.data["file_count"], 3)
-        self.assertEqual(response.data["files_with_size"], 2)
+        self.assertEqual(response.data["used_bytes"], 350)
+        self.assertEqual(response.data["object_count"], 2)
+        self.assertEqual(response.data["remaining_bytes"], 10 * 1024**3 - 350)
+
+    def test_requires_authentication(self) -> None:
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get("/api/media/total-size/")
+
+        self.assertEqual(response.status_code, 401)
