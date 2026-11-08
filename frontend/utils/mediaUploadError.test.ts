@@ -34,6 +34,16 @@ describe(parseMediaUploadError, () => {
     expect(error.message).toBe('This image could not be verified.');
   });
 
+  it('returns a quota message when storage is full', () => {
+    const error = parseMediaUploadError(
+      { code: 'storage_quota_exceeded' },
+      'Upload failed.',
+    );
+
+    expect(error).toBeInstanceOf(MediaUploadError);
+    expect(error.message).toContain('Storage quota reached.');
+  });
+
   it('returns the caller fallback for non-media errors', () => {
     const error = parseMediaUploadError(
       { code: 'media_persistence_failed' },
