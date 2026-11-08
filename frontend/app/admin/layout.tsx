@@ -3,62 +3,87 @@
 import { Banner } from '@/components/layout/Banner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { WelcomeBanner } from "@/components/admin/WelcomeBanner";
-import { usePathname, redirect } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminNavbar } from "@/components/layout/AdminNavbar";
 import { AdminFooter } from "@/components/layout/AdminFooter";
-import { fetchLocalStorageAdmin, hasPermission } from '@/components/admin/AdminPermssionHandler';
+import { hasPermission } from '@/components/admin/AdminPermssionHandler';
 import { adminNavLinks, adminSubPages } from '@/config/adminNavLinks';
+import { verifySession } from '@/context/verifySession';
+import { useAuth } from '@/context/AuthContext';
 import { useEffect, useState } from 'react';
 
-export default function AdminLayout({
-                                      children,
-                                    }: Readonly<{
-  children: React.ReactNode;
-}>) {
+const DASHBOARD = '/admin/dashboard';
+
+export default function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
-  const isDashboard = pathname === '/admin/dashboard';
+  const router = useRouter();
+  const { logout } = useAuth();
+  const isDashboard = pathname === DASHBOARD;
   const [urlChecked, setUrlChecked] = useState(false);
 
   useEffect(() => {
-      if (pathname != "/admin"){
-        let currentLink = adminNavLinks.find((link) => link.href === pathname); //returns if link is in navbar
+    let cancelled = false; // ignore stale results if the user navigates mid-request
+    setUrlChecked(false);
 
-        if (!currentLink) { // page is not in navbar but is subpage
-          currentLink = adminSubPages.find((link) => pathname.startsWith(link.href));
+    (async () => {
+      // 1. Ask the backend whether the token is real
+      const session = await verifySession();
+      if (cancelled) return;
+
+      if (!session.ok) {
+        if (session.reason === 'network') {
+          router.replace('/'); // server unreachable: leave, but don't wipe a possibly valid session
+        } else {
+          logout(); // clears storage and state, redirects to '/'
         }
-
-        if (!currentLink) redirect ('/admin'); // page is not real (or not added to \frontend\config\adminNavLinks.ts)
-
-        const localAdmin = fetchLocalStorageAdmin();
-
-        const eligible = hasPermission ({
-          adminPermissions: localAdmin?.permissionData,
-          permissionNeeded: currentLink.label,
-          isExecutive: localAdmin?.isExecutive ?? false,
-        })
-
-        if (!eligible) redirect('/admin');
+        return;
       }
-    setUrlChecked(true);
-  }, [pathname]);
 
-  if(!urlChecked) return null;
+      // 2. /admin itself redirects server-side to the dashboard
+      if (pathname === '/admin') {
+        setUrlChecked(true);
+        return;
+      }
+
+      // 3. Find the matching nav link / subpage
+      const currentLink =
+        adminNavLinks.find((link) => link.href === pathname) ??
+        adminSubPages.find((link) => pathname.startsWith(link.href));
+
+      if (!currentLink) {
+        router.replace(DASHBOARD);
+        return;
+      }
+
+      // 4. Permission check using the verified token claims, not msscc_user
+      const eligible = hasPermission({
+        adminPermissions: session.user.permissionData,
+        permissionNeeded: currentLink.label,
+        isExecutive: session.user.isExecutive ?? false,
+      });
+
+      if (!eligible) {
+        if (pathname === DASHBOARD) logout(); // can't see the dashboard: out, no loop
+        else router.replace(DASHBOARD);
+        return;
+      }
+
+      setUrlChecked(true);
+    })();
+
+    return () => { cancelled = true; };
+  }, [pathname, router, logout]);
+
+  if (!urlChecked) return null;
 
   return (
     <div className="flex min-h-screen flex-col bg-msscc-white">
       <Banner />
       <AdminNavbar />
-
       <div className="border-b-2 border-msscc-pink" />
-
-
-
       {isDashboard && <WelcomeBanner />}
-
       <main className="mx-auto w-full max-w-content flex-grow px-6 py-10">
-        <ProtectedRoute>
-          {children}
-        </ProtectedRoute>
+        <ProtectedRoute>{children}</ProtectedRoute>
       </main>
       <AdminFooter />
     </div>
