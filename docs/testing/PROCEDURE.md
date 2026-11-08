@@ -191,8 +191,8 @@ The backend suite uses `subTest()` for table-driven cases, and those subtests ar
 **not separate tests**. They run inside the test that contains them, which has two
 consequences worth knowing before reading any count:
 
-- pytest's summary reads `367 passed, 447 subtests passed`. The JUnit
-  `<testsuite tests="...">` attribute adds the two together and declares `814`,
+- pytest's summary reads `710 passed, 746 subtests passed`. The JUnit
+  `<testsuite tests="...">` attribute adds the two together and declares `1456`,
   which is **by design, not a defect**. A test count read from that attribute is
   wrong; read `SUMMARY.md`, which counts `<testcase>` elements and reports subtests
   on their own line.
