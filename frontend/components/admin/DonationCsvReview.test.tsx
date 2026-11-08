@@ -91,8 +91,12 @@ describe('donation CSV review and signed confirmation', () => {
     expect(region).toHaveClass('max-w-full', 'overflow-x-auto');
     const dialog = screen.getByRole('dialog', { name: 'Donation CSV review' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(dialog).toHaveClass('min-w-0', 'max-w-6xl', 'overflow-hidden');
-    expect(region.parentElement?.parentElement).toHaveClass('overflow-y-auto', 'min-h-0');
+    // Phone-sized dialogs scroll as one surface; at sm the review body takes
+    // over vertical scrolling so the actions remain visible on wider screens.
+    expect(dialog).toHaveClass('min-w-0', 'max-w-6xl', 'overflow-x-hidden',
+      'overflow-y-auto', 'sm:overflow-hidden');
+    expect(region.parentElement?.parentElement).toHaveClass('shrink-0', 'sm:min-h-0',
+      'sm:flex-1', 'sm:shrink', 'sm:overflow-y-auto');
     expect(screen.getByRole('table').parentElement).toBe(region);
     expect(screen.getByRole('table')).toHaveClass('w-max', 'min-w-full');
     expect(within(region).getByText('Backend-validated donation proposals (read only)'))

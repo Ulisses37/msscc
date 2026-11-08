@@ -271,7 +271,7 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-6">
           <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="donation-csv-dialog-title"
             onKeyDown={handleDialogKeyDown}
-            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-6xl flex-col overflow-hidden rounded-md bg-msscc-white shadow-xl sm:max-h-[calc(100dvh-3rem)]">
+            className="flex max-h-[calc(100dvh-1rem)] w-full min-w-0 max-w-6xl flex-col overflow-x-hidden overflow-y-auto rounded-md bg-msscc-white shadow-xl sm:max-h-[calc(100dvh-3rem)] sm:overflow-hidden">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-msscc-gray-light p-3 sm:p-5">
               <h2 ref={headingRef} tabIndex={-1} id="donation-csv-dialog-title"
                 className="font-heading text-xl text-msscc-teal">Donation CSV review</h2>
@@ -280,7 +280,10 @@ export function DonationCsvReview({ embedded = false, onConfirmed, onViewSavedDo
                 Close review
               </button>
             </header>
-            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+            {/* On phones the header, review and actions scroll together so the
+                fixed title and footer cannot crowd out the proposals. On wider
+                screens only the review body scrolls, keeping actions visible. */}
+            <div className="min-w-0 shrink-0 sm:min-h-0 sm:flex-1 sm:shrink sm:overflow-y-auto sm:overscroll-contain">
               <div className="min-w-0 p-3 [overflow-wrap:anywhere] sm:p-5">
                 {error && <p role="alert" className="mb-3 text-msscc-danger">{error}</p>}
                 <p>Donation preview: {preview.row_count} data rows, {preview.proposed_records.length} valid proposals.</p>
