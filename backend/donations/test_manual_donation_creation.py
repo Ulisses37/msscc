@@ -79,7 +79,7 @@ class ManualDonationCreationTests(TestCase):
     def test_reusable_service_and_endpoint_share_validation(self):
         for overrides in (
             {"amount": "0"}, {"donation_date": "2025-02-29"}, {"donor_email": "invalid"},
-            {"payment_method": "card"}, {"donation_date": "9999-12-31"},
+            {"payment_method": "unsupported"}, {"donation_date": "9999-12-31"},
         ):
             with self.subTest(overrides=overrides):
                 with self.assertRaises(ValidationError):
@@ -94,7 +94,7 @@ class ManualDonationCreationTests(TestCase):
         self.assertEqual(record.record_source, "manual")
 
     def test_references_and_payment_methods_are_independent_of_checkout(self):
-        for method in (None, "cash", "check"):
+        for method in (None, "cash", "check", "card", "bank_transfer"):
             response = self.client.post(self.url, self.donation_data(
                 payment_method=method, external_reference=" DON-00000001 cash/check ",
             ), format="json")
