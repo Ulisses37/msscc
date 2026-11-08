@@ -10,7 +10,9 @@ MANUAL_MEMBERSHIP_FIELDS = (
 )
 
 
-def create_manual_membership(data: dict) -> Membership:
+def create_manual_membership(
+    data: dict, *, import_batch=None,
+) -> Membership:
     """Validate and create manual input for authorized callers, including future imports.
 
     Callers enforce their own authorization. Input uses the same external field names
@@ -21,7 +23,8 @@ def create_manual_membership(data: dict) -> Membership:
 
     serializer = ManualMembershipCreateSerializer(data=data)
     serializer.is_valid(raise_exception=True)
-    return serializer.save()
+    # Provenance is backend-only: never copy a CSV field into these arguments.
+    return serializer.save(import_batch=import_batch) if import_batch else serializer.save()
 
 
 @transaction.atomic
@@ -31,10 +34,15 @@ def _persist_manual_membership(validated_data: dict) -> Membership:
     fields = {
         key: value for key, value in validated_data.items() if key in MANUAL_MEMBERSHIP_FIELDS
     }
+    import_batch = validated_data.get("import_batch")
     membership = Membership.objects.create(
-        **fields, record_source=Membership.RecordSource.MANUAL,
+        **fields,
+        record_source=(Membership.RecordSource.CSV_IMPORT if import_batch
+                       else Membership.RecordSource.MANUAL),
+        import_batch=import_batch,
     )
     if not membership.reference_id:
-        membership.reference_id = f"MEM-MANUAL-{membership.pk:08d}"
+        prefix = "MEM-CSV" if import_batch else "MEM-MANUAL"
+        membership.reference_id = f"{prefix}-{membership.pk:08d}"
         membership.save(update_fields=["reference_id"])
     return membership
