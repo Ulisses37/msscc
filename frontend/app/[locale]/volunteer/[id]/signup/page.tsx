@@ -112,6 +112,10 @@ export default function VolunteerSignupPage() {
 
     try {
       const res = await submitVolunteerSignup(payload);
+      if (res.status === 429) {
+        setSubmitError(t('rateLimitError'));
+        return;
+      }
       if (!res.ok) {
         throw new Error('Volunteer signup request failed.');
       }
