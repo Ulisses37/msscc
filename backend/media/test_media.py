@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
 
@@ -448,6 +449,43 @@ class MediaUploadApiTests(TestCase):
         media = MediaAsset.objects.get()
         self.assertGreater(media.file_size, 0)
         self.assertEqual(media.file_size, default_storage.size(media.file.name))
+
+    def test_upload_rejects_file_that_exceeds_fresh_quota(self) -> None:
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(pk=1).update(
+            used_bytes=0,
+            reserved_bytes=0,
+            capacity_bytes=1,
+            sync_state=StorageUsageSnapshot.SYNC_OK,
+            last_synced_at=timezone.now(),
+        )
+        upload = SimpleUploadedFile("quota.png", image_bytes(), content_type="image/png")
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 507)
+        self.assertEqual(response.data["code"], "storage_quota_exceeded")
+        self.assertFalse(response.data["safety_margin_applied"])
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        self.assertFalse(default_storage.exists("public/quota.png"))
+
+    def test_upload_uses_safety_margin_when_usage_is_stale(self) -> None:
+        from site_analytics.models import StorageUsageSnapshot
+
+        StorageUsageSnapshot.objects.filter(pk=1).update(
+            used_bytes=80,
+            reserved_bytes=0,
+            capacity_bytes=100,
+            sync_state=StorageUsageSnapshot.SYNC_STALE,
+            last_synced_at=None,
+        )
+        upload = SimpleUploadedFile("stale.png", image_bytes(), content_type="image/png")
+
+        response = self.client.post("/api/media/upload/", {"image": upload}, format="multipart")
+
+        self.assertEqual(response.status_code, 507)
+        self.assertTrue(response.data["safety_margin_applied"])
 
 def make_asset(name: str, size: int | None) -> MediaAsset:
     return MediaAsset.objects.create(

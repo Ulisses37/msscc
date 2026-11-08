@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 from config.encryption import parse_encryption_keyring
@@ -99,9 +100,19 @@ REST_FRAMEWORK = {
 
 # Media uploads are checked before storage. These limits are intentionally
 # configurable so deployments can tune them without changing application code.
+# MEDIA_MAX_UPLOAD_SIZE_BYTES: Maximum allowed size for media uploads in bytes.
+# STORAGE_CAPACITY_BYTES: Total storage capacity in bytes.
 MEDIA_MAX_UPLOAD_SIZE_BYTES = int(
     os.getenv("MEDIA_MAX_UPLOAD_SIZE_BYTES", 20 * 2048 * 2048)
 )
+
+_storage_capacity_value = os.getenv("STORAGE_CAPACITY_BYTES", str(10 * 1024**3))
+try:
+    STORAGE_CAPACITY_BYTES = int(_storage_capacity_value)
+except ValueError as exc:
+    raise ImproperlyConfigured("STORAGE_CAPACITY_BYTES must be a positive integer.") from exc
+if STORAGE_CAPACITY_BYTES <= 0:
+    raise ImproperlyConfigured("STORAGE_CAPACITY_BYTES must be a positive integer.")
 ##:Labels
 #
 #

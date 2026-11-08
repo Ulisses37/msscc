@@ -13,7 +13,7 @@ from .models import MediaAsset, StaticImage
 from .persistence import MediaPersistenceError, persist_media_asset
 from .sanitization import MediaSanitizationError, sanitize_media
 from .serializers import MediaFileSerializer, StaticImageSerializer
-from .storage_usage import schedule_storage_usage_sync
+from .storage_usage import StorageQuotaExceededError, schedule_storage_usage_sync
 from .validation import validate_media
 
 
@@ -88,6 +88,11 @@ class MediaUploadView(APIView):
                 sanitized_media,
                 alt_text_en=request.data.get("alt_text_en", request.data.get("alt_text", "")),
                 alt_text_ja=request.data.get("alt_text_ja", ""),
+            )
+        except StorageQuotaExceededError as exc:
+            return Response(
+                exc.as_response_data(),
+                status=status.HTTP_507_INSUFFICIENT_STORAGE,
             )
         except MediaPersistenceError:
             return Response(

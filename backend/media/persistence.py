@@ -4,15 +4,16 @@ import logging
 
 from django.db import transaction
 
+from .exceptions import MediaPersistenceError
 from .models import MediaAsset
 from .sanitization import SanitizedMedia
-from .storage_usage import schedule_storage_usage_sync
+from .storage_usage import (
+    StorageQuotaExceededError,
+    reserve_storage_bytes,
+    schedule_storage_usage_sync,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class MediaPersistenceError(Exception):
-    """Raised when a sanitized asset cannot be persisted consistently."""
 
 
 def persist_media_asset(
@@ -35,10 +36,13 @@ def persist_media_asset(
     try:
         #synchronous database save within a transaction to storage
         with transaction.atomic():
+            reserve_storage_bytes(sanitized_media.file.size)
             media.save(force_insert=True)
 
     # If the database save fails, the transaction will be rolled back,
     # and the storage will be cleaned up.
+    except StorageQuotaExceededError:
+        raise
     except Exception as exc:
         stored_file_name = media.file.name
         if stored_file_name:

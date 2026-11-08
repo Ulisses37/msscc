@@ -27,12 +27,13 @@ class StorageUsageSnapshot(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     used_bytes = models.PositiveBigIntegerField(default=0)
     object_count = models.PositiveIntegerField(default=0)
+    reserved_bytes = models.PositiveBigIntegerField(default=0)
     capacity_bytes = models.PositiveBigIntegerField(default=STORAGE_CAPACITY_BYTES)
     last_synced_at = models.DateTimeField(null=True, blank=True)
     sync_state = models.CharField(
         max_length=16,
         choices=SYNC_STATE_CHOICES,
-        default=SYNC_OK,
+        default=SYNC_STALE,
     )
     sync_error = models.TextField(blank=True, default="")
 
