@@ -129,6 +129,16 @@ jobs:
           name: jest-results
           path: frontend/jest.json
           if-no-files-found: ignore
+      - name: Generate next-env.d.ts
+        # next-env.d.ts is gitignored and only written by next dev/build, so a
+        # clean checkout has no image module declarations and every
+        # `import Logo from '@/...png'` fails tsc with TS2307. Recreate the file
+        # next writes so the declarations in next/image-types/global.d.ts are
+        # referenced without running a full build. The format string and both
+        # arguments are single-quoted, so the double quotes need no escaping.
+        run: |
+          printf '%s\n' '/// <reference types="next" />' '/// <reference types="next/image-types/global" />' > next-env.d.ts
+        working-directory: frontend
       - name: Type-check frontend
         run: npm exec -- tsc --noEmit
         working-directory: frontend
