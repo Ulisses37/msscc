@@ -130,6 +130,17 @@ describe('manual donation entry and review', () => {
     expect(screen.getByLabelText('Donation date (required)')).toHaveValue('1990-01-02');
   });
 
+  it.each([['card', 'Card'], ['bank_transfer', 'Bank transfer']])(
+    'reviews %s as a recorded method rather than an online charge', (method, label) => {
+      enterMinimum();
+      change('Payment method (optional)', method);
+      review();
+      const field = screen.getByText('Payment method').closest('div');
+      expect(field).toHaveTextContent(label);
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
   it('preserves hidden drafts on anonymity toggle but excludes them from review and submission', async () => {
     enterMinimum();
     change('First name (optional)', 'Private first');
