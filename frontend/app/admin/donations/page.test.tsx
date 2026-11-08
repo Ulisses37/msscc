@@ -4,11 +4,17 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
+import { confirmDonationCsv, previewDonationCsv } from '@/services/donationImportPreview';
 import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 
 import AdminDonationsPage from './page';
 
 jest.mock('@/services/financialRecordSearch', () => ({ fetchFinancialRecords: jest.fn() }));
+jest.mock('@/services/donationImportTemplate', () => ({ downloadDonationImportTemplate: jest.fn() }));
+jest.mock('@/services/donationImportPreview', () => ({
+  previewDonationCsv: jest.fn(), confirmDonationCsv: jest.fn(),
+}));
 jest.mock('@/hooks/useVisibleTableRevisionPolling', () => ({
   useVisibleTableRevisionPolling: jest.fn(),
 }));
@@ -41,9 +47,20 @@ function saveDonation() {
   fireEvent.click(screen.getByRole('button', { name: 'Confirm and save donation' }));
 }
 
+function openCsvImport() {
+  fireEvent.click(screen.getByRole('button', { name: 'Import from CSV' }));
+}
+
 describe('donation page manual-entry dialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+    });
+    jest.mocked(confirmDonationCsv).mockResolvedValue({
+      record_type: 'donation', batch_id: 'batch-42', created_count: 1,
+      donation_ids: [42], already_imported: false,
+    });
     jest.mocked(fetchFinancialRecords).mockResolvedValue([]);
     localStorage.setItem('msscc_access_token', 'test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({
@@ -54,6 +71,97 @@ describe('donation page manual-entry dialog', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     localStorage.clear();
+  });
+
+  it('groups the template with entry and review and reports download access failures', async () => {
+    // The service is mocked so this test proves page wiring without hitting
+    // the backend or downloading a real file in the DOM test environment.
+    jest.mocked(downloadDonationImportTemplate).mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('private response'));
+    render(<AdminDonationsPage />);
+    const entry = screen.getByRole('region', { name: 'Add donations' });
+    // Routine list viewing should not start with a full import form above the table.
+    const toggle = screen.getByRole('button', { name: 'Import from CSV' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByLabelText('Donation CSV file')).not.toBeVisible();
+    openCsvImport();
+    const csv = screen.getByRole('group', { name: 'Import from CSV' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(entry).toContainElement(csv);
+    expect(entry).toContainElement(screen.getByRole('button', { name: 'Add donation' }));
+    expect(csv).toContainElement(screen.getByRole('button', { name: 'Download donation CSV template' }));
+    expect(csv).toContainElement(screen.getByLabelText('Donation CSV file'));
+    expect(screen.getByText(/payment status is set to completed/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Documentation & Help' }))
+      .toHaveAttribute('href', '/admin/documentation');
+    expect(screen.queryByText(/team setup/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/exact ordered columns/i)).not.toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'Download donation CSV template' });
+    fireEvent.click(button);
+    await waitFor(() => expect(downloadDonationImportTemplate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+    // Never display a raw private server/network message in the admin page.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Check your finance access');
+    expect(screen.queryByText('private response')).not.toBeInTheDocument();
+  });
+
+  it('shows the donations table with a compact entry toolbar before import is opened', async () => {
+    jest.mocked(fetchFinancialRecords).mockResolvedValue([savedDonation]);
+    render(<AdminDonationsPage />);
+    const table = await screen.findByRole('table');
+    const entry = screen.getByRole('region', { name: 'Add donations' });
+    expect(entry.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('searchbox')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Add donation' })).toHaveClass('py-1.5');
+    expect(screen.getByRole('button', { name: 'Import from CSV' })).toHaveClass('py-1.5');
+    expect(screen.getByRole('button', { name: 'Download donation CSV template', hidden: true }))
+      .not.toBeVisible();
+    openCsvImport();
+    expect(screen.getByRole('button', { name: 'Download donation CSV template' })).toBeVisible();
+    expect(table).toBeVisible();
+  });
+
+  it('places read-only CSV review alongside the existing manual donation workflow', async () => {
+    render(<AdminDonationsPage />);
+    openCsvImport();
+    expect(screen.getByRole('button', { name: 'Download donation CSV template' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add donation' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    expect(await screen.findByText(/Donation preview: 1 data rows/)).toBeInTheDocument();
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /confirm donation import/i })).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the reviewed file and signed decision when the CSV section is collapsed', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+      review_token: 'signed-review',
+    });
+    render(<AdminDonationsPage />);
+    openCsvImport();
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    const review = await screen.findByRole('dialog', { name: 'Donation CSV review' });
+    fireEvent.click(within(review).getByRole('button', { name: 'Close review' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide CSV import' }));
+    expect(screen.getByRole('button', { name: 'Import from CSV' }))
+      .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Reopen CSV review', hidden: true }))
+      .not.toBeVisible();
+    openCsvImport();
+    fireEvent.click(screen.getByRole('button', { name: 'Reopen CSV review' }));
+    expect(await screen.findByRole('dialog', { name: 'Donation CSV review' })).toBeInTheDocument();
+    expect(previewDonationCsv).toHaveBeenCalledTimes(1);
+    expect(within(screen.getByRole('dialog', { name: 'Donation CSV review' }))
+      .getByRole('button', { name: 'Confirm donation import' })).toBeEnabled();
   });
 
   it('opens on an empty list, pauses polling, and resumes it when canceled', async () => {
@@ -124,6 +232,74 @@ describe('donation page manual-entry dialog', () => {
     expect(within(dialog).getByText('Ledger 42')).toBeInTheDocument();
     expect(dialog).toHaveTextContent('Subscription for saved record 42');
     expect(within(dialog).getByText('Payment method').closest('div')).toHaveTextContent('Check');
+  });
+
+  it.each([false, true])('refreshes active search on import receipt and opens hidden record, retry %p', async (alreadyImported) => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+      review_token: 'signed-review',
+    });
+    jest.mocked(confirmDonationCsv).mockResolvedValue({
+      record_type: 'donation', batch_id: 'batch-42', created_count: 1,
+      donation_ids: [42], already_imported: alreadyImported,
+    });
+    jest.mocked(fetchFinancialRecords).mockResolvedValue(Array.from({ length: 12 }, (_, index) => ({
+      ...savedDonation, donation_id: index + 100, donor_first_name: 'Existing',
+    })));
+    jest.mocked(global.fetch).mockResolvedValue({ ok: true, json: async () => savedDonation } as Response);
+    render(<AdminDonationsPage />);
+    openCsvImport();
+    await screen.findByRole('table');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Existing' } });
+    await waitFor(() => expect(fetchFinancialRecords).toHaveBeenLastCalledWith('donations', 'Existing'));
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    const previousCalls = jest.mocked(fetchFinancialRecords).mock.calls.length;
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByText(/Batch batch-42: 1 donations/)).toBeInTheDocument();
+    await waitFor(() => expect(jest.mocked(fetchFinancialRecords).mock.calls.length)
+      .toBeGreaterThan(previousCalls));
+    expect(fetchFinancialRecords).toHaveBeenLastCalledWith('donations', 'Existing');
+    expect(screen.getByRole('searchbox')).toHaveValue('Existing');
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View imported donation' }));
+    expect(await screen.findByRole('dialog', { name: 'Not provided' })).toBeInTheDocument();
+    // Successful confirmation closes CSV review before opening the existing
+    // authorized detail drawer; two modal dialogs must not compete for focus.
+    expect(screen.queryByRole('dialog', { name: 'Donation CSV review' })).toBeNull();
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/donations/42/'),
+      expect.objectContaining({ cache: 'no-store', headers: expect.objectContaining({
+        Authorization: 'Bearer test-admin-token',
+      }) }),
+    );
+    expect(confirmDonationCsv).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a confirmed receipt and offers a list read retry without confirming again', async () => {
+    jest.mocked(previewDonationCsv).mockResolvedValue({
+      record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
+      review_token: 'signed-review',
+    });
+    jest.mocked(fetchFinancialRecords).mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error('List unavailable'))
+      .mockResolvedValue([]);
+    render(<AdminDonationsPage />);
+    openCsvImport();
+    await waitFor(() => expect(fetchFinancialRecords).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText('Donation CSV file'), {
+      target: { files: [new File(['fictional'], 'review.csv')] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Upload and review CSV' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm donation import' }));
+    expect(await screen.findByRole('button', { name: 'Retry donation list refresh' })).toBeInTheDocument();
+    expect(screen.getByText(/Batch batch-42: 1 donations/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry donation list refresh' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry donation list refresh' })).toBeNull());
+    expect(confirmDonationCsv).toHaveBeenCalledTimes(1);
   });
 
   it('guards duplicate detail requests and retries safely without creating again', async () => {

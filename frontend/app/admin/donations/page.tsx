@@ -1,10 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleTableRevisionPolling } from '@/hooks/useVisibleTableRevisionPolling';
 import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { fetchSavedDonation } from '@/services/manualDonation';
+import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
 import { ManualDonationForm } from '@/components/admin/ManualDonationForm';
+import { DonationCsvReview } from '@/components/admin/DonationCsvReview';
 import { DataExportMenu, type ExportFieldOption, type ExportFormat } from "@/components/admin/DataExportMenu";
 import { DonationDetailDrawer, type DonationEntry } from "@/components/admin/DonationDetailDrawer";
 import { PostPages } from "@/components/content/Pagination";
@@ -129,9 +132,15 @@ function createDonationXlsxCell(donation: DonationEntry, field: keyof DonationEn
   //Will Host entire data set, pulled from backend, to be dispersed to table and page functions.
 export default function AdminDonationsPage() {
   const [isAddingDonation, setIsAddingDonation] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  // Template failures belong to the import section, not the existing table or
+  // single-record form; keep their loading/error state independent.
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const [creationMessage, setCreationMessage] = useState<string | null>(null);
   const [savedDonationId, setSavedDonationId] = useState<number | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [hasImportReceipt, setHasImportReceipt] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const detailRequestStarted = useRef(false);
   const [error, setError] = useState<string | null>("Error: List Failed to Load Properly");
@@ -345,31 +354,97 @@ export default function AdminDonationsPage() {
         <h1 className="font-heading text-[1.75rem] text-msscc-teal sm:text-display">View Donations</h1>
       </header>
 
-      <main className="w-full">
-        {creationMessage && <p role="status" className="mb-4">{creationMessage}</p>}
-        {savedDonationId !== null && (
-          <button type="button" onClick={() => void viewSavedDonation()}
-            disabled={isLoadingSaved}
-            className="mb-4 rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
-            {isLoadingSaved ? 'Loading saved donation…' : 'View saved donation'}
-          </button>
-        )}
-        {detailError && <p role="alert" className="mb-4 text-msscc-danger">{detailError}</p>}
-        {!isAddingDonation ? (
-          <button type="button" onClick={() => setIsAddingDonation(true)}
-            className="mb-4 rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
-            Add donation
-          </button>
-        ) : (
-          <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
-            onCreated={({ donationId }) => {
-              setIsAddingDonation(false);
-              setCreationMessage('Donation record saved.');
-              setSavedDonationId(donationId);
-              setDetailError(null);
+      <main className="min-w-0 w-full">
+        <section aria-labelledby="donation-entry-title"
+          className="mb-4 min-w-0 max-w-full rounded-md border border-msscc-gray-light p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 id="donation-entry-title" className="mr-auto font-heading text-lg text-msscc-teal">
+              Add donations
+            </h2>
+            {!isAddingDonation && (
+              <button type="button" onClick={() => setIsAddingDonation(true)}
+                className="rounded-md bg-msscc-pink px-3 py-1.5 text-body-sm text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink">
+                Add donation
+              </button>
+            )}
+            <button type="button" aria-expanded={isImportOpen} aria-controls="donation-csv-group"
+              onClick={() => setIsImportOpen((open) => !open)}
+              className="rounded-md border border-msscc-pink px-3 py-1.5 text-body-sm text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink">
+              {isImportOpen ? 'Hide CSV import' : 'Import from CSV'}
+            </button>
+          </div>
+          {creationMessage && <p role="status" className="mt-4">{creationMessage}</p>}
+          {savedDonationId !== null && (
+            <button type="button" onClick={() => void viewSavedDonation()}
+              disabled={isLoadingSaved}
+              className="mt-4 rounded-md border border-msscc-gray-light px-4 py-2 disabled:opacity-50">
+              {isLoadingSaved ? 'Loading saved donation…' : 'View saved donation'}
+            </button>
+          )}
+          {detailError && <p role="alert" className="mt-2 text-msscc-danger">{detailError}</p>}
+          {isAddingDonation && (
+            <div className="mt-4">
+              <ManualDonationForm onCancel={() => setIsAddingDonation(false)}
+                onCreated={({ donationId }) => {
+                  setIsAddingDonation(false);
+                  setCreationMessage('Donation record saved.');
+                  setSavedDonationId(donationId);
+                  setDetailError(null);
+                  void fetchDonations();
+                }} />
+            </div>
+          )}
+          {/* Download, review and confirmation belong to one CSV workflow;
+              single-record entry and the table's configurable export do not.
+              Hide rather than unmount: an uncertain confirmation must retain
+              its original file and signed review for the safe retry path. */}
+          <div id="donation-csv-group" role="group" aria-labelledby="donation-csv-group-title"
+            hidden={!isImportOpen}
+            className="mt-4 min-w-0 border-t border-msscc-gray-light pt-4">
+            <h3 id="donation-csv-group-title" className="font-heading text-lg text-msscc-teal">
+              Import from CSV
+            </h3>
+            <p className="mt-2 text-body-sm">
+              Download the template and enter one already-received donation per row. Upload to review;
+              fix errors in the file and acknowledge warnings before confirming. Review does not save;
+              Confirm saves the entire batch or none. Payment status is set to completed by the server.
+            </p>
+            <p className="mt-2 text-body-sm">
+              Need field formats or supported values? See <Link href="/admin/documentation"
+                className="text-msscc-pink underline">Documentation &amp; Help</Link> under Finances.
+            </p>
+            {/* The server supplies the strict header; never use the unrelated
+                configurable donation export as an import template. */}
+            <button type="button" disabled={isDownloadingTemplate}
+              className="mt-4 w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white disabled:opacity-50 sm:w-auto"
+              onClick={async () => {
+                // A failed private request should clear only this section's
+                // message; it must not disturb a saved donation or table filter.
+                setTemplateError(null);
+                setIsDownloadingTemplate(true);
+                try {
+                  await downloadDonationImportTemplate();
+                } catch {
+                  setTemplateError('Unable to download the template. Check your finance access and try again.');
+                } finally {
+                  setIsDownloadingTemplate(false);
+                }
+              }}>
+              {isDownloadingTemplate ? 'Downloading template…' : 'Download donation CSV template'}
+            </button>
+            {templateError && <p role="alert" className="mt-2 text-msscc-danger">{templateError}</p>}
+            {/* A receipt refreshes the active search without assuming its
+                historical rows are currently visible in the donation table. */}
+            <DonationCsvReview embedded onConfirmed={() => {
+              setHasImportReceipt(true);
               void fetchDonations();
-            }} />
-        )}
+            }} onViewSavedDonation={setSelectedDonation} />
+            {hasImportReceipt && error && <button type="button" onClick={() => void fetchDonations()}
+              className="mt-4 rounded-md border border-msscc-gray-light px-4 py-2">
+              Retry donation list refresh
+            </button>}
+          </div>
+        </section>
         {error && <div className="text-red-600 mb-4">Error: {error}</div>}
                 {exportError && <div role="alert" className="mb-4 border border-msscc-danger bg-red-50 p-4 text-msscc-danger">{exportError}</div>}
                 {!hasDonations && !error && <div className="border border-dashed border-msscc-gray-light py-12 text-center text-body-sm text-msscc-gray-mid">No donations found.</div>}
