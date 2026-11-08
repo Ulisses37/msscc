@@ -225,7 +225,10 @@ export default function VolunteerShiftsPage() {
                 color: '#dc2626',
                 margin: 0,
               }}>
-                {t('filled', { filled: shift.filled_count, capacity: shift.capacity })}
+                {t('filled', {
+                  filled: Math.min(shift.filled_count, shift.capacity),
+                  capacity: shift.capacity,
+                })}
               </p>
             </div>
 

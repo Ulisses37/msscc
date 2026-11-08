@@ -38,7 +38,7 @@ export function VolunteerSignupForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Subtask 337: Validate all fields
     if (!formData.first_name || !formData.last_name || !formData.email || !formData.slot) {
       setStatus({ type: 'error', msg: 'Please fill out all required fields.' });
@@ -58,28 +58,28 @@ export function VolunteerSignupForm({
     <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', padding: 'var(--space-8)', maxWidth: '500px', width: '100%', borderRadius: '8px' }}>
         <h3>Sign up for {event.title}</h3>
-        
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <input type="text" placeholder="First Name" onChange={e => setFormData({...formData, first_name: e.target.value})} required />
           <input type="text" placeholder="Last Name" onChange={e => setFormData({...formData, last_name: e.target.value})} required />
           <input type="email" placeholder="Email" onChange={e => setFormData({...formData, email: e.target.value})} required />
-          
+
           {/* Subtask 336/337: Multiple shifts/time frames */}
           <select onChange={e => setFormData({...formData, slot: e.target.value})} required>
             <option value="">Select a Shift</option>
             {slots.map(slot => (
-              <option 
-                key={slot.volunteer_slot_id} 
+              <option
+                key={slot.volunteer_slot_id}
                 value={slot.volunteer_slot_id}
                 disabled={slot.filled_count >= slot.capacity} // Subtask 337: Disable if full
               >
-                {slot.position_name} ({new Date(slot.start_datetime).toLocaleTimeString()} - {slot.capacity - slot.filled_count} left)
+                {slot.position_name} ({new Date(slot.start_datetime).toLocaleTimeString()} - {Math.max(0, slot.capacity - slot.filled_count)} left)
               </option>
             ))}
           </select>
 
           <textarea placeholder="Comments" onChange={e => setFormData({...formData, message: e.target.value})} />
-          
+
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button type="submit" style={{ backgroundColor: '#dc2626', color: 'white', padding: '10px' }}>Submit</button>
             <button type="button" onClick={onClose}>Cancel</button>
@@ -94,5 +94,5 @@ export function VolunteerSignupForm({
       </div>
     </div>
   );
-  
+
 }
