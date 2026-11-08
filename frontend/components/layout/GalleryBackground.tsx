@@ -20,6 +20,7 @@ export default function GalleryBackground() {
   const [transitioningFrom, setTransitioningFrom] = useState<number | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isPillExpanded, setIsPillExpanded] = useState(false);
   const [timerDelay, setTimerDelay] = useState(DISPLAY_TIME_MS);
   const [timerGeneration, setTimerGeneration] = useState(0);
   const previewButtonRef = useRef<HTMLButtonElement>(null);
@@ -161,60 +162,74 @@ export default function GalleryBackground() {
       </div>
 
       {images.length > 1 && (
-        <div
-          className="fixed bottom-8 right-4 z-20 flex flex-col items-center rounded-full border border-msscc-teal/20 bg-white/60 p-0.5 shadow-sm backdrop-blur-sm"
-        >
-          <span className="px-2 pt-0.5 text-center text-[9px] leading-none text-msscc-teal/70">
-            Background Gallery
-          </span>
-          <div
-            role="group"
-            aria-label="Gallery controls"
-            className="flex items-center gap-0.5"
+        <div className="fixed bottom-4 right-3 z-20 flex items-end gap-1">
+          {isPillExpanded && (
+            <>
+              <div className="flex flex-col items-center rounded-full border border-msscc-teal/20 bg-white/60 p-0.5 shadow-sm backdrop-blur-sm">
+                <span className="px-2 pt-0.5 text-center text-[9px] leading-none text-msscc-teal/70">
+                Background Gallery
+                </span>
+                <div
+                  role="group"
+                  aria-label="Gallery controls"
+                  className="flex items-center gap-0.5"
+                >
+                <button
+                  type="button"
+                  onClick={() => changeImage(-1)}
+                  className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+                  aria-label="Show previous gallery image"
+                >
+                  ‹
+                </button>
+                <button
+                  ref={previewButtonRef}
+                  type="button"
+                  onClick={() => setIsViewerOpen(true)}
+                  className="flex size-8 items-center justify-center rounded-full text-sm leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+                  aria-label="View current gallery image"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3.75 8.25v-4.5h4.5M3.75 3.75 9 9M20.25 8.25v-4.5h-4.5M20.25 3.75 15 9M3.75 15.75v4.5h4.5M3.75 20.25 9 15M20.25 15.75v4.5h-4.5M20.25 20.25 15 15" />
+                  </svg>
+                </button>
+                <span
+                  className="min-w-8 px-0.5 text-center text-[10px] tabular-nums text-msscc-teal/75"
+                  aria-live="polite"
+                >
+                  {activeIndex + 1} / {images.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeImage(1)}
+                  className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+                  aria-label="Show next gallery image"
+                >
+                  ›
+                </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsPillExpanded((expanded) => !expanded)}
+            className="flex size-6 items-center justify-center rounded-full bg-white/45 text-xs text-msscc-teal opacity-70 shadow-sm transition-colors hover:bg-msscc-teal/10 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
+            aria-expanded={isPillExpanded}
+            aria-label={isPillExpanded ? 'Collapse gallery controls' : 'Expand gallery controls'}
           >
-            <button
-              type="button"
-              onClick={() => changeImage(-1)}
-              className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
-              aria-label="Show previous gallery image"
-            >
-              ‹
-            </button>
-            <button
-              ref={previewButtonRef}
-              type="button"
-              onClick={() => setIsViewerOpen(true)}
-              className="flex size-8 items-center justify-center rounded-full text-sm leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
-              aria-label="View current gallery image"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3.75 8.25v-4.5h4.5M3.75 3.75 9 9M20.25 8.25v-4.5h-4.5M20.25 3.75 15 9M3.75 15.75v4.5h4.5M3.75 20.25 9 15M20.25 15.75v4.5h-4.5M20.25 20.25 15 15" />
-              </svg>
-            </button>
-            <span
-              className="min-w-8 px-0.5 text-center text-[10px] tabular-nums text-msscc-teal/75"
-              aria-live="polite"
-            >
-              {activeIndex + 1} / {images.length}
-            </span>
-            <button
-              type="button"
-              onClick={() => changeImage(1)}
-              className="flex size-7 items-center justify-center rounded-full text-base leading-none text-msscc-teal transition-colors hover:bg-msscc-teal/10 focus:outline-none focus:ring-2 focus:ring-msscc-teal/30"
-              aria-label="Show next gallery image"
-            >
-              ›
-            </button>
-          </div>
+            {isPillExpanded ? '−' : '+'}
+          </button>
         </div>
       )}
 

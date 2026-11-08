@@ -83,8 +83,24 @@ describe('GalleryBackground', () => {
   async function renderGallery(images: TestImage[] = galleryImages) {
     mockFetch.mockResolvedValue(resolveGallery(images));
     render(<GalleryBackground />);
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Expand gallery controls' })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Expand gallery controls' }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
   }
+
+  it('starts with the pill collapsed', async () => {
+    mockFetch.mockResolvedValue(resolveGallery());
+    render(<GalleryBackground />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Expand gallery controls' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('group', { name: 'Gallery controls' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View current gallery image' })).not.toBeInTheDocument();
+  });
 
   it('cycles automatically after eight seconds', async () => {
     await renderGallery();
@@ -107,6 +123,28 @@ describe('GalleryBackground', () => {
 
     act(() => jest.advanceTimersByTime(1));
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
+  });
+
+  it('collapses and expands the pill without changing the active image', async () => {
+    await renderGallery();
+
+    const collapseButton = screen.getByRole('button', { name: 'Collapse gallery controls' });
+    expect(collapseButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'View current gallery image' })).toBeInTheDocument();
+
+    fireEvent.click(collapseButton);
+
+    expect(screen.getByRole('button', { name: 'Expand gallery controls' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.queryByRole('group', { name: 'Gallery controls' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View current gallery image' })).not.toBeInTheDocument();
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand gallery controls' }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View current gallery image' })).toBeInTheDocument();
   });
 
   it('opens the active image in an accessible viewer and pauses cycling', async () => {
