@@ -1,3 +1,6 @@
+import uuid
+
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -104,6 +107,21 @@ class Donation(models.Model):
         return super().save(*args, **kwargs)
 
 
+class MembershipImportBatch(models.Model):
+    """Durable, content-unique receipt for a fully committed CSV import."""
+
+    batch_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # A database constraint, rather than a process-local lock, arbitrates races
+    # across workers. The digest contains no plaintext contact details.
+    fingerprint = models.CharField(max_length=64, unique=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        """Identify the batch without printing uploaded contacts or its fingerprint."""
+        return f"Membership import {self.pk}"
+
+
 class Membership(models.Model):
     """Membership record to store membership information."""
 
@@ -128,6 +146,7 @@ class Membership(models.Model):
         CHECKOUT = "checkout", "Checkout"
         MANUAL = "manual", "Manually created"
         LEGACY_IMPORT = "legacy_import", "Legacy import"
+        CSV_IMPORT = "csv_import", "CSV import"
 
     membership_id = models.AutoField(primary_key=True)
     first_name_encrypted = EncryptedTextField(null=True, blank=True)
@@ -150,6 +169,11 @@ class Membership(models.Model):
     )
     record_source = models.CharField(
         max_length=20, choices=RecordSource.choices, default=RecordSource.MANUAL,
+    )
+    # Nullable for every pre-import membership; only CSV imports set this link.
+    import_batch = models.ForeignKey(
+        MembershipImportBatch, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="memberships",
     )
     reference_id = models.CharField(max_length=255)
     # Only checkout-issued references are unique; legacy admin references are editable.
@@ -174,7 +198,9 @@ class Membership(models.Model):
         verbose_name_plural = "Memberships"
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(record_source__in=["checkout", "manual", "legacy_import"]),
+                condition=models.Q(record_source__in=[
+                    "checkout", "manual", "legacy_import", "csv_import",
+                ]),
                 name="membership_valid_record_source",
             ),
         ]

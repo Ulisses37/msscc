@@ -87,6 +87,7 @@ export function MembershipDetailDrawer({ membership, onClose }: MembershipDetail
     checkout: 'Checkout',
     manual: 'Manual entry',
     legacy_import: 'Legacy import',
+    csv_import: 'CSV import',
   };
   const recordOrigin = Object.hasOwn(recordOrigins, membership.record_source ?? '')
     ? recordOrigins[membership.record_source ?? ''] : 'Unknown';

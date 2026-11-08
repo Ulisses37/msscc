@@ -22,6 +22,21 @@ export interface AdminPageInfo {
 // Array of pageInstructions allows for easy multi line explanations
 export const adminPageList: AdminPageInfo[] = [
   {
+    // The help page filters by permission key; membership record access is
+    // controlled by Finances, not a separate Members permission.
+    pageName: "Finances",
+    pageDescription: "Membership CSV import and single-record entry",
+    pageInstructions: [
+      "On View Memberships, use Add membership to save a single record. For multiple records, download the membership CSV template and keep its columns in order.",
+      "Each CSV row needs first_name, last_name, membership_type and status. Other columns can be left blank when unknown; 0.00 means a known zero, not an unknown amount.",
+      "Status: unknown, active, inactive, pending, expired or canceled. Optional payment status: pending, completed, failed, canceled or waived. Optional payment method: cash, check, card, bank_transfer or other. CSV choices ignore capitalization; Paid and Unpaid are not supported aliases.",
+      "Dates may use YYYY-MM-DD, YYYY/MM/DD, MM/DD/YYYY or MM-DD-YYYY. Amounts must be nonnegative decimals with at most two places, without currency symbols or commas.",
+      "Upload a UTF-8 CSV of at most 1,048,576 bytes and 500 data rows. Fix row errors in the source file and upload again. Possible duplicates are warnings, not automatic merges.",
+      "Preview does not save records. Acknowledge warnings before confirming. Confirm saves the whole batch or none; the result shows the batch and its saved memberships.",
+      "If a confirmation response is lost, retry the same reviewed file. After leaving the page, upload and confirm that same file again to retrieve the existing batch without duplicating records.",
+    ]
+  },
+  {
     ...getPage("Partners"),
     pageInstructions: [
       "The **Partners** page stores a list of Partners, Donors, and Sponsors.",
