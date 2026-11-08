@@ -15,7 +15,8 @@ export async function verifySession(): Promise<VerifiedSession> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token }),
     });
-    if (!res.ok) return { ok: false, reason: 'invalid' };
+    if (res.status === 401) return { ok: false, reason: 'invalid' };
+    if (!res.ok) return { ok: false, reason: 'network' };
 
     // The server confirmed the signature and expiry, so the payload can be trusted.
     return { ok: true, user: decodeTokenPayload(token) };
