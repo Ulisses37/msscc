@@ -78,7 +78,8 @@
     "previous": "Previous",
     "next": "Next",
     "navigation": "Event navigation",
-    "volunteerSlots": "{count, plural, one {# volunteer slot available} other {# volunteer slots available}}"
+    "volunteerSlots": "{count, plural, one {# volunteer slot available} other {# volunteer slots available}}",
+    "volunteerSlotsFull": "All volunteer slots are full"
   },
 
   "AboutPage": {

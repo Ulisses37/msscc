@@ -9,6 +9,8 @@ from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 class EventSerializer(serializers.ModelSerializer):
     """Serializer for event records."""
 
+    open_spots = serializers.SerializerMethodField()
+
     class Meta:
         model = Event
         fields = [
@@ -22,6 +24,7 @@ class EventSerializer(serializers.ModelSerializer):
             "start_datetime",
             "end_datetime",
             "volunteer_slots",
+            "open_spots",
             "is_published",
             "send_volunteer_reminders",
             "reminder_sent_at",
@@ -34,6 +37,10 @@ class EventSerializer(serializers.ModelSerializer):
             "thumbnail_crop_width",
             "thumbnail_crop_height",
         ]
+
+    def get_open_spots(self, obj: Event) -> int:
+        """Return volunteer capacity remaining across every shift."""
+        return sum(max(0, slot.capacity - slot.filled_count) for slot in obj.slots.all())
 
     def validate(self, attrs: dict) -> dict:
         """Reject a thumbnail crop that extends past the edge of the image."""

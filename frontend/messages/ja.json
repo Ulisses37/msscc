@@ -79,7 +79,8 @@
     "previous": "前へ",
     "next": "次へ",
     "navigation": "イベント間の移動",
-    "volunteerSlots": "ボランティア募集中：{count}名"
+    "volunteerSlots": "ボランティア募集中：{count}名",
+    "volunteerSlotsFull": "ボランティアの募集は定員に達しました"
   },
 
   "AboutPage": {

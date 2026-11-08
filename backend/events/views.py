@@ -24,14 +24,14 @@ from events.throttles import VolunteerSignupThrottle
 class EventListView(generics.ListCreateAPIView):
     """Return event records as a JSON list."""
 
-    queryset = Event.objects.all().order_by("start_datetime", "event_id")
+    queryset = Event.objects.all().order_by("start_datetime", "event_id").prefetch_related("slots")
     serializer_class = EventSerializer
 
 
 class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve or update a single event."""
 
-    queryset = Event.objects.all()
+    queryset = Event.objects.prefetch_related("slots")
     serializer_class = EventSerializer
     lookup_field = "event_id"
 
