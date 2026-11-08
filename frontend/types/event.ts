@@ -32,6 +32,8 @@ export interface Event {
   isPublished: boolean;
   sendVolunteerReminders: boolean;
   reminderSentAt: string | null;
+  /** Set once the mailing-list announcement for this event has been sent. */
+  announcementSentAt: string | null;
   createdAt: string;
   updatedAt: string;
   calendarLink?: string;

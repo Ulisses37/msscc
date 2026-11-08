@@ -25,6 +25,7 @@ class EventSerializer(serializers.ModelSerializer):
             "is_published",
             "send_volunteer_reminders",
             "reminder_sent_at",
+            "announcement_sent_at",
             "created_at",
             "updated_at",
             "media_asset",
@@ -34,6 +35,9 @@ class EventSerializer(serializers.ModelSerializer):
             "thumbnail_crop_width",
             "thumbnail_crop_height",
         ]
+        # Server-controlled: only the announcement service may write this, so a
+        # later edit can never clear it and re-arm a second announcement.
+        read_only_fields = ["announcement_sent_at"]
 
     def validate(self, attrs: dict) -> dict:
         """Reject a thumbnail crop that extends past the edge of the image."""
@@ -71,6 +75,32 @@ class EventSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+
+class EventCreateSerializer(EventSerializer):
+    """Create-only serializer that also accepts the announce option.
+
+    The flag is write-only and deliberately not a stored field: it is an action
+    for this one request, not an event property. Keeping it off
+    ``EventSerializer`` means PATCH can never send an announcement, which the
+    story requires.
+    """
+
+    announce_to_mailing_list = serializers.BooleanField(
+        write_only=True,
+        required=False,
+        default=False,
+    )
+
+    class Meta(EventSerializer.Meta):
+        fields = list(EventSerializer.Meta.fields) + ["announce_to_mailing_list"]
+
+    def create(self, validated_data: dict) -> Event:
+        """Drop the write-only announce flag before the model row is created."""
+        # The flag has no matching model field, so leaving it in would reach
+        # Model.objects.create() and raise TypeError.
+        validated_data.pop("announce_to_mailing_list", None)
+        return super().create(validated_data)
 
 
 class EventImageSerializer(serializers.ModelSerializer):

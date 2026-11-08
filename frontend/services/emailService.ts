@@ -1,3 +1,5 @@
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
+
 /** Where a mailing-list signup came from. Must match the backend's choices. */
 export type SubscribeSource = 'footer' | 'donation' | 'membership' | 'volunteer';
 
@@ -103,5 +105,44 @@ export async function confirmSubscription(
   } catch (error) {
     console.error('Unable to confirm your subscription.', error);
     throw new Error('Unable to confirm your subscription.');
+  }
+}
+
+/** Features the backend can enable without a frontend deploy. */
+export interface EmailFeatures {
+  eventAnnouncements: boolean;
+}
+
+/**
+ * Read the backend email feature flags.
+ *
+ * The backend owns these flags, so the admin UI asks instead of guessing. The
+ * request is authenticated because the endpoint is: `getAdminRequestHeaders`
+ * throws when there is no admin token, and callers treat a failure as "feature
+ * off" so a signed-out admin never sees a control the API would ignore.
+ */
+export async function getEmailFeatures(): Promise<EmailFeatures> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/emails/features/`, {
+      headers: getAdminRequestHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Feature lookup failed with status ${response.status}.`);
+    }
+
+    const body: unknown = await response.json();
+    if (typeof body !== 'object' || body === null) {
+      throw new Error('Feature lookup returned an unexpected body.');
+    }
+
+    return {
+      eventAnnouncements: (body as { event_announcements?: unknown })
+        .event_announcements === true,
+    };
+  } catch (error) {
+    console.error('Unable to read email feature flags.', error);
+    return { eventAnnouncements: false };
   }
 }

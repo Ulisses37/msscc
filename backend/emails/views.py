@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.db import DatabaseError
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -50,6 +51,26 @@ SUBSCRIBE_RESPONSE = {"detail": "Thanks, you're on the list."}
 # cannot be used to tell those cases apart. The frontend matches this string to
 # show its "link is invalid" state.
 CONFIRM_RESPONSE = {"detail": "Your subscription to the MSSCC mailing list is confirmed."}
+
+
+class EmailFeaturesView(APIView):
+    """Report which email features are enabled, so the admin UI can hide them.
+
+    The backend owns the feature flags; the frontend only mirrors what this
+    endpoint reports. Authenticated rather than ``IsAdminUser`` on purpose:
+    ``IsAdminUser`` checks ``is_staff``, and admins created through the portal's
+    ``create_admin`` path never get ``is_staff=True``, so that check would hide
+    this from real admins. Every account in this project is an admin account.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Return the current value of each email feature flag."""
+        return Response(
+            {"event_announcements": settings.EVENT_ANNOUNCEMENTS_ENABLED},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AnnouncementSendView(APIView):

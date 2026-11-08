@@ -2,6 +2,7 @@ from django.urls import path
 
 from emails.views import (
     AnnouncementSendView,
+    EmailFeaturesView,
     ResendWebhookView,
     SubscribeConfirmView,
     SubscribeView,
@@ -13,6 +14,7 @@ urlpatterns = [
         AnnouncementSendView.as_view(),
         name="email-announcement-send",
     ),
+    path("features/", EmailFeaturesView.as_view(), name="email-features"),
     path("subscribe/", SubscribeView.as_view(), name="email-subscribe"),
     path(
         "subscribe/confirm/",
