@@ -177,6 +177,23 @@ class DuplicateSignupTests(SignupLimitsMixin, TestCase):
 class VolunteerSignupPermissionsTests(SignupLimitsMixin, TestCase):
     """Public signup creation stays open while signup management requires event access."""
 
+    def assert_management_refused(self, client, signup, expected_status):
+        """Assert every signup management action is refused without changing the signup."""
+        url = f"{SIGNUP_URL}{signup.volunteer_signup_id}/"
+        requests = {
+            "list": lambda: client.get(f"{SIGNUP_URL}?slot_id={signup.slot_id}"),
+            "retrieve": lambda: client.get(url),
+            "patch": lambda: client.patch(url, {"first_name": "Changed"}, format="json"),
+            "put": lambda: client.put(url, {"first_name": "Changed"}, format="json"),
+            "delete": lambda: client.delete(url),
+        }
+        for action, send in requests.items():
+            with self.subTest(action=action):
+                self.assertEqual(send().status_code, expected_status)
+
+        signup.refresh_from_db()
+        self.assertEqual(signup.first_name, "Aiko")
+
     def test_public_signup_creation_does_not_require_authentication(self):
         slot = self.make_slot()
 
@@ -184,21 +201,50 @@ class VolunteerSignupPermissionsTests(SignupLimitsMixin, TestCase):
 
         self.assertEqual(response.status_code, 201)
 
-    def test_unauthenticated_signup_list_is_refused(self):
+    def test_logged_out_requests_cannot_read_or_change_signups(self):
+        signup = self.make_signup(self.make_slot())
+
+        self.assert_management_refused(self.client, signup, 401)
+
+    def test_an_admin_without_the_events_permission_cannot_manage_signups(self):
+        signup = self.make_signup(self.make_slot())
+        client = self.make_admin_client(permissions={"Events": False, "Finances": True})
+
+        self.assert_management_refused(client, signup, 403)
+
+    def test_an_admin_with_no_permissions_cannot_manage_signups(self):
+        signup = self.make_signup(self.make_slot())
+        client = self.make_admin_client(permissions={})
+
+        self.assert_management_refused(client, signup, 403)
+
+    def test_an_events_admin_can_view_edit_and_remove_signups(self):
         slot = self.make_slot()
+        signup = self.make_signup(slot, email="aiko@example.com")
+        client = self.make_admin_client(permissions={"Events": True})
+        url = f"{SIGNUP_URL}{signup.volunteer_signup_id}/"
 
-        response = self.client.get(f"{SIGNUP_URL}?slot_id={slot.volunteer_slot_id}")
+        listing = client.get(f"{SIGNUP_URL}?slot_id={slot.volunteer_slot_id}")
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual([row["email"] for row in listing.json()], ["aiko@example.com"])
+        self.assertEqual(client.get(url).status_code, 200)
+        self.assertEqual(
+            client.patch(url, {"first_name": "Mina"}, format="json").status_code,
+            200,
+        )
+        self.assertEqual(client.delete(url).status_code, 204)
+        self.assertFalse(VolunteerSignup.objects.filter(pk=signup.pk).exists())
 
-        self.assertEqual(response.status_code, 401)
-
-    def test_unauthenticated_signup_deletion_is_refused(self):
+    def test_an_executive_can_view_signups(self):
         slot = self.make_slot()
-        signup = self.make_signup(slot)
+        self.make_signup(slot)
 
-        response = self.client.delete(f"{SIGNUP_URL}{signup.volunteer_signup_id}/")
+        response = self.make_admin_client(executive=True).get(
+            f"{SIGNUP_URL}?slot_id={slot.volunteer_slot_id}"
+        )
 
-        self.assertEqual(response.status_code, 401)
-        self.assertTrue(VolunteerSignup.objects.filter(pk=signup.pk).exists())
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
 
 
 class FullShiftTests(SignupLimitsMixin, TestCase):
