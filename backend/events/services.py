@@ -15,7 +15,9 @@ import logging
 import threading
 from dataclasses import dataclass, field
 
+from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 
 from events.models import Event, VolunteerSignup, VolunteerSlot
 
@@ -298,6 +300,57 @@ def _flush() -> None:
             # outage or a misconfigured EMAIL_PROVIDER must not surface here.
             # No recipient address in the log.
             logger.error("Volunteer change notification failed.")
+
+
+def announce_event_to_mailing_list(event: Event) -> None:
+    """Broadcast one announcement for a newly created event, at most once.
+
+    Called from ``transaction.on_commit`` after an event is created, so this is
+    the last thing that runs in the request. The whole body is wrapped in a
+    single ``except Exception``: by this point the event is already committed, and
+    a provider outage, a rendering error or a database hiccup must never surface
+    as an error on an event the admin has already saved.
+
+    Recipients come from the database, not from this call: only rows whose status
+    is ``subscribed`` count as consent, and the provider broadcasts to its segment
+    mirror of those rows. The provider only delivers; our database stays the
+    source of truth for who agreed to receive mail.
+    """
+    try:
+        if not settings.EVENT_ANNOUNCEMENTS_ENABLED:
+            return
+
+        # Already announced. A retry, a later edit or a second on_commit flush
+        # can all reach this point, and the timestamp is what makes it once-only.
+        if event.announcement_sent_at is not None:
+            return
+
+        from emails.messages import build_event_announcement  # noqa: PLC0415
+        from emails.models import Subscriber  # noqa: PLC0415
+        from emails.providers import get_provider  # noqa: PLC0415
+
+        if not Subscriber.objects.filter(
+            status=Subscriber.Status.SUBSCRIBED
+        ).exists():
+            # Nothing to announce to. Leaving the timestamp unset means a later
+            # event with a populated list is still announced normally.
+            return
+
+        subject, html = build_event_announcement(event)
+        get_provider().send_broadcast(subject=subject, html=html)
+
+        # Only a successful send marks the event, so a failure stays retryable.
+        # The filter re-checks the timestamp so two callbacks racing after one
+        # commit cannot both write.
+        sent_at = timezone.now()
+        Event.objects.filter(pk=event.pk, announcement_sent_at__isnull=True).update(
+            announcement_sent_at=sent_at
+        )
+        event.announcement_sent_at = sent_at
+    except Exception:
+        # Swallowed on purpose: see the docstring. The log line carries no
+        # subscriber address and no provider text.
+        logger.error("Event announcement broadcast failed.")
 
 
 def _send(details_by_kind: dict) -> None:

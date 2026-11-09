@@ -6,9 +6,12 @@ from django.core.cache import cache
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework_simplejwt.tokens import RefreshToken
 
+from emails.models import Subscriber
 from events import services
 from events.models import Event, VolunteerSignup, VolunteerSlot
 
@@ -1413,4 +1416,223 @@ class VolunteerChangeEventLevelTests(TestCase):
 
 
 
+
+
+
+class EventAnnouncementTests(TestCase):
+    """Creating an event can broadcast one announcement to the mailing list."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="admin@example.com",
+            password="TestPass123!",
+            first_name="Admin",
+            last_name="User",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def create_event(self, **overrides):
+        """Create an Event with sensible defaults, varying one field per test."""
+        values = {
+            "title_en": "Cultural Exchange",
+            "title_ja": "文化交流",
+            "start_datetime": datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            "end_datetime": datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            "is_published": True,
+        }
+        values.update(overrides)
+        return Event.objects.create(**values)
+
+    def create_subscriber(self, email, status=Subscriber.Status.SUBSCRIBED):
+        """Create a mailing-list row in the given consent state."""
+        return Subscriber.objects.create(
+            email=email,
+            source=Subscriber.Source.FOOTER,
+            status=status,
+        )
+
+    def post_event(self, **overrides):
+        """POST a new event and run any on_commit callbacks it scheduled."""
+        payload = {
+            "title_en": "Cultural Exchange",
+            "title_ja": "文化交流",
+            "start_datetime": "2026-12-25T10:00:00Z",
+            "end_datetime": "2026-12-25T12:00:00Z",
+            "is_published": True,
+        }
+        payload.update(overrides)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post("/api/events/", payload, format="json")
+
+    def patch_provider(self):
+        """Patch the provider factory the announcement service imports.
+
+        The service imports ``get_provider`` inside the function, so it is not a
+        module attribute and cannot be patched on ``events.services``. Patching
+        the provider package makes the local import resolve to the mock.
+        """
+        return patch("emails.providers.get_provider")
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_checked_box_sends_one_announcement_and_marks_the_event(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_called_once()
+        event = Event.objects.get()
+        self.assertIsNotNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_unchecked_box_sends_nothing(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event()
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=False)
+    def test_feature_off_ignores_the_flag_and_still_creates_the_event(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_anonymous_caller_cannot_announce(self):
+        self.create_subscriber("member@example.com")
+        self.client.force_authenticate(user=None)
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_real_jwt_authorizes_the_announcement(self):
+        # force_authenticate bypasses authentication, so this one uses a real
+        # token to prove the JWT path populates request.user.
+        self.create_subscriber("member@example.com")
+        token = str(RefreshToken.for_user(self.user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_called_once()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_editing_an_event_never_announces(self):
+        self.create_subscriber("member@example.com")
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.patch(
+                    f"/api/events/{event.event_id}/",
+                    {"title_en": "Renamed", "announce_to_mailing_list": True},
+                    format="json",
+                )
+
+        self.assertEqual(response.status_code, 200)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        event.refresh_from_db()
+        self.assertIsNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_already_announced_event_is_never_announced_again(self):
+        self.create_subscriber("member@example.com")
+        event = self.create_event(announcement_sent_at=timezone.now())
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_empty_mailing_list_sends_nothing_and_leaves_the_event_unmarked(self):
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        event.refresh_from_db()
+        self.assertIsNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_unconfirmed_subscribers_do_not_receive_an_announcement(self):
+        # Only a confirmed address consents, so pending and unsubscribed rows
+        # must not be enough to trigger a broadcast.
+        self.create_subscriber("pending@example.com", status=Subscriber.Status.PENDING)
+        self.create_subscriber(
+            "gone@example.com", status=Subscriber.Status.UNSUBSCRIBED
+        )
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_provider_failure_leaves_creation_successful_and_unmarked(self):
+        from emails.providers import ProviderError
+
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            get_provider_mock.return_value.send_broadcast.side_effect = ProviderError(
+                "provider-internal-detail"
+            )
+            with self.assertLogs("events.services", level="ERROR") as captured:
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+        # The provider's own text must not reach the log.
+        self.assertNotIn("provider-internal-detail", "\n".join(captured.output))
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_failure_while_building_the_email_leaves_creation_successful(self):
+        self.create_subscriber("member@example.com")
+
+        with patch(
+            "emails.messages.build_event_announcement",
+            side_effect=RuntimeError("template blew up"),
+        ):
+            with self.assertLogs("events.services", level="ERROR"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_unpublished_event_is_not_announced(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(
+                    announce_to_mailing_list=True, is_published=False
+                )
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
 

@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.core.management import call_command
 from django.db import transaction
@@ -14,13 +16,17 @@ from emails.messages import send_volunteer_thanks_email
 from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 from events.permissions import HasEventsPermission
 from events.serializers import (
+    EventCreateSerializer,
     EventImageSerializer,
     EventSerializer,
     VolunteerCancellationDetailSerializer,
     VolunteerSignupSerializer,
     VolunteerSlotSerializer,
 )
+from events.services import announce_event_to_mailing_list
 from events.throttles import VolunteerSignupThrottle
+
+logger = logging.getLogger(__name__)
 
 SHIFT_FULL_MESSAGE = "This shift is full."
 SHIFT_FULL_CODE = "shift_full"
@@ -65,6 +71,54 @@ class EventListView(generics.ListCreateAPIView):
 
     queryset = Event.objects.all().order_by("start_datetime", "event_id").prefetch_related("slots")
     serializer_class = EventSerializer
+
+    def get_serializer_class(self):
+        """Accept the announce option on create only, never on a plain list read."""
+        if self.request.method == "POST":
+            return EventCreateSerializer
+        return EventSerializer
+
+    def perform_create(self, serializer):
+        """Create the event, then queue an announcement if the request asked for one.
+
+        The flag is read from ``validated_data`` before ``save()`` because
+        ``EventCreateSerializer.create()`` pops it: once create runs, the value is
+        gone from the data. The announcement itself is scheduled with
+        ``transaction.on_commit`` so it runs after the event is committed, and a
+        provider outage can never roll the event back.
+        """
+        announce = serializer.validated_data.get("announce_to_mailing_list", False)
+        event = serializer.save()
+
+        if not announce:
+            return
+
+        # The events API has no permission_classes, and DRF's default is
+        # AllowAny, so this endpoint is reachable anonymously. Only a logged-in
+        # admin may make the server mail the whole list; anyone else is ignored.
+        if not self.request.user.is_authenticated:
+            logger.warning(
+                "Ignoring announce_to_mailing_list from an unauthenticated caller."
+            )
+            return
+
+        if not settings.EVENT_ANNOUNCEMENTS_ENABLED:
+            logger.warning(
+                "Ignoring announce_to_mailing_list while "
+                "EVENT_ANNOUNCEMENTS_ENABLED is off."
+            )
+            return
+
+        # The public cannot see an unpublished event yet, and the detail page
+        # would show its not-found state, so there is nothing to announce.
+        if not event.is_published:
+            logger.warning(
+                "Ignoring announce_to_mailing_list for unpublished event %s.",
+                event.event_id,
+            )
+            return
+
+        transaction.on_commit(lambda: announce_event_to_mailing_list(event))
 
 
 class EventDetailView(generics.RetrieveUpdateDestroyAPIView):

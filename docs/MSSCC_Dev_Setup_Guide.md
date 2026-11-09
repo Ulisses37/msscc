@@ -23,6 +23,7 @@ This guide walks you through setting up your local development environment from 
 10. [JetBrains Setup (Optional)](#10-jetbrains-setup-optional)
 11. [Common Issues](#11-common-issues)
 12. [Testing](#12-testing)
+13. [Event Announcement Emails](#13-event-announcement-emails)
 
 ---
 
@@ -727,6 +728,49 @@ Since Cline v4.1.7 there is one Execute commands toggle, and our test showed it 
 If a rule or skill seems ignored, open Cline's Rules and Skills panels and check it is switched on.
 
 The full rule and skill list, the auto-approve table, and the `PreToolUse` guard test live in the [README's Cline section](../README.md#ai-assistant-cline).
+
+---
+
+## 13. Event Announcement Emails
+
+Creating an event can email the mailing list about it. This ships **off**. Leave
+it off until the steps below are done: the dev Resend account has no verified
+sending domain, so a Broadcast cannot be delivered yet.
+
+`EVENT_ANNOUNCEMENTS_ENABLED` is the switch. When it is unset or false:
+
+- the announce checkbox does not appear on the admin event form,
+- the events API ignores `announce_to_mailing_list` and logs a warning,
+- the "Announcement sent / not sent" marker is hidden on the admin events list.
+
+The admin event form only shows the checkbox for a signed-in admin with a valid
+token, because the feature endpoint it reads is authenticated. A signed-out or
+expired session reads the feature as off and shows nothing.
+
+### Enabling it
+
+Do these in order, on the target environment (staging or production):
+
+1. **Verify a sending domain in Resend.** Add the MSSCC domain and complete its
+   DNS records in the Resend dashboard. A Broadcast cannot be sent from the
+   `resend.dev` test sender.
+2. **Configure `RESEND_WEBHOOK_SECRET`.** Set it to the Svix signing secret for
+   the Resend webhook that reports contact unsubscribes. Without it the webhook
+   fails closed and a provider-side unsubscribe never reaches our database.
+3. **Confirm a test unsubscribe flips the row.** Subscribe a test address,
+   confirm it, then unsubscribe through the link and check the `Subscriber` row
+   for that address is `unsubscribed`. Do this before the flag is on, so the
+   consent path is known to work.
+4. **Set `EVENT_ANNOUNCEMENTS_ENABLED=true`** and restart the backend.
+5. **Send one test announcement to a seed list.** Keep the mailing list small
+   (a few addresses) for this first send.
+6. **Confirm the unsubscribe link works.** Click it in the received email and
+   check the address is removed from the segment and marked in the database.
+7. **Confirm the Broadcast daily cap.** Resend's free tier limits daily sends
+   (see the ToS verification doc). Check how that limit applies to Broadcasts
+   before announcing to the full list.
+
+If any step fails, set `EVENT_ANNOUNCEMENTS_ENABLED=false` again and report it.
 
 ---
 

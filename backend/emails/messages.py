@@ -1,8 +1,18 @@
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils import timezone
 
+from emails.providers import get_provider
 from emails.services import send_email
+
+# MSSCC is a Sacramento organisation, so announcement times are shown in
+# Pacific time. The project runs on UTC (settings.TIME_ZONE) and events carry no
+# timezone of their own, so the conversion is explicit here: without it, an
+# evening event would be announced with the wrong date.
+PACIFIC_TZ = ZoneInfo("America/Los_Angeles")
 
 
 def send_password_reset_email(to_email: str, reset_link: str) -> None:
@@ -161,3 +171,29 @@ def send_volunteer_role_changed_email(to_email: str, details: dict) -> None:
     )
 
 
+def build_event_announcement(event) -> tuple[str, str]:
+    """Return the ``(subject, html)`` for one event's mailing-list announcement.
+
+    Kept separate from the send so the announcement can be handed to a Broadcast
+    through ``get_provider().send_broadcast`` rather than looped per recipient.
+    This stays provider agnostic: the unsubscribe link comes from the provider's
+    own ``unsubscribe_url``, which its Broadcast API substitutes per recipient
+    (CAN-SPAM requires that link, and Resend does not add one on its own).
+    """
+    subject = f"MSSCC Event: {event.title_en}"
+    event_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/events/{event.event_id}"
+
+    html = render_to_string(
+        "emails/event_announcement.html",
+        {
+            "event_title": event.title_en,
+            "event_datetime": timezone.localtime(
+                event.start_datetime, PACIFIC_TZ
+            ).strftime("%B %d, %Y at %I:%M %p"),
+            "event_location": event.location_en or "To be announced",
+            "event_url": event_url,
+            "unsubscribe_url": get_provider().unsubscribe_url,
+        },
+    )
+
+    return subject, html

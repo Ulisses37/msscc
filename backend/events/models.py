@@ -33,6 +33,10 @@ class Event(models.Model):
     is_published = models.BooleanField(default=False)
     send_volunteer_reminders = models.BooleanField(default=False)
     reminder_sent_at = models.DateTimeField(blank=True, null=True)
+    # Set once the mailing-list announcement for this event has been broadcast.
+    # This timestamp is the guard that makes an announcement at most once per
+    # event: a retry or a later edit can never send a second one.
+    announcement_sent_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     media_asset = models.ForeignKey(
