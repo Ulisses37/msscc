@@ -16,6 +16,10 @@ jest.mock('@/services/deeplService', () => ({
   requestDeepLTranslation: jest.fn(),
 }));
 
+jest.mock('@/services/emailService', () => ({
+  getEmailFeatures: jest.fn(),
+}));
+
 jest.mock('@/components/admin/ImageBlockInput', () => ({
   __esModule: true,
   default: ({
@@ -170,5 +174,74 @@ describe('EventForm translation buttons', () => {
     await user.tab();
 
     expect(screen.queryByText(NOTICE_TEXT)).not.toBeInTheDocument();
+  });
+});
+
+describe('EventForm announcement checkbox', () => {
+  const ANNOUNCE_LABEL = 'Email the mailing list about this event';
+
+  const initialData = {
+    titleEn: 'Autumn Festival',
+    titleJa: '',
+    descriptionEn: 'Celebrate with us.',
+    descriptionJa: '',
+    locationEn: 'Community Center',
+    locationJa: '',
+    startDatetime: '2026-10-20T10:00',
+    endDatetime: '2026-10-20T12:00',
+    sendVolunteerReminders: false,
+  };
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows the checkbox on create when the feature is on', () => {
+    render(
+      <EventForm
+        initialData={initialData}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+        showAnnounceOption
+      />,
+    );
+
+    expect(screen.getByLabelText(ANNOUNCE_LABEL)).toBeInTheDocument();
+  });
+
+  it('hides the checkbox when the feature is off', () => {
+    render(
+      <EventForm
+        initialData={initialData}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.queryByLabelText(ANNOUNCE_LABEL)).not.toBeInTheDocument();
+  });
+
+  it('hides the checkbox when editing an existing event', () => {
+    render(
+      <EventForm
+        eventId={7}
+        initialData={initialData}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+        showAnnounceOption
+      />,
+    );
+
+    expect(screen.queryByLabelText(ANNOUNCE_LABEL)).not.toBeInTheDocument();
+  });
+
+  it('hides the checkbox when duplicating an event', () => {
+    render(
+      <EventForm
+        initialData={initialData}
+        onSubmit={jest.fn().mockResolvedValue(undefined)}
+        showAnnounceOption
+        isDuplicate
+      />,
+    );
+
+    expect(screen.queryByLabelText(ANNOUNCE_LABEL)).not.toBeInTheDocument();
   });
 });

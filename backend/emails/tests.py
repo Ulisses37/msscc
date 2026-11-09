@@ -5,7 +5,7 @@ import hmac
 import json
 import pathlib
 import time
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import resend
@@ -21,6 +21,7 @@ from resend.exceptions import ResendError
 from rest_framework.test import APIClient
 from rest_framework.throttling import ScopedRateThrottle
 
+from emails.messages import build_event_announcement
 from emails.models import (
     CONFIRMATION_RESEND_COOLDOWN,
     CONFIRMATION_TOKEN_TTL,
@@ -33,6 +34,7 @@ from emails.providers.resend import UNSUBSCRIBE_URL_PLACEHOLDER, ResendProvider
 from emails.services import send_email
 from emails.subscribers import confirm_subscription, subscribe_contact
 from emails.views import SUBSCRIBE_RESPONSE
+from events.models import Event
 
 User = get_user_model()
 
@@ -1705,4 +1707,103 @@ class AnnouncementEndpointTests(TestCase):
                 )
 
         self.assertIn("Broadcasts cannot be sent from resend.dev.", "\n".join(captured.output))
+
+
+class EventAnnouncementTemplateTests(TestCase):
+    """The event announcement renders its details and the CAN-SPAM footer."""
+
+    def build_event(self, start_datetime):
+        """Return an unsaved Event with a known title and location."""
+        return Event(
+            event_id=42,
+            title_en="Summer Festival",
+            title_ja="夏祭り",
+            location_en="Memorial Auditorium",
+            start_datetime=start_datetime,
+            end_datetime=start_datetime + timedelta(hours=2),
+        )
+
+    def render(self, start_datetime):
+        """Render the announcement for an event starting at the given time."""
+        with override_settings(FRONTEND_URL="https://example.test"):
+            with patch("emails.providers.get_provider") as get_provider_mock:
+                get_provider_mock.return_value.unsubscribe_url = (
+                    UNSUBSCRIBE_URL_PLACEHOLDER
+                )
+                return build_event_announcement(self.build_event(start_datetime))
+
+    def test_details_and_unsubscribe_footer_are_rendered(self):
+        subject, html = self.render(datetime(2026, 7, 15, 19, 0, tzinfo=UTC))
+
+        self.assertIn("Summer Festival", subject)
+        self.assertIn("Summer Festival", html)
+        self.assertIn("Memorial Auditorium", html)
+        self.assertIn("https://example.test/en/events/42", html)
+        self.assertIn("Unsubscribe from future announcements", html)
+        self.assertIn("PO BOX 162785, Sacramento, CA 95816", html)
+
+    def test_winter_start_time_is_rendered_in_pacific_standard_time(self):
+        # 02:00 UTC on 2026-12-25 is 18:00 PST on 2026-12-24, so a UTC render
+        # would show the wrong date entirely.
+        _, html = self.render(datetime(2026, 12, 25, 2, 0, tzinfo=UTC))
+
+        self.assertIn("December 24, 2026 at 06:00 PM", html)
+        self.assertIn(" PT", html)
+
+    def test_summer_start_time_is_rendered_in_pacific_daylight_time(self):
+        # 02:00 UTC on 2026-07-15 is 19:00 PDT on 2026-07-14. A hardcoded -8
+        # offset would render 18:00 here and fail.
+        _, html = self.render(datetime(2026, 7, 15, 2, 0, tzinfo=UTC))
+
+        self.assertIn("July 14, 2026 at 07:00 PM", html)
+
+    def test_the_unsubscribe_placeholder_survives_as_a_literal_href(self):
+        _, html = self.render(datetime(2026, 7, 15, 19, 0, tzinfo=UTC))
+
+        self.assertIn(f'href="{UNSUBSCRIBE_URL_PLACEHOLDER}"', html)
+
+    def test_the_template_names_no_provider(self):
+        template = (
+            pathlib.Path(__file__).resolve().parent
+            / "templates"
+            / "emails"
+            / "event_announcement.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("RESEND", template)
+
+
+class EmailFeaturesEndpointTests(TestCase):
+    """The features endpoint reports the flag and is admin-only."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email="admin@example.test",
+            password="TestPass123!",
+            first_name="Admin",
+            last_name="User",
+        )
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_reports_the_feature_as_on(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/emails/features/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"event_announcements": True})
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=False)
+    def test_reports_the_feature_as_off(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/emails/features/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"event_announcements": False})
+
+    def test_anonymous_request_is_rejected(self):
+        response = self.client.get("/api/emails/features/")
+
+        self.assertIn(response.status_code, (401, 403))
+
 

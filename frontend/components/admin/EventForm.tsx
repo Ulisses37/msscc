@@ -30,6 +30,8 @@ export interface EventFormData {
   startDatetime: string;
   endDatetime: string;
   sendVolunteerReminders: boolean;
+  /** Only meaningful on create; editing never sends an announcement. */
+  announceToMailingList?: boolean;
   thumbnailCrop: ThumbnailCrop;
 }
 
@@ -80,6 +82,8 @@ interface EventFormProps {
   isDuplicate?: boolean;
   // Reports whether the form has unsaved changes.
   onDirtyChange?: (isDirty: boolean) => void;
+  // True only when the backend reports the event-announcement feature is on.
+  showAnnounceOption?: boolean;
 }
 
 /**
@@ -98,6 +102,7 @@ export default function EventForm({
     startDatetime: '',
     endDatetime: '',
     sendVolunteerReminders: false,
+    announceToMailingList: false,
     thumbnailCrop: FULL_CROP,
   },
   initialImageUrl = null,
@@ -112,6 +117,7 @@ export default function EventForm({
   eventId,
   isDuplicate = false,
   onDirtyChange,
+  showAnnounceOption = false,
 }: EventFormProps) {
   const [formData, setFormData] = useState<EventFormData>(initialData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -492,6 +498,32 @@ export default function EventForm({
               </label>
               <p className="mt-1 ml-7 text-caption text-msscc-gray-mid">
                 Volunteers will receive a reminder email before the event starts.
+              </p>
+            </div>
+          )}
+
+          {/* Mailing-list announcement. Create-only and feature-gated: the
+              backend reports the flag, and editing an event never announces. */}
+          {showAnnounceOption && !eventId && !isDuplicate && (
+            <div className="mt-4">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.announceToMailingList}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      announceToMailingList: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-msscc-teal"
+                />
+                <span className="text-eyebrow tracking-eyebrow uppercase text-msscc-gray-mid">
+                  Email the mailing list about this event
+                </span>
+              </label>
+              <p className="mt-1 ml-7 text-caption text-msscc-gray-mid">
+                Subscribers will receive one announcement when this event is created.
               </p>
             </div>
           )}

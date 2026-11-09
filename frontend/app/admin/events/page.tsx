@@ -15,6 +15,8 @@ import {
   getMediaAssetById,
   updateEventImage,
 } from '@/services/eventService';
+import { getEmailFeatures } from '@/services/emailService';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 import type { Event, EventImage } from '@/types/event';
 import {
   MediaUploadError,
@@ -58,6 +60,9 @@ export default function EventsPage() {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [eventFilter, setEventFilter] = useState<EventFilter>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
+  // Backend-owned flag: the announce checkbox and the sent indicator only show
+  // when the server reports the feature is on.
+  const [eventAnnouncementsEnabled, setEventAnnouncementsEnabled] = useState(false);
   const searchParams = useSearchParams();
   const mainRef = useRef<HTMLElement>(null);
 
@@ -115,6 +120,20 @@ export default function EventsPage() {
     };
 
     loadEvents();
+  }, []);
+
+  // The feature endpoint is authenticated, so a signed-out admin reads "off"
+  // and simply does not see the announcement controls.
+  useEffect(() => {
+    let isActive = true;
+
+    getEmailFeatures().then((features) => {
+      if (isActive) setEventAnnouncementsEnabled(features.eventAnnouncements);
+    });
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   // Auto-open the edit form for an event when returning from the volunteer shifts page
@@ -226,7 +245,10 @@ export default function EventsPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/api/events/`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAdminRequestHeaders(),
+          },
           body: JSON.stringify({
             title_en: data.titleEn,
             title_ja: data.titleJa,
@@ -239,6 +261,8 @@ export default function EventsPage() {
             media_asset: mediaAssetId,
             is_published: true,
             send_volunteer_reminders: data.sendVolunteerReminders,
+            // Create-only action: the backend ignores this on any other request.
+            announce_to_mailing_list: data.announceToMailingList,
             thumbnail_crop_x: data.thumbnailCrop.x,
             thumbnail_crop_y: data.thumbnailCrop.y,
             thumbnail_crop_width: data.thumbnailCrop.width,
@@ -316,6 +340,7 @@ export default function EventsPage() {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
+            ...getAdminRequestHeaders(),
           },
           body: JSON.stringify({
             title_en: data.titleEn,
@@ -648,6 +673,16 @@ export default function EventsPage() {
                     {event.isPublished ? 'Published' : 'Unpublished'}
                   </p>
 
+                  {/* Announcement status. Only shown when the backend reports
+                      the feature is on, so it never appears while dark. */}
+                  {eventAnnouncementsEnabled && (
+                    <p className="text-body-sm text-msscc-gray-mid">
+                      {event.announcementSentAt
+                        ? 'Announcement sent'
+                        : 'Announcement not sent'}
+                    </p>
+                  )}
+
                   {/* Edit and Delete Buttons */}
                   <div className="mt-2 flex gap-3">
                     <button
@@ -759,6 +794,7 @@ export default function EventsPage() {
               successMessage={saveMessage}
               errorMessage={saveError}
               requireImage
+              showAnnounceOption={eventAnnouncementsEnabled}
             />
           )
         ) : (

@@ -78,7 +78,8 @@
     "previous": "Previous",
     "next": "Next",
     "navigation": "Event navigation",
-    "volunteerSlots": "{count, plural, one {# volunteer slot available} other {# volunteer slots available}}"
+    "volunteerSlots": "{count, plural, one {# volunteer slot available} other {# volunteer slots available}}",
+    "volunteerSlotsFull": "All volunteer slots are full"
   },
 
   "AboutPage": {
@@ -155,7 +156,8 @@
     "commentsCount": "{count} / {max} characters",
     "shiftHeading": "Your shift",
     "shiftNotFound": "We couldn't find that shift. Please go back and choose a shift to volunteer for.",
-    "shiftFull": "This shift is full. Please go back and choose another shift."
+    "shiftFull": "This shift is full. Please go back and choose another shift.",
+    "alreadySignedUp": "You're already signed up for this shift with this email address."
   },
 
   "VolunteerEditPage": {
@@ -383,6 +385,7 @@
     "paymentFailed": "Your donation payment failed and was not completed.",
     "paymentCanceled": "Your payment was canceled or expired. Your donation was not completed.",
     "paymentResultUnavailable": "We could not confirm your payment result. Please check again shortly.",
+    "retryPaymentStatus": "Check Payment Status Again",
     "tryPaymentAgain": "Try Payment Again",
     "editDonationDetails": "Edit Donation Details",
     "startNewDonationAttempt": "Start a New Donation Attempt"

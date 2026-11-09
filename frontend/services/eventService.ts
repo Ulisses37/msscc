@@ -13,9 +13,11 @@ interface RawEvent {
   start_datetime: string;
   end_datetime: string;
   volunteer_slots: number;
+  open_spots?: number;
   is_published: boolean;
   send_volunteer_reminders: boolean;
   reminder_sent_at: string | null;
+  announcement_sent_at: string | null;
   calendar_link: string | null;
   media_asset: number | null;
   thumbnail_crop_x: number;
@@ -83,9 +85,12 @@ function mapEvent(raw: RawEvent): Event {
     startDatetime:  raw.start_datetime,
     endDatetime:    raw.end_datetime,
     volunteerSlots: raw.volunteer_slots,
+    // Fall back to total capacity until every deployed API serves open spots.
+    openSpots: raw.open_spots ?? raw.volunteer_slots,
     isPublished:    raw.is_published,
     sendVolunteerReminders: raw.send_volunteer_reminders,
     reminderSentAt: raw.reminder_sent_at,
+    announcementSentAt: raw.announcement_sent_at,
     calendarLink:   raw.calendar_link ?? undefined,
     mediaAssetId: raw.media_asset,
     thumbnailCrop: {

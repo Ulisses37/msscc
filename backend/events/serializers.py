@@ -9,6 +9,8 @@ from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
 class EventSerializer(serializers.ModelSerializer):
     """Serializer for event records."""
 
+    open_spots = serializers.SerializerMethodField()
+
     class Meta:
         model = Event
         fields = [
@@ -22,9 +24,11 @@ class EventSerializer(serializers.ModelSerializer):
             "start_datetime",
             "end_datetime",
             "volunteer_slots",
+            "open_spots",
             "is_published",
             "send_volunteer_reminders",
             "reminder_sent_at",
+            "announcement_sent_at",
             "created_at",
             "updated_at",
             "media_asset",
@@ -34,6 +38,13 @@ class EventSerializer(serializers.ModelSerializer):
             "thumbnail_crop_width",
             "thumbnail_crop_height",
         ]
+        # Server-controlled: only the announcement service may write this, so a
+        # later edit can never clear it and re-arm a second announcement.
+        read_only_fields = ["announcement_sent_at"]
+
+    def get_open_spots(self, obj: Event) -> int:
+        """Return volunteer capacity remaining across every shift."""
+        return sum(max(0, slot.capacity - slot.filled_count) for slot in obj.slots.all())
 
     def validate(self, attrs: dict) -> dict:
         """Reject a thumbnail crop that extends past the edge of the image."""
@@ -73,6 +84,32 @@ class EventSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class EventCreateSerializer(EventSerializer):
+    """Create-only serializer that also accepts the announce option.
+
+    The flag is write-only and deliberately not a stored field: it is an action
+    for this one request, not an event property. Keeping it off
+    ``EventSerializer`` means PATCH can never send an announcement, which the
+    story requires.
+    """
+
+    announce_to_mailing_list = serializers.BooleanField(
+        write_only=True,
+        required=False,
+        default=False,
+    )
+
+    class Meta(EventSerializer.Meta):
+        fields = list(EventSerializer.Meta.fields) + ["announce_to_mailing_list"]
+
+    def create(self, validated_data: dict) -> Event:
+        """Drop the write-only announce flag before the model row is created."""
+        # The flag has no matching model field, so leaving it in would reach
+        # Model.objects.create() and raise TypeError.
+        validated_data.pop("announce_to_mailing_list", None)
+        return super().create(validated_data)
+
+
 class EventImageSerializer(serializers.ModelSerializer):
     """Serialize an additional event image and its directly usable media URL."""
 
@@ -110,6 +147,8 @@ class VolunteerSlotSerializer(serializers.ModelSerializer):
 # Names are included in volunteer emails, so reject links, markup, email
 # addresses, and control characters such as line breaks.
 NAME_NOT_ALLOWED = re.compile(r"https?://|www\.|[<>@]|[\x00-\x1f]", re.IGNORECASE)
+DUPLICATE_SIGNUP_MESSAGE = "This email is already signed up for this shift."
+DUPLICATE_SIGNUP_CODE = "duplicate_signup"
 
 
 class VolunteerSignupSerializer(serializers.ModelSerializer):
@@ -152,6 +191,35 @@ class VolunteerSignupSerializer(serializers.ModelSerializer):
         if value is not None and not VolunteerSlot.objects.filter(pk=value).exists():
             raise serializers.ValidationError("This shift does not exist.")
         return value
+
+    def validate(self, attrs: dict) -> dict:
+        """Reject a second signup from the same email for the same shift."""
+        email = attrs.get("email", getattr(self.instance, "email", ""))
+
+        if "slot_id" in attrs:
+            slot_id = attrs["slot_id"]
+        elif "slot" in attrs:
+            slot_id = attrs["slot"].pk if attrs["slot"] else None
+        else:
+            slot_id = getattr(self.instance, "slot_id", None)
+
+        if slot_id is None or not email:
+            return attrs
+
+        if self.instance is not None and (
+            email.strip().lower() == self.instance.email.strip().lower()
+            and slot_id == self.instance.slot_id
+        ):
+            return attrs
+
+        if VolunteerSignup.objects.filter(slot_id=slot_id, email__iexact=email.strip()).exclude(
+            pk=getattr(self.instance, "pk", None)
+        ).exists():
+            raise serializers.ValidationError(
+                {"email": [DUPLICATE_SIGNUP_MESSAGE], "code": [DUPLICATE_SIGNUP_CODE]}
+            )
+
+        return attrs
 
 
 class VolunteerCancellationDetailSerializer(serializers.ModelSerializer):

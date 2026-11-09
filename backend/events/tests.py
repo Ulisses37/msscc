@@ -6,9 +6,12 @@ from django.core.cache import cache
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework_simplejwt.tokens import RefreshToken
 
+from emails.models import Subscriber
 from events import services
 from events.models import Event, VolunteerSignup, VolunteerSlot
 
@@ -74,6 +77,120 @@ class EventListAPITests(TestCase):
         self.assertFalse(event.is_published)
 
 
+class AdminVolunteerSignupCreateTests(TestCase):
+    """Verify only authorized admins can add volunteers beyond shift capacity."""
+
+    url = "/api/events/admin/signups/"
+
+    def setUp(self):
+        self.client = APIClient()
+        self.event = Event.objects.create(
+            title_en="Cultural Exchange",
+            title_ja="文化交流",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        self.slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Greeter",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=1,
+        )
+        self.payload = {
+            "slot_id": self.slot.volunteer_slot_id,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+
+    def create_user(self, **overrides):
+        """Create an active admin account with event access overrides."""
+        data = {
+            "email": "admin@example.com",
+            "password": "TestPass123!",
+            "first_name": "Admin",
+            "last_name": "User",
+            "permissions_data": {"Events": True},
+        }
+        data.update(overrides)
+        return User.objects.create_user(**data)
+
+    def fill_slot(self):
+        """Create an approved signup that fills the test shift."""
+        return VolunteerSignup.objects.create(
+            slot=self.slot,
+            first_name="Existing",
+            last_name="Volunteer",
+            email="existing@example.com",
+            phone="916-555-0199",
+            status="approved",
+        )
+
+    def test_unauthenticated_request_is_rejected(self):
+        """Require an authenticated admin account for the capacity override."""
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+
+    def test_admin_without_events_permission_is_rejected(self):
+        """Reject active admins that are not authorized to manage events."""
+        self.client.force_authenticate(user=self.create_user(permissions_data={"Events": False}))
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(VolunteerSignup.objects.count(), 0)
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_events_admin_can_add_a_volunteer_to_a_full_shift(self, mock_send_email):
+        """Allow event-authorized admins to exceed capacity when needed."""
+        self.fill_slot()
+        self.client.force_authenticate(user=self.create_user())
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 2)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_executive_can_add_a_volunteer_to_a_full_shift(self, mock_send_email):
+        """Allow executives to override capacity without delegated event access."""
+        self.fill_slot()
+        self.client.force_authenticate(
+            user=self.create_user(is_executive=True, permissions_data={})
+        )
+
+        response = self.client.post(self.url, self.payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 2)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_duplicate_email_is_still_rejected_for_admin_capacity_override(self, mock_send_email):
+        """Retain duplicate protection even when capacity enforcement is bypassed."""
+        self.fill_slot()
+        self.client.force_authenticate(user=self.create_user())
+
+        response = self.client.post(
+            self.url,
+            {**self.payload, "email": "EXISTING@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["email"], ["This email is already signed up for this shift."]
+        )
+        self.assertEqual(response.json()["code"], ["duplicate_signup"])
+        self.assertEqual(VolunteerSignup.objects.filter(slot=self.slot).count(), 1)
+        mock_send_email.assert_not_called()
+
+
 @override_settings(FRONTEND_URL="https://example.test")
 class VolunteerSignupEmailTests(TestCase):
     """Verify volunteer signup confirmation emails include cancellation links."""
@@ -93,6 +210,7 @@ class VolunteerSignupEmailTests(TestCase):
             position_name="Greeter",
             start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
             end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=50,
         )
 
     @patch("events.views.send_volunteer_thanks_email")
@@ -185,6 +303,102 @@ class VolunteerSignupEmailTests(TestCase):
         mock_send_email.assert_not_called()
 
     @patch("events.views.send_volunteer_thanks_email")
+    def test_duplicate_email_for_the_same_shift_is_rejected(self, mock_send_email):
+        """Prevent a second signup for the same shift, regardless of email case."""
+        payload = {
+            "slot_id": self.slot.volunteer_slot_id,
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+        self.client.post("/api/events/signups/", payload, format="json")
+
+        response = self.client.post(
+            "/api/events/signups/",
+            {**payload, "email": "AIKO@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["email"], ["This email is already signed up for this shift."]
+        )
+        self.assertEqual(response.json()["code"], ["duplicate_signup"])
+        self.assertEqual(VolunteerSignup.objects.count(), 1)
+        mock_send_email.assert_called_once()
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_same_email_can_sign_up_for_a_different_shift(self, mock_send_email):
+        """Allow one email address to volunteer for more than one shift."""
+        second_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Guide",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+        )
+        payload = {
+            "first_name": "Aiko",
+            "last_name": "Tanaka",
+            "email": "aiko@example.com",
+            "phone": "916-555-0100",
+        }
+
+        first = self.client.post(
+            "/api/events/signups/",
+            {**payload, "slot_id": self.slot.volunteer_slot_id},
+            format="json",
+        )
+        second = self.client.post(
+            "/api/events/signups/",
+            {**payload, "slot_id": second_slot.volunteer_slot_id},
+            format="json",
+        )
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 201)
+        self.assertEqual(VolunteerSignup.objects.count(), 2)
+        self.assertEqual(mock_send_email.call_count, 2)
+
+    @patch("events.views.send_volunteer_thanks_email")
+    def test_full_shift_is_rejected_without_saving_or_sending_email(self, mock_send_email):
+        """Reject signups once the live approved-signup count reaches capacity."""
+        full_slot = VolunteerSlot.objects.create(
+            event=self.event,
+            position_name="Guide",
+            start_datetime=datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            end_datetime=datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            capacity=1,
+        )
+        VolunteerSignup.objects.create(
+            slot=full_slot,
+            first_name="Aiko",
+            last_name="Tanaka",
+            email="aiko@example.com",
+            phone="916-555-0100",
+            status="approved",
+        )
+
+        response = self.client.post(
+            "/api/events/signups/",
+            {
+                "slot_id": full_slot.volunteer_slot_id,
+                "first_name": "Kenji",
+                "last_name": "Sato",
+                "email": "kenji@example.com",
+                "phone": "916-555-0101",
+                "allow_full_shift": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["slot_id"], ["This shift is full."])
+        self.assertEqual(response.json()["code"], ["shift_full"])
+        self.assertEqual(VolunteerSignup.objects.filter(slot=full_slot).count(), 1)
+        mock_send_email.assert_not_called()
+
+    @patch("events.views.send_volunteer_thanks_email")
     def test_rapid_signups_from_one_ip_are_throttled(self, mock_send_email):
         """Reject a request once the per-IP volunteer-signup limit is exceeded."""
         payload = {
@@ -197,7 +411,12 @@ class VolunteerSignupEmailTests(TestCase):
 
         with patch.dict(AnonRateThrottle.THROTTLE_RATES, {"volunteer_signup": "2/hour"}):
             responses = [
-                self.client.post("/api/events/signups/", payload, format="json") for _ in range(3)
+                self.client.post(
+                    "/api/events/signups/",
+                    {**payload, "email": f"aiko{number}@example.com"},
+                    format="json",
+                )
+                for number in range(3)
             ]
 
         self.assertEqual(responses[0].status_code, 201)
@@ -1197,4 +1416,223 @@ class VolunteerChangeEventLevelTests(TestCase):
 
 
 
+
+
+
+class EventAnnouncementTests(TestCase):
+    """Creating an event can broadcast one announcement to the mailing list."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="admin@example.com",
+            password="TestPass123!",
+            first_name="Admin",
+            last_name="User",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def create_event(self, **overrides):
+        """Create an Event with sensible defaults, varying one field per test."""
+        values = {
+            "title_en": "Cultural Exchange",
+            "title_ja": "文化交流",
+            "start_datetime": datetime(2026, 12, 25, 10, 0, tzinfo=UTC),
+            "end_datetime": datetime(2026, 12, 25, 12, 0, tzinfo=UTC),
+            "is_published": True,
+        }
+        values.update(overrides)
+        return Event.objects.create(**values)
+
+    def create_subscriber(self, email, status=Subscriber.Status.SUBSCRIBED):
+        """Create a mailing-list row in the given consent state."""
+        return Subscriber.objects.create(
+            email=email,
+            source=Subscriber.Source.FOOTER,
+            status=status,
+        )
+
+    def post_event(self, **overrides):
+        """POST a new event and run any on_commit callbacks it scheduled."""
+        payload = {
+            "title_en": "Cultural Exchange",
+            "title_ja": "文化交流",
+            "start_datetime": "2026-12-25T10:00:00Z",
+            "end_datetime": "2026-12-25T12:00:00Z",
+            "is_published": True,
+        }
+        payload.update(overrides)
+
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post("/api/events/", payload, format="json")
+
+    def patch_provider(self):
+        """Patch the provider factory the announcement service imports.
+
+        The service imports ``get_provider`` inside the function, so it is not a
+        module attribute and cannot be patched on ``events.services``. Patching
+        the provider package makes the local import resolve to the mock.
+        """
+        return patch("emails.providers.get_provider")
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_checked_box_sends_one_announcement_and_marks_the_event(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_called_once()
+        event = Event.objects.get()
+        self.assertIsNotNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_unchecked_box_sends_nothing(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event()
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=False)
+    def test_feature_off_ignores_the_flag_and_still_creates_the_event(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_anonymous_caller_cannot_announce(self):
+        self.create_subscriber("member@example.com")
+        self.client.force_authenticate(user=None)
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_real_jwt_authorizes_the_announcement(self):
+        # force_authenticate bypasses authentication, so this one uses a real
+        # token to prove the JWT path populates request.user.
+        self.create_subscriber("member@example.com")
+        token = str(RefreshToken.for_user(self.user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        with self.patch_provider() as get_provider_mock:
+            response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_called_once()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_editing_an_event_never_announces(self):
+        self.create_subscriber("member@example.com")
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.patch(
+                    f"/api/events/{event.event_id}/",
+                    {"title_en": "Renamed", "announce_to_mailing_list": True},
+                    format="json",
+                )
+
+        self.assertEqual(response.status_code, 200)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        event.refresh_from_db()
+        self.assertIsNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_already_announced_event_is_never_announced_again(self):
+        self.create_subscriber("member@example.com")
+        event = self.create_event(announcement_sent_at=timezone.now())
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_empty_mailing_list_sends_nothing_and_leaves_the_event_unmarked(self):
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+        event.refresh_from_db()
+        self.assertIsNone(event.announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_unconfirmed_subscribers_do_not_receive_an_announcement(self):
+        # Only a confirmed address consents, so pending and unsubscribed rows
+        # must not be enough to trigger a broadcast.
+        self.create_subscriber("pending@example.com", status=Subscriber.Status.PENDING)
+        self.create_subscriber(
+            "gone@example.com", status=Subscriber.Status.UNSUBSCRIBED
+        )
+        event = self.create_event()
+
+        with self.patch_provider() as get_provider_mock:
+            services.announce_event_to_mailing_list(event)
+
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_provider_failure_leaves_creation_successful_and_unmarked(self):
+        from emails.providers import ProviderError
+
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            get_provider_mock.return_value.send_broadcast.side_effect = ProviderError(
+                "provider-internal-detail"
+            )
+            with self.assertLogs("events.services", level="ERROR") as captured:
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+        # The provider's own text must not reach the log.
+        self.assertNotIn("provider-internal-detail", "\n".join(captured.output))
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_a_failure_while_building_the_email_leaves_creation_successful(self):
+        self.create_subscriber("member@example.com")
+
+        with patch(
+            "emails.messages.build_event_announcement",
+            side_effect=RuntimeError("template blew up"),
+        ):
+            with self.assertLogs("events.services", level="ERROR"):
+                response = self.post_event(announce_to_mailing_list=True)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().announcement_sent_at)
+
+    @override_settings(EVENT_ANNOUNCEMENTS_ENABLED=True)
+    def test_an_unpublished_event_is_not_announced(self):
+        self.create_subscriber("member@example.com")
+
+        with self.patch_provider() as get_provider_mock:
+            with self.assertLogs("events.views", level="WARNING"):
+                response = self.post_event(
+                    announce_to_mailing_list=True, is_published=False
+                )
+
+        self.assertEqual(response.status_code, 201)
+        get_provider_mock.return_value.send_broadcast.assert_not_called()
 
