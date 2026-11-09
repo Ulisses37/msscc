@@ -8,7 +8,10 @@ from emails.providers import get_provider
 logger = logging.getLogger(__name__)
 
 
-def send_email(to: str, subject: str, template_name: str, context: dict) -> None:
+def send_email(
+    to: str, subject: str, template_name: str, context: dict, *,
+    raise_on_failure: bool = False, html_override: str | None = None,
+) -> None:
     """Render an email template and send it via the configured provider.
 
     This is the single public entry point for transactional emails. It renders
@@ -19,8 +22,21 @@ def send_email(to: str, subject: str, template_name: str, context: dict) -> None
 
     Existing behavior is preserved: failures are logged and a dev alert is sent
     when ``RESEND_DEV_ALERT_EMAIL`` is configured.
+
+    ``raise_on_failure`` exists for callers that must know whether the message
+    actually left, such as the membership reminder that records a send only on
+    success. It defaults to False so every existing caller keeps the original
+    swallow-and-log behavior. On the raising path the exception is still logged
+    and the dev alert is still attempted before it propagates.
+
+    ``html_override`` lets a caller that already rendered the body send it
+    without a second render. The dev-interception layer above still tags it, so
+    the prebuilt path is not a way to bypass the interception. The template name
+    is still required, because the interception banner reports it.
     """
-    html = render_to_string(template_name, context)
+    html = html_override if html_override is not None else render_to_string(
+        template_name, context
+    )
 
     # ── DEV-ONLY EMAIL INTERCEPTION LAYER ─────────────────────────────────
     # Resend no longer redirects test-mode emails to the account owner's
@@ -59,9 +75,15 @@ def send_email(to: str, subject: str, template_name: str, context: dict) -> None
         # gets logged and mailed to the dev inbox.
         cause = exc.__cause__ or exc
         logger.error("Email send failed for %s: %s", to, cause)
-        if not settings.RESEND_DEV_ALERT_EMAIL:
-            return
-        _send_dev_alert(to, subject, str(cause))
+        # The alert is skipped on the raising path: that caller reports the
+        # failure itself, and the alert would otherwise be retried against the
+        # same provider that just failed, once per member in a batch run.
+        if settings.RESEND_DEV_ALERT_EMAIL and not raise_on_failure:
+            _send_dev_alert(to, subject, str(cause))
+        # Opt-in only: the caller that has to record a send needs the real
+        # outcome, and every other caller keeps the original silent return.
+        if raise_on_failure:
+            raise
 
 
 def _send_via_provider(*, to_email: str, subject: str, html: str) -> None:
