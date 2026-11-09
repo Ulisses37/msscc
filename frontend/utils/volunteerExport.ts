@@ -27,11 +27,28 @@ function textCell(value: string | null | undefined, wrap = false): XlsxCell {
   };
 }
 
+/**
+ * write-excel-file stores a Date's UTC clock time, and spreadsheets have no time zone.
+ * Shift the Date so its UTC time matches the admin's local clock time.
+ */
+function toSpreadsheetDate(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+    ),
+  );
+}
+
 function dateTimeCell(value: string | null | undefined): XlsxCell {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return { value: date, type: Date, format: DATE_TIME_FORMAT };
+  return { value: toSpreadsheetDate(date), type: Date, format: DATE_TIME_FORMAT };
 }
 
 const volunteerExportColumns: XlsxColumn<VolunteerExportRow>[] = [

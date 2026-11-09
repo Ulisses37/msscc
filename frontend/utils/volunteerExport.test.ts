@@ -207,11 +207,27 @@ describe('exportEventVolunteers', () => {
   it('writes shift times as date cells with a readable format', async () => {
     const { call } = await runExport([slots[1]], [[signup({})]]);
     const [row] = call![2];
+    const sourceDate = new Date(slots[1].start_datetime);
+    const spreadsheetDate = cell(call!, 'Shift Start', row)?.value as Date;
 
     expect(cell(call!, 'Shift Start', row)).toMatchObject({
       type: Date,
       format: 'mm/dd/yyyy h:mm AM/PM',
     });
-    expect(cell(call!, 'Shift Start', row)?.value).toBeInstanceOf(Date);
+    expect(spreadsheetDate).toBeInstanceOf(Date);
+    expect(spreadsheetDate.getUTCHours()).toBe(sourceDate.getHours());
+    expect(spreadsheetDate.getUTCMinutes()).toBe(sourceDate.getMinutes());
+  });
+
+  it("writes the admin's local clock time, because spreadsheets store no time zone", async () => {
+    const { call } = await runExport([slots[1]], [[signup({})]]);
+    const [row] = call![2];
+    const start = new Date(slots[1].start_datetime);
+    const written = cell(call!, 'Shift Start', row)?.value as Date;
+
+    expect(written.getUTCHours()).toBe(start.getHours());
+    expect(written.getUTCMinutes()).toBe(start.getMinutes());
+    expect(written.getUTCDate()).toBe(start.getDate());
+    expect(written.getUTCMonth()).toBe(start.getMonth());
   });
 });
