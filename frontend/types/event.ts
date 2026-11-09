@@ -29,6 +29,8 @@ export interface Event {
   startDatetime: string;
   endDatetime: string;
   volunteerSlots: number;
+  // Spots still open across all shifts (never below zero)
+  openSpots: number;
   isPublished: boolean;
   sendVolunteerReminders: boolean;
   reminderSentAt: string | null;

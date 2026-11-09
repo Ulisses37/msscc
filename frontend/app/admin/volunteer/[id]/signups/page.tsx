@@ -18,6 +18,20 @@ function formatDateTime(datetime: string): string {
   });
 }
 
+
+/** Turn a failed signup response into a message the admin can act on. */
+async function getSignupErrorMessage(res: Response, fallback: string): Promise<string> {
+  if (res.status === 401) return 'Your session has expired. Please log in again.';
+  if (res.status === 403) return 'You do not have permission to add or edit volunteers.';
+  if (res.status === 400) {
+    const errorBody = await res.json().catch(() => null);
+    const code = Array.isArray(errorBody?.code) ? errorBody.code[0] : errorBody?.code;
+    if (code === 'duplicate_signup') return 'This email is already signed up for this shift.';
+  }
+  return fallback;
+}
+
+
 export default function VolunteerSignupsPage() {
   const { id } = useParams();
   const searchParams = useSearchParams();
@@ -83,8 +97,22 @@ export default function VolunteerSignupsPage() {
     setSaveError('');
 
     try {
+      // Look at the shift right now, so the warning uses the latest count.
+      const slotRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/${id}/`,
+      );
+      if (!slotRes.ok) throw new Error('Failed to load shift.');
+      const slot = await slotRes.json();
+
+      if (slot.filled_count >= slot.capacity) {
+        const addAnyway = window.confirm(
+          `This shift is full (${slot.filled_count}/${slot.capacity}). Add anyway?`,
+        );
+        if (!addAnyway) return;
+      }
+
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/admin/signups/`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAdminRequestHeaders() },
@@ -100,7 +128,13 @@ export default function VolunteerSignupsPage() {
         },
       );
 
-      if (!res.ok) throw new Error('Failed to add volunteer.');
+      if (!res.ok) {
+        setSaveError(
+          await getSignupErrorMessage(res, 'Failed to add volunteer. Please try again.'),
+        );
+        setTimeout(() => setSaveError(''), 5000);
+        return;
+      }
 
       const newSignup = await res.json();
       setSignups((prev) => [newSignup, ...prev]);
@@ -143,7 +177,13 @@ export default function VolunteerSignupsPage() {
         },
       );
 
-      if (!res.ok) throw new Error('Failed to update volunteer.');
+      if (!res.ok) {
+        setSaveError(
+          await getSignupErrorMessage(res, 'Failed to update volunteer. Please try again.'),
+        );
+        setTimeout(() => setSaveError(''), 5000);
+        return;
+      }
 
       const updatedSignup = await res.json();
       setSignups((prev) =>

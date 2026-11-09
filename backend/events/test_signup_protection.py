@@ -21,6 +21,7 @@ class VolunteerSignupProtectionTests(TestCase):
         self.client = APIClient()
         # Throttle history is cache-backed, so keep tests independent.
         cache.clear()
+        self.post_count = 0
 
         patcher = patch("events.views.send_volunteer_thanks_email")
         self.mock_send_email = patcher.start()
@@ -48,8 +49,15 @@ class VolunteerSignupProtectionTests(TestCase):
         }
 
     def post(self, client=None, **overrides):
+        """Post a signup using a unique email unless a test specifies one."""
+        self.post_count += 1
+        payload = {
+            **self.payload,
+            "email": f"aiko{self.post_count}@example.com",
+            **overrides,
+        }
         return (client or self.client).post(
-            SIGNUP_URL, {**self.payload, **overrides}, format="json"
+            SIGNUP_URL, payload, format="json"
         )
 
     # Validation
@@ -119,7 +127,10 @@ class VolunteerSignupProtectionTests(TestCase):
                 SIGNUP_URL, self.payload, format="json", REMOTE_ADDR="10.0.0.1"
             )
             other_ip = self.client.post(
-                SIGNUP_URL, self.payload, format="json", REMOTE_ADDR="10.0.0.2"
+                SIGNUP_URL,
+                {**self.payload, "email": "other@example.com"},
+                format="json",
+                REMOTE_ADDR="10.0.0.2",
             )
 
         self.assertEqual(first.status_code, 201)
