@@ -180,7 +180,9 @@ export function EventCard({ event }: EventCardProps) {
             color: 'var(--color-teal)',
             margin: 0,
           }}>
-            {t('volunteerSlots', { count: event.volunteerSlots })}
+            {event.openSpots > 0
+              ? t('volunteerSlots', { count: event.openSpots })
+              : t('volunteerSlotsFull')}
           </p>
         )}
 

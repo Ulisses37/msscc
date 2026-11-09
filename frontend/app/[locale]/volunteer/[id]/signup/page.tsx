@@ -116,6 +116,20 @@ export default function VolunteerSignupPage() {
         setSubmitError(t('rateLimitError'));
         return;
       }
+      if (res.status === 400) {
+        // The server names the reason in a "code" field. A few refusals get their own message.
+        const errorBody = await res.json().catch(() => null);
+        const code = Array.isArray(errorBody?.code) ? errorBody.code[0] : errorBody?.code;
+        if (code === 'duplicate_signup') {
+          setSubmitError(t('alreadySignedUp'));
+          return;
+        }
+        if (code === 'shift_full') {
+          // The shift filled up after this page loaded.
+          setSubmitError(t('shiftFull'));
+          return;
+        }
+      }
       if (!res.ok) {
         throw new Error('Volunteer signup request failed.');
       }
@@ -231,12 +245,6 @@ export default function VolunteerSignupPage() {
         ) : (
         <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-          {submitError && (
-            <div style={{ padding: '1rem', backgroundColor: '#fff5f5', border: '1px solid #fc8181', borderRadius: '8px', color: '#c53030' }}>
-              {submitError}
-            </div>
-          )}
-
           {/* The shift being signed up for */}
           <div>
             <p style={{ marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: 700, color: '#d72638' }}>
@@ -335,8 +343,19 @@ export default function VolunteerSignupPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <Button text={isSubmitting ? t('processing') : t('register')} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <Button text={isSubmitting ? t('processing') : t('register')} />
+            </div>
+
+            {submitError && (
+              <p
+                role="alert"
+                style={{ color: '#c53030', fontSize: '0.875rem', textAlign: 'center', margin: 0 }}
+              >
+                {submitError}
+              </p>
+            )}
           </div>
         </form>
         )}

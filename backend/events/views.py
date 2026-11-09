@@ -1,16 +1,18 @@
 from django.conf import settings
 from django.core.management import call_command
+from django.db import transaction
 from django.db.models import QuerySet
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from rest_framework import generics, permissions, status, viewsets
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from emails.messages import send_volunteer_thanks_email
 from events.models import Event, EventImage, VolunteerSignup, VolunteerSlot
+from events.permissions import HasEventsPermission
 from events.serializers import (
     EventImageSerializer,
     EventSerializer,
@@ -20,18 +22,55 @@ from events.serializers import (
 )
 from events.throttles import VolunteerSignupThrottle
 
+SHIFT_FULL_MESSAGE = "This shift is full."
+SHIFT_FULL_CODE = "shift_full"
+
+
+def create_signup_under_lock(serializer, *, allow_over_capacity=False):
+    """Save a validated signup while holding a lock on its shift."""
+    slot = serializer.validated_data.get("slot")
+    slot_id = serializer.validated_data.get("slot_id") or (slot.pk if slot else None)
+
+    with transaction.atomic():
+        if slot_id is not None:
+            # Serialize signups for this shift so the next request sees the prior
+            # request's committed signup before checking capacity.
+            locked_slot = VolunteerSlot.objects.select_for_update().get(pk=slot_id)
+
+            # Recheck here because simultaneous duplicate requests can both pass
+            # serializer validation before either one saves.
+            serializer.validate(serializer.validated_data)
+
+            if not allow_over_capacity:
+                taken = VolunteerSignup.objects.filter(
+                    slot=locked_slot,
+                    status="approved",
+                ).count()
+                if taken >= locked_slot.capacity:
+                    raise ValidationError(
+                        {"slot_id": [SHIFT_FULL_MESSAGE], "code": [SHIFT_FULL_CODE]}
+                    )
+
+        signup = serializer.save(status="approved")
+
+    # Provider latency must not hold the shift-row lock.
+    if signup.slot is not None:
+        send_volunteer_thanks_email(signup)
+
+    return signup
+
 
 class EventListView(generics.ListCreateAPIView):
     """Return event records as a JSON list."""
 
-    queryset = Event.objects.all().order_by("start_datetime", "event_id")
+    queryset = Event.objects.all().order_by("start_datetime", "event_id").prefetch_related("slots")
     serializer_class = EventSerializer
 
 
 class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve or update a single event."""
 
-    queryset = Event.objects.all()
+    queryset = Event.objects.prefetch_related("slots")
     serializer_class = EventSerializer
     lookup_field = "event_id"
 
@@ -108,9 +147,19 @@ class VolunteerSignupViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        signup = serializer.save(status="approved")
-        if signup.slot is not None:
-            send_volunteer_thanks_email(signup)
+        """Create a public signup without allowing capacity to be exceeded."""
+        create_signup_under_lock(serializer)
+
+
+class AdminVolunteerSignupCreateView(generics.CreateAPIView):
+    """Let authorized admins add volunteers to a full shift when necessary."""
+
+    serializer_class = VolunteerSignupSerializer
+    permission_classes = [HasEventsPermission]
+
+    def perform_create(self, serializer):
+        """Create an admin-entered signup while retaining duplicate protection."""
+        create_signup_under_lock(serializer, allow_over_capacity=True)
 
 
 class VolunteerCancellationLookupView(APIView):

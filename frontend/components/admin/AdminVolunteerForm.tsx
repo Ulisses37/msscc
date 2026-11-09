@@ -198,7 +198,7 @@ export function AdminVolunteerForm({
           </div>
 
           {/* Feedback messages */}
-          <div className="h-6">
+          <div className="min-h-[1.5rem]">
             {successMessage && (
               <p className="text-body-sm text-msscc-teal">{successMessage}</p>
             )}
