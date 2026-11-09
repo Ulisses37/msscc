@@ -427,3 +427,24 @@ class ManualMembershipCreateSerializer(MembershipSerializer):
         if start is not None and end is not None and end < start:
             raise serializers.ValidationError({"end_date": "End date cannot precede start date."})
         return attrs
+
+class DashboardDonationSerializer(serializers.ModelSerializer):
+    donor_first_name = serializers.CharField(source="donor_first_name_encrypted", read_only=True)
+    donor_last_name = serializers.CharField(source="donor_last_name_encrypted", read_only=True)
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, coerce_to_string=False, read_only=True)
+
+    class Meta:
+        model = Donation
+        fields = ["donor_first_name", "donor_last_name", "amount", "created_at"]
+        read_only_fields = fields
+
+
+class DashboardMembershipSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="first_name_encrypted", read_only=True)
+    last_name = serializers.CharField(source="last_name_encrypted", read_only=True)
+
+    class Meta:
+        model = Membership
+        fields = ["first_name", "last_name", "membership_type", "created_at"]
+        read_only_fields = fields

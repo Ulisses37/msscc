@@ -16,6 +16,8 @@ from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import (
     AdminDonationSerializer,
+    DashboardDonationSerializer,
+    DashboardMembershipSerializer,
     DonationSerializer,
     ManualMembershipCreateSerializer,
     MembershipSerializer,
@@ -349,3 +351,23 @@ class MembershipDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDes
                 {"detail": "Unable to delete the membership at this time."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+
+class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView):
+    """Slim donation rows for the logged-in dashboard. Skips the finance check."""
+
+    serializer_class = DashboardDonationSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return Donation.objects.order_by("-created_at", "-donation_id")[:50]
+
+
+class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIView):
+    """Slim membership rows for the logged-in dashboard. Skips the finance check."""
+
+    serializer_class = DashboardMembershipSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return Membership.objects.order_by("-created_at", "-membership_id")[:50]
