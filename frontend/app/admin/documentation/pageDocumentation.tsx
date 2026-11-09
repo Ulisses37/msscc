@@ -22,6 +22,51 @@ export interface AdminPageInfo {
 // Array of pageInstructions allows for easy multi line explanations
 export const adminPageList: AdminPageInfo[] = [
   {
+    pageName: "Dashboard",
+    pageDescription: "Homepage for all admins",
+    pageInstructions: [
+      "The admin dashboard page is a **purely visual** page.",
+      "It is viewable to all admins and provides helpful information and diagnostic data about the website.",
+      "The {pink|left sidebar} shows the admin's **Name** and **Email**.",
+      "The **Your Pages** section lists all of the pages that an admin has access to, along with a quick description of each.",
+      "The {pink|right sidebar} shows analytics about the site:",
+      "The **first box** shows the number of views the site has gotten over the course of a month, a year, and its lifetime.",
+      "The **second box** shows the amount of image storage currently being used by the website.",
+      {
+        text: "Our current storage tier can only hold up to **XX GB** at a time.",
+        variant: 'note',
+      },
+      "The **third box** shows the Monthly **DeepL Translation Usage**.",
+      {
+        text: "The free tier of DeepL provides **500,000 tokens** a month of translation requests.",
+        variant: 'note',
+      },
+      "At the bottom of the page, there are three information carousels: **Events**, **Donations**, and **Memberships**.",
+      "The **Event** carousel shows upcoming events and some of the most recent past events. Clicking on an Event will take you to its user-side page.",
+      "The **Donation** and **Membership** carousels show recent financial contribution names, amounts, and dates.",
+      {
+        text: "Click the arrows on the sides of a carousel to scroll through it.",
+        variant: 'tip',
+      },
+    ],
+  },
+  {
+    ...getPage("Events"),
+    pageInstructions: [
+      "This page is dedicated managing Events that are displayed on the User's side of the website.",
+      "You can add, edit, and delete events here, and the changes will reflect on the public-facing Events page.",
+      {
+        text: "The **Preview Page** button shows what the page looks like with your current edits. You do **not** need to save to see the preview.",
+        variant: 'note',
+      },
+      "The **Save** button saves the currently written content of the entire page.",
+      {
+        text: "This page only affects content **dynamically added** by this editor. It cannot edit existing static content that is hardcoded in the website itself.",
+        variant: 'warning',
+      },
+    ],
+  },
+  {
     // The help page filters by permission key. Both membership and donation
     // imports require Finances, so keep their instructions in the same entry.
     pageName: "Finances",
@@ -81,32 +126,85 @@ export const adminPageList: AdminPageInfo[] = [
     ],
   },
   {
-    pageName: "Dashboard",
-    pageDescription: "Homepage for all admins",
+    ...getPage("Edit Pages"),
     pageInstructions: [
-      "The admin dashboard page is a **purely visual** page.",
-      "It is viewable to all admins and provides helpful information and diagnostic data about the website.",
-      "The {pink|left sidebar} shows the admin's **Name** and **Email**.",
-      "The **Your Pages** section lists all of the pages that an admin has access to, along with a quick description of each.",
-      "The {pink|right sidebar} shows analytics about the site:",
-      "The **first box** shows the number of views the site has gotten over the course of a month, a year, and its lifetime.",
-      "The **second box** shows the amount of image storage currently being used by the website.",
+      "This page is dedicated to adding and editing **text** and **image** content on the existing public-facing pages. Newly added content is represented as **content blocks** on this page.",
+      "The pages affected by this editor are: {teal|Home}, {teal|Program|Events}, {teal|Support}, {teal|Membership}, {teal|About|Board}, and {teal|Partners}.",
+      "Both English and Japanese text can be edited through this page. Japanese translations can be generated automatically by clicking the **Translate to Japanese** button.",
+      "Choose which page to edit by selecting one under the **SELECT PAGE** dropdown button.",
+      "Add new text/image blocks by clicking the {green|+} buttons under **ADD CONTENT**.",
+      "Each content block has its own text formatting based on the content type chosen.",
+      "To delete a content block, hover over the top right of the block and click the {red|X} button that appears.",
+      "To change the order of the displayed content blocks, click the **Move** buttons that appear above each block.",
       {
-        text: "Our current storage tier can only hold up to **XX GB** at a time.",
-        variant: 'note',
-      },
-      "The **third box** shows the Monthly **DeepL Translation Usage**.",
-      {
-        text: "The free tier of DeepL provides **500,000 tokens** a month of translation requests.",
-        variant: 'note',
-      },
-      "At the bottom of the page, there are three information carousels: **Events**, **Donations**, and **Memberships**.",
-      "The **Event** carousel shows upcoming events and some of the most recent past events. Clicking on an Event will take you to its user-side page.",
-      "The **Donation** and **Membership** carousels show recent financial contribution names, amounts, and dates.",
-      {
-        text: "Click the arrows on the sides of a carousel to scroll through it.",
+        text: "The **Preview Page** button shows what the page looks like with your current edits. You do **not** need to save to see the preview.",
         variant: 'tip',
       },
+      "The **Save** button saves the currently written content of the entire page.",
+      {
+        text: "This page only affects content **dynamically added** by this editor. It cannot edit existing static content that is hardcoded in the website itself.",
+        variant: 'warning',
+      },
+    ],
+  },
+  {
+    ...getPage("Media"),
+    pageInstructions: [
+      "This page is dedicated managing media content generally accessed through the website.",
+      "Operations for this page consists of Importing, Deleting, and Replacing any image throughout the website.",
+      "Operation also includes managing the gallery slideshow display for the User's side of the website.",
+      {
+        text: "Changes within this page reflects into changes to the database and storage.",
+        variant: 'note',
+      },
+
+      "To **Import** new images to the database and storage, Scroll to the Import Images section.",
+      "**- -** Browse a local image from device and click {pink|Submit}.",
+      {
+        text: "Accepted image formats include JPG, JPEG, JFIF, PNG, BMP, WEBP, TIFF, GIF, and PDF.",
+        variant: 'note',
+      },
+      {
+        text: "Images uploaded are sanitized before being stored in the database and storage.",
+        variant: 'note',
+      },
+      "To **Delete** old images from the database and storage, Scroll to the Delete Images section",
+      "**- -** Click '{pink|Start}' to open an interface to select images to delete.",
+      "**- -** **Toggle** the selection of images to delete.",
+      "**- -** Click '{red|Delete}' to remove the selected images from the database and storage.",
+      {
+        text: "Any deleted images are removed forever from the database and storage.",
+        variant: 'warning',
+      },
+      {
+        text: "Any images in use that are deleted will be replaced with a placeholder or removed from the gallery slideshow.",
+        variant: 'tip',
+      },
+      {
+        text: "Certain images may be protected and cannot be deleted.",
+        variant: 'note',
+      },
+      "To **Replace** images from existing content, Scroll to the Replace Image section.",
+      "**- -** {pink|Select} the category you want to replace from the existing content.",
+      "**- -** {pink|Select} the specific image you want to replace from the existing content.",
+      "**- -** **Choose** between uploading a new image or selecting an existing image from the storage.",
+      "**- -** Click '{pink|Submit}' to update the image in the database and storage.",
+      {
+        text: "You can reselect images before submitting the changes.",
+        variant: 'tip',
+      },
+      {
+        text: "**Importing a new image** will upload to database, storage, and replace the specific image you selected from the existing content. **Selecting an existing image** from the storage will replace the image with the one you chose.",
+        variant: 'note',
+      },
+      {
+        text: "You can not select a replace image without first selecting the specific image you want to replace from the existing content.",
+        variant: 'note',
+      },
+      "To **Manage** the Gallery Slideshow, Scroll to the Gallery Slideshow section.",
+      "**- -** Click '{pink|Manage Gallery Slideshow}' to open the gallery management interface.",
+      "**- -** **Select** the images you want to include in the gallery slideshow from the available stored images.",
+      "**- -** **Deselect** the images you no longer want to include in the gallery slideshow by clicking the image thumbnail again or the listed gallery images.",
     ],
   },
   {
@@ -138,28 +236,6 @@ export const adminPageList: AdminPageInfo[] = [
       {
         text: "The Developer admin feature is intended to be used during **transfers of leadership** and to prevent misuse of the Executive rank.",
         variant: 'note',
-      },
-    ],
-  },
-  {
-    ...getPage("Edit Pages"),
-    pageInstructions: [
-      "This page is dedicated to adding and editing **text** and **image** content on the existing public-facing pages. Newly added content is represented as **content blocks** on this page.",
-      "The pages affected by this editor are: {teal|Home}, {teal|Program|Events}, {teal|Support}, {teal|Membership}, {teal|About|Board}, and {teal|Partners}.",
-      "Both English and Japanese text can be edited through this page. Japanese translations can be generated automatically by clicking the **Translate to Japanese** button.",
-      "Choose which page to edit by selecting one under the **SELECT PAGE** dropdown button.",
-      "Add new text/image blocks by clicking the {green|+} buttons under **ADD CONTENT**.",
-      "Each content block has its own text formatting based on the content type chosen.",
-      "To delete a content block, hover over the top right of the block and click the {red|X} button that appears.",
-      "To change the order of the displayed content blocks, click the **Move** buttons that appear above each block.",
-      {
-        text: "The **Preview Page** button shows what the page looks like with your current edits. You do **not** need to save to see the preview.",
-        variant: 'tip',
-      },
-      "The **Save** button saves the currently written content of the entire page.",
-      {
-        text: "This page only affects content **dynamically added** by this editor. It cannot edit existing static content that is hardcoded in the website itself.",
-        variant: 'warning',
       },
     ],
   },

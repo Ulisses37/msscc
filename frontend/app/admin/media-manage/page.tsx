@@ -112,7 +112,7 @@ export default function Dashboard() {
       {/** Must have ability to delete images from storage: Debug Element */}
       <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4">
-          <h2 className="font-heading text-xl font-medium text-msscc-teal">Delete Stored Images</h2>
+          <h2 className="font-heading text-xl font-medium text-msscc-teal">Delete Images</h2>
           <p className="mt-2 text-sm text-msscc-gray-mid">
             Select Media and Images from storage to delete.
           </p>
@@ -126,7 +126,9 @@ export default function Dashboard() {
           {showDeleteManager ? 'In Progress' : 'Click to Start'}
         </button>
       </section>
-
+      <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-4 shadow-sm sm:p-6">
+        <ReplaceImage />
+      </section>
       <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4">
           <h2 className="font-heading text-xl font-medium text-msscc-teal">Gallery Slideshow</h2>
@@ -152,9 +154,7 @@ export default function Dashboard() {
         <ImageDeletionManager onClose={() => setShowDeleteManager(false)} />
       )}
 
-      <section className="w-full max-w-2xl rounded-xl border border-msscc-gray-light bg-white p-4 shadow-sm sm:p-6">
-        <ReplaceImage />
-      </section>
+
     </main>
   );
 }
