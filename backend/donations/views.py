@@ -3,7 +3,10 @@ from decimal import Decimal
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
+from django.db.models import Count, DecimalField, F, Q, Sum, Value
+from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -371,3 +374,69 @@ class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIVie
 
     def get_queryset(self):
         return Membership.objects.order_by("-created_at", "-membership_id")[:50]
+
+ZERO = Decimal("0.00")
+
+def _period_totals(queryset, amount_field, today):
+    """Sum amount_field for today / this month / this year / all time.
+
+    Expects the queryset to be annotated with `effective_date`.
+    """
+    queryset = queryset.filter(effective_date__lte=today)  # ignore future-dated rows
+
+    def total(condition=None):
+        return Coalesce(
+            Sum(amount_field, filter=condition),
+            Value(ZERO),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+
+    return queryset.aggregate(
+        today=total(Q(effective_date=today)),
+        this_month=total(Q(effective_date__gte=today.replace(day=1))),
+        this_year=total(Q(effective_date__gte=today.replace(month=1, day=1))),
+        all_time=total(),
+    )
+
+
+class DashboardSummaryView(APIView):
+    """Aggregate-only numbers for the admin dashboard. No names or contact data."""
+
+    def get(self, request):
+        today = timezone.localdate()
+
+        # --- Memberships: count active ones, overall and per type ---
+        active = Membership.objects.filter(status__iexact="active")
+        by_type = (
+            active.values("membership_type")
+            .annotate(count=Count("membership_id"))
+            .order_by("-count")
+        )
+
+        # --- Money: completed donations + paid memberships ---
+        donations = Donation.objects.filter(
+            payment_status=Donation.PaymentStatus.COMPLETED
+        ).annotate(effective_date=F("donation_date"))
+
+        # start_date can be null on historical rows, so fall back to created_at
+        memberships = (
+            Membership.objects.filter(payment_status__iexact="completed")
+            .annotate(effective_date=Coalesce("start_date", TruncDate("created_at")))
+        )
+
+        donation_totals = _period_totals(donations, "amount", today)
+        membership_totals = _period_totals(memberships, "membership_price", today)
+
+        return Response({
+            "memberships": {
+                "total": active.count(),
+                "by_type": [
+                    {"membership_type": row["membership_type"] or "", "count": row["count"]}
+                    for row in by_type
+                ],
+            },
+            "financials": {
+                key: float(donation_totals[key] + membership_totals[key])
+                for key in ("today", "this_month", "this_year", "all_time")
+            },
+        })

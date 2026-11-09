@@ -14,7 +14,7 @@ import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchDashboardFinancialRecords } from '@/services/financialRecordSearch';
 
 import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
-import { SiteAnalytics } from './analytics';
+import { SiteAnalytics, MembershipCounter, FinanceCounter } from './analytics';
 import { ImageStorage } from './imageStorage';
 
 
@@ -85,7 +85,10 @@ export default function Dashboard() {
           <SiteAnalytics/>
 
           {/* Finances Counter */}
+          <FinanceCounter/>
 
+          {/* Membership Counter */}
+          <MembershipCounter/>
 
         </aside>
       </div>

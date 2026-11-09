@@ -14,6 +14,7 @@ from donations.views import (
     AdminTableRevisionView,
     DashboardDonationListView,
     DashboardMembershipListView,
+    DashboardSummaryView,
     DonationDetailView,
     DonationListCreateView,
     DonationQuoteView,
@@ -77,4 +78,6 @@ urlpatterns = [
          DashboardDonationListView.as_view(), name="public-donation-list"),
     path("dashboard/memberships/",
          DashboardMembershipListView.as_view(), name="public-membership-list"),
+    path("dashboard/summary/",
+          DashboardSummaryView.as_view(), name="dashboard-summary"),
 ]
