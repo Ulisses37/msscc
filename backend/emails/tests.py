@@ -1869,6 +1869,76 @@ class MembershipExpiryReminderTemplateTests(TestCase):
         ).read_text(encoding="utf-8")
 
 
+class BaseTemplateCommentRegressionTests(TestCase):
+    """base.html carries no template syntax into the rendered output.
+
+    A multi-line ``{# ... #}`` note used to sit above the footer block. Django
+    only strips a single-line ``{# #}``, so everything after the first newline
+    was emitted as literal text into every email. This locks that shut.
+    """
+
+    CONFIRMED_ADDRESS = "PO BOX 162785, Sacramento, CA 95816"
+
+    TRANSACTIONAL = (
+        "emails/membership_receipt.html",
+        {
+            "first_name": "Maya",
+            "reference": "MEM-00000001",
+            "completed_at": datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            "total_amount": "$35.00",
+        },
+    )
+
+    def render_marketing(self):
+        """Render a marketing email, which fills the unsubscribe footer."""
+        with override_settings(FRONTEND_URL="https://example.test"):
+            with patch("emails.providers.get_provider") as get_provider_mock:
+                get_provider_mock.return_value.unsubscribe_url = (
+                    UNSUBSCRIBE_URL_PLACEHOLDER
+                )
+                event = Event(
+                    event_id=42,
+                    title_en="Summer Festival",
+                    title_ja="夏祭り",
+                    location_en="Memorial Auditorium",
+                    start_datetime=datetime(2026, 7, 15, 19, 0, tzinfo=UTC),
+                    end_datetime=datetime(2026, 7, 15, 21, 0, tzinfo=UTC),
+                )
+                _, html = build_event_announcement(event)
+                return html
+
+    def test_no_template_syntax_comment_leaks_into_either_render(self):
+        for label, html in (
+            ("transactional", render_to_string(*self.TRANSACTIONAL)),
+            ("marketing", self.render_marketing()),
+        ):
+            with self.subTest(email=label):
+                self.assertNotIn("#}", html)
+                self.assertNotIn("CAN-SPAM", html)
+
+    def test_the_comment_text_does_not_survive_in_any_template(self):
+        # The old note's wording is what used to leak; assert its distinctive
+        # phrases are gone rather than only the delimiter.
+        for label, html in (
+            ("transactional", render_to_string(*self.TRANSACTIONAL)),
+            ("marketing", self.render_marketing()),
+        ):
+            with self.subTest(email=label):
+                self.assertNotIn("transactional emails do not need", html)
+
+    def test_the_marketing_email_carries_the_confirmed_mailing_address(self):
+        html = self.render_marketing()
+
+        self.assertIn(self.CONFIRMED_ADDRESS, html)
+        self.assertIn("Matsuyama-Sacramento Sister City Corporation", html)
+
+    def test_the_transactional_email_carries_no_mailing_address(self):
+        html = render_to_string(*self.TRANSACTIONAL)
+
+        self.assertNotIn(self.CONFIRMED_ADDRESS, html)
+        self.assertNotIn("Unsubscribe from future announcements", html)
+
+
 class EmailFeaturesEndpointTests(TestCase):
     """The features endpoint reports the flag and is admin-only."""
 
