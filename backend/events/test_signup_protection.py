@@ -152,11 +152,21 @@ class VolunteerSignupProtectionTests(TestCase):
         self.assertEqual([response.status_code for response in responses], [201] * 4)
 
     def test_only_creating_a_signup_is_limited(self):
+        admin = User.objects.create_user(
+            email="events-admin@example.com",
+            password="TestPass123!",
+            first_name="Events",
+            last_name="Admin",
+            permissions_data={"Events": True},
+        )
+        management_client = APIClient()
+        management_client.force_authenticate(user=admin)
+
         with patch.dict(AnonRateThrottle.THROTTLE_RATES, {"volunteer_signup": "1/hour"}):
             created = self.post()
             refused = self.post()
-            listing = self.client.get(SIGNUP_URL)
-            deleted = self.client.delete(
+            listing = management_client.get(SIGNUP_URL)
+            deleted = management_client.delete(
                 f"{SIGNUP_URL}{created.json()['volunteer_signup_id']}/"
             )
 

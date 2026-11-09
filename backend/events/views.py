@@ -165,6 +165,12 @@ class VolunteerSlotViewSet(viewsets.ModelViewSet):
 class VolunteerSignupViewSet(viewsets.ModelViewSet):
     serializer_class = VolunteerSignupSerializer
 
+    def get_permissions(self):
+        """Keep public signup creation open while restricting signup management."""
+        if self.action == "create":
+            return [permissions.AllowAny()]
+        return [HasEventsPermission()]
+
     # filter slot IDs properly
     def get_queryset(self):
         queryset = VolunteerSignup.objects.all().order_by("-submitted_at")
