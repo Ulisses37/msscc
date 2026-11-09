@@ -72,3 +72,76 @@ jobs:
       - name: Check for missing migrations
         working-directory: backend
         run: python manage.py makemigrations --check --dry-run
+
+  test-backend:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values only. config.settings.test supplies the remaining service
+      # credentials itself and swaps in in-memory SQLite, so no real secret and
+      # no database service are needed for this job. S3_BUCKET is set here
+      # because config.settings.test does not define it, and media URL
+      # generation in the content API tests needs it to build a bucket handle.
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      DJANGO_SECRET_KEY: ci-dummy-secret-key
+      FIELD_ENCRYPTION_KEYS: mCz0qNSJS2G3LzI4SXfTWaU0JwBkzY0lG9_29s1mHdA=
+      S3_BUCKET: ci-dummy-bucket
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+      - name: Run backend tests
+        working-directory: backend
+        run: python -m pytest . --junitxml=pytest.xml
+      - name: Upload pytest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: backend/pytest.xml
+          if-no-files-found: ignore
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Run frontend tests
+        run: npm test -- --json --outputFile=jest.json
+        working-directory: frontend
+      - name: Upload jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results
+          path: frontend/jest.json
+          if-no-files-found: ignore
+      - name: Generate next-env.d.ts
+        # next-env.d.ts is gitignored and only written by next dev/build, so a
+        # clean checkout has no image module declarations and every
+        # `import Logo from '@/...png'` fails tsc with TS2307. Recreate the file
+        # next writes so the declarations in next/image-types/global.d.ts are
+        # referenced without running a full build. The format string and both
+        # arguments are single-quoted, so the double quotes need no escaping.
+        run: |
+          printf '%s\n' '/// <reference types="next" />' '/// <reference types="next/image-types/global" />' > next-env.d.ts
+        working-directory: frontend
+      - name: Type-check frontend
+        run: npm exec -- tsc --noEmit
+        working-directory: frontend
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
