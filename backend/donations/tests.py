@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, IntegrityError, transaction
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -1648,7 +1649,115 @@ class MembershipReminderRunTests(TestCase):
         self.assertIn("ProviderError", joined)
 
 
-class MembershipReminderEndpointTests(TestCase):
+class CreateTestMembershipCommandTests(TestCase):
+    """The test-data command produces a member the selector actually picks up."""
+
+    def run_command(self, **options):
+        """Run the test-data command and return its stdout."""
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("create_test_membership", stdout=out, **options)
+        return out.getvalue()
+
+    def test_created_member_is_selected_by_the_reminder(self):
+        output = self.run_command()
+
+        membership = Membership.objects.get()
+        self.assertEqual(membership.status, "active")
+        # Same clock as the selector: the project's TIME_ZONE, not the host's.
+        self.assertEqual(
+            membership.end_date, timezone.localdate() + timedelta(days=10)
+        )
+        self.assertIsNone(membership.expiry_reminder_for)
+
+        selection = select_members_due_for_reminder()
+        self.assertEqual([m.pk for m in selection.members], [membership.pk])
+        self.assertEqual(selection.skipped, 0)
+        self.assertIn("expiring", output)
+
+    def test_days_and_email_can_be_overridden(self):
+        self.run_command(email="other@example.test", days=3)
+
+        membership = Membership.objects.get()
+        self.assertEqual(membership.email_encrypted, "other@example.test")
+        self.assertEqual(
+            membership.end_date, timezone.localdate() + timedelta(days=3)
+        )
+
+    def test_a_member_outside_the_window_is_not_selected(self):
+        self.run_command(days=60)
+
+        # Proves the window, not just the command, decides eligibility.
+        self.assertEqual(select_members_due_for_reminder().members, [])
+
+
+class DeleteTestMembershipsCommandTests(TestCase):
+    """Cleanup removes only the rows the test-data command created."""
+
+    def run_command(self, *args, **options):
+        """Run a management command and return its stdout."""
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command(*args, stdout=out, **options)
+        return out.getvalue()
+
+    def test_created_memberships_are_deleted(self):
+        self.run_command("create_test_membership")
+        self.run_command("create_test_membership", email="second@example.test")
+        self.assertEqual(Membership.objects.count(), 2)
+
+        output = self.run_command("delete_test_memberships")
+
+        self.assertEqual(Membership.objects.count(), 0)
+        self.assertIn("Deleted 2 test membership(s).", output)
+
+    def test_dry_run_lists_without_deleting(self):
+        self.run_command("create_test_membership")
+
+        output = self.run_command("delete_test_memberships", dry_run=True)
+
+        self.assertEqual(Membership.objects.count(), 1)
+        self.assertIn("would be deleted", output)
+
+    def test_a_real_membership_is_never_deleted(self):
+        self.run_command("create_test_membership")
+        # Same address, but created the way an admin record would be, so the
+        # reference prefix is the only thing separating them.
+        Membership.objects.create(
+            first_name_encrypted="Real",
+            last_name_encrypted="Member",
+            email_encrypted="test-member@example.test",
+            membership_type="individual",
+            status="active",
+            reference_id="MEM-MANUAL-00000001",
+            notes="",
+        )
+
+        self.run_command("delete_test_memberships")
+
+        remaining = Membership.objects.get()
+        self.assertEqual(remaining.reference_id, "MEM-MANUAL-00000001")
+
+    def test_email_filter_deletes_only_that_address(self):
+        self.run_command("create_test_membership")
+        self.run_command("create_test_membership", email="remove@example.test")
+
+        self.run_command("delete_test_memberships", email="remove@example.test")
+
+        # The filter narrows the deletion, so the other test row survives.
+        remaining = Membership.objects.get()
+        self.assertEqual(remaining.email_encrypted, "test-member@example.test")
+
+    def test_nothing_to_delete_reports_cleanly(self):
+        output = self.run_command("delete_test_memberships")
+
+        self.assertIn("No test memberships found", output)
     """The trigger endpoint is key-protected and reports the run tally as JSON."""
 
     url = "/api/trigger/membership-reminders/"

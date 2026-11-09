@@ -27,6 +27,27 @@ backend/venv/bin/python backend/manage.py send_membership_expiry_reminders
 | `--limit` | `50` | Maximum reminders to attempt in one run. |
 | `--dry-run` | off | Report who would be reminded, without claiming or sending. |
 
+To exercise the flow without waiting for a real membership to come due, create one
+that expires inside the window:
+
+```powershell
+backend\venv\Scripts\python.exe backend\manage.py create_test_membership --days 10
+```
+
+It accepts `--email`, `--days`, `--first-name` and `--type`. It writes to whatever
+database the settings point at, so never run it against production.
+
+Clean up afterwards:
+
+```powershell
+backend\venv\Scripts\python.exe backend\manage.py delete_test_memberships --dry-run
+backend\venv\Scripts\python.exe backend\manage.py delete_test_memberships
+```
+
+Cleanup matches only rows whose reference starts with `MEM-TEST-`, so a membership
+entered through the admin is never deleted even when it shares the test address.
+`--email` narrows the deletion to one address.
+
 Running it twice in a day sends one email per member: the expiry date is claimed
 before the send, so a second run finds the claim taken and skips those members.
 
