@@ -72,7 +72,7 @@ export default function VolunteerSignupsPage() {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${signup.volunteer_signup_id}/`,
-        { method: 'DELETE' },
+        { method: 'DELETE', headers: getAdminRequestHeaders() },
       );
 
       if (!res.ok) throw new Error('Failed to remove signup.');
@@ -166,7 +166,7 @@ export default function VolunteerSignupsPage() {
         `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/${selectedSignup.volunteer_signup_id}/`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAdminRequestHeaders() },
           body: JSON.stringify({
             first_name: data.firstName,
             last_name: data.lastName,

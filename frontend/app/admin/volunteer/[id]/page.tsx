@@ -7,6 +7,7 @@ import { ShiftCard } from '@/components/admin/ShiftCard';
 import { ShiftForm, ShiftFormData } from '@/components/admin/ShiftForm';
 import { getSlotsByEventId } from '@/services/volunteerService';
 import { getEventById } from '@/services/eventService';
+import { exportEventVolunteers } from '@/utils/volunteerExport';
 
 interface VolunteerSlot {
   volunteer_slot_id: number;
@@ -47,6 +48,8 @@ export default function VolunteerCreationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
 
 // Fetch shifts for this event, reusable so it can be called again after creating a shift
   const loadShifts = async () => {
@@ -170,6 +173,21 @@ const handleUpdateShift = async (data: ShiftFormData) => {
   }
 };
 
+const handleExportVolunteers = async () => {
+  setExportError('');
+  setIsExporting(true);
+
+  try {
+    const exported = await exportEventVolunteers(Number(id), eventTitle);
+    if (!exported) setExportError('This event has no shifts to export yet.');
+  } catch (error) {
+    console.error('Volunteer export failed:', error);
+    setExportError('Unable to export volunteers. Please try again.');
+  } finally {
+    setIsExporting(false);
+  }
+};
+
 const handleDeleteShift = async (shift: VolunteerSlot) => {
   const confirmed = window.confirm(
     `Are you sure you want to delete the "${shift.position_name}" shift?`,
@@ -251,20 +269,46 @@ const handleDeleteShift = async (shift: VolunteerSlot) => {
             </p>
           )}
 
-          {shifts.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedShift(null);
-                setIsEditing(false);
-                setShowForm(true)
-              }}
-              className="rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors self-start sm:self-auto"
-            >
-              New Shift +
-            </button>
-          )}
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            {!isLoadingShifts && (
+              <button
+                type="button"
+                onClick={handleExportVolunteers}
+                disabled={isExporting}
+                className="w-full rounded-sm border border-msscc-pink px-4 py-2 text-msscc-pink text-btn tracking-btn transition-colors hover:bg-msscc-pink hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {isExporting ? 'Exporting…' : 'Export Volunteers'}
+              </button>
+            )}
+
+            {shifts.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedShift(null);
+                  setIsEditing(false);
+                  setShowForm(true)
+                }}
+                className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-white text-btn tracking-btn hover:bg-msscc-pink-dark transition-colors sm:w-auto"
+              >
+                New Shift +
+              </button>
+            )}
+          </div>
         </div>
+
+        {exportError && (
+          <p
+            role="alert"
+            style={{
+              color: 'var(--color-danger)',
+              fontSize: 'var(--fs-body-sm)',
+              marginBottom: 'var(--space-4)',
+            }}
+          >
+            {exportError}
+          </p>
+        )}
 
             {/* Loading state */}
             {isLoadingShifts && (
