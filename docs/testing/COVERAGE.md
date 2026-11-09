@@ -13,8 +13,8 @@ baseline commit.
 
 | Check | Scope | Trustworthy as evidence for |
 |---|---|---|
-| pytest (`367` tests, baseline) | Every Django app under `backend/`, against in-memory SQLite | Serializers, views, models, permissions, migrations, encryption |
-| jest (`243` tests, baseline) | Colocated `*.test.ts(x)` files under `frontend/`, in the Node environment | Pure logic, service-layer request shaping, component rendering without a browser |
+| pytest (`710` tests) | Every Django app under `backend/`, against in-memory SQLite | Serializers, views, models, permissions, migrations, encryption |
+| jest (`686` tests) | Colocated `*.test.ts(x)` files under `frontend/`, in the Node environment | Pure logic, service-layer request shaping, component rendering without a browser |
 | `tsc --noEmit` | The whole `frontend/` project | Type correctness at the pinned TypeScript version |
 | ruff | All of `backend/` except `migrations/` | Style, imports, dead code, likely bugs, Django model conventions |
 
@@ -85,25 +85,27 @@ provider sandboxes.
 
 ## Known failures at the baseline
 
-The committed baseline is **not fully green.** Its frontend run recorded 4 failed
-suites and 12 failed tests, with the backend, `tsc` and ruff all passing. The
-suites and test names are listed in
+The committed baseline is **fully green.** Its backend run records 710 tests with
+0 failures, its frontend run records 686 tests in 67 suites with 0 failures, and
+`tsc` and ruff both pass. See
 [baseline/SUMMARY.md](baseline/SUMMARY.md), which is generated from `jest.json`
-and is the single source of truth for that list.
+and `pytest.xml` and is the single source of truth for the current counts.
 
-Those failures were observed at the baseline commit recorded in that summary. Root
-causes were not investigated as part of the reporting work, and this document does
-not restate its conclusions. Use `scripts/compare_runs.py` to see when they clear.
+An earlier baseline was red on the frontend side (4 failed suites, 12 failed
+tests). Those failures were fixed in Story A (SCRUM-896), and Story B
+(SCRUM-897) replaced the baseline with the clean run. Use
+`scripts/compare_runs.py` against the committed baseline to see whether a later
+change alters any result.
 
 ## Reporting caveat: tests, subtests and the `tests` attribute
 
 The backend suite uses Django's `subTest()` for table-driven cases, and a subtest
 is **not** a separate test. It runs inside the test that contains it.
 
-pytest reports this as `367 passed, 447 subtests passed`, and the JUnit
-`<testsuite tests="...">` attribute adds the two together and declares `814`.
+pytest reports this as `710 passed, 746 subtests passed`, and the JUnit
+`<testsuite tests="...">` attribute adds the two together and declares `1456`.
 **That is by design, not a defect and not a quirk.** Counting the attribute as a
-test count gives 814 for a suite of 367 tests.
+test count gives 1456 for a suite of 710 tests.
 
 For the same reason, a failing subtest does not appear as its own `<testcase>`. It
 appears as an extra `<failure>` child on the parent test's element, so a test with
