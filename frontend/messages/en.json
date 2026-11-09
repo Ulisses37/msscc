@@ -385,6 +385,7 @@
     "paymentFailed": "Your donation payment failed and was not completed.",
     "paymentCanceled": "Your payment was canceled or expired. Your donation was not completed.",
     "paymentResultUnavailable": "We could not confirm your payment result. Please check again shortly.",
+    "retryPaymentStatus": "Check Payment Status Again",
     "tryPaymentAgain": "Try Payment Again",
     "editDonationDetails": "Edit Donation Details",
     "startNewDonationAttempt": "Start a New Donation Attempt"
