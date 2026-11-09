@@ -60,3 +60,116 @@ async function fetchAnalytics(): Promise<VisitSummary | null>{
     return null;
   }
 }
+
+type MembershipSummary = {
+  memberships: {
+    total: number;
+    by_type: { membership_type: string; count: number }[];
+  };
+}
+
+type FinanceSummary = {
+  financials: {
+    today: number;
+    this_month: number;
+    this_year: number;
+    all_time: number;
+  };
+}
+
+const TYPE_ORDER = ['student', 'individual', 'family', 'corporate'];
+
+export function MembershipCounter(){
+  const [summary, setSummary] = useState<MembershipSummary | null>();
+
+  useEffect(() => {
+    fetchSummary<MembershipSummary>().then(setSummary);
+  }, [])
+
+  const counts = Object.fromEntries(
+    (summary?.memberships?.by_type ?? []).map((r) => [
+      (r.membership_type ?? '').toLowerCase(),
+      r.count,
+    ]),
+  );
+
+  return(
+    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm">
+      <div className="text-center font-body font-bold">Active Memberships</div>
+      <div className="rounded-sm py-2 text-center">
+        <div className="text-3xl font-body">{summary?.memberships?.total?.toLocaleString() || '00'}</div>
+        <div className="text-eyebrow tracking-label text-msscc-gray-faint">Total</div>
+      </div>
+      <div className="grid grid-cols-2">
+        {TYPE_ORDER.map((type) => (
+          <div key={type} className="rounded-sm py-2 text-center">
+            <div className="text-xl font-body">{(counts[type] ?? 0).toLocaleString()}</div>
+            <div className="px-1 text-eyebrow tracking-label text-msscc-gray-faint capitalize">
+              {type}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function FinanceCounter(){
+  const [summary, setSummary] = useState<FinanceSummary | null>();
+  const now = new Date();
+  const monthName = now.toLocaleString('en-US', { month: 'long' });
+
+  useEffect(() => {
+    fetchSummary<FinanceSummary>().then(setSummary);
+  }, [])
+
+  const f = summary?.financials;
+
+  return(
+    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm">
+      <div className="text-center font-body font-bold">Donations & Support</div>
+      <div className="grid grid-cols-2">
+        <div className="rounded-sm py-2 text-center">
+          <div className="text-lg font-body">{formatMoney(f?.today)}</div>
+          <div className="text-eyebrow tracking-label text-msscc-gray-faint">Today</div>
+        </div>
+        <div className="rounded-sm py-2 text-center">
+          <div className="text-lg font-body">{formatMoney(f?.this_month)}</div>
+          <div className="text-eyebrow tracking-label text-msscc-gray-faint">{monthName}</div>
+        </div>
+        <div className="rounded-sm py-2 text-center">
+          <div className="text-lg font-body">{formatMoney(f?.this_year)}</div>
+          <div className="text-eyebrow tracking-label text-msscc-gray-faint">{now.getFullYear()}</div>
+        </div>
+        <div className="rounded-sm py-2 text-center">
+          <div className="text-lg font-body">{formatMoney(f?.all_time)}</div>
+          <div className="text-eyebrow tracking-label text-msscc-gray-faint">Total</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function formatMoney(n?: number){
+  return (n ?? 0).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  });
+}
+
+async function fetchSummary<T>(): Promise<T | null>{
+  try{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/donations/dashboard/summary/`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      throw new Error(`Request failed: ${res.status}`);
+    }
+    const data: T = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Failed to fetch dashboard summary:", err);
+    return null;
+  }
+}

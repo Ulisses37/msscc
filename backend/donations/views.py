@@ -4,8 +4,11 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
+from django.db.models import Count, DecimalField, F, Q, Sum, Value
+from django.db.models.functions import Coalesce, Lower, TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
@@ -20,6 +23,8 @@ from donations.processing_costs import calculate_donation_amounts
 from donations.search import DONATION_SEARCH_FIELDS, MEMBERSHIP_SEARCH_FIELDS, search_encrypted_pii
 from donations.serializers import (
     AdminDonationSerializer,
+    DashboardDonationSerializer,
+    DashboardMembershipSerializer,
     DonationSerializer,
     ManualMembershipCreateSerializer,
     MembershipSerializer,
@@ -371,3 +376,98 @@ def run_membership_expiry_reminders_view(request):
 
     tally = run_membership_expiry_reminders()
     return JsonResponse(tally.as_dict())
+
+
+class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView):
+    """Slim donation rows for the logged-in dashboard. Skips the finance check."""
+
+    serializer_class = DashboardDonationSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            Donation.objects.filter(payment_status=Donation.PaymentStatus.COMPLETED)
+            .order_by("-created_at", "-donation_id")[:50]
+        )
+
+
+class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIView):
+    """Slim membership rows for the logged-in dashboard. Skips the finance check."""
+
+    serializer_class = DashboardMembershipSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            Membership.objects.filter(status__iexact="active")
+            .order_by("-created_at", "-membership_id")[:50]
+        )
+
+ZERO = Decimal("0.00")
+
+FINANCE_STATUSES = ("active", "inactive", "expired", "canceled")
+
+
+def _period_totals(queryset, amount_field, today):
+    """Sum amount_field for today / this month / this year / all time.
+
+    Expects the queryset to be annotated with `effective_date`.
+    """
+    queryset = queryset.filter(effective_date__lte=today)  # ignore future-dated rows
+
+    def total(condition=None):
+        return Coalesce(
+            Sum(amount_field, filter=condition),
+            Value(ZERO),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        )
+
+    return queryset.aggregate(
+        today=total(Q(effective_date=today)),
+        this_month=total(Q(effective_date__gte=today.replace(day=1))),
+        this_year=total(Q(effective_date__gte=today.replace(month=1, day=1))),
+        all_time=total(),
+    )
+
+
+class DashboardSummaryView(APIView):
+    """Aggregate-only numbers. No names or contact data."""
+
+    def get(self, request):
+        today = timezone.localdate()
+
+        # Counters: active memberships only
+        active = Membership.objects.filter(status__iexact="active")
+        by_type = (
+            active.values("membership_type")
+            .annotate(count=Count("membership_id"))
+            .order_by("-count")
+        )
+
+        # Money: completed donations + active/inactive/expired/canceled memberships
+        donations = Donation.objects.filter(
+            payment_status=Donation.PaymentStatus.COMPLETED
+        ).annotate(effective_date=F("donation_date"))
+
+        memberships = (
+            Membership.objects.annotate(status_lower=Lower("status"))
+            .filter(status_lower__in=FINANCE_STATUSES)
+            .annotate(effective_date=Coalesce("start_date", TruncDate("created_at")))
+        )
+
+        donation_totals = _period_totals(donations, "amount", today)
+        membership_totals = _period_totals(memberships, "membership_price", today)
+
+        return Response({
+            "memberships": {
+                "total": active.count(),
+                "by_type": [
+                    {"membership_type": row["membership_type"] or "", "count": row["count"]}
+                    for row in by_type
+                ],
+            },
+            "financials": {
+                key: float(donation_totals[key] + membership_totals[key])
+                for key in ("today", "this_month", "this_year", "all_time")
+            },
+        })

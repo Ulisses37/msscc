@@ -24,3 +24,22 @@ export async function fetchFinancialRecords<T>(
     throw new Error('Unable to load financial records. Please try again.');
   }
 }
+
+export async function fetchDashboardFinancialRecords<T>(
+  resource: FinancialResource,
+): Promise<T[]> {
+  const path =
+    resource === 'donations'
+      ? '/api/donations/dashboard/donations/'
+      : '/api/donations/dashboard/memberships/';
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('Record request failed.');
+    return (await response.json()) as T[];
+  } catch {
+    console.error('Unable to load records.');
+    throw new Error('Unable to load records. Please try again.');
+  }
+}

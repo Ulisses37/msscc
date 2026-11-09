@@ -237,7 +237,7 @@ function DonationCard({ donation}: {donation: DonationEntry}){
     {name}
   </div>
   <div className="font-heading text-base sm:text-heading-2 text-msscc-teal">
-    {formatCurrency(Number(donation.total_amount))}
+    {formatCurrency(Number(donation.amount))}
   </div>
   <div className="text-label sm:text-body-sm text-msscc-gray-mid">
     {formatDate(donation.created_at)}

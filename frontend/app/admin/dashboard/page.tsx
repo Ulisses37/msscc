@@ -11,10 +11,10 @@ import type { Event } from '@/types/event';
 
 import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
-import { fetchFinancialRecords } from '@/services/financialRecordSearch';
+import { fetchDashboardFinancialRecords } from '@/services/financialRecordSearch';
 
 import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
-import { SiteAnalytics } from './analytics';
+import { SiteAnalytics, MembershipCounter, FinanceCounter } from './analytics';
 import { ImageStorage } from './imageStorage';
 
 
@@ -39,8 +39,8 @@ export default function Dashboard() {
   useEffect(() => {
     setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
-    fetchFinancialRecords<DonationEntry>('donations', "").then(setDonations);
-    fetchFinancialRecords<MembershipEntry>('memberships', "").then(setMemberships);
+    fetchDashboardFinancialRecords<DonationEntry>('donations').then(setDonations);
+    fetchDashboardFinancialRecords<MembershipEntry>('memberships').then(setMemberships);
   }, []);
 
   if (!localAdmin) return null;
@@ -49,7 +49,7 @@ export default function Dashboard() {
     <div>
       <div className="flex flex-col bg-msscc-white font-body text-msscc-gray-dark lg:flex-row lg:mb-8">
         {/* Left Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col bg-msscc-pink-light lg:w-48 lg:self-start">
+        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:ml-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
           <div className="w-full bg-msscc-pink px-4 py-2 text-white">
             <div className="break-words font-heading text-heading-2">
               {localAdmin.firstName + ' ' + localAdmin.lastName}
@@ -58,6 +58,12 @@ export default function Dashboard() {
               {localAdmin.email}
             </div>
           </div>
+
+          {/* Cloud Storage Capacity */}
+          <ImageStorage/>
+
+          {/* Keep translation quota visible beside the other dashboard capacity information. */}
+          <DeepLUsageMeter />
         </aside>
 
         {/* Center */}
@@ -78,11 +84,12 @@ export default function Dashboard() {
           {/* Visit Counter */}
           <SiteAnalytics/>
 
-          {/* Cloud Storage Capacity */}
-          <ImageStorage/>
+          {/* Finances Counter */}
+          <FinanceCounter/>
 
-          {/* Keep translation quota visible beside the other dashboard capacity information. */}
-          <DeepLUsageMeter />
+          {/* Membership Counter */}
+          <MembershipCounter/>
+
         </aside>
       </div>
 
