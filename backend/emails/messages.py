@@ -197,3 +197,51 @@ def build_event_announcement(event) -> tuple[str, str]:
     )
 
     return subject, html
+
+
+def build_membership_expiry_reminder(membership) -> tuple[str, str]:
+    """Return the ``(subject, html)`` for one member's expiry reminder.
+
+    This is a transactional account notice, not marketing, so the template leaves
+    ``footer_unsubscribe`` empty and carries no unsubscribe link, matching the
+    volunteer-change emails. A member who opted out of announcements still gets
+    this one, because it concerns their own membership rather than news.
+
+    The expiry date is passed through unformatted and the template applies its
+    own date filter, so the display format stays in one place with the other
+    receipt and reminder templates.
+    """
+    subject = "Your MSSCC membership expires soon"
+    membership_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/membership"
+
+    html = render_to_string(
+        "emails/membership_expiry_reminder.html",
+        {
+            "first_name": membership.first_name_encrypted or "member",
+            "expiry_date": membership.end_date,
+            "membership_url": membership_url,
+        },
+    )
+
+    return subject, html
+
+
+def send_membership_expiry_reminder(membership) -> None:
+    """Send the expiry reminder for one member through the shared mailer.
+
+    Goes out via ``send_email`` so provider selection, dev interception and
+    failure handling stay in one place. Callers are responsible for recording the
+    reminder only after this returns, since a raise here must leave the member
+    eligible for the next run.
+    """
+    subject, html = build_membership_expiry_reminder(membership)
+    send_email(
+        to=membership.email_encrypted,
+        subject=subject,
+        template_name="emails/membership_expiry_reminder.html",
+        context={
+            "first_name": membership.first_name_encrypted or "member",
+            "expiry_date": membership.end_date,
+            "membership_url": f"{settings.FRONTEND_URL.rstrip('/')}/en/membership",
+        },
+    )

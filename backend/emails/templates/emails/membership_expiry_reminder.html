@@ -1,0 +1,47 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Your Membership Expires Soon — MSSCC{% endblock %}
+
+{% block preheader %}
+  <div style="display:none;font-size:1px;color:#F1EFE8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    Your membership expires on {{ expiry_date|date:"F j, Y" }}.
+  </div>
+{% endblock %}
+
+{% block content %}
+  <h2 style="margin:0 0 12px 0;font-family:'Libre Baskerville',Georgia,serif;font-size:20px;line-height:1.3;font-weight:600;color:#264653;">
+    Your membership expires soon
+  </h2>
+  <p style="margin:0 0 24px 0;">
+    Hello{% if first_name %} {{ first_name }}{% endif %}! Our records show that your
+    Matsuyama-Sacramento Sister City Corporation membership expires on
+    <strong>{{ expiry_date|date:"F j, Y" }}</strong>. Renewing before then keeps your
+    membership current without a break.
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="12" cellspacing="0" border="0" style="background-color:#F1EFE8;border-radius:4px;margin-bottom:24px;">
+    <tr>
+      <td style="width:160px;font-weight:600;font-size:14px;color:#3D3D3A;">Membership expires</td>
+      <td style="font-size:14px;color:#3D3D3A;">{{ expiry_date|date:"F j, Y" }}</td>
+    </tr>
+  </table>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+    <tr>
+      <td align="center" bgcolor="#264653" style="border-radius:4px;">
+        <a href="{{ membership_url }}" style="display:inline-block;padding:12px 20px;font-family:Almarai,'Segoe UI',sans-serif;font-size:14px;font-weight:600;line-height:1.2;color:#FFFFFF;text-decoration:none;">
+          Renew here
+        </a>
+      </td>
+    </tr>
+  </table>
+
+  <p style="margin:16px 0 0 0;">
+    This is a service notice about your membership, so it is not affected by your
+    mailing-list preferences.
+  </p>
+  <p style="margin:8px 0 0 0;font-size:14px;line-height:1.6;color:#6B6B68;">
+    If your membership has already been renewed, or you have any questions, please
+    reply to this email and we will sort it out.
+  </p>
+{% endblock %}
