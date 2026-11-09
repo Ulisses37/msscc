@@ -95,7 +95,7 @@ export function MembershipCounter(){
 
   return(
     <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm">
-      <div className="text-center font-body font-bold">MSSCC Members</div>
+      <div className="text-center font-body font-bold">Active Memberships</div>
       <div className="rounded-sm py-2 text-center">
         <div className="text-3xl font-body">{summary?.memberships?.total?.toLocaleString() || '00'}</div>
         <div className="text-eyebrow tracking-label text-msscc-gray-faint">Total</div>

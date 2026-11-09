@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
 from django.db.models import Count, DecimalField, F, Q, Sum, Value
-from django.db.models.functions import Coalesce, TruncDate
+from django.db.models.functions import Coalesce, Lower, TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -385,7 +385,10 @@ class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView)
     pagination_class = None
 
     def get_queryset(self):
-        return Donation.objects.order_by("-created_at", "-donation_id")[:50]
+        return (
+            Donation.objects.filter(payment_status=Donation.PaymentStatus.COMPLETED)
+            .order_by("-created_at", "-donation_id")[:50]
+        )
 
 
 class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIView):
@@ -395,9 +398,15 @@ class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIVie
     pagination_class = None
 
     def get_queryset(self):
-        return Membership.objects.order_by("-created_at", "-membership_id")[:50]
+        return (
+            Membership.objects.filter(status__iexact="active")
+            .order_by("-created_at", "-membership_id")[:50]
+        )
 
 ZERO = Decimal("0.00")
+
+FINANCE_STATUSES = ("active", "inactive", "expired", "canceled")
+
 
 def _period_totals(queryset, amount_field, today):
     """Sum amount_field for today / this month / this year / all time.
@@ -422,12 +431,12 @@ def _period_totals(queryset, amount_field, today):
 
 
 class DashboardSummaryView(APIView):
-    """Aggregate-only numbers for the admin dashboard. No names or contact data."""
+    """Aggregate-only numbers. No names or contact data."""
 
     def get(self, request):
         today = timezone.localdate()
 
-        # --- Memberships: count active ones, overall and per type ---
+        # Counters: active memberships only
         active = Membership.objects.filter(status__iexact="active")
         by_type = (
             active.values("membership_type")
@@ -435,14 +444,14 @@ class DashboardSummaryView(APIView):
             .order_by("-count")
         )
 
-        # --- Money: completed donations + paid memberships ---
+        # Money: completed donations + active/inactive/expired/canceled memberships
         donations = Donation.objects.filter(
             payment_status=Donation.PaymentStatus.COMPLETED
         ).annotate(effective_date=F("donation_date"))
 
-        # start_date can be null on historical rows, so fall back to created_at
         memberships = (
-            Membership.objects.filter(payment_status__iexact="completed")
+            Membership.objects.annotate(status_lower=Lower("status"))
+            .filter(status_lower__in=FINANCE_STATUSES)
             .annotate(effective_date=Coalesce("start_date", TruncDate("created_at")))
         )
 
