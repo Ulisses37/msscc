@@ -27,12 +27,18 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.core.validators import validate_email
 from django.utils import timezone
 
 from donations.models import Membership
 
 logger = logging.getLogger(__name__)
+
+# How many consecutive provider failures end the run. A provider that is down
+# will fail every remaining member, so stopping early keeps one outage from
+# burning through the whole list and the daily send cap.
+MAX_CONSECUTIVE_FAILURES = 5
 
 # How far ahead of its end_date a membership becomes eligible for a reminder.
 # A window rather than an exact day means one missed run does not skip anyone.
@@ -249,6 +255,10 @@ def claim_member_for_reminder(membership, expiry_date: date):
     caller can win. The tradeoff is documented on the command: a crash between
     the claim and the send skips that reminder until the next cycle.
     """
+    # Read before the update, because the update overwrites the field. This
+    # value is only for the caller to hand back to release_member_claim; it is
+    # the conditional update below, not this read, that makes the claim safe
+    # against a concurrent run.
     previous = membership.expiry_reminder_for
     claimed = (
         Membership.objects.filter(pk=membership.pk, end_date=expiry_date)
@@ -279,3 +289,144 @@ def release_member_claim(membership, claimed_expiry: date, previous_value: date 
         pk=membership.pk, expiry_reminder_for=claimed_expiry
     ).update(expiry_reminder_for=previous_value)
     membership.expiry_reminder_for = previous_value
+
+
+@dataclass
+class ReminderRunTally:
+    """What one reminder run did, in the shape the command and endpoint report.
+
+    ``skipped`` counts rows the selector could not attempt because they had no
+    usable address. ``limit_reached`` means more eligible members remained than
+    the run was allowed to attempt. ``aborted`` means the failure circuit
+    breaker ended the run early.
+    """
+
+    sent: int = 0
+    skipped: int = 0
+    failed: int = 0
+    limit: int = 0
+    limit_reached: bool = False
+    disabled: bool = False
+    aborted: bool = False
+    # Only set by a dry run: the primary keys of the members it would have
+    # reminded. Primary keys only, so a preview cannot leak an address.
+    would_remind: list = field(default_factory=list)
+
+    def as_dict(self) -> dict:
+        """Return the JSON-ready form, which is what the endpoint returns."""
+        return {
+            "sent": self.sent,
+            "skipped": self.skipped,
+            "failed": self.failed,
+            "limit": self.limit,
+            "limit_reached": self.limit_reached,
+            "disabled": self.disabled,
+            "aborted": self.aborted,
+            "would_remind": self.would_remind,
+        }
+
+
+def run_membership_expiry_reminders(
+    *, days: int | None = None, limit: int = 50, dry_run: bool = False
+) -> ReminderRunTally:
+    """Send the expiry reminders, returning a tally of what happened.
+
+    Shared by the management command and the trigger endpoint so both report the
+    same numbers. ``dry_run`` reports who would be reminded without claiming or
+    sending, and deliberately ignores ``MEMBERSHIP_REMINDERS_ENABLED`` so the
+    list can be reviewed before the feature is switched on. A real run respects
+    the flag and returns ``disabled`` when it is off.
+
+    Each member is handled in one guarded block that knows whether this run holds
+    the claim, so a failure can give the claim back and leave the member
+    eligible for the next run. Delivery is at most once per expiry: a crash
+    between the claim and the send skips that member until the next cycle.
+    """
+    tally = ReminderRunTally(limit=limit)
+
+    if not dry_run and not settings.MEMBERSHIP_REMINDERS_ENABLED:
+        tally.disabled = True
+        return tally
+
+    selection = select_members_due_for_reminder(days=days)
+    tally.skipped = selection.skipped
+    candidates = selection.members
+
+    if dry_run:
+        # Counted, never claimed or sent. Only primary keys are reported, so a
+        # preview can never leak an address into a log or a response.
+        tally.limit_reached = len(candidates) > limit
+        tally.would_remind = [membership.pk for membership in candidates[:limit]]
+        return tally
+
+    consecutive_failures = 0
+    for index, membership in enumerate(candidates):
+        if index >= limit:
+            # Applied after the guard and dedupe, so the limit counts send
+            # attempts against the members that were actually eligible.
+            tally.limit_reached = True
+            break
+        if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+            tally.aborted = True
+            break
+
+        outcome = _remind_one(membership, tally)
+        if outcome:
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+
+    if tally.aborted:
+        # Count and exception class only: no address and no provider text.
+        logger.error(
+            "Membership reminder run aborted after %s consecutive failures.",
+            consecutive_failures,
+        )
+
+    return tally
+
+
+def _remind_one(membership, tally: ReminderRunTally) -> bool:
+    """Build, claim, send and release one reminder. Returns whether it sent.
+
+    The message is built before the claim on purpose. Building after claiming
+    would let a template error leave a claim recorded for a message that never
+    went out, and the member would then be skipped for the rest of the cycle.
+    """
+    from emails.messages import (  # noqa: PLC0415
+        build_membership_expiry_reminder,
+        send_membership_expiry_reminder,
+    )
+
+    expiry = membership.end_date
+    try:
+        subject, html = build_membership_expiry_reminder(membership)
+    except Exception as exc:
+        # Nothing was claimed, so there is nothing to release.
+        tally.failed += 1
+        logger.error("Membership reminder failed. %s", type(exc).__name__)
+        return False
+
+    claimed_previous = claim_member_for_reminder(membership, expiry)
+    if claimed_previous is CLAIM_LOST:
+        # Another run holds this member's expiry, so this run must not send.
+        # It also must not release: the claim belongs to someone else.
+        return False
+
+    try:
+        send_membership_expiry_reminder(
+            to=membership.email_encrypted,
+            subject=subject,
+            html=html,
+            raise_on_failure=True,
+        )
+    except Exception as exc:
+        # The send, or anything between the claim and it, failed. Give the claim
+        # back so the next run retries this member.
+        release_member_claim(membership, expiry, claimed_previous)
+        tally.failed += 1
+        logger.error("Membership reminder failed. %s", type(exc).__name__)
+        return False
+
+    tally.sent += 1
+    return True

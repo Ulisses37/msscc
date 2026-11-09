@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
@@ -18,6 +18,7 @@ from .membership_reminders import (
     is_cancelled_status,
     is_sendable_email,
     release_member_claim,
+    run_membership_expiry_reminders,
     select_members_due_for_reminder,
 )
 from .models import AdminTableRevision, Donation, Membership
@@ -1306,3 +1307,43 @@ class MembershipReminderClaimTests(TestCase):
         release_member_claim(membership, membership.end_date, previous)
 
         self.assertEqual(self.stored_expiry(membership), self.PREVIOUS_CYCLE)
+
+
+class MembershipReminderRunClaimTests(TestCase):
+    """A second run for the same expiry sends nothing, because the claim is lost."""
+
+    TODAY = date(2026, 6, 1)
+
+    def create_membership(self, **overrides):
+        """Create a membership eligible for a reminder."""
+        values = {
+            "first_name_encrypted": "Maya",
+            "last_name_encrypted": "Chen",
+            "email_encrypted": "member@example.test",
+            "membership_type": "individual",
+            "status": "active",
+            "end_date": date.today() + timedelta(days=7),
+            "reference_id": "MEM-RUN",
+            "notes": "",
+        }
+        values.update(overrides)
+        return Membership.objects.create(**values)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_second_run_loses_the_claim_and_sends_nothing(self):
+        membership = self.create_membership()
+
+        # emails.services imported get_provider directly, so the patch has to
+        # target that module's name rather than the provider package.
+        with patch("emails.services.get_provider") as provider:
+            first = run_membership_expiry_reminders()
+            second = run_membership_expiry_reminders()
+
+        self.assertEqual(first.sent, 1)
+        self.assertEqual(first.failed, 0)
+        # The second run finds the expiry already reminded, so it has no
+        # candidates at all and sends nothing.
+        self.assertEqual(second.sent, 0)
+        self.assertEqual(provider.return_value.send_email.call_count, 1)
+        membership.refresh_from_db()
+        self.assertEqual(membership.expiry_reminder_for, membership.end_date)

@@ -226,22 +226,24 @@ def build_membership_expiry_reminder(membership) -> tuple[str, str]:
     return subject, html
 
 
-def send_membership_expiry_reminder(membership) -> None:
-    """Send the expiry reminder for one member through the shared mailer.
+def send_membership_expiry_reminder(
+    to: str, subject: str, html: str, *, raise_on_failure: bool = False,
+) -> None:
+    """Send one already-built expiry reminder through the shared mailer.
 
-    Goes out via ``send_email`` so provider selection, dev interception and
-    failure handling stay in one place. Callers are responsible for recording the
-    reminder only after this returns, since a raise here must leave the member
-    eligible for the next run.
+    Takes pre-built content rather than a membership so the caller can build the
+    message before it claims the member's expiry. If building happened after the
+    claim, a template error would leave a claim recorded for a message that was
+    never sent, and the member would be skipped for the rest of the cycle.
+
+    ``raise_on_failure`` is passed through so the reminder command can record a
+    send only when the provider accepted it.
     """
-    subject, html = build_membership_expiry_reminder(membership)
     send_email(
-        to=membership.email_encrypted,
+        to=to,
         subject=subject,
         template_name="emails/membership_expiry_reminder.html",
-        context={
-            "first_name": membership.first_name_encrypted or "member",
-            "expiry_date": membership.end_date,
-            "membership_url": f"{settings.FRONTEND_URL.rstrip('/')}/en/membership",
-        },
+        context={},
+        html_override=html,
+        raise_on_failure=raise_on_failure,
     )
