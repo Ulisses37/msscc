@@ -8,6 +8,8 @@ import { downloadXlsx, type XlsxCell, type XlsxColumn } from '@/utils/exportXlsx
 export type VolunteerExportRow = {
   slot: VolunteerSlot;
   signup: VolunteerSignup | null;
+  // Place among the shift's approved volunteers, starting at 1. 0 means nobody signed up.
+  spot: number;
 };
 
 const DATE_TIME_FORMAT = 'mm/dd/yyyy h:mm AM/PM';
@@ -53,11 +55,8 @@ const volunteerExportColumns: XlsxColumn<VolunteerExportRow>[] = [
     width: 22,
     getCell: ({ slot }) => dateTimeCell(slot.end_datetime),
   },
-  {
-    header: 'Capacity',
-    width: 10,
-    getCell: ({ slot }) => ({ value: slot.capacity, type: Number, format: '0' }),
-  },
+  // Text, not a number, so spreadsheet apps keep "1/6" and don't read it as a date.
+  { header: 'Spot', width: 10, getCell: ({ slot, spot }) => textCell(`${spot}/${slot.capacity}`) },
   {
     header: 'First Name',
     width: 16,
@@ -113,10 +112,10 @@ export function buildVolunteerExportRows(
       );
 
     if (approved.length === 0) {
-      rows.push({ slot, signup: null });
+      rows.push({ slot, signup: null, spot: 0 });
       continue;
     }
-    for (const signup of approved) rows.push({ slot, signup });
+    approved.forEach((signup, index) => rows.push({ slot, signup, spot: index + 1 }));
   }
 
   return rows;

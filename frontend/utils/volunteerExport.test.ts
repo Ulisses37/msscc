@@ -50,16 +50,16 @@ describe('buildVolunteerExportRows', () => {
       ],
     ]);
 
-    expect(rows.map((row) => [row.slot.position_name, row.signup?.last_name])).toEqual([
-      ['Greeter', 'Ito'],
-      ['Greeter', 'Yamada'],
-      ['Setup', undefined],
+    expect(rows.map((row) => [row.slot.position_name, row.signup?.last_name, row.spot])).toEqual([
+      ['Greeter', 'Ito', 1],
+      ['Greeter', 'Yamada', 2],
+      ['Setup', undefined, 0],
     ]);
   });
 
   it('excludes signups that are not approved', () => {
     const rows = buildVolunteerExportRows([slots[0]], [[signup({ status: 'cancelled' })]]);
 
-    expect(rows).toEqual([{ slot: slots[0], signup: null }]);
+    expect(rows).toEqual([{ slot: slots[0], signup: null, spot: 0 }]);
   });
 });
