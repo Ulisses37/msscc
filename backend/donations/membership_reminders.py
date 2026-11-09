@@ -313,7 +313,12 @@ class ReminderRunTally:
     would_remind: list = field(default_factory=list)
 
     def as_dict(self) -> dict:
-        """Return the JSON-ready form, which is what the endpoint returns."""
+        """Return the JSON-ready form, which is what the endpoint returns.
+
+        The dry-run preview is reduced to a count here. The command prints the
+        primary keys for a human to review, but the HTTP response must not carry
+        a list of record identifiers to a caller.
+        """
         return {
             "sent": self.sent,
             "skipped": self.skipped,
@@ -322,7 +327,7 @@ class ReminderRunTally:
             "limit_reached": self.limit_reached,
             "disabled": self.disabled,
             "aborted": self.aborted,
-            "would_remind": self.would_remind,
+            "would_remind_count": len(self.would_remind),
         }
 
 

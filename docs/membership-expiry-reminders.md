@@ -113,3 +113,44 @@ distinguishable from a healthy run:
   once, not on two schedulers at once.
 - **One reminder per address per expiry.** Members who share an address are
   treated as one member.
+
+## Launch checklist
+
+Do these in order, on the target environment. Nothing here is automated: the
+deploy applies no migrations and creates no cron job.
+
+1. **Apply migration `0022` before or with the deploy.** The reminder writes
+   `Membership.expiry_reminder_for`, so the column must exist before the endpoint
+   can run. The repo has no `release` step, no `Dockerfile` and no `railway.json`,
+   and CI only checks that migrations exist, so this is a manual step on the
+   Railway shell or from an approved deploy run:
+
+   ```powershell
+   python backend/manage.py migrate donations
+   ```
+
+2. **Set `TRIGGER_API_KEY` in production.** A real value, not the `dev-trigger-key`
+   default. The endpoint returns 403 without it. Use the same value on the cron
+   job's request header.
+
+3. **Create the Railway cron job.** Daily at `0 17 * * *`, `POST` to
+   `https://<your-backend-host>/api/trigger/membership-reminders/` with the
+   `X-API-Key` header. The schedule is configured in the Railway dashboard, not
+   in this repository.
+
+4. **Run a dry run and review the list.** The dry run ignores the feature flag, so
+   it works before step 5. Run it from the Railway shell and check the printed
+   membership primary keys for lifetime or historical members carrying an
+   `end_date`:
+
+   ```powershell
+   python backend/manage.py send_membership_expiry_reminders --dry-run
+   ```
+
+5. **Set `MEMBERSHIP_REMINDERS_ENABLED=true`** and restart the backend. The first
+   real run is the first live send, so watch the log and the tally for
+   `failed` or `aborted`.
+
+If a run goes wrong, set `MEMBERSHIP_REMINDERS_ENABLED=false` and pause the cron
+job. Members already reminded for their expiry are not emailed again, so a resume
+does not duplicate.

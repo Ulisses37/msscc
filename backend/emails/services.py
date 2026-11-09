@@ -75,7 +75,10 @@ def send_email(
         # gets logged and mailed to the dev inbox.
         cause = exc.__cause__ or exc
         logger.error("Email send failed for %s: %s", to, cause)
-        if settings.RESEND_DEV_ALERT_EMAIL:
+        # The alert is skipped on the raising path: that caller reports the
+        # failure itself, and the alert would otherwise be retried against the
+        # same provider that just failed, once per member in a batch run.
+        if settings.RESEND_DEV_ALERT_EMAIL and not raise_on_failure:
             _send_dev_alert(to, subject, str(cause))
         # Opt-in only: the caller that has to record a send needs the real
         # outcome, and every other caller keeps the original silent return.
