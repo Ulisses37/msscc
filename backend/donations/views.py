@@ -1,15 +1,19 @@
 import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
 from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from config.encryption import EncryptedTextError
 from donations.manual_donations import create_manual_donation
+from donations.membership_reminders import run_membership_expiry_reminders
 from donations.models import AdminTableRevision, Donation, Membership
 from donations.permissions import HasFinancialRecordPermission
 from donations.processing_costs import calculate_donation_amounts
@@ -349,3 +353,21 @@ class MembershipDetailView(EncryptedPIIResponseMixin, generics.RetrieveUpdateDes
                 {"detail": "Unable to delete the membership at this time."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+
+@require_POST
+def run_membership_expiry_reminders_view(request):
+    """Scheduled trigger for the membership expiry reminder emails.
+
+    External schedulers (e.g. a Railway cron job) POST to this endpoint to run the
+    ``send_membership_expiry_reminders`` command on schedule. The request must
+    include the shared secret in the ``X-API-Key`` header, matching the
+    ``TRIGGER_API_KEY`` setting. The tally is returned so a run that sent nothing
+    is distinguishable from a healthy one.
+    """
+    api_key = request.headers.get("X-API-Key", "")
+    if api_key != settings.TRIGGER_API_KEY:
+        return JsonResponse({"error": "Unauthorized"}, status=403)
+
+    tally = run_membership_expiry_reminders()
+    return JsonResponse(tally.as_dict())

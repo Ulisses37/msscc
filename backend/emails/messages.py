@@ -197,3 +197,53 @@ def build_event_announcement(event) -> tuple[str, str]:
     )
 
     return subject, html
+
+
+def build_membership_expiry_reminder(membership) -> tuple[str, str]:
+    """Return the ``(subject, html)`` for one member's expiry reminder.
+
+    This is a transactional account notice, not marketing, so the template leaves
+    ``footer_unsubscribe`` empty and carries no unsubscribe link, matching the
+    volunteer-change emails. A member who opted out of announcements still gets
+    this one, because it concerns their own membership rather than news.
+
+    The expiry date is passed through unformatted and the template applies its
+    own date filter, so the display format stays in one place with the other
+    receipt and reminder templates.
+    """
+    subject = "Your MSSCC membership expires soon"
+    membership_url = f"{settings.FRONTEND_URL.rstrip('/')}/en/membership"
+
+    html = render_to_string(
+        "emails/membership_expiry_reminder.html",
+        {
+            "first_name": membership.first_name_encrypted or "member",
+            "expiry_date": membership.end_date,
+            "membership_url": membership_url,
+        },
+    )
+
+    return subject, html
+
+
+def send_membership_expiry_reminder(
+    to: str, subject: str, html: str, *, raise_on_failure: bool = False,
+) -> None:
+    """Send one already-built expiry reminder through the shared mailer.
+
+    Takes pre-built content rather than a membership so the caller can build the
+    message before it claims the member's expiry. If building happened after the
+    claim, a template error would leave a claim recorded for a message that was
+    never sent, and the member would be skipped for the rest of the cycle.
+
+    ``raise_on_failure`` is passed through so the reminder command can record a
+    send only when the provider accepted it.
+    """
+    send_email(
+        to=to,
+        subject=subject,
+        template_name="emails/membership_expiry_reminder.html",
+        context={},
+        html_override=html,
+        raise_on_failure=raise_on_failure,
+    )

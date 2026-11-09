@@ -217,6 +217,10 @@ class Membership(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     receipt_sent_at = models.DateTimeField(null=True, blank=True)
+    # The end_date value this member was last reminded about. Storing the date
+    # rather than a timestamp means a renewal, which moves end_date, makes the
+    # member eligible again for the next cycle without any extra bookkeeping.
+    expiry_reminder_for = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["-start_date", "-created_at", "membership_id"]

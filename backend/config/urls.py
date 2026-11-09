@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from donations.views import run_membership_expiry_reminders_view
 from events.views import run_event_reminders
 
 urlpatterns = [
@@ -27,6 +28,11 @@ urlpatterns = [
         "api/trigger/event-reminders/",
         run_event_reminders,
         name="trigger-event-reminders",
+    ),
+    path(
+        "api/trigger/membership-reminders/",
+        run_membership_expiry_reminders_view,
+        name="trigger-membership-reminders",
     ),
     path("api/board-members/", include("board_members.urls")),
     path("api/partners/", include("partners.urls")),

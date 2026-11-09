@@ -5,7 +5,7 @@ import hmac
 import json
 import pathlib
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import patch
 
 import resend
@@ -21,7 +21,8 @@ from resend.exceptions import ResendError
 from rest_framework.test import APIClient
 from rest_framework.throttling import ScopedRateThrottle
 
-from emails.messages import build_event_announcement
+from donations.models import Membership
+from emails.messages import build_event_announcement, build_membership_expiry_reminder
 from emails.models import (
     CONFIRMATION_RESEND_COOLDOWN,
     CONFIRMATION_TOKEN_TTL,
@@ -1771,6 +1772,171 @@ class EventAnnouncementTemplateTests(TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertNotIn("RESEND", template)
+
+
+class MembershipExpiryReminderTemplateTests(TestCase):
+    """The reminder renders its expiry and renew link without a marketing footer."""
+
+    EXPIRY = date(2027, 3, 14)
+
+    def build_membership(self, **overrides):
+        """Return an unsaved Membership with a known name and expiry date."""
+        values = {
+            "membership_id": 7,
+            "first_name_encrypted": "Maya",
+            "last_name_encrypted": "Chen",
+            "email_encrypted": "member@example.test",
+            "membership_type": "individual",
+            "status": "active",
+            "end_date": self.EXPIRY,
+            "reference_id": "MEM-TEMPLATE",
+            "notes": "",
+        }
+        values.update(overrides)
+        return Membership(**values)
+
+    def render(self, **overrides):
+        """Render the reminder with a fixed frontend base URL."""
+        with override_settings(FRONTEND_URL="https://example.test"):
+            return build_membership_expiry_reminder(self.build_membership(**overrides))
+
+    def test_expiry_date_and_renew_link_are_rendered(self):
+        subject, html = self.render()
+
+        self.assertIn("expires soon", subject)
+        self.assertIn("March 14, 2027", html)
+        self.assertIn("https://example.test/en/membership", html)
+        self.assertIn("Renew here", html)
+
+    def test_the_renew_link_is_scoped_to_the_english_membership_page(self):
+        _, html = self.render()
+
+        self.assertIn('href="https://example.test/en/membership"', html)
+
+    def test_a_trailing_slash_on_the_frontend_url_does_not_double_up(self):
+        with override_settings(FRONTEND_URL="https://example.test/"):
+            _, html = build_membership_expiry_reminder(self.build_membership())
+
+        self.assertIn('href="https://example.test/en/membership"', html)
+        self.assertNotIn("example.test//en", html)
+
+    def test_the_members_first_name_is_greeted(self):
+        _, html = self.render(first_name_encrypted="Aiko")
+
+        self.assertIn("Aiko", html)
+
+    def test_a_missing_first_name_falls_back_to_member(self):
+        _, html = self.render(first_name_encrypted=None)
+
+        self.assertIn("Hello member!", html)
+
+    def test_no_unsubscribe_footer_is_rendered(self):
+        # This is a transactional account notice, so the footer block stays
+        # empty: no unsubscribe link, no mailing address. The literal word
+        # "unsubscribe" is deliberately not asserted on, because base.html
+        # carries a multi-line {# #} note about it that Django emits as text.
+        _, html = self.render()
+
+        self.assertNotIn("Unsubscribe from future announcements", html)
+        self.assertNotIn("PO BOX 162785", html)
+        self.assertNotIn("cg?unsubscribe", html)
+
+    def test_the_footer_block_is_not_overridden_in_the_template(self):
+        template = self._template_source()
+
+        self.assertNotIn("footer_unsubscribe", template)
+
+    def test_the_template_names_no_provider(self):
+        # The provider placeholder is a context value elsewhere; a reminder must
+        # never carry provider syntax of its own.
+        self.assertNotIn("RESEND", self._template_source())
+
+    def test_the_template_uses_inline_colours_not_css_tokens(self):
+        template = self._template_source()
+
+        # Follows base.html: inline hex, no Tailwind-style msscc-* tokens.
+        self.assertNotIn("msscc-", template)
+        self.assertIn("#264653", template)
+
+    @staticmethod
+    def _template_source():
+        """Return the reminder template's source text."""
+        return (
+            pathlib.Path(__file__).resolve().parent
+            / "templates"
+            / "emails"
+            / "membership_expiry_reminder.html"
+        ).read_text(encoding="utf-8")
+
+
+class BaseTemplateCommentRegressionTests(TestCase):
+    """base.html carries no template syntax into the rendered output.
+
+    A multi-line ``{# ... #}`` note used to sit above the footer block. Django
+    only strips a single-line ``{# #}``, so everything after the first newline
+    was emitted as literal text into every email. This locks that shut.
+    """
+
+    CONFIRMED_ADDRESS = "PO BOX 162785, Sacramento, CA 95816"
+
+    TRANSACTIONAL = (
+        "emails/membership_receipt.html",
+        {
+            "first_name": "Maya",
+            "reference": "MEM-00000001",
+            "completed_at": datetime(2026, 6, 1, 12, 0, tzinfo=UTC),
+            "total_amount": "$35.00",
+        },
+    )
+
+    def render_marketing(self):
+        """Render a marketing email, which fills the unsubscribe footer."""
+        with override_settings(FRONTEND_URL="https://example.test"):
+            with patch("emails.providers.get_provider") as get_provider_mock:
+                get_provider_mock.return_value.unsubscribe_url = (
+                    UNSUBSCRIBE_URL_PLACEHOLDER
+                )
+                event = Event(
+                    event_id=42,
+                    title_en="Summer Festival",
+                    title_ja="夏祭り",
+                    location_en="Memorial Auditorium",
+                    start_datetime=datetime(2026, 7, 15, 19, 0, tzinfo=UTC),
+                    end_datetime=datetime(2026, 7, 15, 21, 0, tzinfo=UTC),
+                )
+                _, html = build_event_announcement(event)
+                return html
+
+    def test_no_template_syntax_comment_leaks_into_either_render(self):
+        for label, html in (
+            ("transactional", render_to_string(*self.TRANSACTIONAL)),
+            ("marketing", self.render_marketing()),
+        ):
+            with self.subTest(email=label):
+                self.assertNotIn("#}", html)
+                self.assertNotIn("CAN-SPAM", html)
+
+    def test_the_comment_text_does_not_survive_in_any_template(self):
+        # The old note's wording is what used to leak; assert its distinctive
+        # phrases are gone rather than only the delimiter.
+        for label, html in (
+            ("transactional", render_to_string(*self.TRANSACTIONAL)),
+            ("marketing", self.render_marketing()),
+        ):
+            with self.subTest(email=label):
+                self.assertNotIn("transactional emails do not need", html)
+
+    def test_the_marketing_email_carries_the_confirmed_mailing_address(self):
+        html = self.render_marketing()
+
+        self.assertIn(self.CONFIRMED_ADDRESS, html)
+        self.assertIn("Matsuyama-Sacramento Sister City Corporation", html)
+
+    def test_the_transactional_email_carries_no_mailing_address(self):
+        html = render_to_string(*self.TRANSACTIONAL)
+
+        self.assertNotIn(self.CONFIRMED_ADDRESS, html)
+        self.assertNotIn("Unsubscribe from future announcements", html)
 
 
 class EmailFeaturesEndpointTests(TestCase):
