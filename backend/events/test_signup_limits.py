@@ -174,6 +174,33 @@ class DuplicateSignupTests(SignupLimitsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+class VolunteerSignupPermissionsTests(SignupLimitsMixin, TestCase):
+    """Public signup creation stays open while signup management requires event access."""
+
+    def test_public_signup_creation_does_not_require_authentication(self):
+        slot = self.make_slot()
+
+        response = self.post(slot)
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_unauthenticated_signup_list_is_refused(self):
+        slot = self.make_slot()
+
+        response = self.client.get(f"{SIGNUP_URL}?slot_id={slot.volunteer_slot_id}")
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_unauthenticated_signup_deletion_is_refused(self):
+        slot = self.make_slot()
+        signup = self.make_signup(slot)
+
+        response = self.client.delete(f"{SIGNUP_URL}{signup.volunteer_signup_id}/")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertTrue(VolunteerSignup.objects.filter(pk=signup.pk).exists())
+
+
 class FullShiftTests(SignupLimitsMixin, TestCase):
     """The public endpoint refuses a signup once the shift is full."""
 
@@ -298,7 +325,7 @@ class SpotCountTests(SignupLimitsMixin, TestCase):
         created = self.post(slot)
         self.assertEqual(self.post(slot).status_code, 400)
 
-        removed = self.client.delete(
+        removed = self.make_admin_client(executive=True).delete(
             f"{SIGNUP_URL}{created.json()['volunteer_signup_id']}/"
         )
 
@@ -324,7 +351,9 @@ class SpotCountTests(SignupLimitsMixin, TestCase):
         slot.refresh_from_db()
         self.assertEqual(slot.filled_count, 2)
 
-        response = self.client.delete(f"{SIGNUP_URL}{first.volunteer_signup_id}/")
+        response = self.make_admin_client(executive=True).delete(
+            f"{SIGNUP_URL}{first.volunteer_signup_id}/"
+        )
 
         self.assertEqual(response.status_code, 204)
         slot.refresh_from_db()

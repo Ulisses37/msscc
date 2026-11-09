@@ -65,6 +65,7 @@ export interface VolunteerCancellationDetails {
 export async function getSignupsBySlotId(slotId: number): Promise<VolunteerSignup[]> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/?slot_id=${slotId}`,
+    { headers: getAdminRequestHeaders() },
   );
 
   if (!res.ok) {
