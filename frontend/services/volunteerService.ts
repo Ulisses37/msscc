@@ -1,4 +1,5 @@
 import { Event } from '@/types/event';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -38,6 +39,17 @@ export interface VolunteerSignup {
   comments?: string | null;
   status: string;
   submitted_at: string;
+}
+
+export interface VolunteerSlot {
+  volunteer_slot_id: number;
+  position_name: string;
+  description: string;
+  start_datetime: string;
+  end_datetime: string;
+  capacity: number;
+  filled_count: number;
+  event: number;
 }
 
 export interface VolunteerCancellationDetails {
@@ -87,4 +99,37 @@ export async function cancelVolunteerSignup(token: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Unable to cancel volunteer signup.');
   }
+}
+
+/** Load an event's shifts and each shift's signups for the admin export. */
+export async function getVolunteerExportData(eventId: number): Promise<{
+  slots: VolunteerSlot[];
+  signupsBySlot: VolunteerSignup[][];
+}> {
+  const headers = getAdminRequestHeaders();
+
+  const slotsRes = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/events/slots/?event_id=${eventId}`,
+    { headers },
+  );
+  if (!slotsRes.ok) {
+    throw new Error(`Failed to fetch shifts for event ${eventId}: ${slotsRes.status}`);
+  }
+  const slots: VolunteerSlot[] = await slotsRes.json();
+
+  // Any failed request stops the export so a partial list is never downloaded.
+  const signupsBySlot = await Promise.all(
+    slots.map(async (slot) => {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/events/signups/?slot_id=${slot.volunteer_slot_id}`,
+        { headers },
+      );
+      if (!res.ok) {
+        throw new Error(`Failed to fetch signups for slot ${slot.volunteer_slot_id}: ${res.status}`);
+      }
+      return (await res.json()) as VolunteerSignup[];
+    }),
+  );
+
+  return { slots, signupsBySlot };
 }
