@@ -118,6 +118,8 @@ export function DonationForm() {
     null,
   );
   const [paymentStatusError, setPaymentStatusError] = useState(false);
+  const [statusLookupInFlight, setStatusLookupInFlight] = useState(false);
+  const retryPaymentStatus = useRef<(() => void) | null>(null);
   const [receiptReference, setReceiptReference] = useState('');
 
   // The donation reference associates the database record with Stripe.
@@ -178,11 +180,17 @@ export function DonationForm() {
     let isCancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let attemptCount = 0;
+    let statusRequestInFlight = false;
     const maximumAttempts = 10;
 
     // The webhook may arrive just after Stripe redirects the browser. Poll
     // briefly so a pending record can change to its authoritative outcome.
     const checkPaymentStatus = async () => {
+      // The ref also protects the retry button from two clicks before React
+      // renders its disabled state; both would otherwise query one session.
+      if (isCancelled || statusRequestInFlight) return;
+      statusRequestInFlight = true;
+      setStatusLookupInFlight(true);
       attemptCount += 1;
 
       try {
@@ -219,8 +227,15 @@ export function DonationForm() {
         if (!isCancelled) {
           setPaymentStatusError(true);
         }
+      } finally {
+        statusRequestInFlight = false;
+        if (!isCancelled) setStatusLookupInFlight(false);
       }
     };
+
+    // A failed lookup does not imply a failed payment. A retry must preserve
+    // the session in the URL and read its authoritative backend status again.
+    retryPaymentStatus.current = () => { void checkPaymentStatus(); };
 
     // Show an honest pending state while the first database lookup runs.
     setPaymentStatus('pending');
@@ -229,6 +244,7 @@ export function DonationForm() {
 
     return () => {
       isCancelled = true;
+      retryPaymentStatus.current = null;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, []);
@@ -422,10 +438,11 @@ export function DonationForm() {
           <p>{t('paymentResultUnavailable')}</p>
           <button
             type="button"
-            onClick={handleStartNewAttempt}
-            className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60"
+            onClick={() => retryPaymentStatus.current?.()}
+            disabled={statusLookupInFlight}
+            className="mt-3 rounded-md border border-current px-4 py-2 font-semibold transition-colors hover:bg-white/60 disabled:opacity-60"
           >
-            {t('startNewDonationAttempt')}
+            {t('retryPaymentStatus')}
           </button>
         </div>
       )}

@@ -223,6 +223,24 @@ describe('MembershipPaymentResult states and browser recovery', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
+  it('discards an older completed result when its reference changes during the lookup', async () => {
+    // The old response arrives last. It must never show a success or receipt
+    // belonging to another membership reference on the new result page.
+    const nextReference = `MEM-${'b'.repeat(32)}`;
+    let finishOld!: (status: 'complete') => void;
+    jest.mocked(getMembershipPaymentStatus)
+      .mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve; }))
+      .mockResolvedValueOnce('pending');
+    const view = render(<MembershipPaymentResult locale="en" confirmationReference={reference} />);
+    view.rerender(<MembershipPaymentResult locale="en" confirmationReference={nextReference} />);
+    expect(await screen.findByText(enMessages.MembershipPaymentResult.pending)).toBeInTheDocument();
+    await act(async () => { finishOld('complete'); });
+    expect(screen.getByText(enMessages.MembershipPaymentResult.pending)).toBeInTheDocument();
+    expect(screen.queryByText(enMessages.MembershipPaymentResult.complete)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
+    expect(getMembershipPaymentStatus).toHaveBeenNthCalledWith(2, nextReference);
+  });
+
   it.each([['en', enMessages], ['ja', jaMessages]] as const)('renders all %s result messages without missing keys', async (locale, messages) => {
     mockMessages = messages;
     for (const status of ['pending', 'complete', 'failed', 'canceled'] as const) {
