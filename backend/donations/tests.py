@@ -9,6 +9,8 @@ from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
+from emails.providers import ProviderError
+
 from .membership_reminders import (
     CLAIM_LOST,
     REMINDER_WINDOW,
@@ -1347,3 +1349,431 @@ class MembershipReminderRunClaimTests(TestCase):
         self.assertEqual(provider.return_value.send_email.call_count, 1)
         membership.refresh_from_db()
         self.assertEqual(membership.expiry_reminder_for, membership.end_date)
+
+
+class MembershipReminderRunTests(TestCase):
+    """The shared run service: sending, failing, retrying and reporting."""
+
+    def create_membership(self, **overrides):
+        """Create a membership eligible for a reminder today."""
+        values = {
+            "first_name_encrypted": "Maya",
+            "last_name_encrypted": "Chen",
+            "email_encrypted": "member@example.test",
+            "membership_type": "individual",
+            "status": "active",
+            "end_date": date.today() + timedelta(days=7),
+            "reference_id": "MEM-RUN-TESTS",
+            "notes": "",
+        }
+        values.update(overrides)
+        return Membership.objects.create(**values)
+
+    def patch_provider(self):
+        """Patch the provider factory the shared mailer actually resolves."""
+        return patch("emails.services.get_provider")
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_run_sends_one_reminder_and_marks_the_member(self):
+        membership = self.create_membership()
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders()
+
+        self.assertEqual(tally.sent, 1)
+        self.assertEqual(tally.failed, 0)
+        self.assertFalse(tally.aborted)
+        provider.return_value.send_email.assert_called_once()
+        membership.refresh_from_db()
+        self.assertEqual(membership.expiry_reminder_for, membership.end_date)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_the_sent_message_carries_the_renew_link(self):
+        self.create_membership()
+
+        with self.patch_provider() as provider:
+            run_membership_expiry_reminders()
+
+        payload = provider.return_value.send_email.call_args.kwargs
+        self.assertEqual(payload["to"], "member@example.test")
+        self.assertIn("expires soon", payload["subject"])
+        self.assertIn("/en/membership", payload["html"])
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_provider_failure_leaves_the_member_unmarked_and_continues(self):
+        first = self.create_membership(reference_id="MEM-FAIL-1")
+        second = self.create_membership(
+            email_encrypted="second@example.test", reference_id="MEM-OK-2"
+        )
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = [
+                ProviderError("provider-internal-detail"),
+                None,
+            ]
+            tally = run_membership_expiry_reminders()
+
+        self.assertEqual(tally.sent, 1)
+        self.assertEqual(tally.failed, 1)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        # The failed member is left eligible so the next run retries them.
+        self.assertIsNone(first.expiry_reminder_for)
+        self.assertEqual(second.expiry_reminder_for, second.end_date)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_build_failure_has_nothing_to_release(self):
+        membership = self.create_membership()
+
+        with patch(
+            "emails.messages.build_membership_expiry_reminder",
+            side_effect=RuntimeError("template blew up"),
+        ):
+            tally = run_membership_expiry_reminders()
+
+        self.assertEqual(tally.sent, 0)
+        self.assertEqual(tally.failed, 1)
+        membership.refresh_from_db()
+        # Nothing was claimed, so no claim is left behind for the next run.
+        self.assertIsNone(membership.expiry_reminder_for)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_send_failure_after_a_claim_restores_a_null_previous_value(self):
+        membership = self.create_membership(expiry_reminder_for=None)
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = ProviderError("down")
+            tally = run_membership_expiry_reminders()
+
+        self.assertEqual(tally.failed, 1)
+        membership.refresh_from_db()
+        self.assertIsNone(membership.expiry_reminder_for)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_send_failure_after_a_claim_restores_an_older_cycle_date(self):
+        previous_cycle = date.today() - timedelta(days=365)
+        membership = self.create_membership(expiry_reminder_for=previous_cycle)
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = ProviderError("down")
+            run_membership_expiry_reminders()
+
+        membership.refresh_from_db()
+        # The older date is restored, not wiped to NULL.
+        self.assertEqual(membership.expiry_reminder_for, previous_cycle)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_lost_claim_is_skipped_without_releasing_it(self):
+        membership = self.create_membership()
+        # Another run already holds this expiry.
+        claim_member_for_reminder(membership, membership.end_date)
+        membership.refresh_from_db()
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders()
+
+        self.assertEqual(tally.sent, 0)
+        self.assertEqual(tally.failed, 0)
+        provider.return_value.send_email.assert_not_called()
+        membership.refresh_from_db()
+        # The other run's claim is untouched.
+        self.assertEqual(membership.expiry_reminder_for, membership.end_date)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_running_twice_sends_exactly_one_email_per_member(self):
+        self.create_membership(reference_id="MEM-ONCE-1")
+        self.create_membership(
+            email_encrypted="second@example.test", reference_id="MEM-ONCE-2"
+        )
+
+        with self.patch_provider() as provider:
+            first = run_membership_expiry_reminders()
+            second = run_membership_expiry_reminders()
+
+        self.assertEqual(first.sent, 2)
+        self.assertEqual(second.sent, 0)
+        self.assertEqual(provider.return_value.send_email.call_count, 2)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_dry_run_sends_claims_and_marks_nothing(self):
+        membership = self.create_membership()
+        self.create_membership(email_encrypted="", reference_id="MEM-BLANK-ADDR")
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders(dry_run=True)
+
+        self.assertEqual(tally.sent, 0)
+        self.assertEqual(tally.failed, 0)
+        self.assertEqual(tally.would_remind, [membership.pk])
+        self.assertEqual(tally.skipped, 1)
+        provider.return_value.send_email.assert_not_called()
+        membership.refresh_from_db()
+        self.assertIsNone(membership.expiry_reminder_for)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=False)
+    def test_dry_run_works_while_the_feature_flag_is_off(self):
+        membership = self.create_membership()
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders(dry_run=True)
+
+        self.assertFalse(tally.disabled)
+        self.assertEqual(tally.would_remind, [membership.pk])
+        provider.return_value.send_email.assert_not_called()
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=False)
+    def test_a_real_run_is_disabled_and_sends_nothing(self):
+        membership = self.create_membership()
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders()
+
+        self.assertTrue(tally.disabled)
+        self.assertEqual(tally.sent, 0)
+        self.assertEqual(tally.would_remind, [])
+        provider.return_value.send_email.assert_not_called()
+        membership.refresh_from_db()
+        self.assertIsNone(membership.expiry_reminder_for)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_limit_is_applied_after_the_guard_and_sets_limit_reached(self):
+        for index in range(3):
+            self.create_membership(
+                email_encrypted=f"member{index}@example.test",
+                reference_id=f"MEM-LIMIT-{index}",
+                end_date=date.today() + timedelta(days=index + 1),
+            )
+        # Not eligible, so it must not consume one of the limited slots.
+        self.create_membership(status="canceled", reference_id="MEM-NOT-ELIGIBLE")
+
+        with self.patch_provider() as provider:
+            tally = run_membership_expiry_reminders(limit=2)
+
+        self.assertEqual(tally.sent, 2)
+        self.assertEqual(tally.limit, 2)
+        self.assertTrue(tally.limit_reached)
+        self.assertEqual(provider.return_value.send_email.call_count, 2)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_limit_is_not_reached_when_every_eligible_member_is_sent(self):
+        self.create_membership()
+
+        with self.patch_provider():
+            tally = run_membership_expiry_reminders(limit=5)
+
+        self.assertEqual(tally.sent, 1)
+        self.assertFalse(tally.limit_reached)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_five_consecutive_failures_abort_the_run_and_release_claims(self):
+        members = [
+            self.create_membership(
+                email_encrypted=f"member{index}@example.test",
+                reference_id=f"MEM-BREAK-{index}",
+                end_date=date.today() + timedelta(days=index + 1),
+            )
+            for index in range(6)
+        ]
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = ProviderError("down")
+            tally = run_membership_expiry_reminders()
+
+        self.assertTrue(tally.aborted)
+        self.assertEqual(tally.failed, 5)
+        self.assertEqual(tally.sent, 0)
+        # Aborted after five, so the sixth was never attempted.
+        self.assertEqual(provider.return_value.send_email.call_count, 5)
+        for member in members:
+            member.refresh_from_db()
+            self.assertIsNone(member.expiry_reminder_for)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_success_resets_the_consecutive_failure_counter(self):
+        # Four failures, one success, then five more failures must be needed to
+        # abort: the counter resets on success, so this run is not aborted.
+        for index in range(4):
+            self.create_membership(
+                email_encrypted=f"fail{index}@example.test",
+                reference_id=f"MEM-RESET-F{index}",
+                end_date=date.today() + timedelta(days=index + 1),
+            )
+        self.create_membership(
+            email_encrypted="good@example.test",
+            reference_id="MEM-RESET-OK",
+            end_date=date.today() + timedelta(days=5),
+        )
+        for index in range(4):
+            self.create_membership(
+                email_encrypted=f"fail2-{index}@example.test",
+                reference_id=f"MEM-RESET-F2-{index}",
+                end_date=date.today() + timedelta(days=index + 6),
+            )
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = [
+                ProviderError("down"), ProviderError("down"),
+                ProviderError("down"), ProviderError("down"),
+                None,
+                ProviderError("down"), ProviderError("down"),
+                ProviderError("down"), ProviderError("down"),
+            ]
+            tally = run_membership_expiry_reminders()
+
+        # Only four consecutive failures after the success, so no abort.
+        self.assertFalse(tally.aborted)
+        self.assertEqual(tally.sent, 1)
+        self.assertEqual(tally.failed, 8)
+
+    @override_settings(MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_the_reminder_runs_own_logs_carry_no_address_or_provider_text(self):
+        # Scope: only the donations.membership_reminders logger. The shared
+        # mailer logs "Email send failed for %s: %s" with the recipient and the
+        # provider's text; that is a known leak in emails/services.py, outside
+        # this story, and tracked separately. This test does not assert on it.
+        self.create_membership(email_encrypted="secret-member@example.test")
+
+        with self.patch_provider() as provider:
+            provider.return_value.send_email.side_effect = ProviderError(
+                "provider-internal-detail"
+            )
+            with self.assertLogs("donations.membership_reminders", level="ERROR") as logs:
+                tally = run_membership_expiry_reminders()
+
+        joined = "\n".join(logs.output)
+        self.assertEqual(tally.failed, 1)
+        self.assertNotIn("secret-member@example.test", joined)
+        self.assertNotIn("provider-internal-detail", joined)
+        # The exception class is what a developer needs, and nothing more.
+        self.assertIn("ProviderError", joined)
+
+
+class MembershipReminderEndpointTests(TestCase):
+    """The trigger endpoint is key-protected and reports the run tally as JSON."""
+
+    url = "/api/trigger/membership-reminders/"
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def create_membership(self, **overrides):
+        """Create a membership eligible for a reminder today."""
+        values = {
+            "first_name_encrypted": "Maya",
+            "last_name_encrypted": "Chen",
+            "email_encrypted": "member@example.test",
+            "membership_type": "individual",
+            "status": "active",
+            "end_date": date.today() + timedelta(days=7),
+            "reference_id": "MEM-ENDPOINT",
+            "notes": "",
+        }
+        values.update(overrides)
+        return Membership.objects.create(**values)
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_missing_api_key_is_rejected(self):
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json(), {"error": "Unauthorized"})
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_wrong_api_key_is_rejected(self):
+        response = self.client.post(self.url, HTTP_X_API_KEY="wrong-key")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json(), {"error": "Unauthorized"})
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_get_is_not_allowed(self):
+        response = self.client.get(self.url, HTTP_X_API_KEY="correct-key")
+
+        self.assertEqual(response.status_code, 405)
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_the_correct_key_returns_the_run_tally(self):
+        membership = self.create_membership()
+
+        with patch("emails.services.get_provider"):
+            response = self.client.post(self.url, HTTP_X_API_KEY="correct-key")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "sent": 1,
+            "skipped": 0,
+            "failed": 0,
+            "limit": 50,
+            "limit_reached": False,
+            "disabled": False,
+            "aborted": False,
+            "would_remind_count": 0,
+        })
+        membership.refresh_from_db()
+        self.assertEqual(membership.expiry_reminder_for, membership.end_date)
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_the_endpoint_tally_matches_the_command_run(self):
+        self.create_membership()
+        self.create_membership(email_encrypted="", reference_id="MEM-ENDPOINT-BLANK")
+
+        with patch("emails.services.get_provider"):
+            service_tally = run_membership_expiry_reminders()
+        with patch("emails.services.get_provider"):
+            response = self.client.post(self.url, HTTP_X_API_KEY="correct-key")
+
+        # The second run has nothing left to send, which is the point: the
+        # endpoint reports the same shape and the claim prevents a duplicate.
+        self.assertEqual(response.json()["sent"], 0)
+        self.assertEqual(response.json()["skipped"], service_tally.skipped)
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=False)
+    def test_the_endpoint_reports_the_feature_as_disabled(self):
+        self.create_membership()
+
+        with patch("emails.services.get_provider") as provider:
+            response = self.client.post(self.url, HTTP_X_API_KEY="correct-key")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["disabled"])
+        self.assertEqual(response.json()["sent"], 0)
+        provider.return_value.send_email.assert_not_called()
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_a_client_cannot_pass_a_dry_run_or_extended_limit(self):
+        membership = self.create_membership()
+
+        with patch("emails.services.get_provider") as provider:
+            # The endpoint ignores request data entirely, so this neither
+            # previews nor escapes the default send cap.
+            response = self.client.post(
+                self.url,
+                {"dry_run": True, "limit": 100000},
+                HTTP_X_API_KEY="correct-key",
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["limit"], 50)
+        self.assertEqual(response.json()["would_remind_count"], 0)
+        self.assertEqual(response.json()["sent"], 1)
+        provider.return_value.send_email.assert_called_once()
+        membership.refresh_from_db()
+        self.assertEqual(membership.expiry_reminder_for, membership.end_date)
+
+    @override_settings(TRIGGER_API_KEY="correct-key", MEMBERSHIP_REMINDERS_ENABLED=True)
+    def test_the_response_never_carries_record_identifiers(self):
+        self.create_membership()
+
+        with patch("emails.services.get_provider"):
+            response = self.client.post(self.url, HTTP_X_API_KEY="correct-key")
+
+        body = response.json()
+        # A list of primary keys must never be exposed over HTTP; the response
+        # carries counters and booleans only.
+        self.assertNotIn("would_remind", body)
+        self.assertIn("would_remind_count", body)
+        self.assertNotIn("member@example.test", str(body))
+        for value in body.values():
+            with self.subTest(value=value):
+                self.assertNotIsInstance(value, list)

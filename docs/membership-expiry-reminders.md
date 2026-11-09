@@ -90,7 +90,8 @@ distinguishable from a healthy run:
 
 ```json
 {"sent": 4, "skipped": 1, "failed": 0, "limit": 50,
- "limit_reached": false, "disabled": false, "aborted": false, "would_remind": []}
+ "limit_reached": false, "disabled": false, "aborted": false,
+ "would_remind_count": 0}
 ```
 
 - `disabled: true` means the feature flag is off and nothing was sent.
@@ -98,6 +99,22 @@ distinguishable from a healthy run:
   claims were released and the next run retries.
 - `limit_reached: true` means more eligible members remained than `--limit`
   allowed; raise the limit or run again.
+- `would_remind_count` is non-zero only for a dry run. The command prints the
+  membership primary keys; the HTTP response carries the count only.
+
+An aborted or disabled run still answers HTTP 200, so a cron that only checks the
+exit status will treat it as healthy. Check the body as well:
+
+```bash
+curl --fail --silent --show-error \
+  -X POST "https://<your-backend-host>/api/trigger/membership-reminders/" \
+  -H "X-API-Key: <TRIGGER_API_KEY>"
+```
+
+`--fail` makes an HTTP error fail the cron run, and `--show-error` keeps the
+reason on stderr. A 200 is not enough on its own: inspect the JSON for
+`"aborted": true` or `"disabled": true` and alert on either, because both mean no
+reminders went out.
 
 ## Provider limits and risks
 
@@ -119,11 +136,20 @@ distinguishable from a healthy run:
 Do these in order, on the target environment. Nothing here is automated: the
 deploy applies no migrations and creates no cron job.
 
-1. **Apply migration `0022` before or with the deploy.** The reminder writes
-   `Membership.expiry_reminder_for`, so the column must exist before the endpoint
-   can run. The repo has no `release` step, no `Dockerfile` and no `railway.json`,
-   and CI only checks that migrations exist, so this is a manual step on the
-   Railway shell or from an approved deploy run:
+1. **Apply migration `0022` BEFORE the new code is deployed.** The new field is
+   on `Membership`, so once the new code is live **every** `Membership` query
+   selects the column: checkout, the admin membership list, and receipts, not
+   only the reminder. Against an unmigrated database those all fail with a
+   missing-column error, so the reminder would take down more than itself.
+
+   Apply it first. The column is nullable and additive, so the **old** code runs
+   fine against the migrated schema, which makes "migrate, then deploy" safe in
+   that order whereas the reverse is not.
+
+   `backend/Procfile` has no `release` phase (`web: gunicorn config.wsgi
+   --log-file -` only), there is no `Dockerfile` or `railway.json`, and CI runs
+   `makemigrations --check --dry-run` rather than `migrate`, so this is a manual
+   step on the Railway shell or from an approved deploy run:
 
    ```powershell
    python backend/manage.py migrate donations
@@ -136,7 +162,8 @@ deploy applies no migrations and creates no cron job.
 3. **Create the Railway cron job.** Daily at `0 17 * * *`, `POST` to
    `https://<your-backend-host>/api/trigger/membership-reminders/` with the
    `X-API-Key` header. The schedule is configured in the Railway dashboard, not
-   in this repository.
+   in this repository. Use the `curl --fail` command above, and check the body
+   for `"aborted": true` or `"disabled": true`, because both return HTTP 200.
 
 4. **Run a dry run and review the list.** The dry run ignores the feature flag, so
    it works before step 5. Run it from the Railway shell and check the printed
