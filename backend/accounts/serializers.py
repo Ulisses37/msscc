@@ -35,6 +35,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "is_executive",
+            "is_superuser",
             "permissions",
         ]
 

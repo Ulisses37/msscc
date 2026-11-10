@@ -7,15 +7,21 @@ import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler
 
 export default function AdminPermissionPage(){
   const logInAdmin = fetchLocalStorageAdmin();
-  const logInType = getLogInType();
 
   const [adminList, setAdminList] = useState<AdminRecord[]>([]);
+  const [isSuperuser, setIsSuperuser] = useState<boolean | null>(null); // null = still loading
 
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null);
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
 
+  // Empty while loading so a superuser never briefly sees the wrong label
+  const logInType =
+    isSuperuser === null ? "" : isSuperuser ? "Developer Admin" : "Executive Admin";
+
+  console.log(isSuperuser)
+
   useEffect(() => {
-    filterAdmins().then(setAdminList);
+    loadAdmins();
   }, []);
 
   return(
@@ -64,22 +70,22 @@ export default function AdminPermissionPage(){
             <h2 className="font-heading text-heading-2 text-msscc-teal">
               Admin List
             </h2>
-<div className="flex flex-1 justify-end gap-2 sm:gap-4">
-    <button
-      type="button"
-      className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
-      onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
-    >
-      Add
-    </button>
-  <button
-    type="button"
-    className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
-    onClick={() => updateDatabase()}
-  >
-    Update
-  </button>
-</div>
+            <div className="flex flex-1 justify-end gap-2 sm:gap-4">
+              <button
+                type="button"
+                className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+                onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+                onClick={() => updateDatabase()}
+              >
+                Update
+              </button>
+            </div>
           </div>
 
           {adminList.map((record) => (
@@ -134,42 +140,37 @@ export default function AdminPermissionPage(){
     });
   }
 
-  function getLogInType(){
-    if (logInAdmin?.email == "msscc.scrumlords.dev@gmail.com"){
-      return "Developer Admin";
-    }else if (logInAdmin?.isExecutive){
-      return "Executive Admin"
-    }
-    return "Admin"
-  }
-
-  async function filterAdmins() {
+  async function loadAdmins() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
 
-      const allAdminList: AdminRecord[] = await res.json();
+      const allAdmins: AdminRecord[] = await res.json();
+      console.log(allAdmins);
 
-      return allAdminList.filter(a => {
-        const isDeveloper = a.email === "msscc.scrumlords.dev@gmail.com";
-        const isSelf = a.email === logInAdmin?.email;
+      // Find the logged-in admin in the list to see if they're a superuser
+      const me = allAdmins.find(a => a.email === logInAdmin?.email);
+      const superuser = !!me?.is_superuser;
+      setIsSuperuser(superuser);
 
-        switch (logInType) {
-          case "Developer Admin":
-            return !isDeveloper;
-          case "Executive Admin":
-            return (!isDeveloper && !a.is_executive);
-          default: // "Admin"
-            return !isDeveloper && !a.is_executive && !isSelf;
-        }
-    }).sort((a, b) =>
-      Number(b.is_executive) - Number(a.is_executive) ||
-      a.first_name.localeCompare(b.first_name) ||
-      a.last_name.localeCompare(b.last_name)
-    );
+      setAdminList(
+        allAdmins
+          .filter(a => {
+            if (a.is_superuser) return false;   // nobody edits superusers
+            if (superuser) return true;         // superusers see everyone else
+            return !a.is_executive;             // executives only see non-executives
+          })
+          .sort(
+            (a, b) =>
+              Number(b.is_executive) - Number(a.is_executive) ||
+              a.first_name.localeCompare(b.first_name) ||
+              a.last_name.localeCompare(b.last_name)
+          )
+      );
     } catch (error) {
       console.error("Error fetching admins:", error);
-      return [];
+      setIsSuperuser(false);
+      setAdminList([]);
     }
   }
 }
