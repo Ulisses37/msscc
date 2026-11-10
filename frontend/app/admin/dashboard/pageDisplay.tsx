@@ -14,7 +14,7 @@ import { useRef } from "react";
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 
 const GAP = 16; // gap-4 = 1rem = 16px
-const MAX_CAROUSEL_ITEMS = 10;
+const MAX_CAROUSEL_ITEMS = 16;
 
 const pageDescriptions: Record<string, string>={
   Events: "Manage MSSCC events and volunteers.",

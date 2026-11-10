@@ -89,7 +89,7 @@ export default function Dashboard() {
 
         {/* Front end preview */}
         <div>
-          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16 flex flex-col gap-4">
+          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-8 flex flex-col gap-4">
             <EventCarousel data={events} />
             <MembershipCarousel data={memberships}/>
             <DonationCarousel data={donations}/>
