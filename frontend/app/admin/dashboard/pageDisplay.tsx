@@ -326,4 +326,27 @@ function formatDate(datetime: string): string {
   });
 }
 
+type LocalAdminInfo = {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  permissionData: Record<string, boolean>;
+  isExecutive: boolean;
+};
+
+export function CurrentAdmin({localAdmin}: {localAdmin: LocalAdminInfo}){
+  return (
+    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm pl-3">
+      <div className="break-words font-heading font-bold capitalize text-xl">
+        <span className="inline-block">{localAdmin.firstName}</span>{" "}
+        <span className="inline-block">{localAdmin.lastName}</span>
+      </div>
+      <div className="break-words text-body-sm tracking-label text-msscc-gray-faint py-1">
+        {localAdmin.email.split("@")[0]}
+        <wbr />@{localAdmin.email.split("@")[1]}
+      </div>
+    </div>
+  )
+}
 

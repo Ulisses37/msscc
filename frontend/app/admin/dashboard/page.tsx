@@ -13,7 +13,7 @@ import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchDashboardFinancialRecords } from '@/services/financialRecordSearch';
 
-import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
+import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel, CurrentAdmin } from './pageDisplay';
 import { SiteAnalytics, MembershipCounter, FinanceCounter } from './analytics';
 import { ImageStorage } from './imageStorage';
 
@@ -50,14 +50,8 @@ export default function Dashboard() {
       <div className="flex flex-col bg-msscc-white font-body text-msscc-gray-dark lg:flex-row lg:mb-8">
         {/* Left Panel */}
         <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:ml-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
-          <div className="w-full bg-msscc-pink px-4 py-2 text-white">
-            <div className="break-words font-heading text-heading-2">
-              {localAdmin.firstName + ' ' + localAdmin.lastName}
-            </div>
-            <div className="break-all text-body-sm text-msscc-gray-faint">
-              {localAdmin.email}
-            </div>
-          </div>
+          {/* Local Admin info */}
+          <CurrentAdmin localAdmin ={localAdmin}/>
 
           {/* Cloud Storage Capacity */}
           <ImageStorage/>
