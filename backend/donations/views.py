@@ -386,10 +386,7 @@ class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView)
 
     def get_queryset(self):
         return (
-            Donation.objects.filter(
-                payment_status=Donation.PaymentStatus.COMPLETED,
-                is_anonymous=False,
-                )
+            Donation.objects.filter(payment_status=Donation.PaymentStatus.COMPLETED)
             .order_by("-donation_date", "-donation_id")[:50]
         )
 
