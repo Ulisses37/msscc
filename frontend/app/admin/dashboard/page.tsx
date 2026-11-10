@@ -91,8 +91,8 @@ export default function Dashboard() {
         <div>
           <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16 flex flex-col gap-4">
             <EventCarousel data={events} />
-            <DonationCarousel data={donations}/>
             <MembershipCarousel data={memberships}/>
+            <DonationCarousel data={donations}/>
           </div>
       </div>
     </div>

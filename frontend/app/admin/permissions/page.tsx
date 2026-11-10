@@ -18,7 +18,6 @@ export default function AdminPermissionPage(){
   const logInType =
     isSuperuser === null ? "" : isSuperuser ? "Developer Admin" : "Executive Admin";
 
-  console.log(isSuperuser)
 
   useEffect(() => {
     loadAdmins();
@@ -146,7 +145,6 @@ export default function AdminPermissionPage(){
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
 
       const allAdmins: AdminRecord[] = await res.json();
-      console.log(allAdmins);
 
       // Find the logged-in admin in the list to see if they're a superuser
       const me = allAdmins.find(a => a.email === logInAdmin?.email);

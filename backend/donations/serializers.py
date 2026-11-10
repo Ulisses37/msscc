@@ -436,7 +436,7 @@ class DashboardDonationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Donation
-        fields = ["donor_first_name", "donor_last_name", "amount", "created_at"]
+        fields = ["donor_first_name", "donor_last_name", "amount", "donation_date", "donation_id"]
         read_only_fields = fields
 
 
@@ -446,5 +446,5 @@ class DashboardMembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["first_name", "last_name", "membership_type", "created_at"]
+        fields = ["first_name", "last_name", "membership_type", "start_date", "membership_id"]
         read_only_fields = fields
