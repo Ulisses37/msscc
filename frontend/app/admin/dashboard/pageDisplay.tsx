@@ -342,7 +342,7 @@ type LocalAdminInfo = {
 
 export function CurrentAdmin({localAdmin}: {localAdmin: LocalAdminInfo}){
   return (
-    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm pl-3">
+    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm px-3">
       <div className="break-words font-heading font-bold capitalize text-xl">
         <span className="inline-block">{localAdmin.firstName}</span>{" "}
         <span className="inline-block">{localAdmin.lastName}</span>
