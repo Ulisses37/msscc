@@ -28,6 +28,17 @@
     "closeModal": "Close login modal"
   },
 
+  "ForgotPasswordPage": {
+    "heading": "Forgot password",
+    "description": "Enter your email address and we'll send you a link to reset your password.",
+    "emailLabel": "Email",
+    "invalidEmail": "Please enter a valid email address",
+    "genericError": "Something went wrong. Please try again.",
+    "submit": "Send reset link",
+    "sending": "Sending…",
+    "success": "If an account exists with that email, a reset link has been sent."
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "Connecting our community through service and shared opportunity throughout MatsuyamaSacramento and Sacramento.",

@@ -28,6 +28,17 @@
     "closeModal": "ログイン画面を閉じる"
   },
 
+  "ForgotPasswordPage": {
+    "heading": "パスワードをお忘れですか？",
+    "description": "ご登録のメールアドレスを入力してください。パスワード再設定用のリンクをお送りします。",
+    "emailLabel": "メールアドレス",
+    "invalidEmail": "有効なメールアドレスを入力してください",
+    "genericError": "問題が発生しました。もう一度お試しください。",
+    "submit": "再設定リンクを送信",
+    "sending": "送信中…",
+    "success": "そのメールアドレスのアカウントが存在する場合、パスワード再設定用のリンクを送信しました。"
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "松山・サクラメントおよびサクラメント全域において、奉仕活動と共有の機会を通じて地域社会をつなぐ。",
