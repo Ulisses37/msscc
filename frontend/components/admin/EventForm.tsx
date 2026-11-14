@@ -350,7 +350,7 @@ export default function EventForm({
       missingFields.push('End Date & Time');
     }
     if (requireImage && !selectedFile && !initialImageUrl) {
-      missingFields.push('Image');
+      missingFields.push('Thumbnail Image');
     }
     if (eventPhotos.some((photo) => !photo.file && !photo.mediaAssetId)) {
       missingFields.push('an image for each Event Photo');
