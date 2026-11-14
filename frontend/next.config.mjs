@@ -18,6 +18,7 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/forgot-password', destination: '/en/forgot-password', permanent: false },
+      { source: '/reset-password', destination: '/en/reset-password', permanent: false },
     ];
   },
 

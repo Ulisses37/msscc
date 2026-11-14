@@ -39,6 +39,20 @@
     "success": "そのメールアドレスのアカウントが存在する場合、パスワード再設定用のリンクを送信しました。"
   },
 
+  "ResetPasswordPage": {
+    "heading": "パスワードの再設定",
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認）",
+    "invalidLink": "再設定リンクが無効か、有効期限が切れています。",
+    "mismatch": "パスワードが一致しません。",
+    "tooShort": "パスワードは8文字以上で入力してください。",
+    "genericError": "問題が発生しました。もう一度お試しください。",
+    "submit": "パスワードを再設定",
+    "submitting": "再設定中…",
+    "success": "パスワードを再設定しました。ホームに移動します…",
+    "backToHome": "ホームに戻る"
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "松山・サクラメントおよびサクラメント全域において、奉仕活動と共有の機会を通じて地域社会をつなぐ。",
