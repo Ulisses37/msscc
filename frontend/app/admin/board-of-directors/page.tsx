@@ -43,7 +43,6 @@ export default function BoardOfDirectors() {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
       ])
         .then(([members, mediaAssets]: [unknown[], unknown[]]) => {
-          console.log("raw members:", members);
           const mediaById = new Map(
             (mediaAssets as {media_asset_id: number; file_url: string | null}[])
               .map(m => [m.media_asset_id, m])

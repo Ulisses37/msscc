@@ -14,7 +14,7 @@ import { useRef } from "react";
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 
 const GAP = 16; // gap-4 = 1rem = 16px
-const MAX_CAROUSEL_ITEMS = 10;
+const MAX_CAROUSEL_ITEMS = 16;
 
 const pageDescriptions: Record<string, string>={
   Events: "Manage MSSCC events and volunteers.",
@@ -193,6 +193,7 @@ export function DonationCarousel({ data }:{ data: DonationEntry[] }) {
     });
   }
 
+
   return (
     <div>
       <h2 className="font-heading text-heading-2 text-msscc-teal">
@@ -240,7 +241,7 @@ function DonationCard({ donation}: {donation: DonationEntry}){
     {formatCurrency(Number(donation.amount))}
   </div>
   <div className="text-label sm:text-body-sm text-msscc-gray-mid">
-    {formatDate(donation.created_at)}
+    {formatDate(donation.donation_date)}
   </div>
 </div>
   );
@@ -267,7 +268,7 @@ export function MembershipCarousel({ data }:{ data: MembershipEntry[] }) {
   return (
     <div>
       <h2 className="font-heading text-heading-2 text-msscc-teal">
-        Membership
+        Memberships
       </h2>
       <div className="flex items-stretch bg-msscc-pink-light rounded-md">
         <button
@@ -309,7 +310,7 @@ function MembershipCard({ membership}: {membership: MembershipEntry}){
         {membership.membership_type}
       </div>
       <div className="text-label sm:text-body-sm text-msscc-gray-mid">
-        {formatDate(membership.created_at)}
+        {formatDate(membership?.start_date)}
       </div>
     </div>
   );
@@ -317,8 +318,12 @@ function MembershipCard({ membership}: {membership: MembershipEntry}){
 
 
 // Formats ISO datetime string to readable date
-function formatDate(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('en-US', {
+function formatDate(datetime?: string | null): string {
+  if (!datetime) return "—";
+  const date = new Date(datetime);
+  if (isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -326,4 +331,27 @@ function formatDate(datetime: string): string {
   });
 }
 
+type LocalAdminInfo = {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  permissionData: Record<string, boolean>;
+  isExecutive: boolean;
+};
+
+export function CurrentAdmin({localAdmin}: {localAdmin: LocalAdminInfo}){
+  return (
+    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm px-3">
+      <div className="break-words font-heading font-bold capitalize text-xl">
+        <span className="inline-block">{localAdmin.firstName}</span>{" "}
+        <span className="inline-block">{localAdmin.lastName}</span>
+      </div>
+      <div className="break-words text-body-sm text-msscc-gray-faint py-1">
+        {localAdmin.email.split("@")[0]}
+        <wbr />@{localAdmin.email.split("@")[1]}
+      </div>
+    </div>
+  )
+}
 
