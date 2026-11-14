@@ -1,7 +1,6 @@
 'use client';
 
 // React and next
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -11,9 +10,10 @@ import { requestDeepLTranslation } from '@/services/deeplService';
 import ImageBlockInput from '@/components/admin/ImageBlockInput';
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { ImportImage } from '@/components/ui/ImportImage';
+import CroppedImage from '@/components/ui/CroppedImage';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
 import ThumbnailCropModal from '@/components/admin/ThumbnailCropModal';
-import { CARD_IMAGE_RATIO, FULL_CROP, getCropImageStyle, sanitizeCrop } from '@/utils/thumbnailCrop';
+import { CARD_IMAGE_RATIO, FULL_CROP, sanitizeCrop } from '@/utils/thumbnailCrop';
 
 // Types
 import type { ImageAlignment, ImageWidth } from '@/types/content';
@@ -350,7 +350,7 @@ export default function EventForm({
       missingFields.push('End Date & Time');
     }
     if (requireImage && !selectedFile && !initialImageUrl) {
-      missingFields.push('Image');
+      missingFields.push('Thumbnail Image');
     }
     if (eventPhotos.some((photo) => !photo.file && !photo.mediaAssetId)) {
       missingFields.push('an image for each Event Photo');
@@ -412,13 +412,11 @@ export default function EventForm({
               className="group relative block w-full cursor-pointer overflow-hidden rounded-sm border border-msscc-gray-light bg-msscc-gray-faint lg:w-72"
               style={{ aspectRatio: CARD_IMAGE_RATIO }}
             >
-              <Image
+              <CroppedImage
                 src={pickerImageUrl}
                 alt={thumbnailPreviewUrl ? 'Selected event image preview' : 'Current event image'}
-                width={288}
-                height={190}
-                className="h-full w-full"
-                style={getCropImageStyle(formData.thumbnailCrop)}
+                crop={formData.thumbnailCrop}
+                sizes="(min-width: 1024px) 288px, 100vw"
               />
 
               {/* Hint shown on hover and on keyboard focus */}

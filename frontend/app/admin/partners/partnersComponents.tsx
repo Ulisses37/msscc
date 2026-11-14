@@ -319,6 +319,7 @@ export function CreatePartnerProp(
             <ImportImage
               id="create-partner-media"
               onChange={handleMediaChange}
+              enableCrop
             />
             {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
             {previewUrl && (
@@ -587,6 +588,7 @@ export function EditPartnerProp(
               <ImportImage
                 id="edit-partner-media"
                 onChange={handleMediaChange}
+                enableCrop
               />
               {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
               {previewUrl && (

@@ -3,11 +3,11 @@
 import { useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 
+import CroppedImage from '@/components/ui/CroppedImage';
 import {
   CARD_IMAGE_RATIO,
   FULL_CROP,
   fitCropToRatio,
-  getCropImageStyle,
 } from '@/utils/thumbnailCrop';
 import type { ThumbnailCrop } from '@/utils/thumbnailCrop';
 
@@ -329,15 +329,14 @@ export default function ThumbnailPicker({ imageUrl, crop, onChange }: ThumbnailP
         </p>
 
         <div
-          className="w-full overflow-hidden rounded-sm border border-msscc-gray-light bg-msscc-gray-faint"
+          className="relative w-full overflow-hidden rounded-sm border border-msscc-gray-light bg-msscc-gray-faint"
           style={{ aspectRatio: CARD_IMAGE_RATIO }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <CroppedImage
             src={imageUrl}
             alt="Event card preview"
-            className="h-full w-full"
-            style={getCropImageStyle(displayCrop ?? FULL_CROP)}
+            crop={displayCrop ?? FULL_CROP}
+            sizes="400px"
           />
         </div>
       </div>

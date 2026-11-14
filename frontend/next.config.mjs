@@ -13,6 +13,15 @@ const withNextIntl = createNextIntlPlugin(
 const nextConfig = {
   reactStrictMode: true,
 
+  // The forgot password page now lives under the locale folder. Send the old URL to the
+  // English page so existing links and bookmarks keep working.
+  async redirects() {
+    return [
+      { source: '/forgot-password', destination: '/en/forgot-password', permanent: false },
+      { source: '/reset-password', destination: '/en/reset-password', permanent: false },
+    ];
+  },
+
   //enables images from external storage server
   images: {
     remotePatterns: [

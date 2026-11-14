@@ -20,6 +20,8 @@ export const routing = defineRouting({
     '/support': '/support',
     '/membership': '/membership',
     '/partners': '/partners',
+    '/forgot-password': '/forgot-password',
+    '/reset-password': '/reset-password',
 
     // In case other pages are created, create the pathnames below this comment
   },

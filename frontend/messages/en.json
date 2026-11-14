@@ -28,6 +28,31 @@
     "closeModal": "Close login modal"
   },
 
+  "ForgotPasswordPage": {
+    "heading": "Forgot password",
+    "description": "Enter your email address and we'll send you a link to reset your password.",
+    "emailLabel": "Email",
+    "invalidEmail": "Please enter a valid email address",
+    "genericError": "Something went wrong. Please try again.",
+    "submit": "Send reset link",
+    "sending": "Sending…",
+    "success": "If an account exists with that email, a reset link has been sent."
+  },
+
+  "ResetPasswordPage": {
+    "heading": "Reset password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "invalidLink": "Invalid or expired reset link.",
+    "mismatch": "Passwords do not match.",
+    "tooShort": "Password must be at least 8 characters.",
+    "genericError": "Something went wrong. Please try again.",
+    "submit": "Reset password",
+    "submitting": "Resetting…",
+    "success": "Password reset successfully. Redirecting to home…",
+    "backToHome": "Back to home"
+  },
+
   "Footer": {
     "organizationName": "MSSCC Communications",
     "description": "Connecting our community through service and shared opportunity throughout MatsuyamaSacramento and Sacramento.",
