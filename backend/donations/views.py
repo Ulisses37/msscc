@@ -387,7 +387,7 @@ class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView)
     def get_queryset(self):
         return (
             Donation.objects.filter(payment_status=Donation.PaymentStatus.COMPLETED)
-            .order_by("-created_at", "-donation_id")[:50]
+            .order_by("-donation_date", "-donation_id")[:50]
         )
 
 
@@ -400,7 +400,7 @@ class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIVie
     def get_queryset(self):
         return (
             Membership.objects.filter(status__iexact="active")
-            .order_by("-created_at", "-membership_id")[:50]
+            .order_by("-start_date", "-membership_id")[:50]
         )
 
 ZERO = Decimal("0.00")
