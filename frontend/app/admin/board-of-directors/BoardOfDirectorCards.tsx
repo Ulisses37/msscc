@@ -8,6 +8,7 @@ import ImageCropModal from '@/components/ui/ImageCropModal';
 import { requestDeepLTranslation } from '@/services/deeplService';
 
 import type { BoardMember } from './page';
+import { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from '@/components/layout/AdminButtonStyles';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass =
@@ -335,8 +336,21 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
       {/* Actions: stacked on phones, a row from sm up */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
         <button
+          onClick={() => {
+            if (!edited?.boardMemberNameEn?.trim()) {
+              alert("English name cannot be empty");
+              return;
+            }
+            onUpdate(edited, editedFile);
+            onClose(null);
+          }}
+          className={primaryButtonClass}
+        >
+          {isNewMember ? "Add" : "Save"}
+        </button>
+        <button
           onClick={() => onClose(null)}
-          className="w-full rounded-sm border border-msscc-gray-light bg-msscc-white px-4 py-2 text-btn tracking-btn text-msscc-gray-dark transition-colors hover:border-msscc-pink hover:text-msscc-pink"
+          className={secondaryButtonClass}
         >
           Close
         </button>
@@ -347,24 +361,11 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
               onDelete(member);
               onClose(null);
             }}
-            className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
+            className={dangerButtonClass}
           >
             Delete
           </button>
         )}
-        <button
-          onClick={() => {
-            if (!edited?.boardMemberNameEn?.trim()) {
-              alert("English name cannot be empty");
-              return;
-            }
-            onUpdate(edited, editedFile);
-            onClose(null);
-          }}
-          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
-        >
-          {isNewMember ? "Add" : "Update"}
-        </button>
       </div>
       </div>
     </div>
