@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 
 import { PartnerProp, PartnerTable, PartnerTableHeader, CreatePartnerProp, EditPartnerProp } from "./partnersComponents"
+import { addButtonClass } from '@/components/layout/AdminButtonStyles';
 
 const SECTIONS = [
-  { category: "partner", title: "Partners", addLabel: "Add Partner", emptyLabel: "No partners found." },
-  { category: "donor", title: "Donors", addLabel: "Add Donor", emptyLabel: "No donors found." },
-  { category: "sponsor", title: "Sponsors", addLabel: "Add Sponsor", emptyLabel: "No sponsors found." },
+  { category: "partner", title: "Partners", addLabel: "Add", emptyLabel: "No partners found." },
+  { category: "donor", title: "Donors", addLabel: "Add", emptyLabel: "No donors found." },
+  { category: "sponsor", title: "Sponsors", addLabel: "Add", emptyLabel: "No sponsors found." },
 ] as const;
 
 // Each table shows at most this many rows at a time.
@@ -173,7 +174,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+      className={addButtonClass}
     >
       {label}
     </button>
