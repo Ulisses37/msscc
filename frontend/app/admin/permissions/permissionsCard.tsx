@@ -3,6 +3,7 @@ import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
 import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
+import { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from "@/components/layout/AdminButtonStyles";
 
 // text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass =
@@ -89,7 +90,7 @@ export function PermissionCard(
       <div className="mx-4 border-t border-msscc-gray-light sm:hidden" />
 
       {/* Permission icons: 2 columns on phones, 3 from sm up */}
-      <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 p-2 sm:grid-cols-3">
+      <div className="grid min-w-0 flex-1 grid-cols-2 content-center gap-2 p-2 sm:grid-cols-3">
         {Object.entries(adminInformation.permissions).map(([permissionName, hasPermission]) => (
           <div key={permissionName} className="min-w-0" onClick={(e) => e.stopPropagation()}>
             <PermissionIcon
@@ -234,20 +235,20 @@ export function AdminPopup({
             }
           )}
           disabled={firstName == "" || lastName == "" || email == "" || !isValidEmail(email || "")}
-          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
-        >
-          {pType =="update" ? "Save" : "Create"}
+          className={primaryButtonClass}
+          >
+          {pType =="update" ? "Save" : "Add"}
         </button>
         <button
           onClick={() => setPType("")}
-          className="w-full rounded-sm border border-msscc-gray-light bg-msscc-white px-4 py-2 text-btn tracking-btn text-msscc-gray-dark transition-colors hover:border-msscc-pink hover:text-msscc-pink"
+          className={secondaryButtonClass}
         >
           Cancel
         </button>
         {pType === "update" && (
           <button
             onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
-            className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
+            className={dangerButtonClass}
           >
             Delete
           </button>

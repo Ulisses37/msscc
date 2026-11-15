@@ -75,7 +75,8 @@
     --color-gray-faint: theme(colors.msscc.gray.faint);
 
     /* Danger */
-    --color-danger:     theme(colors.msscc.danger);
+    --color-danger:      theme(colors.msscc.danger.DEFAULT);
+    --color-danger-dark: theme(colors.msscc.danger.dark);
 
     /* Border radius */
     --radius-sm: 3px;
