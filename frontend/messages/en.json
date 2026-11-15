@@ -96,6 +96,7 @@
     "notFound": "Event Not Found",
     "unavailable": "This event does not exist or is no longer available.",
     "backToEvents": "Back to events",
+    "backToPastEvents": "Back to past events",
     "viewEvent": "View Event →",
     "volunteerForEvent": "Volunteer for this Event",
     "googleCalendar": "Google Calendar",

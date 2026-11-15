@@ -97,6 +97,7 @@
     "notFound": "イベントが見つかりません",
     "unavailable": "このイベントは存在しないか、現在ご覧いただけません。",
     "backToEvents": "イベント一覧に戻る",
+    "backToPastEvents": "過去のイベントに戻る",
     "viewEvent": "イベントを見る →",
     "volunteerForEvent": "このイベントでボランティアをする",
     "googleCalendar": "Google カレンダー",
