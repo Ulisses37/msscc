@@ -36,7 +36,10 @@ const config: Config = {
             faint: "#F1EFE8", // Subtle fills, public table headers
           },
           // Semantic extras
-          danger: "#8B2020", // Destructive actions (delete, error borders)
+          danger:{
+            DEFAULT: "#8B2020", // Destructive actions (delete, error borders)
+            dark: "#7b1b1b",
+          }
         },
       },
 
