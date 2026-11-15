@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { PartnerProp, PartnerTable, PartnerTableHeader, CreatePartnerProp, EditPartnerProp } from "./partnersComponents"
 
 const SECTIONS = [
-  { category: "partner", title: "Partners", addLabel: "Add partner", emptyLabel: "No partners found." },
-  { category: "donor", title: "Donors", addLabel: "Add donor", emptyLabel: "No donors found." },
-  { category: "sponsor", title: "Sponsors", addLabel: "Add sponsor", emptyLabel: "No sponsors found." },
+  { category: "partner", title: "Partners", addLabel: "Add Partner", emptyLabel: "No partners found." },
+  { category: "donor", title: "Donors", addLabel: "Add Donor", emptyLabel: "No donors found." },
+  { category: "sponsor", title: "Sponsors", addLabel: "Add Sponsor", emptyLabel: "No sponsors found." },
 ] as const;
 
 // Each table shows at most this many rows at a time.
@@ -173,7 +173,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-md bg-msscc-pink px-3 py-1 text-body-sm text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink"
+      className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
     >
       {label}
     </button>
