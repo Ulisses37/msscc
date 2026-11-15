@@ -244,12 +244,14 @@ export function AdminPopup({
         >
           Cancel
         </button>
-        <button
-          onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
-          className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
-        >
-          Delete
-        </button>
+        {pType === "update" && (
+          <button
+            onClick={() => confirmAndDelete({selectedAdmin: selectedAdmin})}
+            className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
+          >
+            Delete
+          </button>
+        )}
         </div>
       </div>
     </div>

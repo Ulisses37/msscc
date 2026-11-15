@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+import ImageCropModal from '@/components/ui/ImageCropModal';
 import { requestDeepLTranslation } from '@/services/deeplService';
 
 import type { BoardMember } from './page';
@@ -106,6 +107,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 ) {
   const [edited, setEdited] = useState<BoardMember | null>(member);
   const [editedFile, setEditedFile] = useState<File | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const isNewMember = member?.boardMemberId === -1;
   // Keep each board-member translation independent so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
@@ -187,15 +189,27 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) {
-                const url = URL.createObjectURL(file);
-                setEditedFile(file);
-                setEdited(prev => prev ? { ...prev, boardMemberImageURL: url } : prev);
-              }
+              e.target.value = '';
+              if (file) setPendingFile(file);
             }}
           />
         </label>
       </div>
+
+      {pendingFile && (
+        <ImageCropModal
+          file={pendingFile}
+          aspect={1}
+          title="Crop photo"
+          onConfirm={(croppedFile) => {
+            const url = URL.createObjectURL(croppedFile);
+            setEditedFile(croppedFile);
+            setEdited((prev) => (prev ? { ...prev, boardMemberImageURL: url } : prev));
+            setPendingFile(null);
+          }}
+          onCancel={() => setPendingFile(null)}
+        />
+      )}
 
       {/* Editable fields */}
       <div className="flex flex-col gap-3">
