@@ -352,7 +352,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
           onClick={() => onClose(null)}
           className={secondaryButtonClass}
         >
-          Close
+          Cancel
         </button>
         {/* An unsaved draft has no database record to delete. */}
         {!isNewMember && (
