@@ -15,7 +15,11 @@ interface EventMapProps {
 export function EventMap({ event }: EventMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 
-  const shouldShowMap = event.locationEn && isValidLocation(event.locationEn) && apiKey;
+  // Past events do not need directions, so skip loading the map.
+  const isPastEvent = new Date(event.endDatetime).getTime() < Date.now();
+
+  const shouldShowMap =
+    !isPastEvent && event.locationEn && isValidLocation(event.locationEn) && apiKey;
 
   if (!shouldShowMap) return null;
 
