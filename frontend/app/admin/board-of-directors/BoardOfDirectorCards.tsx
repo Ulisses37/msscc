@@ -165,10 +165,10 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     >
       <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-md bg-msscc-white p-4 font-body text-msscc-gray-dark sm:p-6"
         onClick={(e) => e.stopPropagation()}
-    >
-      <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
-        {type === "officer" ? "Edit Officer" : "Edit Director"}
-      </h2>
+      >
+        <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
+          {isNewMember ? "Add" : "Edit"} {type === "officer" ? "Officer" : "Director"}
+        </h2>
 
       <div className="mb-4 flex justify-center">
         <label className="cursor-pointer">
