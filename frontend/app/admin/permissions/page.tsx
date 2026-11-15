@@ -3,6 +3,7 @@ import { AdminRecord } from "./adminRecord";
 import { PermissionCard, AdminPopup } from "./permissionsCard";
 import { useEffect, useState } from "react";
 import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler";
+import { addButtonClass } from "@/components/layout/AdminButtonStyles";
 
 
 export default function AdminPermissionPage(){
@@ -72,14 +73,14 @@ export default function AdminPermissionPage(){
             <div className="flex flex-1 justify-end gap-2 sm:gap-4">
               <button
                 type="button"
-                className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+                className={addButtonClass}
                 onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
               >
                 Add
               </button>
               <button
                 type="button"
-                className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+                className={addButtonClass}
                 onClick={() => updateDatabase()}
               >
                 Update
