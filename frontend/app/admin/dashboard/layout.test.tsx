@@ -10,12 +10,34 @@ import { logoutRequest, refreshRequest } from '@/services/authService';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
-const mockRouter = { push: mockPush, replace: mockReplace };
 
-jest.mock('next/navigation', () => ({
-  useRouter: () => mockRouter,
-  usePathname: () => '/admin/dashboard',
-}));
+// Controllable pathname that re-renders subscribers when it changes,
+// so tests can simulate the router moving from /admin/... to a public page.
+let mockPathname = '/admin/dashboard';
+const mockPathnameListeners = new Set<() => void>();
+
+function mockSetPathname(path: string): void {
+  mockPathname = path;
+  mockPathnameListeners.forEach((listener) => listener());
+}
+
+jest.mock('next/navigation', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useSyncExternalStore } = require('react');
+
+  const subscribe = (listener: () => void) => {
+    mockPathnameListeners.add(listener);
+    return () => {
+      mockPathnameListeners.delete(listener);
+    };
+  };
+
+  return {
+    useRouter: () => ({ replace: mockReplace, push: mockPush }),
+    usePathname: () =>
+      useSyncExternalStore(subscribe, () => mockPathname, () => mockPathname),
+  };
+});
 
 jest.mock('@/components/layout/Banner', () => ({ Banner: () => null }));
 jest.mock('@/components/layout/AdminNavbar', () => ({ AdminNavbar: () => null }));
@@ -64,6 +86,10 @@ function LogoutControl() {
 describe('admin session gating', () => {
   beforeEach(() => {
     jest.mocked(refreshRequest).mockReset();
+    mockReplace.mockReset();
+    // Like the real router, replace() changes the current pathname.
+    mockReplace.mockImplementation((path: string) => mockSetPathname(path));
+    mockPathname = '/admin/dashboard';
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -89,7 +115,7 @@ describe('admin session gating', () => {
     renderLayout();
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Your session has expired. Please sign in again.',
     );
     expect(sessionStorage.getItem('msscc_admin_session_active')).toBeNull();
@@ -110,7 +136,7 @@ describe('admin session gating', () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(refreshRequest).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Your session has expired. Please sign in again.',
     );
   });
