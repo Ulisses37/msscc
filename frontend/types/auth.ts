@@ -1,7 +1,6 @@
-/** Token pair returned by django-simplejwt's TokenObtainPairView. */
+/** Access token returned after the refresh token is stored in an HttpOnly cookie. */
 export interface AuthTokens {
   access: string;
-  refresh: string;
 }
 
 /** Decoded payload from the JWT access token. */
@@ -13,14 +12,16 @@ export interface UserPayload {
 
   permissionData: Record<string, boolean>;
   isExecutive: boolean;
+  isSuperuser: boolean;
 }
 
 /** Shape of the value provided by AuthContext. */
 export interface AuthContextValue {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: UserPayload | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 /** Props for the LoginButton component. */

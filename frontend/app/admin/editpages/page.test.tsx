@@ -199,6 +199,10 @@ describe('Page Editor workflow', () => {
       configurable: true,
       value: jest.fn(() => 'blob:test-image-preview'),
     });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: jest.fn(),
+    });
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
       value: jest.fn(),
@@ -441,12 +445,13 @@ describe('Page Editor workflow', () => {
     const fileInput = imageBlock.querySelector<HTMLInputElement>('input[type="file"]');
     if (!fileInput) throw new Error('The new image block did not render a file input');
     await user.upload(fileInput, imageFile);
+    await user.click(await screen.findByRole('button', { name: 'Use original' }));
 
     const createObjectUrlMock = URL.createObjectURL as jest.MockedFunction<
       typeof URL.createObjectURL
     >;
-    expect(createObjectUrlMock.mock.calls).toHaveLength(1);
-    expect(createObjectUrlMock.mock.calls[0][0]).toBe(imageFile);
+    expect(createObjectUrlMock.mock.calls).toHaveLength(2);
+    expect(createObjectUrlMock.mock.calls).toEqual([[imageFile], [imageFile]]);
     expect(within(imageBlock).getByAltText('Selected image preview')).toHaveAttribute(
       'src',
       'blob:test-image-preview',

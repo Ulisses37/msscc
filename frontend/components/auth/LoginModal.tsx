@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 import { isValidEmail } from '@/utils/emailValidation';
@@ -38,6 +39,9 @@ const DEFAULT_LABELS: LoginModalLabels = {
 /** Login modal with email and password inputs. Closes on success, X, or backdrop click. */
 export function LoginModal({ onClose, labels = DEFAULT_LABELS }: LoginModalProps) {
   const { login } = useAuth();
+  const pathname = usePathname();
+  // The password pages live under the locale folder, so link to the current language's page.
+  const locale = pathname === '/ja' || pathname.startsWith('/ja/') ? 'ja' : 'en';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,7 +137,7 @@ export function LoginModal({ onClose, labels = DEFAULT_LABELS }: LoginModalProps
           )}
 
           <Link
-            href="/forgot-password"
+            href={`/${locale}/forgot-password`}
             onClick={onClose}
             className="text-body-sm text-msscc-teal hover:underline"
           >

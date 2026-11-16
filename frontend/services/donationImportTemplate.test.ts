@@ -1,7 +1,7 @@
 import { downloadDonationImportTemplate } from './donationImportTemplate';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 const originalFetch = global.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
 const originalUrl = Object.getOwnPropertyDescriptor(globalThis, 'URL');
 
@@ -18,9 +18,7 @@ describe('authorized donation CSV template download', () => {
     jest.clearAllMocks();
     // Node tests do not supply browser download APIs or a real auth session;
     // isolate each boundary to verify authorization and URL cleanup safely.
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-admin-token') },
-    });
+    setAccessToken('test-admin-token');
     Object.defineProperty(globalThis, 'document', {
       configurable: true, value: { createElement: jest.fn().mockReturnValue(link), body: { appendChild } },
     });
@@ -34,11 +32,12 @@ describe('authorized donation CSV template download', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     for (const [name, descriptor] of [
-      ['localStorage', originalStorage], ['document', originalDocument], ['URL', originalUrl],
+      ['document', originalDocument], ['URL', originalUrl],
     ] as const) {
       if (descriptor) Object.defineProperty(globalThis, name, descriptor);
       else Reflect.deleteProperty(globalThis, name);
     }
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -60,7 +59,7 @@ describe('authorized donation CSV template download', () => {
   it.each(['missing token', 'denied', 'network'])('does not download on %s', async (failure) => {
     // Missing credentials should stop before fetch; either server rejection or
     // network failure must not create a download or expose response details.
-    if (failure === 'missing token') jest.mocked(localStorage.getItem).mockReturnValue(null);
+    if (failure === 'missing token') clearAccessToken();
     if (failure === 'denied') jest.mocked(fetch).mockResolvedValue({ ok: false } as Response);
     if (failure === 'network') jest.mocked(fetch).mockRejectedValue(new Error('private'));
     await expect(downloadDonationImportTemplate()).rejects.toThrow('Check your finance access');

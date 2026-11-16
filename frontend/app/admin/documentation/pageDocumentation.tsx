@@ -15,7 +15,18 @@ export type Instruction =
 export interface AdminPageInfo {
   pageName: string;
   pageDescription: string;
+  permissionNeeded: string; // "None", "Executive", Matches permission in permissionData
   pageInstructions: Instruction[]; // an array so you can have multiple lines
+}
+
+export function canViewPage(
+  page: AdminPageInfo,
+  admin: { isExecutive: boolean; permissionData: Record<string, boolean> }
+): boolean {
+  if (admin.isExecutive) return true;                  // executives see everything
+  if (page.permissionNeeded === "None") return true;   // open to all admins
+  if (page.permissionNeeded === "Executive") return false;
+  return !!admin.permissionData[page.permissionNeeded];
 }
 
 // Name and Description pulled from frontend\app\admin\dashboard\pageDisplay.tsx for consistency
@@ -24,6 +35,7 @@ export const adminPageList: AdminPageInfo[] = [
   {
     pageName: "Dashboard",
     pageDescription: "Homepage for all admins",
+    permissionNeeded: "None",
     pageInstructions: [
       "The admin dashboard page is a **purely visual** page.",
       "It is viewable to all admins and provides helpful information and diagnostic data about the website.",
@@ -52,6 +64,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Events"),
+    permissionNeeded: "Events",
     pageInstructions: [
       "This page is dedicated managing Events that are displayed on the User's side of the website.",
       "You can add, edit, duplicate, and delete events here, and the changes will reflect on the public-facing Events page.",
@@ -107,6 +120,7 @@ export const adminPageList: AdminPageInfo[] = [
     // imports require Finances, so keep their instructions in the same entry.
     pageName: "Finances",
     pageDescription: "Membership and donation CSV imports and single-record entry",
+    permissionNeeded: "Finances",
     pageInstructions: [
       "Memberships: On View Memberships, use Add membership to save a single record. For multiple records, download the membership CSV template and keep its columns in order.",
       "Each CSV row needs first_name, last_name, membership_type and status. Other columns can be left blank when unknown; 0.00 means a known zero, not an unknown amount.",
@@ -128,6 +142,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Partners"),
+    permissionNeeded: "Finances",
     pageInstructions: [
       "The **Partners** page stores a list of Partners, Donors, and Sponsors.",
       "To create a new entry, click the {green| +} in the top right corner of the table.",
@@ -148,6 +163,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Directors"),
+    permissionNeeded: "Board_Members",
     pageInstructions: [
       "The **Board of Directors** page features the MSSCC Officers and Directors.",
       "Its user-side related page is the {teal|About|Board} page.",
@@ -163,6 +179,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Edit Pages"),
+    permissionNeeded: "Text_Editing",
     pageInstructions: [
       "This page is dedicated to adding and editing **text** and **image** content on the existing public-facing pages. Newly added content is represented as **content blocks** on this page.",
       "The pages affected by this editor are: {teal|Home}, {teal|Program|Events}, {teal|Support}, {teal|Membership}, {teal|About|Board}, and {teal|Partners}.",
@@ -185,6 +202,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Media"),
+    permissionNeeded: "Media_Management",
     pageInstructions: [
       "This page is dedicated managing media content generally accessed through the website.",
       "Operations for this page consists of Importing, Deleting, and Replacing any image throughout the website.",
@@ -245,6 +263,7 @@ export const adminPageList: AdminPageInfo[] = [
   },
   {
     ...getPage("Permissions"),
+    permissionNeeded: "Executive",
     pageInstructions: [
       "The admin **Permissions** page is where {pink|Executive Admins} can limit the access that {teal|Normal Admins} have throughout the site.",
       "The left sidebox shows the **Name** and **Email** of the currently logged in Executive Admin.",
@@ -285,6 +304,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "Home",
     pageDescription: "The landing page visitors see first",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **Home** page is the first page most visitors see when they arrive at the MSSCC website.",
       "It introduces MSSCC and points visitors toward the programs, events, donation options, and supporters found on the other pages.",
@@ -297,6 +317,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "Program|Events",
     pageDescription: "MSSCC programs and upcoming events",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **Program|Events** page is where visitors can see MSSCC programs and events.",
       "Each event has its own user-side page. Clicking an event on the admin **Dashboard** carousel will take you there.",
@@ -309,6 +330,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "Support",
     pageDescription: "Donation options for supporters",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **Support** page is where visitors can find the ways they can donate to MSSCC.",
       "Donations made through the site appear in the **Donations** carousel on the admin Dashboard.",
@@ -321,6 +343,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "Membership",
     pageDescription: "Information about becoming a member",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **Membership** page is where visitors can learn about joining MSSCC.",
       "New memberships appear in the **Memberships** carousel on the admin Dashboard.",
@@ -333,6 +356,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "About|Board",
     pageDescription: "MSSCC Officers and Directors",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **About|Board** page shows the MSSCC Officers and Directors.",
       "Its content is managed from the **Board of Directors** admin page, and updates there are reflected here.",
@@ -345,6 +369,7 @@ export const userPageList: AdminPageInfo[] = [
   {
     pageName: "Partners",
     pageDescription: "Partners, donors, and sponsors",
+    permissionNeeded: "None",
     pageInstructions: [
       "The **Partners** page displays MSSCC's Partners, Donors, and Sponsors.",
       "Its entries are managed from the **Partners** admin page.",

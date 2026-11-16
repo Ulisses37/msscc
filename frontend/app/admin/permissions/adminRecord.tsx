@@ -11,5 +11,6 @@ export type AdminRecord = {
     last_name: string;
     email: string;
     is_executive: boolean;
+    is_superuser: boolean;
     permissions: Record<string, boolean>;
 };

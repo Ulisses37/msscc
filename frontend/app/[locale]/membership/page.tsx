@@ -48,6 +48,7 @@ export default function MembershipPage() {
 }
 
 function MembershipPageContent({ locale }: { locale: string }) {
+  const deployment = useTranslations('Deployment');
   const t = useTranslations('MembershipPage');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(
     getCachedPageContent('membership'),
@@ -244,6 +245,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
       </div>
 
       {/* Membership selection */}
+      {process.env.NEXT_PUBLIC_PAYMENTS_ENABLED !== 'false' ? (
       <section className="mx-auto w-full min-w-0 max-w-3xl px-4 pb-10 sm:px-6">
         <MembershipOptions
           locale={locale}
@@ -292,6 +294,11 @@ function MembershipPageContent({ locale }: { locale: string }) {
           />
         )}
       </section>
+      ) : (
+        <p role="status" className="mx-auto max-w-content px-4 pb-10">
+          {deployment('paymentsUnavailable')}
+        </p>
+      )}
     </main>
   );
 }

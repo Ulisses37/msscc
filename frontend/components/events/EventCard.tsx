@@ -1,13 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+
+import CroppedImage from '@/components/ui/CroppedImage';
 import Button from '@/components/ui/Button';
 import type { Event } from '@/types/event';
 import { useParams } from 'next/navigation';
 import { formatLocalizedDate } from '@/utils/dateLocalization';
-import { getCropImageStyle } from '@/utils/thumbnailCrop';
 
 interface EventCardProps {
   event: Event;
@@ -59,13 +59,12 @@ export function EventCard({ event }: EventCardProps) {
       {/* Image — links to event detail page */}
       <Link href={eventUrl} className="h-[260px] w-full sm:h-auto sm:w-[400px]" style={{ flexShrink: 0, position: 'relative', display: 'block' }}>
         {event.media?.fileUrl ? (
-          // `fill` sizes the image to the box and cover crops it, so the image can't change the card's size
-          <Image
+          // The image fills the link box and is cropped inside it, so it cannot change the card's size.
+          <CroppedImage
             src={event.media.fileUrl}
             alt={event.media.altText ?? title}
-            fill
+            crop={event.thumbnailCrop}
             sizes="(min-width: 640px) 400px, 100vw"
-            style={getCropImageStyle(event.thumbnailCrop)}
           />
         ) : (
           // Placeholder when no image is provided

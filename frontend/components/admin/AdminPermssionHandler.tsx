@@ -66,23 +66,6 @@ export function hasPermission(
   return !!adminPermissions[Permission];
 }
 
-export function fetchLocalStorageAdmin(){
-  if (typeof window === 'undefined') return undefined;
-  const current_admin = localStorage.getItem("msscc_user");
-  if (!current_admin) return;
-
-  const userData: {
-    userId: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    permissionData: Record<string, boolean>;
-    isExecutive: boolean;
-  } = JSON.parse(current_admin);
-
-  return userData;
-}
-
 export function getToolTip(category: string): string | undefined {
   return permissionCategories[category]?.tooltip;
 }

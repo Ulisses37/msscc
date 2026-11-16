@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { ContentBlockRenderer } from '@/components/content/ContentBlockRenderer';
 import { DonationForm } from '@/components/support/DonationForm';
@@ -14,6 +15,7 @@ import { useDelayedFallback } from '@/hooks/useDelayedFallback';
 import { ContentStateTransition } from '@/components/content/ContentFallBack';
 
 export default function SupportPage() {
+  const t = useTranslations('Deployment');
   const [contentBlocks, setContentBlocks] = useState<DbContentBlock[]>(getCachedPageContent('support'),);
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const contentDisplayState = useDelayedFallback(contentBlocks.length);
@@ -48,7 +50,11 @@ export default function SupportPage() {
         </ContentStateTransition>
       </section>
 
-      <DonationForm />
+      {process.env.NEXT_PUBLIC_PAYMENTS_ENABLED !== 'false' ? (
+        <DonationForm />
+      ) : (
+        <p role="status">{t('paymentsUnavailable')}</p>
+      )}
 
       <footer className="mt-16 w-full max-w-[1200px] border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
         Matsuyama-Sacramento Sister City Corporation

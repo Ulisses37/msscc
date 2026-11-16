@@ -1,8 +1,8 @@
-const ACCESS_TOKEN_KEY = 'msscc_access_token';
+import { getAccessToken } from '@/services/accessTokenStore';
 
-/** Require the existing admin JWT before requesting private record data. */
+/** Require the in-memory admin JWT before requesting private record data. */
 export function getAdminRequestHeaders(): Record<string, string> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = getAccessToken();
   if (!token) {
     throw new Error('Please sign in to access admin records.');
   }
