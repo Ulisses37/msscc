@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { SessionExpiredToast } from '@/components/ui/SessionExpiredToast';
 import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
 import {
   decodeTokenPayload,
@@ -15,12 +16,29 @@ import type { ReactNode } from 'react';
 import type { AuthContextValue, UserPayload } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const ACTIVE_ADMIN_SESSION_KEY = 'msscc_admin_session_active';
 
 function clearLegacyAuthStorage(): void {
   if (typeof window === 'undefined') return;
 
   localStorage.removeItem('msscc_access_token');
   localStorage.removeItem('msscc_user');
+}
+
+function hasActiveAdminSession(): boolean {
+  return typeof window !== 'undefined' && sessionStorage.getItem(ACTIVE_ADMIN_SESSION_KEY) === 'true';
+}
+
+function markActiveAdminSession(): void {
+  if (typeof window === 'undefined') return;
+
+  sessionStorage.setItem(ACTIVE_ADMIN_SESSION_KEY, 'true');
+}
+
+function clearActiveAdminSession(): void {
+  if (typeof window === 'undefined') return;
+
+  sessionStorage.removeItem(ACTIVE_ADMIN_SESSION_KEY);
 }
 
 interface AuthProviderProps {
@@ -44,6 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<UserPayload | null>(null);
   const [accessToken, setCurrentAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSessionExpiredToast, setShowSessionExpiredToast] = useState(false);
 
   const router = useRouter();
 
@@ -52,6 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const clearSession = useCallback((): void => {
     clearAccessToken();
     clearLegacyAuthStorage();
+    clearActiveAdminSession();
     setCurrentAccessToken(null);
     setUser(null);
   }, []);
@@ -62,6 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAccessToken(token);
       setCurrentAccessToken(token);
       setUser(payload);
+      markActiveAdminSession();
       return true;
     } catch (error) {
       console.error('Unable to decode the current admin session.', error);
@@ -75,7 +96,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const tokens = await refreshRequest();
       return applyAccessToken(tokens.access);
     } catch {
+      const hadActiveSession = hasActiveAdminSession();
       clearSession();
+      if (hadActiveSession) {
+        setShowSessionExpiredToast(true);
+      }
       return false;
     }
   }, [applyAccessToken, clearSession]);
@@ -104,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [applyAccessToken, router]);
 
   const logout = useCallback(async (): Promise<void> => {
+    setShowSessionExpiredToast(false);
     try {
       await logoutRequest();
     } catch (error) {
@@ -125,6 +151,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      {showSessionExpiredToast && (
+        <SessionExpiredToast onDismiss={() => setShowSessionExpiredToast(false)} />
+      )}
     </AuthContext.Provider>
   );
 }

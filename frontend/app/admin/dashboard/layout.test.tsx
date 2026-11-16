@@ -1,11 +1,12 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AdminLayout from '../layout';
-import { refreshRequest } from '@/services/authService';
+import { logoutRequest, refreshRequest } from '@/services/authService';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -54,15 +55,23 @@ function renderLayout() {
   );
 }
 
+function LogoutControl() {
+  const { logout } = useAuth();
+
+  return <button type="button" onClick={() => void logout()}>Log out</button>;
+}
+
 describe('admin session gating', () => {
   beforeEach(() => {
     jest.mocked(refreshRequest).mockReset();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it('redirects to / when refresh-cookie restoration fails', async () => {
@@ -71,6 +80,39 @@ describe('admin session gating', () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(screen.queryByText('admin content')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('notifies an admin when a previously active session cannot be renewed', async () => {
+    sessionStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockRejectedValueOnce(new Error('expired refresh cookie'));
+    renderLayout();
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your session has expired. Please sign in again.',
+    );
+    expect(sessionStorage.getItem('msscc_admin_session_active')).toBeNull();
+  });
+
+  it('keeps the expiration notice visible after Strict Mode retries a failed refresh', async () => {
+    sessionStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockRejectedValue(new Error('expired refresh cookie'));
+    render(
+      <StrictMode>
+        <AuthProvider>
+          <AdminLayout>
+            <div>admin content</div>
+          </AdminLayout>
+        </AuthProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(refreshRequest).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your session has expired. Please sign in again.',
+    );
   });
 
   it('removes legacy browser storage instead of treating it as a session', async () => {
@@ -91,5 +133,23 @@ describe('admin session gating', () => {
 
     expect(await screen.findByText('admin content')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem('msscc_admin_session_active')).toBe('true');
+  });
+
+  it('does not show the expiration notice after an explicit logout', async () => {
+    jest.mocked(refreshRequest).mockResolvedValue({ access: VALID_TOKEN });
+    jest.mocked(logoutRequest).mockResolvedValue(undefined);
+    render(
+      <AuthProvider>
+        <LogoutControl />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(sessionStorage.getItem('msscc_admin_session_active')).toBe('true'));
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(sessionStorage.getItem('msscc_admin_session_active')).toBeNull();
   });
 });
