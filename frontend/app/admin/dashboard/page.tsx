@@ -38,7 +38,7 @@ export default function Dashboard() {
     <div>
       <div className="flex flex-col bg-msscc-white font-body text-msscc-gray-dark lg:flex-row lg:mb-8">
         {/* Left Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:ml-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:ml-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
           {/* Local Admin info */}
           <CurrentAdmin user={user} />
 
@@ -62,7 +62,7 @@ export default function Dashboard() {
         </div>
 
         {/* Right Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:mr-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:mr-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
 
           {/* Visit Counter */}
           <SiteAnalytics/>

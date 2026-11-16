@@ -334,12 +334,12 @@ function formatDate(datetime?: string | null): string {
 
 export function CurrentAdmin({ user }: { user: UserPayload }) {
   return (
-    <div className="bg-msscc-pink text-msscc-white py-2 rounded-sm px-3">
+    <div className="min-w-0 bg-msscc-pink text-msscc-white py-2 rounded-sm px-3">
       <div className="break-words font-heading font-bold capitalize text-xl">
         <span className="inline-block">{user.firstName}</span>{" "}
         <span className="inline-block">{user.lastName}</span>
       </div>
-      <div className="break-words text-body-sm text-msscc-gray-faint py-1">
+      <div className="break-all text-body-sm text-msscc-gray-faint py-1">
         {user.email.split("@")[0]}
         <wbr />@{user.email.split("@")[1]}
       </div>
