@@ -7,6 +7,7 @@ import { fetchFinancialRecords } from '@/services/financialRecordSearch';
 import { downloadDonationImportTemplate } from '@/services/donationImportTemplate';
 import { confirmDonationCsv, previewDonationCsv } from '@/services/donationImportPreview';
 import type { DonationEntry } from '@/components/admin/DonationDetailDrawer';
+import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
 
 import AdminDonationsPage from './page';
 
@@ -62,7 +63,7 @@ describe('donation page manual-entry dialog', () => {
       donation_ids: [42], already_imported: false,
     });
     jest.mocked(fetchFinancialRecords).mockResolvedValue([]);
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({
       ok: true, status: 201, json: async () => ({ donation_id: 42 }),
     });
@@ -70,7 +71,7 @@ describe('donation page manual-entry dialog', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
-    localStorage.clear();
+    clearAccessToken();
   });
 
   it('groups the template with entry and review and reports download access failures', async () => {

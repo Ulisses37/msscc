@@ -1,13 +1,14 @@
 "use client";
 import { AdminRecord } from "./adminRecord";
 import { PermissionCard, AdminPopup } from "./permissionsCard";
-import { useEffect, useState } from "react";
-import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler";
+import { useCallback, useEffect, useState } from "react";
 import { addButtonClass } from "@/components/layout/AdminButtonStyles";
+import { useAuth } from "@/context/AuthContext";
+import { getAdminRequestHeaders } from "@/services/adminRequestHeaders";
 
 
 export default function AdminPermissionPage(){
-  const logInAdmin = fetchLocalStorageAdmin();
+  const { user } = useAuth();
 
   const [adminList, setAdminList] = useState<AdminRecord[]>([]);
   const [isSuperuser, setIsSuperuser] = useState<boolean | null>(null); // null = still loading
@@ -20,9 +21,41 @@ export default function AdminPermissionPage(){
     isSuperuser === null ? "" : isSuperuser ? "Developer Admin" : "Executive Admin";
 
 
+  const loadAdmins = useCallback(async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`, {
+        headers: getAdminRequestHeaders(),
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
+      const allAdmins: AdminRecord[] = await res.json();
+      const superuser = user?.isSuperuser ?? false;
+      setIsSuperuser(superuser);
+
+      setAdminList(
+        allAdmins
+          .filter((admin) => {
+            if (admin.is_superuser) return false;
+            if (superuser) return true;
+            return !admin.is_executive;
+          })
+          .sort(
+            (firstAdmin, secondAdmin) =>
+              Number(secondAdmin.is_executive) - Number(firstAdmin.is_executive) ||
+              firstAdmin.first_name.localeCompare(secondAdmin.first_name) ||
+              firstAdmin.last_name.localeCompare(secondAdmin.last_name),
+          ),
+      );
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      setIsSuperuser(false);
+      setAdminList([]);
+    }
+  }, [user?.isSuperuser]);
+
   useEffect(() => {
-    loadAdmins();
-  }, []);
+    if (user) void loadAdmins();
+  }, [loadAdmins, user]);
 
   return(
     <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
@@ -45,7 +78,7 @@ export default function AdminPermissionPage(){
             </div>
             <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
               <div className="break-words text-body-sm text-white">
-                {logInAdmin?.firstName + " " + logInAdmin?.lastName}
+                {user ? `${user.firstName} ${user.lastName}` : ""}
               </div>
             </div>
 
@@ -55,9 +88,9 @@ export default function AdminPermissionPage(){
             <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
               <div
                 className="truncate text-body-sm text-white"
-                title={logInAdmin?.email}
+                title={user?.email}
               >
-                {logInAdmin?.email}
+                {user?.email}
               </div>
             </div>
           </aside>
@@ -131,7 +164,10 @@ export default function AdminPermissionPage(){
         adminList.map(record =>
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/${record.id}/permissions/`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...getAdminRequestHeaders(),
+                },
                 body: JSON.stringify({ permissions: record.permissions }),
             })
         )
@@ -140,36 +176,4 @@ export default function AdminPermissionPage(){
     });
   }
 
-  async function loadAdmins() {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`);
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-
-      const allAdmins: AdminRecord[] = await res.json();
-
-      // Find the logged-in admin in the list to see if they're a superuser
-      const me = allAdmins.find(a => a.email === logInAdmin?.email);
-      const superuser = !!me?.is_superuser;
-      setIsSuperuser(superuser);
-
-      setAdminList(
-        allAdmins
-          .filter(a => {
-            if (a.is_superuser) return false;   // nobody edits superusers
-            if (superuser) return true;         // superusers see everyone else
-            return !a.is_executive;             // executives only see non-executives
-          })
-          .sort(
-            (a, b) =>
-              Number(b.is_executive) - Number(a.is_executive) ||
-              a.first_name.localeCompare(b.first_name) ||
-              a.last_name.localeCompare(b.last_name)
-          )
-      );
-    } catch (error) {
-      console.error("Error fetching admins:", error);
-      setIsSuperuser(false);
-      setAdminList([]);
-    }
-  }
 }

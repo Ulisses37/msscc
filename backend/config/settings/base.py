@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'accounts',
     'emails',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 
     'media',
     "events",
@@ -138,12 +139,25 @@ MEDIA_WEBP_METHOD = int(os.getenv("MEDIA_WEBP_METHOD", 4))
 MEDIA_MAX_FILENAME_LENGTH = int(os.getenv("MEDIA_MAX_FILENAME_LENGTH", 255))
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# Refresh tokens are deliberately unavailable to JavaScript. Production overrides
+# the secure flag so browsers only transmit the cookie over HTTPS.
+JWT_REFRESH_COOKIE_NAME = "msscc_refresh_token"
+JWT_REFRESH_COOKIE_PATH = "/api/auth/"
+JWT_REFRESH_COOKIE_SECURE = os.getenv("JWT_REFRESH_COOKIE_SECURE", "false").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+JWT_REFRESH_COOKIE_SAMESITE = os.getenv("JWT_REFRESH_COOKIE_SAMESITE", "lax").lower()
+CSRF_COOKIE_SECURE = JWT_REFRESH_COOKIE_SECURE
+CSRF_COOKIE_SAMESITE = JWT_REFRESH_COOKIE_SAMESITE
 
 AUTH_USER_MODEL = "accounts.AdminUser"
 
@@ -179,6 +193,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS',
                                       'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    "CSRF_TRUSTED_ORIGINS",
+    ",".join(CORS_ALLOWED_ORIGINS),
+).split(",")
 
 CORS_ALLOW_METHODS = [
     "GET",

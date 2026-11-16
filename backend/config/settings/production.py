@@ -35,6 +35,7 @@ SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r"^health/$"]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+JWT_REFRESH_COOKIE_SECURE = True
 
 # The hosted backend serves JSON; the Next.js portal replaces Django admin.
 REST_FRAMEWORK = {

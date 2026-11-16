@@ -1,75 +1,154 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { loginRequest, decodeTokenPayload } from '@/services/authService';
+import { SessionExpiredToast } from '@/components/ui/SessionExpiredToast';
+import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
+import {
+  decodeTokenPayload,
+  loginRequest,
+  logoutRequest,
+  refreshRequest,
+} from '@/services/authService';
 
 import type { ReactNode } from 'react';
 import type { AuthContextValue, UserPayload } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const ACTIVE_ADMIN_SESSION_KEY = 'msscc_admin_session_active';
 
-const USER_KEY = 'msscc_user';
-const TOKEN_KEY = 'msscc_access_token';
+function clearLegacyAuthStorage(): void {
+  if (typeof window === 'undefined') return;
 
-/** Read the persisted user payload from localStorage. Returns null when absent or invalid. */
-function readStoredUser(): UserPayload | null {
-  if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(USER_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
+  localStorage.removeItem('msscc_access_token');
+  localStorage.removeItem('msscc_user');
 }
 
-/** Read the persisted access token from localStorage. */
-function readStoredToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+function hasActiveAdminSession(): boolean {
+  return typeof window !== 'undefined' && localStorage.getItem(ACTIVE_ADMIN_SESSION_KEY) === 'true';
+}
+
+function markActiveAdminSession(): void {
+  if (typeof window === 'undefined') return;
+
+  localStorage.setItem(ACTIVE_ADMIN_SESSION_KEY, 'true');
+}
+
+function clearActiveAdminSession(): void {
+  if (typeof window === 'undefined') return;
+
+  localStorage.removeItem(ACTIVE_ADMIN_SESSION_KEY);
 }
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+function getRefreshDelay(accessToken: string): number {
+  try {
+    const payloadSegment = accessToken.split('.')[1];
+    const payload = JSON.parse(atob(payloadSegment)) as { exp?: unknown };
+    if (typeof payload.exp !== 'number') return 0;
+
+    return Math.max(payload.exp * 1000 - Date.now() - 30_000, 0);
+  } catch {
+    return 0;
+  }
+}
+
 /** Wraps the application and provides auth state to all descendants. */
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<UserPayload | null>(
-    readStoredUser(),
-  );
-  const [accessToken, setAccessToken] = useState<string | null>(
-    readStoredToken(),
-  );
+  const [user, setUser] = useState<UserPayload | null>(null);
+  const [accessToken, setCurrentAccessToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSessionExpiredToast, setShowSessionExpiredToast] = useState(false);
 
   const router = useRouter();
 
   const isAuthenticated = user !== null;
 
+  const clearSession = useCallback((): void => {
+    clearAccessToken();
+    clearLegacyAuthStorage();
+    clearActiveAdminSession();
+    setCurrentAccessToken(null);
+    setUser(null);
+  }, []);
+
+  const applyAccessToken = useCallback((token: string): boolean => {
+    try {
+      const payload = decodeTokenPayload(token);
+      setAccessToken(token);
+      setCurrentAccessToken(token);
+      setUser(payload);
+      markActiveAdminSession();
+      return true;
+    } catch (error) {
+      console.error('Unable to decode the current admin session.', error);
+      clearSession();
+      return false;
+    }
+  }, [clearSession]);
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const tokens = await refreshRequest();
+      return applyAccessToken(tokens.access);
+    } catch {
+      const hadActiveSession = hasActiveAdminSession();
+      clearSession();
+      if (hadActiveSession) {
+        setShowSessionExpiredToast(true);
+      }
+      return false;
+    }
+  }, [applyAccessToken, clearSession]);
+
+  useEffect(() => {
+    clearLegacyAuthStorage();
+
+    if (!hasActiveAdminSession()) {
+      setIsLoading(false);
+      return;
+    }
+
+    void refreshSession().finally(() => setIsLoading(false));
+  }, [refreshSession]);
+
+  useEffect(() => {
+    if (!accessToken) return undefined;
+
+    const refreshTimer = window.setTimeout(() => {
+      void refreshSession();
+    }, getRefreshDelay(accessToken));
+
+    return () => window.clearTimeout(refreshTimer);
+  }, [accessToken, refreshSession]);
+
   const login = useCallback(async (email: string, password: string): Promise<void> => {
     const tokens = await loginRequest(email, password);
-    const payload = decodeTokenPayload(tokens.access);
-
-    localStorage.setItem(TOKEN_KEY, tokens.access);
-    localStorage.setItem(USER_KEY, JSON.stringify(payload));
-
-    setAccessToken(tokens.access);
-    setUser(payload);
+    if (!applyAccessToken(tokens.access)) {
+      throw new Error('Unable to start the secure session.');
+    }
     router.push('/admin/dashboard');
-  }, [router]);
+  }, [applyAccessToken, router]);
 
-  const logout = useCallback((): void => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setUser(null);
-    setAccessToken(null);
-    router.push('/');
-  }, [router]);
+  const logout = useCallback(async (): Promise<void> => {
+    setShowSessionExpiredToast(false);
+    try {
+      await logoutRequest();
+    } catch (error) {
+      console.error('Unable to revoke the server session during logout.', error);
+    } finally {
+      clearSession();
+      router.push('/');
+    }
+  }, [clearSession, router]);
 
   const value: AuthContextValue = {
     isAuthenticated,
+    isLoading,
     user,
     login,
     logout,
@@ -78,6 +157,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider value={value}>
       {children}
+      {showSessionExpiredToast && (
+        <SessionExpiredToast onDismiss={() => setShowSessionExpiredToast(false)} />
+      )}
     </AuthContext.Provider>
   );
 }
