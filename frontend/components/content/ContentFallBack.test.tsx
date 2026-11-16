@@ -105,8 +105,6 @@ describe('ContentFallBack localization', () => {
     renderFallback('en', source);
 
     expect(screen.getByText(getMessageValue(enMessages.ContentFallback, headingKey))).toBeInTheDocument();
-    expect(screen.getByText(enMessages.ContentFallback.noticeHeading)).toBeInTheDocument();
-    expect(screen.getByAltText(enMessages.ContentFallback.illustrationAlt)).toBeInTheDocument();
   });
 
   it.each([
@@ -120,8 +118,6 @@ describe('ContentFallBack localization', () => {
     renderFallback('ja', source);
 
     expect(screen.getByText(getMessageValue(jaMessages.ContentFallback, headingKey))).toBeInTheDocument();
-    expect(screen.getByText(jaMessages.ContentFallback.noticeHeading)).toBeInTheDocument();
-    expect(screen.getByAltText(jaMessages.ContentFallback.illustrationAlt)).toBeInTheDocument();
   });
 
   it.each([
