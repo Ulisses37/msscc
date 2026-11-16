@@ -5,6 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import AdminLayout from '../layout';
+import { refreshRequest } from '@/services/authService';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -25,40 +26,23 @@ jest.mock('@/components/auth/ProtectedRoute', () => ({
 
 jest.mock('@/services/authService', () => ({
   loginRequest: jest.fn(),
+  logoutRequest: jest.fn(),
+  refreshRequest: jest.fn(),
   decodeTokenPayload: jest.fn((token: string) => {
     if (token === 'not.a.jwt') throw new Error('malformed');
-    return { userId: '2', email: 'dev@test.com', isExecutive: true, permissionData: {} };
+    return {
+      userId: 2,
+      email: 'dev@test.com',
+      firstName: 'Dev',
+      lastName: 'Admin',
+      isExecutive: true,
+      isSuperuser: true,
+      permissionData: {},
+    };
   }),
 }));
 
-const VALID_TOKEN = 'header.payload.signature';
-const originalFetch = globalThis.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
-/** In-memory localStorage so tests can inspect exactly what is left behind. */
-function installStorage(initial: Record<string, string>) {
-  const data = new Map(Object.entries(initial));
-  const storage = {
-    getItem: jest.fn((key: string) => data.get(key) ?? null),
-    setItem: jest.fn((key: string, value: string) => void data.set(key, value)),
-    removeItem: jest.fn((key: string) => void data.delete(key)),
-    clear: jest.fn(() => data.clear()),
-    get length() {
-      return data.size;
-    },
-  };
-  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage });
-  return storage;
-}
-
-/** Mimics the Django verify endpoint: only VALID_TOKEN passes. */
-function mockVerifyEndpoint() {
-  globalThis.fetch = jest.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-    const { token } = JSON.parse(String(init?.body));
-    const ok = token === VALID_TOKEN;
-    return { ok, status: ok ? 200 : 401, json: async () => ({}) } as Response;
-  });
-}
+const VALID_TOKEN = `header.${btoa(JSON.stringify({ exp: 4_102_444_800 }))}.signature`;
 
 function renderLayout() {
   return render(
@@ -72,57 +56,40 @@ function renderLayout() {
 
 describe('admin session gating', () => {
   beforeEach(() => {
-    mockVerifyEndpoint();
+    jest.mocked(refreshRequest).mockReset();
+    localStorage.clear();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    globalThis.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+    localStorage.clear();
   });
 
-  it('redirects to / with empty storage when storage is blank', async () => {
-    const storage = installStorage({});
+  it('redirects to / when refresh-cookie restoration fails', async () => {
+    jest.mocked(refreshRequest).mockRejectedValueOnce(new Error('expired refresh cookie'));
     renderLayout();
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
     expect(screen.queryByText('admin content')).toBeNull();
   });
 
-  it('redirects when only a fake msscc_user is present (the original bug)', async () => {
-    const storage = installStorage({ msscc_user: '{}' });
+  it('removes legacy browser storage instead of treating it as a session', async () => {
+    localStorage.setItem('msscc_access_token', 'legacy-access-token');
+    localStorage.setItem('msscc_user', '{}');
+    jest.mocked(refreshRequest).mockRejectedValueOnce(new Error('expired refresh cookie'));
     renderLayout();
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.getItem('msscc_user')).toBeNull();
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(localStorage.getItem('msscc_access_token')).toBeNull();
+    expect(localStorage.getItem('msscc_user')).toBeNull();
     expect(screen.queryByText('admin content')).toBeNull();
   });
 
-  it('redirects and clears storage for a garbage token', async () => {
-    const storage = installStorage({ msscc_access_token: 'not.a.jwt' });
-    renderLayout();
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
-    expect(screen.queryByText('admin content')).toBeNull();
-  });
-
-  it('redirects and clears storage when the server rejects a tampered token', async () => {
-    const storage = installStorage({ msscc_access_token: 'header.payload.tampered' });
-    renderLayout();
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
-    expect(screen.queryByText('admin content')).toBeNull();
-  });
-
-  it('renders the admin content for a valid token', async () => {
-    installStorage({ msscc_access_token: VALID_TOKEN });
+  it('renders admin content after refresh-cookie session restoration', async () => {
+    jest.mocked(refreshRequest).mockResolvedValue({ access: VALID_TOKEN });
     renderLayout();
 
     expect(await screen.findByText('admin content')).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });

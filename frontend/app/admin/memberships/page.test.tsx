@@ -9,6 +9,7 @@ import { confirmMembershipCsv, previewMembershipCsv } from '@/services/membershi
 import { downloadCsv } from '@/utils/exportCsv';
 import { downloadXlsx } from '@/utils/exportXlsx';
 import type { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
+import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
 
 import AdminMembershipsPage from './page';
 
@@ -41,6 +42,7 @@ const membership: MembershipEntry = {
 
 describe('membership table nullable values', () => {
   beforeEach(() => {
+    setAccessToken('test-admin-token');
     jest.mocked(downloadMembershipImportTemplate).mockReset().mockResolvedValue(undefined);
     jest.mocked(previewMembershipCsv).mockReset();
     jest.mocked(confirmMembershipCsv).mockReset();
@@ -51,9 +53,13 @@ describe('membership table nullable values', () => {
     ]);
   });
 
+  afterEach(() => {
+    clearAccessToken();
+  });
+
   it('refreshes the current search and opens imported details outside filtered/paged results', async () => {
     const originalFetch = global.fetch;
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     const saved = { ...membership, membership_id: 42, first_name: 'Imported',
       record_source: 'csv_import' };
     const request = jest.fn().mockResolvedValue({ ok: true, json: async () => saved });
@@ -97,7 +103,7 @@ describe('membership table nullable values', () => {
       expect(confirmMembershipCsv).toHaveBeenCalledTimes(1);
     } finally {
       global.fetch = originalFetch;
-      localStorage.clear();
+      clearAccessToken();
     }
   });
 
@@ -109,7 +115,7 @@ describe('membership table nullable values', () => {
         ...membership, membership_id: 42, first_name: 'Imported', record_source: 'csv_import',
       }) });
     global.fetch = request;
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     jest.mocked(previewMembershipCsv).mockResolvedValue({
       record_type: 'membership', row_count: 1, proposed_records: [],
       errors: [], warnings: [], review_token: 'signed-review',
@@ -141,7 +147,7 @@ describe('membership table nullable values', () => {
       expect(confirmMembershipCsv).toHaveBeenCalledTimes(1);
     } finally {
       global.fetch = originalFetch;
-      localStorage.clear();
+      clearAccessToken();
       log.mockRestore();
     }
   });
@@ -220,7 +226,7 @@ describe('membership table nullable values', () => {
         json: async () => ({ membership_id: 42 }) })
       .mockResolvedValue({ ok: true, json: async () => saved });
     global.fetch = request;
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     try {
       render(<AdminMembershipsPage />);
       await screen.findByRole('table');
@@ -268,7 +274,7 @@ describe('membership table nullable values', () => {
       log.mockRestore();
     } finally {
       global.fetch = originalFetch;
-      localStorage.clear();
+      clearAccessToken();
       jest.restoreAllMocks();
     }
   });

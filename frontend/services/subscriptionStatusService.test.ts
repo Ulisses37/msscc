@@ -1,16 +1,15 @@
 import { fetchSubscriptionStatus } from './subscriptionStatusService';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 describe('fetchSubscriptionStatus', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-admin-token') },
-    });
+    setAccessToken('test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'pending' }) });
   });
 
   afterEach(() => {
+    clearAccessToken();
     jest.restoreAllMocks();
-    Reflect.deleteProperty(globalThis, 'localStorage');
   });
 
   it.each(['donations', 'memberships'] as const)(
@@ -30,7 +29,7 @@ describe('fetchSubscriptionStatus', () => {
   it.each(['http', 'network', 'json', 'invalid', 'auth'])(
     'reports %s failure without leaking private details', async (kind) => {
       const log = jest.spyOn(console, 'error').mockImplementation(() => {});
-      if (kind === 'auth') jest.mocked(localStorage.getItem).mockReturnValue(null);
+      if (kind === 'auth') clearAccessToken();
       if (kind === 'network') jest.mocked(fetch).mockRejectedValue(new Error('private-email'));
       if (kind === 'http') jest.mocked(fetch).mockResolvedValue({ ok: false } as Response);
       if (kind === 'json' || kind === 'invalid') jest.mocked(fetch).mockResolvedValue({

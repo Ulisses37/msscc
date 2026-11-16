@@ -2,8 +2,9 @@
 import { AdminRecord, PermissionRecord } from "./adminRecord";
 import { useState, useEffect } from 'react';
 import { isValidEmail } from '@/utils/emailValidation';
-import { fetchLocalStorageAdmin, getToolTip } from "@/components/admin/AdminPermssionHandler";
+import { getToolTip } from "@/components/admin/AdminPermssionHandler";
 import { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from "@/components/layout/AdminButtonStyles";
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass =
@@ -293,7 +294,6 @@ export async function validateAndSubmit({
     }
   }
 
-  const token = localStorage.getItem("msscc_access_token");
   const url = (pType == "update") ?
   `${process.env.NEXT_PUBLIC_API_URL}/api/admins/update/${admin_id}`
   :
@@ -306,7 +306,7 @@ export async function validateAndSubmit({
       method,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...getAdminRequestHeaders(),
       },
       body: JSON.stringify({
         first_name: firstName,
@@ -348,9 +348,6 @@ export async function confirmAndDelete({
   selectedAdmin : AdminRecord | null;
 }){
   if (!selectedAdmin) return;
-  const token = localStorage.getItem("msscc_access_token");
-
-
   const confirmationOne = window.confirm("Are you sure you want to delete the admin account?\nThis action cannot be undone.")
 
   if(!confirmationOne){
@@ -361,7 +358,7 @@ export async function confirmAndDelete({
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/delete/${selectedAdmin.id}`,{
       method: "DELETE",
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}`} : {}),
+        ...getAdminRequestHeaders(),
       }
     });
 
@@ -398,18 +395,13 @@ export async function confirmAndPromote(
     selectedAdmin: AdminRecord;
     moteType: "promote" | "demote";
 }){
-  const token = localStorage.getItem("msscc_access_token");
-  const devEmail = fetchLocalStorageAdmin()?.email;
-
-  if(devEmail != "msscc.scrumlords.dev@gmail.com") return; // not approved dev email
-
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/promote-executive/${selectedAdmin.id}`,
       {
         method: "PATCH",
         headers:{
           "Content-Type" : "application/json",
-          ...(token ? { Authorization: `Bearer ${token}`} : {}),
+          ...getAdminRequestHeaders(),
         },
         body: JSON.stringify({ is_executive: moteType === "promote"}),
       });
