@@ -40,6 +40,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# The built-in admin is a local development tool, not the Next.js admin portal.
+DJANGO_ADMIN_ENABLED = False
+
 
 # Application definition
 

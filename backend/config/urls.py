@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -21,7 +22,6 @@ from donations.views import run_membership_expiry_reminders_view
 from events.views import run_event_reminders
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('api/media/', include('media.urls')),
     path("api/events/", include("events.urls")),
     path(
@@ -46,3 +46,6 @@ urlpatterns = [
     path("api/emails/", include("emails.urls")),
     path("api/visits/", include ("site_analytics.urls")),
 ]
+
+if settings.DJANGO_ADMIN_ENABLED:
+    urlpatterns.append(path("admin/", admin.site.urls))

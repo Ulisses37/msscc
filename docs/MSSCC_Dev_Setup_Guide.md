@@ -547,6 +547,11 @@ http://127.0.0.1:8000/admin
 ```
 This should load the Django admin login page. Log in with the superuser credentials you created in step 6.
 
+The built-in Django admin is a local development tool, enabled only by
+`config.settings.development`. Its route is disabled in hosted settings. The application's
+admin portal is the separate Next.js frontend at `/admin`, which uses backend APIs and
+does not depend on the built-in Django admin.
+
 ---
 
 ## 10. JetBrains Setup (Optional)
