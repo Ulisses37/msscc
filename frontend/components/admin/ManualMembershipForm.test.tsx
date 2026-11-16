@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { ManualMembershipForm } from './ManualMembershipForm';
+import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
 
 const mockFetch = jest.fn();
 const onCancel = jest.fn();
@@ -23,7 +24,7 @@ function openReview() {
 describe('manual membership entry and confirmation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     global.fetch = mockFetch;
     mockFetch.mockResolvedValue({ ok: true, status: 201,
       json: async () => ({ membership_id: 42 }) });
@@ -32,7 +33,7 @@ describe('manual membership entry and confirmation', () => {
   });
 
   afterEach(() => {
-    localStorage.clear();
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -253,7 +254,7 @@ describe('manual membership entry and confirmation', () => {
   });
 
   it('makes no network request without an admin token', async () => {
-    localStorage.clear();
+    clearAccessToken();
     enterMinimum();
     openReview();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm and save membership' }));

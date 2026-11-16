@@ -3,16 +3,17 @@ import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
 
 import { ImageStorage } from "./imageStorage";
+import { clearAccessToken, setAccessToken } from "@/services/accessTokenStore";
 
 describe("ImageStorage", () => {
   beforeEach(() => {
-    localStorage.setItem("msscc_access_token", "admin-token");
+    setAccessToken("admin-token");
     global.fetch = jest.fn();
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    localStorage.clear();
+    clearAccessToken();
   });
 
   it("uses the database capacity returned by the API", async () => {

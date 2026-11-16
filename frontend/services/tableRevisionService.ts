@@ -1,6 +1,5 @@
 import type { AdminTableRevisions } from '@/types/tableRevision';
-
-const ACCESS_TOKEN_KEY = 'msscc_access_token';
+import { getAdminRequestHeaders } from '@/services/adminRequestHeaders';
 
 /**
  * Fetch revision tokens for use by the visible-tab polling controller.
@@ -10,18 +9,10 @@ const ACCESS_TOKEN_KEY = 'msscc_access_token';
  * page duplicating the authenticated endpoint request.
  */
 export async function fetchTableRevisions(): Promise<AdminTableRevisions> {
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-
-  if (!accessToken) {
-    throw new Error('An access token is required to fetch table revisions.');
-  }
-
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/api/donations/table-revisions/`,
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: getAdminRequestHeaders(),
     },
   );
 

@@ -1,32 +1,18 @@
 // app/admin/documentation/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
 import SupportForm from '@/components/ui/SupportForm';
 
 import { adminPageList, userPageList, canViewPage } from './pageDocumentation';
-import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import PageAccordion from './PageAccordion';
-
-type LocalAdminInfo = {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  permissionData: Record<string, boolean>;
-  isExecutive: boolean;
-};
+import { useAuth } from '@/context/AuthContext';
 
 
 export default function AdminDocumentationPage() {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-
-  const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
-
-  useEffect(() => {
-    setLocalAdmin(fetchLocalStorageAdmin() ?? null);
-  }, []);
+  const { user } = useAuth();
 
   return (
 <div className="mx-auto max-w-5xl space-y-4 p-4 text-sm sm:space-y-5 sm:p-6 sm:text-base">
@@ -75,9 +61,9 @@ export default function AdminDocumentationPage() {
   {/* Admin-Side Information */}
   <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-pink-faint p-3 sm:p-4">
     <div className="text-lg sm:text-heading-2">Admin-Side Information</div>
-          {localAdmin &&
+          {user &&
             adminPageList
-            .filter((page) => canViewPage(page, localAdmin))
+            .filter((page) => canViewPage(page, user))
               .map((page) => (
               <PageAccordion
                 key={page.pageName}

@@ -1,7 +1,7 @@
 import { confirmDonationCsv, DonationCsvReviewRejected, previewDonationCsv } from './donationImportPreview';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 const originalFetch = global.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 const file = new File(['fictional donation'], 'donations.csv', { type: 'text/csv' });
 const preview = {
   record_type: 'donation', row_count: 1, proposed_records: [], errors: [], warnings: [],
@@ -9,17 +9,14 @@ const preview = {
 
 describe('donation CSV read-only preview request', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-token') },
-    });
+    setAccessToken('test-token');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => preview });
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
-    else Reflect.deleteProperty(globalThis, 'localStorage');
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -45,7 +42,7 @@ describe('donation CSV read-only preview request', () => {
       if (failure === 'missing warnings') jest.mocked(fetch).mockResolvedValue({
         ok: true, json: async () => ({ record_type: 'donation', errors: [], proposed_records: [] }),
       });
-      if (failure === 'no token') jest.mocked(localStorage.getItem).mockReturnValue(null);
+      if (failure === 'no token') clearAccessToken();
       await expect(previewDonationCsv(file)).rejects.toThrow('Check your finance access');
       expect(console.error).toHaveBeenCalledWith('Unable to preview donation CSV.');
       if (failure === 'no token') expect(fetch).not.toHaveBeenCalled();
@@ -59,15 +56,12 @@ describe('donation CSV signed confirmation request', () => {
     donation_ids: [7, 8], already_imported: false,
   };
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-token') },
-    });
+    setAccessToken('test-token');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 201, json: async () => receipt });
   });
   afterEach(() => {
     global.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
-    else Reflect.deleteProperty(globalThis, 'localStorage');
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -93,7 +87,7 @@ describe('donation CSV signed confirmation request', () => {
   });
 
   it('does not send a request without an admin token', async () => {
-    jest.mocked(localStorage.getItem).mockReturnValue(null);
+    clearAccessToken();
     await expect(confirmDonationCsv(file, 'signed-review', false))
       .rejects.toBeInstanceOf(DonationCsvReviewRejected);
     expect(fetch).not.toHaveBeenCalled();
