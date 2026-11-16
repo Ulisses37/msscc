@@ -26,19 +26,19 @@ function clearLegacyAuthStorage(): void {
 }
 
 function hasActiveAdminSession(): boolean {
-  return typeof window !== 'undefined' && sessionStorage.getItem(ACTIVE_ADMIN_SESSION_KEY) === 'true';
+  return typeof window !== 'undefined' && localStorage.getItem(ACTIVE_ADMIN_SESSION_KEY) === 'true';
 }
 
 function markActiveAdminSession(): void {
   if (typeof window === 'undefined') return;
 
-  sessionStorage.setItem(ACTIVE_ADMIN_SESSION_KEY, 'true');
+  localStorage.setItem(ACTIVE_ADMIN_SESSION_KEY, 'true');
 }
 
 function clearActiveAdminSession(): void {
   if (typeof window === 'undefined') return;
 
-  sessionStorage.removeItem(ACTIVE_ADMIN_SESSION_KEY);
+  localStorage.removeItem(ACTIVE_ADMIN_SESSION_KEY);
 }
 
 interface AuthProviderProps {
@@ -107,6 +107,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     clearLegacyAuthStorage();
+
+    if (!hasActiveAdminSession()) {
+      setIsLoading(false);
+      return;
+    }
+
     void refreshSession().finally(() => setIsLoading(false));
   }, [refreshSession]);
 
