@@ -21,7 +21,9 @@ interface MembershipPaymentElementProps {
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 // Share one Stripe.js instance; never pass the account secret key to the browser.
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+const stripePromise = publishableKey && process.env.NEXT_PUBLIC_PAYMENTS_ENABLED !== 'false'
+  ? loadStripe(publishableKey)
+  : null;
 
 function MembershipPaymentForm({
   locale,

@@ -181,7 +181,9 @@ def update_permissions(request, admin_id):
 
 @api_view(["POST"])
 def password_reset_request(request):
-    """Send a password reset link to the email if an account exists. Always returns 200."""
+    """Request a reset without disclosing account existence, or report email disabled."""
+    if not settings.EMAIL_ENABLED:
+        return Response({"detail": "Email is unavailable."}, status=503)
     email = request.data.get("email", "").strip()
 
     if email:
@@ -238,6 +240,8 @@ def password_reset_confirm(request):
 @permission_classes([IsExecutiveAdmin])
 def create_admin(request):
     """Create a new admin user and email them a link to set their password."""
+    if not settings.EMAIL_ENABLED:
+        return Response({"detail": "Email invitations are unavailable."}, status=503)
     serializer = AdminCreateSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

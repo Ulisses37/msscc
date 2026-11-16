@@ -5,6 +5,8 @@ Repo: https://github.com/Ulisses37/msscc
 
 This guide walks you through setting up your local development environment from scratch. Follow the section for your OS. If you run into something not covered here, message the team on Discord before spending too long on it.
 
+For hosted staging setup, see [Staging deployment](staging-deployment.md).
+
 > **Active contributors:** `.env` values are stored in the shared team OneDrive. Ask on Discord for access if you don't have it. External replicators will need to supply their own credentials for each service.
 
 ---
@@ -567,6 +569,11 @@ To verify the backend specifically, navigate to:
 http://127.0.0.1:8000/admin
 ```
 This should load the Django admin login page. Log in with the superuser credentials you created in step 6.
+
+The built-in Django admin is a local development tool, enabled only by
+`config.settings.development`. Its route is disabled in hosted settings. The application's
+admin portal is the separate Next.js frontend at `/admin`, which uses backend APIs and
+does not depend on the built-in Django admin.
 
 ---
 

@@ -75,6 +75,9 @@ class PaymentSessionCreateView(APIView):
         information required by the frontend.
         """
 
+        if not settings.STRIPE_ENABLED:
+            return Response({"detail": "Online payments are unavailable."}, status=503)
+
         # Pass the incoming JSON body to the serializer.
         serializer = PaymentSessionRequestSerializer(data=request.data)
 
@@ -192,6 +195,8 @@ class MembershipPaymentSessionCreateView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        if not settings.STRIPE_ENABLED:
+            return Response({"detail": "Online payments are unavailable."}, status=503)
         serializer = MembershipPaymentSessionRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         option_id = serializer.validated_data["membership_option_id"]
@@ -598,7 +603,7 @@ class StripeWebhookView(APIView):
 
         webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
-        if not webhook_secret:
+        if not settings.STRIPE_ENABLED or not webhook_secret:
             logger.error("Stripe webhook secret is not configured.")
             return Response(
                 {"detail": "Webhook is not configured."},
