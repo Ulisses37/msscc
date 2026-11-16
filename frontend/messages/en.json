@@ -1,4 +1,7 @@
 {
+  "Deployment": {
+    "paymentsUnavailable": "Online payments are currently unavailable."
+  },
   "HomePageTest": {
     "home": "Home"
   },
@@ -34,6 +37,7 @@
     "emailLabel": "Email",
     "invalidEmail": "Please enter a valid email address",
     "genericError": "Something went wrong. Please try again.",
+    "emailUnavailable": "Password recovery by email is currently unavailable.",
     "submit": "Send reset link",
     "sending": "Sending…",
     "success": "If an account exists with that email, a reset link has been sent."

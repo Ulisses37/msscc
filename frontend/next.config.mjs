@@ -25,6 +25,11 @@ const nextConfig = {
   //enables images from external storage server
   images: {
     remotePatterns: [
+      ...(process.env.MEDIA_PUBLIC_HOST ? [{
+        protocol: 'https',
+        hostname: process.env.MEDIA_PUBLIC_HOST,
+        pathname: '/**',
+      }] : []),
       {
         protocol: 'https',
         hostname: 'msscc-storage.uahomeserver.net',

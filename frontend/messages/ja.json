@@ -1,4 +1,7 @@
 {
+  "Deployment": {
+    "paymentsUnavailable": "現在、オンライン決済はご利用いただけません。"
+  },
   "HomePageTest": {
     "home": "ホーム"
   },
@@ -34,6 +37,7 @@
     "emailLabel": "メールアドレス",
     "invalidEmail": "有効なメールアドレスを入力してください",
     "genericError": "問題が発生しました。もう一度お試しください。",
+    "emailUnavailable": "現在、メールによるパスワードの再設定はご利用いただけません。",
     "submit": "再設定リンクを送信",
     "sending": "送信中…",
     "success": "そのメールアドレスのアカウントが存在する場合、パスワード再設定用のリンクを送信しました。"

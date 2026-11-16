@@ -264,6 +264,9 @@ RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
 
 # Which email provider adapter emails.providers.get_provider() returns.
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "resend")
+EMAIL_ENABLED = (os.getenv("EMAIL_ENABLED") or str(bool(RESEND_API_KEY))).lower() in (
+    "true", "1", "yes"
+)
 
 # The Resend segment every mailing-list contact belongs to and every
 # announcement Broadcast is sent to.
@@ -282,7 +285,7 @@ EMAIL_SEND_TO_DEV = os.getenv("EMAIL_SEND_TO_DEV", "false").lower() in ("true", 
 # procedure in docs/ has been completed. An unset variable means off.
 EVENT_ANNOUNCEMENTS_ENABLED = os.getenv(
     "EVENT_ANNOUNCEMENTS_ENABLED", "false"
-).lower() in ("true", "1", "yes")
+).lower() in ("true", "1", "yes") and EMAIL_ENABLED
 
 # Membership expiry reminder emails. Ships dark for the same reason as the event
 # announcements above: no verified sending domain yet. A dry run ignores this
@@ -290,20 +293,21 @@ EVENT_ANNOUNCEMENTS_ENABLED = os.getenv(
 # unset variable means off.
 MEMBERSHIP_REMINDERS_ENABLED = os.getenv(
     "MEMBERSHIP_REMINDERS_ENABLED", "false"
-).lower() in ("true", "1", "yes")
+).lower() in ("true", "1", "yes") and EMAIL_ENABLED
 
 # Shared secret used to authenticate external schedulers (e.g. a Railway cron
 # job or CI task) when they hit the protected trigger endpoints:
 # /api/trigger/event-reminders/ and /api/trigger/membership-reminders/.
 # Requests must present the value in the "X-API-Key" header.
-TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY", "dev-trigger-key")
+TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY", "")
 
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-if not STRIPE_SECRET_KEY:
-    raise RuntimeError(
-        "STRIPE_SECRET_KEY environment variable is required."
-    )
+STRIPE_ENABLED = (os.getenv("STRIPE_ENABLED") or str(bool(STRIPE_SECRET_KEY))).lower() in (
+    "true", "1", "yes"
+)
 
 # Stripe uses this secret to prove that webhook requests came from Stripe.
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+if STRIPE_ENABLED and not (STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET):
+    raise ImproperlyConfigured("Enabled Stripe requires secret and webhook keys.")

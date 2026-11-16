@@ -21,7 +21,10 @@ from django.urls import include, path
 from donations.views import run_membership_expiry_reminders_view
 from events.views import run_event_reminders
 
+from .views import health
+
 urlpatterns = [
+    path("health/", health, name="health"),
     path('api/media/', include('media.urls')),
     path("api/events/", include("events.urls")),
     path(

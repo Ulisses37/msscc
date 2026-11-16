@@ -5,6 +5,8 @@ Repo: https://github.com/Ulisses37/msscc
 
 This guide walks you through setting up your local development environment from scratch. Follow the section for your OS. If you run into something not covered here, message the team on Discord before spending too long on it.
 
+For hosted staging setup, see [Staging deployment](staging-deployment.md).
+
 > **Active contributors:** `.env` values are stored in the shared team OneDrive. Ask on Discord for access if you don't have it. External replicators will need to supply their own credentials for each service.
 
 ---
