@@ -153,6 +153,42 @@ class SeedStaticMediaCommandTests(TestCase):
         self.assertEqual(StaticImage.objects.count(), 0)
         self.assertEqual(MediaAsset.objects.count(), 0)
 
+    def test_empty_creates_reserved_slots_without_assets_or_storage(self) -> None:
+        output = StringIO()
+
+        with patch(
+            "media.management.commands.seed_static_media.persist_media_asset"
+        ) as persist_media_asset:
+            call_command("seed_static_media", "--empty", stdout=output)
+
+        self.assertEqual(
+            list(
+                StaticImage.objects.values_list(
+                    "static_image_id", "display_name", "media_asset_id"
+                )
+            ),
+            [(0, "Placeholder", None), (1, "Banner", None)],
+        )
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        persist_media_asset.assert_not_called()
+        self.assertIn("Created: 2; linked: 0; skipped: 0.", output.getvalue())
+
+    def test_empty_dry_run_does_not_require_source_assets(self) -> None:
+        (self.asset_directory / "Placeholder.png").unlink()
+        (self.asset_directory / "Banner.webp").unlink()
+
+        output = StringIO()
+        call_command(
+            "seed_static_media",
+            *self.command_args("--empty", "--dry-run"),
+            stdout=output,
+        )
+
+        self.assertEqual(StaticImage.objects.count(), 0)
+        self.assertEqual(MediaAsset.objects.count(), 0)
+        self.assertIn("Would create empty static media: Placeholder (0)", output.getvalue())
+        self.assertIn("Would create empty static media: Banner (1)", output.getvalue())
+
     def test_missing_asset_fails_before_writing(self) -> None:
         missing_path = self.asset_directory / "missing.png"
 
