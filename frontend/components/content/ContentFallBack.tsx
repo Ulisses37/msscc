@@ -71,10 +71,7 @@ function FallbackContent({ source }: { source: FallbackSource }) {
 export function FallBack({ source }: { source: FallbackSource }) {
   return (
     <section className="mx-auto max-w-content px-6 py-10">
-      <div>
-        <br/>
-        <FallbackContent source={source} />
-      </div>
+      <FallbackContent source={source} />
     </section>
   );
 }
