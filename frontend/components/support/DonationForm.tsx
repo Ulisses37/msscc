@@ -12,6 +12,7 @@ import {
   isValidDonationAmount,
 } from '@/constants/donationAmounts';
 import { subscribeToUpdates } from '@/services/emailService';
+import { isValidEmail } from '@/utils/emailValidation';
 import { createPaymentSession, getDonationQuote, readDonationQuote, type DonationQuote } from '@/services/paymentService';
 import { formatCurrency } from '@/utils/formatCurrency';
 
@@ -258,9 +259,8 @@ export function DonationForm() {
       }[paymentStatus]
     : '';
 
-  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(
-    email.trim(),
-  );
+  const emailIsValid = isValidEmail(email.trim());
+  const showEmailError = emailTouched && !emailIsValid;
 
   // One effective amount feeds validation, the review summary, the donation
   // record and Stripe session. A missing/unknown option cannot fall back to a
@@ -506,14 +506,14 @@ export function DonationForm() {
             disabled={fieldsAreLocked}
             required
             className={inputClassName}
-            aria-invalid={emailTouched && !emailIsValid}
+            aria-invalid={showEmailError}
             aria-describedby={
-              emailTouched && !emailIsValid ? 'email-error' : undefined
+              showEmailError ? 'email-error' : undefined
             }
           />
 
-          {emailTouched && !emailIsValid && (
-            <p id="email-error" className="mt-1 text-sm text-red-600">
+          {showEmailError && (
+            <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
               {t('emailError')}
             </p>
           )}
