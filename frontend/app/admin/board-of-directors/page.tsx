@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import {DirectorCardPreview, OfficerCardPreview, MemberPopUp} from "./BoardOfDirectorCards";
 import { parseMediaUploadError } from '@/utils/mediaUploadError';
+import { addButtonClass } from "@/components/layout/AdminButtonStyles";
 
 
 export interface BoardMember {
@@ -43,7 +44,6 @@ export default function BoardOfDirectors() {
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/`).then(res => res.json()),
       ])
         .then(([members, mediaAssets]: [unknown[], unknown[]]) => {
-          console.log("raw members:", members);
           const mediaById = new Map(
             (mediaAssets as {media_asset_id: number; file_url: string | null}[])
               .map(m => [m.media_asset_id, m])
@@ -94,7 +94,7 @@ export default function BoardOfDirectors() {
               setSelectedMember(createBoardMemberDraft('officer'));
               setIsOpen('officer');
             }}
-            className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+            className={addButtonClass}
           >
             Add
           </button>
@@ -127,7 +127,7 @@ export default function BoardOfDirectors() {
               setSelectedMember(createBoardMemberDraft('director'));
               setIsOpen('director');
             }}
-            className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
+            className={addButtonClass}
           >
             Add
           </button>

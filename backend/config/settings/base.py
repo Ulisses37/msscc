@@ -40,6 +40,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# The built-in admin is a local development tool, not the Next.js admin portal.
+DJANGO_ADMIN_ENABLED = False
+
 
 # Application definition
 
@@ -57,6 +60,7 @@ INSTALLED_APPS = [
     'accounts',
     'emails',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
 
     'media',
     "events",
@@ -135,12 +139,25 @@ MEDIA_WEBP_METHOD = int(os.getenv("MEDIA_WEBP_METHOD", 4))
 MEDIA_MAX_FILENAME_LENGTH = int(os.getenv("MEDIA_MAX_FILENAME_LENGTH", 255))
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
-    "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# Refresh tokens are deliberately unavailable to JavaScript. Production overrides
+# the secure flag so browsers only transmit the cookie over HTTPS.
+JWT_REFRESH_COOKIE_NAME = "msscc_refresh_token"
+JWT_REFRESH_COOKIE_PATH = "/api/auth/"
+JWT_REFRESH_COOKIE_SECURE = os.getenv("JWT_REFRESH_COOKIE_SECURE", "false").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+JWT_REFRESH_COOKIE_SAMESITE = os.getenv("JWT_REFRESH_COOKIE_SAMESITE", "lax").lower()
+CSRF_COOKIE_SECURE = JWT_REFRESH_COOKIE_SECURE
+CSRF_COOKIE_SAMESITE = JWT_REFRESH_COOKIE_SAMESITE
 
 AUTH_USER_MODEL = "accounts.AdminUser"
 
@@ -176,6 +193,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS',
                                       'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    "CSRF_TRUSTED_ORIGINS",
+    ",".join(CORS_ALLOWED_ORIGINS),
+).split(",")
 
 CORS_ALLOW_METHODS = [
     "GET",
@@ -261,6 +283,9 @@ RESEND_DEV_ALERT_EMAIL = os.getenv("RESEND_DEV_ALERT_EMAIL")
 
 # Which email provider adapter emails.providers.get_provider() returns.
 EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "resend")
+EMAIL_ENABLED = (os.getenv("EMAIL_ENABLED") or str(bool(RESEND_API_KEY))).lower() in (
+    "true", "1", "yes"
+)
 
 # The Resend segment every mailing-list contact belongs to and every
 # announcement Broadcast is sent to.
@@ -279,7 +304,7 @@ EMAIL_SEND_TO_DEV = os.getenv("EMAIL_SEND_TO_DEV", "false").lower() in ("true", 
 # procedure in docs/ has been completed. An unset variable means off.
 EVENT_ANNOUNCEMENTS_ENABLED = os.getenv(
     "EVENT_ANNOUNCEMENTS_ENABLED", "false"
-).lower() in ("true", "1", "yes")
+).lower() in ("true", "1", "yes") and EMAIL_ENABLED
 
 # Membership expiry reminder emails. Ships dark for the same reason as the event
 # announcements above: no verified sending domain yet. A dry run ignores this
@@ -287,20 +312,21 @@ EVENT_ANNOUNCEMENTS_ENABLED = os.getenv(
 # unset variable means off.
 MEMBERSHIP_REMINDERS_ENABLED = os.getenv(
     "MEMBERSHIP_REMINDERS_ENABLED", "false"
-).lower() in ("true", "1", "yes")
+).lower() in ("true", "1", "yes") and EMAIL_ENABLED
 
 # Shared secret used to authenticate external schedulers (e.g. a Railway cron
 # job or CI task) when they hit the protected trigger endpoints:
 # /api/trigger/event-reminders/ and /api/trigger/membership-reminders/.
 # Requests must present the value in the "X-API-Key" header.
-TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY", "dev-trigger-key")
+TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY", "")
 
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-if not STRIPE_SECRET_KEY:
-    raise RuntimeError(
-        "STRIPE_SECRET_KEY environment variable is required."
-    )
+STRIPE_ENABLED = (os.getenv("STRIPE_ENABLED") or str(bool(STRIPE_SECRET_KEY))).lower() in (
+    "true", "1", "yes"
+)
 
 # Stripe uses this secret to prove that webhook requests came from Stripe.
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+if STRIPE_ENABLED and not (STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET):
+    raise ImproperlyConfigured("Enabled Stripe requires secret and webhook keys.")

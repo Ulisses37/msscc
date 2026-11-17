@@ -6,6 +6,8 @@ import PostImage from '@/components/ui/PostImage'
 import { parseMediaUploadError } from '@/utils/mediaUploadError'
 import Image from 'next/image'
 
+import { primaryButtonClass, secondaryButtonClass, dangerButtonClass } from '@/components/layout/AdminButtonStyles'
+
 export interface PartnerProp{
   DisplayOrder: number;
   PartnerID: number;
@@ -28,9 +30,6 @@ const disabledInputClass = "mt-1 w-full cursor-not-allowed rounded-md border bor
 const checkboxClass = "h-4 w-4 accent-msscc-pink";
 const checkboxLabelClass = "flex items-center gap-2 text-body-sm text-msscc-gray-dark";
 const errorTextClass = "mt-1 text-body-sm text-msscc-danger";
-const primaryButtonClass = "w-full rounded-md bg-msscc-pink px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-pink disabled:cursor-not-allowed disabled:opacity-50";
-const secondaryButtonClass = "w-full rounded-md border border-msscc-pink px-4 py-2 text-msscc-pink focus-visible:ring-2 focus-visible:ring-msscc-pink";
-const dangerButtonClass = "w-full rounded-md bg-msscc-danger px-4 py-2 text-msscc-white focus-visible:ring-2 focus-visible:ring-msscc-danger";
 const modalOverlayClass = "fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4";
 const modalTitleClass = "mb-4 font-heading text-xl text-msscc-teal sm:text-2xl";
 
@@ -319,6 +318,7 @@ export function CreatePartnerProp(
             <ImportImage
               id="create-partner-media"
               onChange={handleMediaChange}
+              enableCrop
             />
             {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
             {previewUrl && (
@@ -377,7 +377,7 @@ export function CreatePartnerProp(
             disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
             className={primaryButtonClass}
           >
-            Save
+            Add
           </button>
           <button
             type="button"
@@ -587,6 +587,7 @@ export function EditPartnerProp(
               <ImportImage
                 id="edit-partner-media"
                 onChange={handleMediaChange}
+                enableCrop
               />
               {isUploadingMedia && <p className="mt-1 text-body-sm text-msscc-gray-mid">Uploading image…</p>}
               {previewUrl && (
@@ -653,7 +654,22 @@ export function EditPartnerProp(
           </div>
         </div>
         {/* On phones: Save on top, Delete at the bottom */}
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleUpdateSubmit}
+            disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            className={primaryButtonClass}
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className={secondaryButtonClass}
+          >
+            Cancel
+          </button>
           <button
             type="button"
             onClick={async() => await validateAndSubmit(
@@ -665,21 +681,6 @@ export function EditPartnerProp(
             className={dangerButtonClass}
           >
             Delete
-          </button>
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className={secondaryButtonClass}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleUpdateSubmit}
-            disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
-            className={primaryButtonClass}
-          >
-            Save
           </button>
         </div>
       </div>

@@ -3,9 +3,9 @@ import {
 } from './manualDonation';
 
 import type { ManualDonationInput } from '@/types/manualDonation';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 const originalFetch = global.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 const input: ManualDonationInput = {
   donorFirstName: 'Maya', donorLastName: 'Donor', donorEmail: 'donor@example.test',
   address: 'Historical address', amount: '35.00', currency: 'usd', donationDate: '1990-01-02',
@@ -14,9 +14,7 @@ const input: ManualDonationInput = {
 
 describe('manual donation service boundaries', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-admin-token') },
-    });
+    setAccessToken('test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({
       ok: true, status: 201, json: async () => ({ donation_id: 42 }),
     });
@@ -25,8 +23,7 @@ describe('manual donation service boundaries', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
-    else Reflect.deleteProperty(globalThis, 'localStorage');
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -96,7 +93,7 @@ describe('manual donation service boundaries', () => {
 
   it.each(['id', 'http', 'network', 'json', 'auth'])(
     'reports safe retryable detail errors for %s failures', async (kind) => {
-      if (kind === 'auth') jest.mocked(localStorage.getItem).mockReturnValue(null);
+      if (kind === 'auth') clearAccessToken();
       if (kind === 'network') jest.mocked(fetch).mockRejectedValue(new Error('private-response'));
       if (kind === 'http') jest.mocked(fetch).mockResolvedValue({ ok: false } as Response);
       if (kind === 'id' || kind === 'json') jest.mocked(fetch).mockResolvedValue({

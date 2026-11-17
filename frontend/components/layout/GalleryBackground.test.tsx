@@ -88,6 +88,14 @@ describe('GalleryBackground', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Expand gallery controls' }));
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    const initialImage = document.querySelector('img[data-slot="0"]');
+    expect(initialImage).toBeInTheDocument();
+    fireEvent.load(initialImage as HTMLImageElement);
+  }
+
+  function getSlotImage(slot: 0 | 1) {
+    return document.querySelector(`img[data-slot="${slot}"]`) as HTMLImageElement | null;
   }
 
   it('starts with the pill collapsed', async () => {
@@ -109,6 +117,15 @@ describe('GalleryBackground', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
 
     act(() => jest.advanceTimersByTime(1));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    const incomingImage = getSlotImage(1);
+    expect(incomingImage).toBeInTheDocument();
+    expect(incomingImage).toHaveClass('gallery-image--incoming-pending');
+
+    fireEvent.load(incomingImage as HTMLImageElement);
+    expect(incomingImage).toHaveClass('gallery-image--incoming');
+    act(() => jest.advanceTimersByTime(1100));
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
   });
 
@@ -116,13 +133,44 @@ describe('GalleryBackground', () => {
     await renderGallery();
 
     fireEvent.click(screen.getByRole('button', { name: 'Show next gallery image' }));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    const incomingImage = getSlotImage(1);
+    expect(incomingImage).toBeInTheDocument();
+    expect(incomingImage).toHaveClass('gallery-image--incoming-pending');
+
+    fireEvent.load(incomingImage as HTMLImageElement);
+    act(() => jest.advanceTimersByTime(1100));
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
 
     act(() => jest.advanceTimersByTime(9999));
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
 
     act(() => jest.advanceTimersByTime(1));
+    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+
+    const secondIncomingImage = getSlotImage(0);
+    expect(secondIncomingImage).toBeInTheDocument();
+    fireEvent.load(secondIncomingImage as HTMLImageElement);
+    act(() => jest.advanceTimersByTime(1100));
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
+  });
+
+  it('keeps the current image visible until the next image is ready', async () => {
+    await renderGallery();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show next gallery image' }));
+
+    const currentImage = getSlotImage(0);
+    const incomingImage = getSlotImage(1);
+    expect(currentImage).toHaveClass('gallery-image--outgoing-pending');
+    expect(incomingImage).toHaveClass('gallery-image--incoming-pending');
+
+    fireEvent.error(incomingImage as HTMLImageElement);
+
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(getSlotImage(1)).not.toBeInTheDocument();
+    expect(getSlotImage(0)).toHaveClass('gallery-image--current');
   });
 
   it('collapses and expands the pill without changing the active image', async () => {
@@ -188,6 +236,12 @@ describe('GalleryBackground', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
 
     act(() => jest.advanceTimersByTime(1));
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    const incomingImage = getSlotImage(1);
+    expect(incomingImage).toBeInTheDocument();
+    fireEvent.load(incomingImage as HTMLImageElement);
+    act(() => jest.advanceTimersByTime(1100));
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
   });
 

@@ -229,6 +229,8 @@ class DonationListCreateView(EncryptedPIIResponseMixin, generics.ListCreateAPIVi
 
     def create(self, request, *args, **kwargs):
         """Create a donation without exposing database failure details."""
+        if not settings.STRIPE_ENABLED:
+            return Response({"detail": "Online payments are unavailable."}, status=503)
         try:
             return super().create(request, *args, **kwargs)
         except DatabaseError:
@@ -371,7 +373,7 @@ def run_membership_expiry_reminders_view(request):
     is distinguishable from a healthy one.
     """
     api_key = request.headers.get("X-API-Key", "")
-    if api_key != settings.TRIGGER_API_KEY:
+    if not settings.TRIGGER_API_KEY or api_key != settings.TRIGGER_API_KEY:
         return JsonResponse({"error": "Unauthorized"}, status=403)
 
     tally = run_membership_expiry_reminders()
@@ -387,7 +389,7 @@ class DashboardDonationListView(EncryptedPIIResponseMixin, generics.ListAPIView)
     def get_queryset(self):
         return (
             Donation.objects.filter(payment_status=Donation.PaymentStatus.COMPLETED)
-            .order_by("-created_at", "-donation_id")[:50]
+            .order_by("-donation_date", "-donation_id")[:50]
         )
 
 
@@ -400,7 +402,7 @@ class DashboardMembershipListView(EncryptedPIIResponseMixin, generics.ListAPIVie
     def get_queryset(self):
         return (
             Membership.objects.filter(status__iexact="active")
-            .order_by("-created_at", "-membership_id")[:50]
+            .order_by("-start_date", "-membership_id")[:50]
         )
 
 ZERO = Decimal("0.00")

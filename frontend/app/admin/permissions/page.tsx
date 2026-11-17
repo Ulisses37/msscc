@@ -1,22 +1,61 @@
 "use client";
 import { AdminRecord } from "./adminRecord";
 import { PermissionCard, AdminPopup } from "./permissionsCard";
-import { useEffect, useState } from "react";
-import { fetchLocalStorageAdmin } from "@/components/admin/AdminPermssionHandler";
+import { useCallback, useEffect, useState } from "react";
+import { addButtonClass } from "@/components/layout/AdminButtonStyles";
+import { useAuth } from "@/context/AuthContext";
+import { getAdminRequestHeaders } from "@/services/adminRequestHeaders";
 
 
 export default function AdminPermissionPage(){
-  const logInAdmin = fetchLocalStorageAdmin();
-  const logInType = getLogInType();
+  const { user } = useAuth();
 
   const [adminList, setAdminList] = useState<AdminRecord[]>([]);
+  const [isSuperuser, setIsSuperuser] = useState<boolean | null>(null); // null = still loading
 
   const [selectedAdmin, setSelectedAdmin] = useState<AdminRecord | null>(null);
   const [adminPopupType, setAdminPopUpType] = useState<string>("")
 
+  // Empty while loading so a superuser never briefly sees the wrong label
+  const logInType =
+    isSuperuser === null ? "" : isSuperuser ? "Developer Admin" : "Executive Admin";
+
+
+  const loadAdmins = useCallback(async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`, {
+        headers: getAdminRequestHeaders(),
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
+      const allAdmins: AdminRecord[] = await res.json();
+      const superuser = user?.isSuperuser ?? false;
+      setIsSuperuser(superuser);
+
+      setAdminList(
+        allAdmins
+          .filter((admin) => {
+            if (admin.is_superuser) return false;
+            if (superuser) return true;
+            return !admin.is_executive;
+          })
+          .sort(
+            (firstAdmin, secondAdmin) =>
+              Number(secondAdmin.is_executive) - Number(firstAdmin.is_executive) ||
+              firstAdmin.first_name.localeCompare(secondAdmin.first_name) ||
+              firstAdmin.last_name.localeCompare(secondAdmin.last_name),
+          ),
+      );
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      setIsSuperuser(false);
+      setAdminList([]);
+    }
+  }, [user?.isSuperuser]);
+
   useEffect(() => {
-    filterAdmins().then(setAdminList);
-  }, []);
+    if (user) void loadAdmins();
+  }, [loadAdmins, user]);
 
   return(
     <div className="flex min-h-dvh w-full flex-col items-center bg-msscc-white px-2 py-4 font-body text-msscc-gray-dark sm:p-6 md:p-10">
@@ -39,7 +78,7 @@ export default function AdminPermissionPage(){
             </div>
             <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
               <div className="break-words text-body-sm text-white">
-                {logInAdmin?.firstName + " " + logInAdmin?.lastName}
+                {user ? `${user.firstName} ${user.lastName}` : ""}
               </div>
             </div>
 
@@ -49,9 +88,9 @@ export default function AdminPermissionPage(){
             <div className="mx-2 rounded-sm bg-msscc-pink-light pl-1">
               <div
                 className="truncate text-body-sm text-white"
-                title={logInAdmin?.email}
+                title={user?.email}
               >
-                {logInAdmin?.email}
+                {user?.email}
               </div>
             </div>
           </aside>
@@ -64,22 +103,22 @@ export default function AdminPermissionPage(){
             <h2 className="font-heading text-heading-2 text-msscc-teal">
               Admin List
             </h2>
-<div className="flex flex-1 justify-end gap-2 sm:gap-4">
-    <button
-      type="button"
-      className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
-      onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
-    >
-      Add
-    </button>
-  <button
-    type="button"
-    className="rounded-sm bg-msscc-pink px-2 py-1 text-center text-xs tracking-btn text-white transition-colors hover:bg-msscc-pink-dark sm:px-5 sm:py-2 sm:text-btn"
-    onClick={() => updateDatabase()}
-  >
-    Update
-  </button>
-</div>
+            <div className="flex flex-1 justify-end gap-2 sm:gap-4">
+              <button
+                type="button"
+                className={addButtonClass}
+                onClick={() => { setSelectedAdmin(null); setAdminPopUpType("create"); }}
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                className={addButtonClass}
+                onClick={() => updateDatabase()}
+              >
+                Update
+              </button>
+            </div>
           </div>
 
           {adminList.map((record) => (
@@ -125,7 +164,10 @@ export default function AdminPermissionPage(){
         adminList.map(record =>
             fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/${record.id}/permissions/`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...getAdminRequestHeaders(),
+                },
                 body: JSON.stringify({ permissions: record.permissions }),
             })
         )
@@ -134,42 +176,4 @@ export default function AdminPermissionPage(){
     });
   }
 
-  function getLogInType(){
-    if (logInAdmin?.email == "msscc.scrumlords.dev@gmail.com"){
-      return "Developer Admin";
-    }else if (logInAdmin?.isExecutive){
-      return "Executive Admin"
-    }
-    return "Admin"
-  }
-
-  async function filterAdmins() {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admins/`);
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-
-      const allAdminList: AdminRecord[] = await res.json();
-
-      return allAdminList.filter(a => {
-        const isDeveloper = a.email === "msscc.scrumlords.dev@gmail.com";
-        const isSelf = a.email === logInAdmin?.email;
-
-        switch (logInType) {
-          case "Developer Admin":
-            return !isDeveloper;
-          case "Executive Admin":
-            return (!isDeveloper && !a.is_executive);
-          default: // "Admin"
-            return !isDeveloper && !a.is_executive && !isSelf;
-        }
-    }).sort((a, b) =>
-      Number(b.is_executive) - Number(a.is_executive) ||
-      a.first_name.localeCompare(b.first_name) ||
-      a.last_name.localeCompare(b.last_name)
-    );
-    } catch (error) {
-      console.error("Error fetching admins:", error);
-      return [];
-    }
-  }
 }

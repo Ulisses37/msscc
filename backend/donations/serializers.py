@@ -429,14 +429,20 @@ class ManualMembershipCreateSerializer(MembershipSerializer):
         return attrs
 
 class DashboardDonationSerializer(serializers.ModelSerializer):
-    donor_first_name = serializers.CharField(source="donor_first_name_encrypted", read_only=True)
-    donor_last_name = serializers.CharField(source="donor_last_name_encrypted", read_only=True)
+    donor_first_name = serializers.SerializerMethodField()
+    donor_last_name = serializers.SerializerMethodField()
     amount = serializers.DecimalField(
         max_digits=10, decimal_places=2, coerce_to_string=False, read_only=True)
 
+    def get_donor_first_name(self, obj):
+        return "Anonymous" if obj.is_anonymous else obj.donor_first_name_encrypted
+
+    def get_donor_last_name(self, obj):
+        return "" if obj.is_anonymous else obj.donor_last_name_encrypted
+
     class Meta:
         model = Donation
-        fields = ["donor_first_name", "donor_last_name", "amount", "created_at"]
+        fields = ["donor_first_name", "donor_last_name", "amount", "donation_date", "donation_id"]
         read_only_fields = fields
 
 
@@ -446,5 +452,5 @@ class DashboardMembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["first_name", "last_name", "membership_type", "created_at"]
+        fields = ["first_name", "last_name", "membership_type", "start_date", "membership_id"]
         read_only_fields = fields

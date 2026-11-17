@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
+import { useAuth } from '@/context/AuthContext';
 
 import { getEvents } from '@/services/eventService';
 import type { Event } from '@/types/event';
@@ -13,51 +13,34 @@ import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchDashboardFinancialRecords } from '@/services/financialRecordSearch';
 
-import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel } from './pageDisplay';
+import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel, CurrentAdmin } from './pageDisplay';
 import { SiteAnalytics, MembershipCounter, FinanceCounter } from './analytics';
 import { ImageStorage } from './imageStorage';
 
 
 
-type LocalAdminInfo = {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  permissionData: Record<string, boolean>;
-  isExecutive: boolean;
-};
-
-
 export default function Dashboard() {
-  const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
+  const { user } = useAuth();
 
   const [events, setEvents] = useState<Event[]>([]);
   const [donations, setDonations] = useState<DonationEntry[]>([]);
   const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
 
   useEffect(() => {
-    setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
     fetchDashboardFinancialRecords<DonationEntry>('donations').then(setDonations);
     fetchDashboardFinancialRecords<MembershipEntry>('memberships').then(setMemberships);
   }, []);
 
-  if (!localAdmin) return null;
+  if (!user) return null;
 
   return (
     <div>
       <div className="flex flex-col bg-msscc-white font-body text-msscc-gray-dark lg:flex-row lg:mb-8">
         {/* Left Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:ml-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
-          <div className="w-full bg-msscc-pink px-4 py-2 text-white">
-            <div className="break-words font-heading text-heading-2">
-              {localAdmin.firstName + ' ' + localAdmin.lastName}
-            </div>
-            <div className="break-all text-body-sm text-msscc-gray-faint">
-              {localAdmin.email}
-            </div>
-          </div>
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:ml-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+          {/* Local Admin info */}
+          <CurrentAdmin user={user} />
 
           {/* Cloud Storage Capacity */}
           <ImageStorage/>
@@ -71,15 +54,15 @@ export default function Dashboard() {
           <h1 className="border-b border-msscc-gray-light pb-2 font-heading text-display text-msscc-teal">
             Your Pages
           </h1>
-          {Object.entries(localAdmin.permissionData)
-            .filter(([, allowed]) => allowed || localAdmin.isExecutive)
+          {Object.entries(user.permissionData)
+            .filter(([, allowed]) => allowed || user.isExecutive)
             .map(([page]) => (
               <AvailablePages key={page} CategoryTitle={page} />
             ))}
         </div>
 
         {/* Right Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:mr-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:mr-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
 
           {/* Visit Counter */}
           <SiteAnalytics/>
@@ -95,10 +78,10 @@ export default function Dashboard() {
 
         {/* Front end preview */}
         <div>
-          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-16 flex flex-col gap-4">
+          <div className="min-w-0 px-4 py-4 lg:py-0 lg:px-0 lg:mx-8 flex flex-col gap-4">
             <EventCarousel data={events} />
-            <DonationCarousel data={donations}/>
             <MembershipCarousel data={memberships}/>
+            <DonationCarousel data={donations}/>
           </div>
       </div>
     </div>

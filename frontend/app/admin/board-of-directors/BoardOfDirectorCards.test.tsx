@@ -89,7 +89,7 @@ describe('MemberPopUp translation buttons', () => {
     expect(requestDeepLTranslation).toHaveBeenNthCalledWith(2, 'President');
     expect(requestDeepLTranslation).toHaveBeenNthCalledWith(3, 'Leads the organization.');
 
-    await user.click(screen.getByRole('button', { name: 'Update' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(onUpdate).toHaveBeenCalledWith(
       {
         ...BOARD_MEMBER,

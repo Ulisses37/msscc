@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
+import ImageCropModal from '@/components/ui/ImageCropModal';
 import { requestDeepLTranslation } from '@/services/deeplService';
 
 import type { BoardMember } from './page';
+import { dangerButtonClass, primaryButtonClass, secondaryButtonClass } from '@/components/layout/AdminButtonStyles';
 
 // text-base keeps iOS Safari from zooming in when an input is focused
 const inputClass =
@@ -106,6 +108,7 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
 ) {
   const [edited, setEdited] = useState<BoardMember | null>(member);
   const [editedFile, setEditedFile] = useState<File | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const isNewMember = member?.boardMemberId === -1;
   // Keep each board-member translation independent so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
@@ -162,10 +165,10 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
     >
       <div className="max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-md bg-msscc-white p-4 font-body text-msscc-gray-dark sm:p-6"
         onClick={(e) => e.stopPropagation()}
-    >
-      <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
-        {type === "officer" ? "Edit Officer" : "Edit Director"}
-      </h2>
+      >
+        <h2 className="mb-4 border-b border-msscc-gray-light pb-3 font-heading text-heading-2 text-msscc-teal">
+          {isNewMember ? "Add" : "Edit"} {type === "officer" ? "Officer" : "Director"}
+        </h2>
 
       <div className="mb-4 flex justify-center">
         <label className="cursor-pointer">
@@ -187,15 +190,27 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) {
-                const url = URL.createObjectURL(file);
-                setEditedFile(file);
-                setEdited(prev => prev ? { ...prev, boardMemberImageURL: url } : prev);
-              }
+              e.target.value = '';
+              if (file) setPendingFile(file);
             }}
           />
         </label>
       </div>
+
+      {pendingFile && (
+        <ImageCropModal
+          file={pendingFile}
+          aspect={1}
+          title="Crop photo"
+          onConfirm={(croppedFile) => {
+            const url = URL.createObjectURL(croppedFile);
+            setEditedFile(croppedFile);
+            setEdited((prev) => (prev ? { ...prev, boardMemberImageURL: url } : prev));
+            setPendingFile(null);
+          }}
+          onCancel={() => setPendingFile(null)}
+        />
+      )}
 
       {/* Editable fields */}
       <div className="flex flex-col gap-3">
@@ -321,24 +336,6 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
       {/* Actions: stacked on phones, a row from sm up */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
         <button
-          onClick={() => onClose(null)}
-          className="w-full rounded-sm border border-msscc-gray-light bg-msscc-white px-4 py-2 text-btn tracking-btn text-msscc-gray-dark transition-colors hover:border-msscc-pink hover:text-msscc-pink"
-        >
-          Close
-        </button>
-        {/* An unsaved draft has no database record to delete. */}
-        {!isNewMember && (
-          <button
-            onClick={() => {
-              onDelete(member);
-              onClose(null);
-            }}
-            className="w-full rounded-sm bg-msscc-danger px-4 py-2 text-btn tracking-btn text-white transition-colors hover:opacity-90"
-          >
-            Delete
-          </button>
-        )}
-        <button
           onClick={() => {
             if (!edited?.boardMemberNameEn?.trim()) {
               alert("English name cannot be empty");
@@ -347,10 +344,28 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             onUpdate(edited, editedFile);
             onClose(null);
           }}
-          className="w-full rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark disabled:cursor-not-allowed disabled:bg-msscc-gray-light disabled:text-msscc-gray-mid"
+          className={primaryButtonClass}
         >
-          {isNewMember ? "Add" : "Update"}
+          {isNewMember ? "Add" : "Save"}
         </button>
+        <button
+          onClick={() => onClose(null)}
+          className={secondaryButtonClass}
+        >
+          Cancel
+        </button>
+        {/* An unsaved draft has no database record to delete. */}
+        {!isNewMember && (
+          <button
+            onClick={() => {
+              onDelete(member);
+              onClose(null);
+            }}
+            className={dangerButtonClass}
+          >
+            Delete
+          </button>
+        )}
       </div>
       </div>
     </div>

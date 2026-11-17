@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ManualDonationForm } from './ManualDonationForm';
+import { clearAccessToken, setAccessToken } from '@/services/accessTokenStore';
 
 const mockFetch = jest.fn();
 const onCancel = jest.fn();
@@ -29,7 +30,7 @@ function confirm() {
 describe('manual donation entry and review', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    localStorage.setItem('msscc_access_token', 'test-admin-token');
+    setAccessToken('test-admin-token');
     global.fetch = mockFetch;
     mockFetch.mockResolvedValue({ ok: true, status: 201, json: async () => ({ donation_id: 42 }) });
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -37,7 +38,7 @@ describe('manual donation entry and review', () => {
   });
 
   afterEach(() => {
-    localStorage.clear();
+    clearAccessToken();
     global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
@@ -250,7 +251,7 @@ describe('manual donation entry and review', () => {
   });
 
   it('makes no request without an admin token', async () => {
-    localStorage.clear();
+    clearAccessToken();
     enterMinimum();
     review();
     confirm();

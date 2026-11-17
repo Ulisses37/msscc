@@ -1,19 +1,43 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AdminLayout from '../layout';
+import { logoutRequest, refreshRequest } from '@/services/authService';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
-const mockRouter = { push: mockPush, replace: mockReplace };
 
-jest.mock('next/navigation', () => ({
-  useRouter: () => mockRouter,
-  usePathname: () => '/admin/dashboard',
-}));
+// Controllable pathname that re-renders subscribers when it changes,
+// so tests can simulate the router moving from /admin/... to a public page.
+let mockPathname = '/admin/dashboard';
+const mockPathnameListeners = new Set<() => void>();
+
+function mockSetPathname(path: string): void {
+  mockPathname = path;
+  mockPathnameListeners.forEach((listener) => listener());
+}
+
+jest.mock('next/navigation', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useSyncExternalStore } = require('react');
+
+  const subscribe = (listener: () => void) => {
+    mockPathnameListeners.add(listener);
+    return () => {
+      mockPathnameListeners.delete(listener);
+    };
+  };
+
+  return {
+    useRouter: () => ({ replace: mockReplace, push: mockPush }),
+    usePathname: () =>
+      useSyncExternalStore(subscribe, () => mockPathname, () => mockPathname),
+  };
+});
 
 jest.mock('@/components/layout/Banner', () => ({ Banner: () => null }));
 jest.mock('@/components/layout/AdminNavbar', () => ({ AdminNavbar: () => null }));
@@ -25,40 +49,23 @@ jest.mock('@/components/auth/ProtectedRoute', () => ({
 
 jest.mock('@/services/authService', () => ({
   loginRequest: jest.fn(),
+  logoutRequest: jest.fn(),
+  refreshRequest: jest.fn(),
   decodeTokenPayload: jest.fn((token: string) => {
     if (token === 'not.a.jwt') throw new Error('malformed');
-    return { userId: '2', email: 'dev@test.com', isExecutive: true, permissionData: {} };
+    return {
+      userId: 2,
+      email: 'dev@test.com',
+      firstName: 'Dev',
+      lastName: 'Admin',
+      isExecutive: true,
+      isSuperuser: true,
+      permissionData: {},
+    };
   }),
 }));
 
-const VALID_TOKEN = 'header.payload.signature';
-const originalFetch = globalThis.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
-/** In-memory localStorage so tests can inspect exactly what is left behind. */
-function installStorage(initial: Record<string, string>) {
-  const data = new Map(Object.entries(initial));
-  const storage = {
-    getItem: jest.fn((key: string) => data.get(key) ?? null),
-    setItem: jest.fn((key: string, value: string) => void data.set(key, value)),
-    removeItem: jest.fn((key: string) => void data.delete(key)),
-    clear: jest.fn(() => data.clear()),
-    get length() {
-      return data.size;
-    },
-  };
-  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage });
-  return storage;
-}
-
-/** Mimics the Django verify endpoint: only VALID_TOKEN passes. */
-function mockVerifyEndpoint() {
-  globalThis.fetch = jest.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-    const { token } = JSON.parse(String(init?.body));
-    const ok = token === VALID_TOKEN;
-    return { ok, status: ok ? 200 : 401, json: async () => ({}) } as Response;
-  });
-}
+const VALID_TOKEN = `header.${btoa(JSON.stringify({ exp: 4_102_444_800 }))}.signature`;
 
 function renderLayout() {
   return render(
@@ -70,59 +77,105 @@ function renderLayout() {
   );
 }
 
+function LogoutControl() {
+  const { logout } = useAuth();
+
+  return <button type="button" onClick={() => void logout()}>Log out</button>;
+}
+
 describe('admin session gating', () => {
   beforeEach(() => {
-    mockVerifyEndpoint();
+    jest.mocked(refreshRequest).mockReset();
+    mockReplace.mockReset();
+    // Like the real router, replace() changes the current pathname.
+    mockReplace.mockImplementation((path: string) => mockSetPathname(path));
+    mockPathname = '/admin/dashboard';
+    localStorage.clear();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
-    globalThis.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+    localStorage.clear();
   });
 
-  it('redirects to / with empty storage when storage is blank', async () => {
-    const storage = installStorage({});
+  it('does not request a refresh for a visitor without an admin session marker', async () => {
     renderLayout();
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(refreshRequest).not.toHaveBeenCalled();
+    expect(screen.queryByText('admin content')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('notifies an admin when a previously active session cannot be renewed', async () => {
+    localStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockRejectedValueOnce(new Error('expired refresh cookie'));
+    renderLayout();
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Your session has expired. Please sign in again.',
+    );
+    expect(localStorage.getItem('msscc_admin_session_active')).toBeNull();
+  });
+
+  it('keeps the expiration notice visible after Strict Mode retries a failed refresh', async () => {
+    localStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockRejectedValue(new Error('expired refresh cookie'));
+    render(
+      <StrictMode>
+        <AuthProvider>
+          <AdminLayout>
+            <div>admin content</div>
+          </AdminLayout>
+        </AuthProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(refreshRequest).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Your session has expired. Please sign in again.',
+    );
+  });
+
+  it('removes legacy browser storage instead of treating it as a session', async () => {
+    localStorage.setItem('msscc_access_token', 'legacy-access-token');
+    localStorage.setItem('msscc_user', '{}');
+    renderLayout();
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'));
+    expect(refreshRequest).not.toHaveBeenCalled();
+    expect(localStorage.getItem('msscc_access_token')).toBeNull();
+    expect(localStorage.getItem('msscc_user')).toBeNull();
     expect(screen.queryByText('admin content')).toBeNull();
   });
 
-  it('redirects when only a fake msscc_user is present (the original bug)', async () => {
-    const storage = installStorage({ msscc_user: '{}' });
-    renderLayout();
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.getItem('msscc_user')).toBeNull();
-    expect(screen.queryByText('admin content')).toBeNull();
-  });
-
-  it('redirects and clears storage for a garbage token', async () => {
-    const storage = installStorage({ msscc_access_token: 'not.a.jwt' });
-    renderLayout();
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
-    expect(screen.queryByText('admin content')).toBeNull();
-  });
-
-  it('redirects and clears storage when the server rejects a tampered token', async () => {
-    const storage = installStorage({ msscc_access_token: 'header.payload.tampered' });
-    renderLayout();
-
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
-    expect(storage.length).toBe(0);
-    expect(screen.queryByText('admin content')).toBeNull();
-  });
-
-  it('renders the admin content for a valid token', async () => {
-    installStorage({ msscc_access_token: VALID_TOKEN });
+  it('renders admin content after refresh-cookie session restoration', async () => {
+    localStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockResolvedValue({ access: VALID_TOKEN });
     renderLayout();
 
     expect(await screen.findByText('admin content')).toBeInTheDocument();
-    expect(mockPush).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+    expect(localStorage.getItem('msscc_admin_session_active')).toBe('true');
+  });
+
+  it('does not show the expiration notice after an explicit logout', async () => {
+    localStorage.setItem('msscc_admin_session_active', 'true');
+    jest.mocked(refreshRequest).mockResolvedValue({ access: VALID_TOKEN });
+    jest.mocked(logoutRequest).mockResolvedValue(undefined);
+    render(
+      <AuthProvider>
+        <LogoutControl />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(localStorage.getItem('msscc_admin_session_active')).toBe('true'));
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(localStorage.getItem('msscc_admin_session_active')).toBeNull();
   });
 });

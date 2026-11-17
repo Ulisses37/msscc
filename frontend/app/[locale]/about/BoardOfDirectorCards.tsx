@@ -29,7 +29,7 @@ export function OfficerCard({
           <img
             src={boardMemberImageURL}
             alt={t('portraitAlt', { name: boardMemberName })}
-            className="max-h-full max-w-full object-contain"
+            className="size-full object-contain object-bottom"
           />
         ) : (
           <div className="flex size-full items-center justify-center rounded-full bg-slate-200 text-sm text-white">

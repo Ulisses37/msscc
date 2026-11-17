@@ -106,6 +106,11 @@ export default function EventDetailPage() {
     );
   }
 
+  // A past event goes back to the past events page, an upcoming one to the main list.
+  const isPastEvent = event ? new Date(event.endDatetime).getTime() < Date.now() : false;
+  const backHref = isPastEvent ? `/${locale}/events/history` : `/${locale}/events`;
+  const backLabel = isPastEvent ? t('backToPastEvents') : t('backToEvents');
+
   return (
     <main style={{
       fontFamily: 'var(--font-body)',
@@ -116,7 +121,7 @@ export default function EventDetailPage() {
 
       {/* Back to events link */}
       <Link
-        href={`/${locale}/events`}
+        href={backHref}
         style={{
           color: 'var(--color-teal)',
           fontSize: 'var(--fs-body-sm)',
@@ -125,7 +130,7 @@ export default function EventDetailPage() {
           marginBottom: 'var(--space-6)',
         }}
       >
-        ← {t('backToEvents')}
+        ← {backLabel}
       </Link>
 
       {/* 60/40 layout — left: event detail, right: calendar */}

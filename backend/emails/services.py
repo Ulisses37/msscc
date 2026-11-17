@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.template.loader import render_to_string
 
-from emails.providers import get_provider
+from emails.providers import ProviderError, get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,11 @@ def send_email(
     the prebuilt path is not a way to bypass the interception. The template name
     is still required, because the interception banner reports it.
     """
+    if not settings.EMAIL_ENABLED:
+        if raise_on_failure:
+            raise ProviderError("Email delivery is disabled.")
+        return
+
     html = html_override if html_override is not None else render_to_string(
         template_name, context
     )

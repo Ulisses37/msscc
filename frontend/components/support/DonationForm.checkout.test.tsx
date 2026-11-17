@@ -237,6 +237,24 @@ it('submits an anonymous donation with email only and no personal record fields'
   expect(payload).not.toHaveProperty('address');
 });
 
+it('keeps payment unavailable and shows an error for an invalid email address', async () => {
+  const user = userEvent.setup();
+  render(<DonationForm />);
+
+  await fillDonor(user);
+  const email = screen.getByRole('textbox', { name: en.SupportPage.email });
+  const button = screen.getByRole('button', { name: en.SupportPage.continueToPayment });
+
+  await user.clear(email);
+  await user.type(email, 'not-an-email');
+  await user.tab();
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.SupportPage.emailError);
+  expect(email).toHaveAttribute('aria-invalid', 'true');
+  expect(button).toBeDisabled();
+  expect(createPaymentSession).not.toHaveBeenCalled();
+});
+
 it('omits previously entered names when anonymous and restores ordinary requirements on clearing', async () => {
   const user = userEvent.setup();
   render(<DonationForm />);

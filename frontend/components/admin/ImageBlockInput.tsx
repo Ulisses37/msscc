@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
+import ImageCropModal from '@/components/ui/ImageCropModal';
 import { RichTextInput } from '@/components/admin/RichTextInput';
 import { TranslationReviewNotice } from '@/components/admin/TranslationReviewNotice';
 import { useTranslationReviewNotice } from '@/components/admin/useTranslationReviewNotice';
@@ -38,8 +39,15 @@ export default function ImageBlockInput({
   onTranslate,
 }: ImageBlockInputProps) {
   const [isTranslating, setIsTranslating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const { showNotice, dismissNotice, markEnglishChanged } =
     useTranslationReviewNotice();
+
+  const handleCropCancel = () => {
+    setPendingFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleEnglishUpdate = (value: string) => {
     // RichTextInput also emits on blur, so ignore focus changes that did not edit text.
@@ -77,17 +85,27 @@ export default function ImageBlockInput({
 
         {/* Handle file selection */}
         <input
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           className="w-full min-w-0 text-body-sm"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) {
-              onSelectFile(file);
-            }
+            if (file) setPendingFile(file);
           }}
         />
       </div>
+
+      {pendingFile && (
+        <ImageCropModal
+          file={pendingFile}
+          onConfirm={(croppedFile) => {
+            setPendingFile(null);
+            onSelectFile(croppedFile);
+          }}
+          onCancel={handleCropCancel}
+        />
+      )}
 
       {/* Handle displaying the image */}
       {imageUrl && (
