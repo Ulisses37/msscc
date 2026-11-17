@@ -56,7 +56,7 @@ ACCEPTED_IMAGE_EXTENSIONS = tuple(
 
 
 class Command(BaseCommand):
-    """Create and upload the website's reserved static media slots."""
+    """Create the website's reserved static media slots."""
 
     help = "Seed the Placeholder and Banner static media records."
 
@@ -83,14 +83,26 @@ class Command(BaseCommand):
             action="store_true",
             help="Validate assets and report actions without writing database or storage state.",
         )
+        parser.add_argument(
+            "--empty",
+            action="store_true",
+            help="Create static media records without linking media assets or writing storage.",
+        )
 
     def handle(self, *args, **options) -> None:
         """Validate and seed any missing static media associations."""
+        slots = self._load_slots()
+        if options["empty"]:
+            if options["dry_run"]:
+                self._dry_run_empty(slots)
+            else:
+                self._seed_empty()
+            return
+
         paths = {
             0: self._resolve_path(options.get("placeholder"), STATIC_MEDIA_SEEDS[0]),
             1: self._resolve_path(options.get("banner"), STATIC_MEDIA_SEEDS[1]),
         }
-        slots = self._load_slots()
         pending_seeds = [
             seed
             for seed in STATIC_MEDIA_SEEDS
@@ -214,6 +226,59 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(self.style.SUCCESS("Static media dry run complete."))
+
+    def _dry_run_empty(self, slots: dict[int, StaticImage]) -> None:
+        """Describe empty static media records without reading source assets."""
+        for seed in STATIC_MEDIA_SEEDS:
+            slot = slots.get(seed.static_image_id)
+            if slot is None:
+                self.stdout.write(
+                    f"Would create empty static media: {seed.display_name} "
+                    f"({seed.static_image_id})"
+                )
+            else:
+                self.stdout.write(
+                    f"Would skip {seed.display_name} ({seed.static_image_id}): "
+                    "record already exists."
+                )
+
+        self.stdout.write(self.style.SUCCESS("Empty static media dry run complete."))
+
+    def _seed_empty(self) -> None:
+        """Persist missing reserved slots without creating media assets."""
+        created_slots = 0
+        skipped_slots = 0
+
+        with transaction.atomic():
+            current_slots = self._load_slots()
+            for seed in STATIC_MEDIA_SEEDS:
+                if current_slots.get(seed.static_image_id) is not None:
+                    skipped_slots += 1
+                    self.stdout.write(
+                        f"Static media record already exists: {seed.display_name} "
+                        f"({seed.static_image_id})"
+                    )
+                    continue
+
+                StaticImage.objects.create(
+                    static_image_id=seed.static_image_id,
+                    display_name=seed.display_name,
+                )
+                created_slots += 1
+                self.stdout.write(
+                    f"Created empty static media: {seed.display_name} "
+                    f"({seed.static_image_id})"
+                )
+
+            if created_slots:
+                self._reset_sequence()
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Empty static media seed complete. "
+                f"Created: {created_slots}; linked: 0; skipped: {skipped_slots}."
+            )
+        )
 
     def _seed(
         self,
