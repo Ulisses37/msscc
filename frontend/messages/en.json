@@ -1,4 +1,7 @@
 {
+  "Deployment": {
+    "paymentsUnavailable": "Online payments are currently unavailable."
+  },
   "HomePageTest": {
     "home": "Home"
   },
@@ -34,6 +37,7 @@
     "emailLabel": "Email",
     "invalidEmail": "Please enter a valid email address",
     "genericError": "Something went wrong. Please try again.",
+    "emailUnavailable": "Password recovery by email is currently unavailable.",
     "submit": "Send reset link",
     "sending": "Sending…",
     "success": "If an account exists with that email, a reset link has been sent."
@@ -456,5 +460,10 @@
       "supportHeading2": "Sponsorship",
       "body4": "Corporate sponsorships not only elevate the impact of our mission but also provide essential overhead support that ensures the sustainability and operational strength of our organization. By partnering with us, sponsors play a key role in expanding our reach, enhancing program quality, and fostering long-term community engagement. We’d love the opportunity to discuss how a larger corporate donation could impact our growth."
     }
+  },
+
+  "SessionExpiredToast": {
+  "message": "Your session has expired. Please sign in again.",
+  "dismiss": "Dismiss session expiration notice"
   }
 }

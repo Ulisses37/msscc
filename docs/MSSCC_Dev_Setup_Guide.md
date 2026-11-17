@@ -5,6 +5,8 @@ Repo: https://github.com/Ulisses37/msscc
 
 This guide walks you through setting up your local development environment from scratch. Follow the section for your OS. If you run into something not covered here, message the team on Discord before spending too long on it.
 
+For hosted staging setup, see [Staging deployment](staging-deployment.md).
+
 > **Active contributors:** `.env` values are stored in the shared team OneDrive. Ask on Discord for access if you don't have it. External replicators will need to supply their own credentials for each service.
 
 ---
@@ -211,6 +213,27 @@ copy .env.example .env
 ```
 
 Open `.env` in VS Code and fill in the values. Active team members: see the shared OneDrive for development credentials. External replicators: supply your own database, storage, and API credentials.
+
+#### Admin refresh-token cookie
+
+Admin sessions use a short-lived access token in browser memory and a rotating refresh token in
+an `HttpOnly` cookie. Leave `JWT_REFRESH_COOKIE_SECURE=false` for local HTTP development.
+Production forces secure cookies. Set `CSRF_TRUSTED_ORIGINS` to the exact comma-separated frontend
+origins allowed to send credentialed refresh requests, and keep it aligned with
+`CORS_ALLOWED_ORIGINS` unless an approved deployment design requires a stricter list. The backend
+also needs a daily scheduled cleanup command for expired refresh-token records:
+
+For cross-site frontend and API deployments, set `JWT_REFRESH_COOKIE_SAMESITE=none` and use HTTPS.
+That setting also controls Django's CSRF cookie. Keep `JWT_REFRESH_COOKIE_SECURE=true`, use exact
+origins rather than wildcards, and review the deployment before enabling cross-site cookies.
+
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py flushexpiredtokens
+```
+
+```bash
+backend/venv/bin/python backend/manage.py flushexpiredtokens
+```
 
 `FIELD_ENCRYPTION_KEYS` is required for encrypted database fields. Set it to a comma-separated
 Fernet keyring, with the active key first and prior keys after it. Generate and distribute keys
@@ -546,6 +569,11 @@ To verify the backend specifically, navigate to:
 http://127.0.0.1:8000/admin
 ```
 This should load the Django admin login page. Log in with the superuser credentials you created in step 6.
+
+The built-in Django admin is a local development tool, enabled only by
+`config.settings.development`. Its route is disabled in hosted settings. The application's
+admin portal is the separate Next.js frontend at `/admin`, which uses backend APIs and
+does not depend on the built-in Django admin.
 
 ---
 

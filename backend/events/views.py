@@ -266,7 +266,7 @@ def run_event_reminders(request):
     matching the ``TRIGGER_API_KEY`` setting.
     """
     api_key = request.headers.get("X-API-Key", "")
-    if api_key != settings.TRIGGER_API_KEY:
+    if not settings.TRIGGER_API_KEY or api_key != settings.TRIGGER_API_KEY:
         return JsonResponse(
             {"error": "Unauthorized"},
             status=403,

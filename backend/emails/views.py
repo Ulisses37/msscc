@@ -88,6 +88,8 @@ class AnnouncementSendView(APIView):
 
     def post(self, request):
         """Render the announcement, then ask the provider to broadcast it."""
+        if not settings.EMAIL_ENABLED:
+            return Response({"detail": "Email is unavailable."}, status=503)
         subject = str(request.data.get("subject", "")).strip()
         title = str(request.data.get("title", "")).strip() or subject
         body_html = str(request.data.get("html", ""))
@@ -216,6 +218,8 @@ class SubscribeConfirmView(APIView):
 
     def post(self, request):
         """Validate the token, then confirm the row it belongs to."""
+        if not settings.EMAIL_ENABLED:
+            return Response({"detail": "Email is unavailable."}, status=503)
         serializer = SubscribeConfirmRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -256,6 +260,8 @@ class SubscribeView(APIView):
 
     def post(self, request):
         """Validate the signup, then hand it to the shared service."""
+        if not settings.EMAIL_ENABLED:
+            return Response({"detail": "Email is unavailable."}, status=503)
         serializer = SubscribeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

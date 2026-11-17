@@ -23,13 +23,20 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/password-reset/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/password-reset/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (!response.ok) {
+        console.error('Password reset request failed:', response.status);
+        setError(t(response.status === 503 ? 'emailUnavailable' : 'genericError'));
+        setIsSubmitting(false);
+        return;
+      }
       setSubmitted(true);
-    } catch {
+    } catch (error) {
+      console.error('Password reset request failed:', error);
       setError(t('genericError'));
       setIsSubmitting(false);
     }

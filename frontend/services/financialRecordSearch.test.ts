@@ -1,17 +1,15 @@
 import { fetchFinancialRecords } from './financialRecordSearch';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 describe('fetchFinancialRecords', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true,
-      value: { getItem: jest.fn().mockReturnValue('test-admin-token') },
-    });
+    setAccessToken('test-admin-token');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => [] });
   });
 
   afterEach(() => {
+    clearAccessToken();
     jest.restoreAllMocks();
-    Reflect.deleteProperty(globalThis, 'localStorage');
   });
 
   it('encodes trimmed Unicode search and sends the JWT without caching', async () => {
@@ -39,7 +37,7 @@ describe('fetchFinancialRecords', () => {
   });
 
   it('does not send a request without the existing token', async () => {
-    jest.mocked(localStorage.getItem).mockReturnValue(null);
+    clearAccessToken();
     await expect(fetchFinancialRecords('donations', 'private')).rejects.toThrow('Please sign in');
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -36,7 +36,7 @@ export function ImageStorage(){
       return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
   };
   return(
-    <div className="flex flex-col items-center rounded-sm bg-msscc-pink py-4 sm:flex-1 lg:flex-none">
+    <div className="flex flex-col items-center rounded-sm bg-msscc-pink p-4">
             {requestError && (
               <div className="mb-2 px-3 text-center text-xs text-white" role="alert">
                 Storage usage unavailable.

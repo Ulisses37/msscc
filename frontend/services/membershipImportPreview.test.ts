@@ -1,9 +1,9 @@
 import {
   confirmMembershipCsv, MembershipCsvReviewRejected, previewMembershipCsv,
 } from './membershipImportPreview';
+import { clearAccessToken, setAccessToken } from './accessTokenStore';
 
 const originalFetch = global.fetch;
-const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 const file = new File(['test'], 'membership.csv', { type: 'text/csv' });
 const preview = {
   record_type: 'membership', row_count: 1, proposed_records: [], errors: [], warnings: [],
@@ -11,16 +11,13 @@ const preview = {
 
 describe('membership CSV preview request', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true, value: { getItem: jest.fn().mockReturnValue('test-token') },
-    });
+    setAccessToken('test-token');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => preview });
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
   afterEach(() => {
     global.fetch = originalFetch;
-    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
-    else Reflect.deleteProperty(globalThis, 'localStorage');
+    clearAccessToken();
     jest.restoreAllMocks();
   });
 
@@ -43,7 +40,7 @@ describe('membership CSV preview request', () => {
       if (failure === 'invalid response') jest.mocked(fetch).mockResolvedValue({
         ok: true, json: async () => ({ record_type: 'donation' }),
       });
-      if (failure === 'no token') jest.mocked(localStorage.getItem).mockReturnValue(null);
+      if (failure === 'no token') clearAccessToken();
       await expect(previewMembershipCsv(file)).rejects.toThrow('Check your finance access');
       // Never log the uploaded data or private response when preview fails.
       expect(console.error).toHaveBeenCalledWith('Unable to preview membership CSV.');
@@ -85,7 +82,7 @@ describe('membership CSV preview request', () => {
   });
 
   it('treats a missing admin token as a definite access failure without sending the file', async () => {
-    jest.mocked(localStorage.getItem).mockReturnValue(null);
+    clearAccessToken();
     await expect(confirmMembershipCsv(file, 'signed-review', false))
       .rejects.toMatchObject({ reason: 'access' });
     expect(fetch).not.toHaveBeenCalled();

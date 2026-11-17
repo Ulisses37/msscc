@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { fetchLocalStorageAdmin } from '@/components/admin/AdminPermssionHandler';
 import { DeepLUsageMeter } from '@/components/admin/DeepLUsageMeter';
+import { useAuth } from '@/context/AuthContext';
 
 import { getEvents } from '@/services/eventService';
 import type { Event } from '@/types/event';
@@ -19,39 +19,28 @@ import { ImageStorage } from './imageStorage';
 
 
 
-type LocalAdminInfo = {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  permissionData: Record<string, boolean>;
-  isExecutive: boolean;
-};
-
-
 export default function Dashboard() {
-  const [localAdmin, setLocalAdmin] = useState<LocalAdminInfo | null>(null);
+  const { user } = useAuth();
 
   const [events, setEvents] = useState<Event[]>([]);
   const [donations, setDonations] = useState<DonationEntry[]>([]);
   const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
 
   useEffect(() => {
-    setLocalAdmin(fetchLocalStorageAdmin() ?? null);
     fetchEvents().then(setEvents);
     fetchDashboardFinancialRecords<DonationEntry>('donations').then(setDonations);
     fetchDashboardFinancialRecords<MembershipEntry>('memberships').then(setMemberships);
   }, []);
 
-  if (!localAdmin) return null;
+  if (!user) return null;
 
   return (
     <div>
       <div className="flex flex-col bg-msscc-white font-body text-msscc-gray-dark lg:flex-row lg:mb-8">
         {/* Left Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:ml-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:ml-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
           {/* Local Admin info */}
-          <CurrentAdmin localAdmin ={localAdmin}/>
+          <CurrentAdmin user={user} />
 
           {/* Cloud Storage Capacity */}
           <ImageStorage/>
@@ -65,15 +54,15 @@ export default function Dashboard() {
           <h1 className="border-b border-msscc-gray-light pb-2 font-heading text-display text-msscc-teal">
             Your Pages
           </h1>
-          {Object.entries(localAdmin.permissionData)
-            .filter(([, allowed]) => allowed || localAdmin.isExecutive)
+          {Object.entries(user.permissionData)
+            .filter(([, allowed]) => allowed || user.isExecutive)
             .map(([page]) => (
               <AvailablePages key={page} CategoryTitle={page} />
             ))}
         </div>
 
         {/* Right Panel */}
-        <aside className="flex w-full flex-shrink-0 flex-col gap-4 px-4 pb-4 sm:flex-row lg:mr-8 lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
+        <aside className="grid w-full flex-shrink-0 grid-cols-1 gap-4 px-4 pb-4 sm:grid-cols-3 lg:mr-8 lg:flex lg:w-48 lg:flex-col lg:self-start lg:px-0 lg:pb-0">
 
           {/* Visit Counter */}
           <SiteAnalytics/>
