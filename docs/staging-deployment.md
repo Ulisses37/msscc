@@ -72,10 +72,11 @@ The custom user manager marks a superuser as an executive for the Next.js portal
 Django's built-in `/admin/` remains disabled. Additional staging accounts can also
 be created manually while emailed invitations are unavailable.
 
-The backend-only build excludes `frontend/assets` and `docs/pagecontent.docx`, which
-some existing media/content seed commands expect. Do not run those commands with
-their default paths in this build. Upload media and enter initial page content
-through the custom portal instead.
+The seed images and page-content document are bundled under `backend/media/seed_data/`
+and `backend/page/seed_data/`. The `seed_static_media` and `populate_page_content`
+commands can use their default paths in a backend-only build. Run their `--dry-run`
+checks first, after `seed_pages`, and coordinate any writes to the staging database
+and bucket. Media and page content can also be managed through the custom portal.
 
 ## 2. Netlify frontend
 

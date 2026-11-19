@@ -23,20 +23,19 @@ from page.page_content_translations import PAGE_CONTENT_JA
 
 logger = logging.getLogger(__name__)
 IMPORT_KEY_PREFIX = "scrum-845:pagecontent:"
-DEFAULT_DOCUMENT_PATH = Path(settings.BASE_DIR).parent / "docs" / "pagecontent.docx"
 
 
 class Command(BaseCommand):
     """Populate or roll back the public page content defined in pagecontent.docx."""
 
-    help = "Populate public page-editor content from docs/pagecontent.docx."
+    help = "Populate public page-editor content from backend/page/seed_data/pagecontent.docx."
 
     def add_arguments(self, parser) -> None:
         """Register document, dry-run, and rollback command options."""
         parser.add_argument(
             "--document",
             type=Path,
-            default=DEFAULT_DOCUMENT_PATH,
+            default=Path(settings.BASE_DIR) / "page" / "seed_data" / "pagecontent.docx",
             help="Path to the page-content DOCX file.",
         )
         parser.add_argument(

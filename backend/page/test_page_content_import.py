@@ -136,6 +136,37 @@ class PopulatePageContentCommandTests(TestCase):
             call_command("populate_page_content", *args, stdout=output)
         return output.getvalue()
 
+    def test_default_document_path_uses_backend_only_layout(self) -> None:
+        """The default document is parsed without a sibling docs directory."""
+        with TemporaryDirectory() as temporary_directory:
+            backend_directory = Path(temporary_directory) / "backend"
+            document_path = backend_directory / "page" / "seed_data" / "pagecontent.docx"
+            document_path.parent.mkdir(parents=True)
+            write_test_document(document_path)
+
+            with override_settings(BASE_DIR=backend_directory):
+                call_command("populate_page_content", "--dry-run", stdout=StringIO())
+
+        self.assertEqual(Content.objects.count(), 0)
+        self.assertEqual(MediaAsset.objects.count(), 0)
+
+    def test_document_override_is_preserved(self) -> None:
+        """An explicit document path takes precedence over the bundled default."""
+        with TemporaryDirectory() as temporary_directory:
+            document_path = Path(temporary_directory) / "custom.docx"
+            write_test_document(document_path)
+
+            call_command(
+                "populate_page_content",
+                "--document",
+                str(document_path),
+                "--dry-run",
+                stdout=StringIO(),
+            )
+
+        self.assertEqual(Content.objects.count(), 0)
+        self.assertEqual(MediaAsset.objects.count(), 0)
+
     def test_dry_run_validates_without_writing_content_or_media(self) -> None:
         """Dry-run mode reports success without changing database or storage state."""
         # Tests: the documented validation-only command.
