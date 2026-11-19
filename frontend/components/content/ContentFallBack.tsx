@@ -1,7 +1,5 @@
 'use client';
 
-import Image from 'next/image';
-import img from '@/assets/Placeholder.png';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { ContentDisplayState } from '@/hooks/useDelayedFallback';
@@ -71,23 +69,9 @@ function FallbackContent({ source }: { source: FallbackSource }) {
 
 
 export function FallBack({ source }: { source: FallbackSource }) {
-  const t = useTranslations('ContentFallback');
-
   return (
     <section className="mx-auto max-w-content px-6 py-10">
-
-      <h3 className="font-heading text-[18px] font-bold text-msscc-teal">{t('noticeHeading')}</h3><br />
-      <p className="whitespace-pre-line font-heading text-[18px] font-normal text-[#000000]">
-        {t('noticeBody')}
-      </p><br />
-      <div className="flex justify-center">
-        <Image src={img} alt={t('illustrationAlt')} className="item-center text-center h-auto max-w-full" />
-      </div>
-
-      <div>
-        <br/>
-        <FallbackContent source={source} />
-      </div>
+      <FallbackContent source={source} />
     </section>
   );
 }
