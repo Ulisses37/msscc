@@ -350,8 +350,9 @@ records or page content.
 ### Seed required static media
 
 After migrations, seed the reusable Placeholder and Banner media used by the public website. The
-command by default uploads `frontend/assets/Placeholder.png` and `frontend/assets/Banner.webp` to the
-configured object storage and creates StaticImage IDs `0` and `1` , respectively, when they are missing.
+command by default uploads `Placeholder.png` and `Banner.webp` from `backend/media/seed_data/`
+to the configured object storage and creates StaticImage IDs `0` and `1`, respectively, when
+they are missing. The frontend keeps its own copies; seeding does not require the frontend folder.
 
 
 Image extensions does not necessarily needs to be exact. However, filenames needs to be exact as declared.
@@ -388,11 +389,17 @@ from another location, pass `--placeholder <path-or-filename>` and
 `--banner <path-or-filename>`. The extension may be omitted; the command searches the accepted
 image extensions (`jpg`, `jpeg`, `jfif`, `png`, `webp`, `bmp`, `tif`, `tiff`, and `gif`).
 
-Example: Provides Initialization for static images under path: 
-placeholder:'frontend\assets\NewBanner.webp' , banner:'frontend\assets\NewPlaceholder.png'
+Filename-only overrides are resolved within `backend/media/seed_data/`. For example, to use
+`NewPlaceholder.png` and `NewBanner.webp` from that directory:
 
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp
+```
+
+**Mac:**
 ```bash
-backend/manage.py seed_static_media --placeholder "frontend\assets\NewBanner.webp" --banner "frontend\assets\NewPlaceholder.png"
+backend/venv/bin/python backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp
 ```
 
 ### Seed the Board of Directors template
@@ -432,9 +439,9 @@ the initial empty-table initialization.
 ### Populate the initial public page content
 
 After running `seed_pages`, use the page-content importer to add the bilingual text and images
-defined in `docs/pagecontent.docx`. The command appends its blocks after any existing page content.
-It does not overwrite manually entered blocks, and repeated runs skip blocks that were already
-imported.
+defined in `backend/page/seed_data/pagecontent.docx`. The command appends its blocks after any
+existing page content. It does not overwrite manually entered blocks, and repeated runs skip
+blocks that were already imported.
 
 Validate the document, page records, translations, and images without writing to the database or
 storage:

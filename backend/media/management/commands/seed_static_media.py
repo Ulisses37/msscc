@@ -67,7 +67,7 @@ class Command(BaseCommand):
             type=Path,
             help=(
                 "Path or filename for the placeholder image; the extension may be omitted "
-                "(defaults to frontend/assets/Placeholder.png)."
+                "(defaults to backend/media/seed_data/Placeholder.png)."
             ),
         )
         parser.add_argument(
@@ -75,7 +75,7 @@ class Command(BaseCommand):
             type=Path,
             help=(
                 "Path or filename for the banner image; the extension may be omitted "
-                "(defaults to frontend/assets/Banner.webp)."
+                "(defaults to backend/media/seed_data/Banner.webp)."
             ),
         )
         parser.add_argument(
@@ -125,7 +125,7 @@ class Command(BaseCommand):
 
     def _resolve_path(self, supplied_path: Path | None, seed: StaticMediaSeed) -> Path:
         """Resolve a CLI path or filename, trying accepted image extensions."""
-        default_directory = Path(settings.BASE_DIR).parent / "frontend" / "assets"
+        default_directory = Path(settings.BASE_DIR) / "media" / "seed_data"
         if supplied_path is None:
             path = default_directory / seed.file_name
         else:
