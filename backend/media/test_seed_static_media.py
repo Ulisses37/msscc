@@ -84,8 +84,8 @@ class SeedStaticMediaCommandTests(TestCase):
     def test_command_accepts_filename_stems_and_supported_extensions(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            default_assets = root / "frontend" / "assets"
             backend_directory = root / "backend"
+            default_assets = backend_directory / "media" / "seed_data"
             backend_directory.mkdir()
             default_assets.mkdir(parents=True)
             write_image(default_assets / "Placeholder.jpg", "JPEG")
@@ -256,11 +256,11 @@ class SeedStaticMediaCommandTests(TestCase):
         created_media = created_media_assets[0]
         self.assertFalse(created_media.file.storage.exists(created_media.file.name))
 
-    def test_default_asset_paths_use_repository_layout(self) -> None:
+    def test_default_asset_paths_use_backend_only_layout(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            default_assets = root / "frontend" / "assets"
             backend_directory = root / "backend"
+            default_assets = backend_directory / "media" / "seed_data"
             backend_directory.mkdir()
             default_assets.mkdir(parents=True)
             write_image(default_assets / "Placeholder.png", "PNG")
