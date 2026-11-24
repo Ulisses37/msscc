@@ -319,11 +319,19 @@ function MembershipCard({ membership}: {membership: MembershipEntry}){
 }
 
 
-// Formats ISO datetime string to readable date
-function formatDate(datetime?: string | null): string {
-  if (!datetime) return "—";
-  const date = new Date(datetime);
-  if (isNaN(date.getTime())) return "—";
+// Date-only API values represent a calendar day, not midnight UTC.
+function formatDate(value?: string | null): string {
+  if (!value) return "—";
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnlyMatch
+    ? createLocalDate(
+      Number(dateOnlyMatch[1]),
+      Number(dateOnlyMatch[2]),
+      Number(dateOnlyMatch[3]),
+    )
+    : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return "—";
 
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -331,6 +339,16 @@ function formatDate(datetime?: string | null): string {
     month: 'long',
     day: 'numeric',
   });
+}
+
+function createLocalDate(year: number, month: number, day: number): Date | null {
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, month - 1, day);
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+    ? date
+    : null;
 }
 
 export function CurrentAdmin({ user }: { user: UserPayload }) {
