@@ -26,6 +26,7 @@ const pageDescriptions: Record<string, string>={
   'Directors': "Manage board member list.",
   'Permissions': "Manage the information and permissions of MSSCC Admins.",
   Media: "Manage media images across the website",
+  Documentation: "View admin documentation and get technical assistance.",
 }
 
 export function getPage(pageName: string){
@@ -51,7 +52,7 @@ export function AvailablePages(
   )
 }
 
-function PageCard(
+export function PageCard(
   {
     PageTitle,
   } : {
