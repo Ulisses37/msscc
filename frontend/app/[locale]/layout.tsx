@@ -10,6 +10,7 @@ import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { Banner } from '@/components/layout/Banner';
 import { PublicFooter } from '@/components/layout/PublicFooter';
 import GalleryBackground from '@/components/layout/GalleryBackground';
+import { SiteVisitTracker } from '@/components/analytics/SiteVisitTracker';
 
 export default async function LocaleLayout({
   children,
@@ -25,6 +26,7 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <div className="relative isolate flex min-h-screen flex-col">
+            <SiteVisitTracker />
             <GalleryBackground />
             {/* Banner Section.*/}
             <div className="relative z-20">
