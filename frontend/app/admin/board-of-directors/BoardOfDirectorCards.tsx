@@ -109,12 +109,23 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
   const [edited, setEdited] = useState<BoardMember | null>(member);
   const [editedFile, setEditedFile] = useState<File | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isNameTouched, setIsNameTouched] = useState(false);
+  const [isRoleTouched, setIsRoleTouched] = useState(false);
   const isNewMember = member?.boardMemberId === -1;
   // Keep each board-member translation independent so one field does not block the others.
   const [translatingFields, setTranslatingFields] = useState<BoardMemberTranslationField[]>([]);
   const nameReviewNotice = useTranslationReviewNotice();
   const roleReviewNotice = useTranslationReviewNotice();
   const captionReviewNotice = useTranslationReviewNotice();
+  const hasEnglishName = Boolean(edited?.boardMemberNameEn.trim());
+  const hasEnglishRole = Boolean(edited?.boardMemberRoleEn.trim());
+  const nameError = isNameTouched && !hasEnglishName
+    ? 'Name (English) is required.'
+    : null;
+  const roleError = isRoleTouched && type === 'officer' && !hasEnglishRole
+    ? 'Role (English) is required.'
+    : null;
+  const canSubmit = hasEnglishName && (type === 'director' || hasEnglishRole);
 
   const updateEnglishField = (
     field: 'boardMemberNameEn' | 'boardMemberRoleEn' | 'boardMemberCaptionEn',
@@ -217,20 +228,30 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
         {nameReviewNotice.showNotice && (
           <TranslationReviewNotice onDismiss={nameReviewNotice.dismissNotice} />
         )}
-        <label className={labelClass}>Name (English)
-          <input
-            type="text"
-            value={edited?.boardMemberNameEn ?? ""}
-            onChange={(event) =>
-              updateEnglishField(
-                'boardMemberNameEn',
-                event.target.value,
-                nameReviewNotice.markEnglishChanged,
-              )
-            }
-            className={inputClass}
-          />
-        </label>
+        <div>
+          <label className={labelClass}>Name (English)
+            <input
+              type="text"
+              value={edited?.boardMemberNameEn ?? ""}
+              onBlur={() => setIsNameTouched(true)}
+              onChange={(event) =>
+                updateEnglishField(
+                  'boardMemberNameEn',
+                  event.target.value,
+                  nameReviewNotice.markEnglishChanged,
+                )
+              }
+              aria-describedby={nameError ? 'board-member-name-en-error' : undefined}
+              aria-invalid={Boolean(nameError)}
+              className={inputClass}
+            />
+          </label>
+          {nameError && (
+            <p id="board-member-name-en-error" className="mt-1 text-body-sm text-msscc-danger">
+              {nameError}
+            </p>
+          )}
+        </div>
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="board-member-name-ja" className={labelClass}>
@@ -258,20 +279,30 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
             {roleReviewNotice.showNotice && (
               <TranslationReviewNotice onDismiss={roleReviewNotice.dismissNotice} />
             )}
-            <label className={labelClass}>Role (English)
-              <input
-                type="text"
-                value={edited?.boardMemberRoleEn ?? ""}
-                onChange={(event) =>
-                  updateEnglishField(
-                    'boardMemberRoleEn',
-                    event.target.value,
-                    roleReviewNotice.markEnglishChanged,
-                  )
-                }
-                className={inputClass}
-              />
-            </label>
+            <div>
+              <label className={labelClass}>Role (English)
+                <input
+                  type="text"
+                  value={edited?.boardMemberRoleEn ?? ""}
+                  onBlur={() => setIsRoleTouched(true)}
+                  onChange={(event) =>
+                    updateEnglishField(
+                      'boardMemberRoleEn',
+                      event.target.value,
+                      roleReviewNotice.markEnglishChanged,
+                    )
+                  }
+                  aria-describedby={roleError ? 'board-member-role-en-error' : undefined}
+                  aria-invalid={Boolean(roleError)}
+                  className={inputClass}
+                />
+              </label>
+              {roleError && (
+                <p id="board-member-role-en-error" className="mt-1 text-body-sm text-msscc-danger">
+                  {roleError}
+                </p>
+              )}
+            </div>
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <label htmlFor="board-member-role-ja" className={labelClass}>
@@ -336,14 +367,13 @@ export function MemberPopUp({ member, type, onUpdate, onClose, onDelete }:
       {/* Actions: stacked on phones, a row from sm up */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
         <button
+          type="button"
           onClick={() => {
-            if (!edited?.boardMemberNameEn?.trim()) {
-              alert("English name cannot be empty");
-              return;
-            }
+            if (!canSubmit) return;
             onUpdate(edited, editedFile);
             onClose(null);
           }}
+          disabled={!canSubmit}
           className={primaryButtonClass}
         >
           {isNewMember ? "Add" : "Save"}
