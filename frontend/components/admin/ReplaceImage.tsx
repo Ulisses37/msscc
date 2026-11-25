@@ -172,7 +172,7 @@ export default function ReplaceImage() {
           {(selectedModel === "static-images" || selectedModel === null) && (
             <button className="rounded-sm bg-msscc-pink px-4 py-2 text-btn tracking-btn text-white transition-colors hover:bg-msscc-pink-dark"
             onClick={() => handleModelSelection("static-images")}>
-              {selectedModel === null ? "Icons" : "Cancel"}
+              {selectedModel === null ? "Media item" : "Cancel"}
             </button>
           )}
         </div>
