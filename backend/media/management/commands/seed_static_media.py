@@ -52,6 +52,13 @@ STATIC_MEDIA_SEEDS = (
         content_type="application/pdf",
         alt_text_en="Printable membership form",
     ),
+    StaticMediaSeed(
+        static_image_id=3,
+        display_name="Officer Default Image",
+        file_name="Officer_Default.png",
+        content_type="image/png",
+        alt_text_en="Officer Default",
+    ),
 )
 
 ACCEPTED_MEDIA_EXTENSIONS = tuple(

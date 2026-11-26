@@ -3,7 +3,7 @@ from rest_framework import serializers
 from board_members.models import BoardMember
 from media.models import StaticImage
 
-PLACEHOLDER_STATIC_IMAGE_ID = 2
+PLACEHOLDER_STATIC_IMAGE_ID = 3
 
 
 # serializer allows for easy access to board member metadata
