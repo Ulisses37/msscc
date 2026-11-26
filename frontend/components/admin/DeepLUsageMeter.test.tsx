@@ -47,6 +47,28 @@ describe('DeepLUsageMeter', () => {
     });
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '80');
     expect(screen.getByText('100,000 left')).toBeInTheDocument();
+    expect(screen.getByText('DeepL Translation Usage')).toBeInTheDocument();
+    expect(screen.queryByText(/monthly/i)).not.toBeInTheDocument();
+  });
+
+  it('displays a million-character provider allowance without promising a reset', async () => {
+    jest.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        characterCount: 250_000,
+        characterLimit: 1_000_000,
+        remainingCharacters: 750_000,
+        usagePercentage: 25,
+      }),
+    } as Response);
+
+    render(<DeepLUsageMeter />);
+
+    expect(await screen.findByText('250,000 / 1,000,000 characters')).toBeInTheDocument();
+    expect(screen.getByText('750,000 left')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
+    expect(screen.getByText('DeepL Translation Usage')).toBeInTheDocument();
+    expect(screen.queryByText(/monthly|billing cycle|reset/i)).not.toBeInTheDocument();
   });
 
   it('hides the meter and shows an error when usage is unavailable', async () => {

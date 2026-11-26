@@ -78,8 +78,8 @@ describe('requestDeepLTranslation', () => {
 
     await expect(requestDeepLTranslation('<strong>Four</strong>')).resolves.toBeNull();
     expect(window.alert).toHaveBeenCalledWith(
-      'This translation needs 4 characters, but only 3 remain in the DeepL quota for the ' +
-        'current billing cycle. Please refer to the admin dashboard for the remaining limit.',
+      'This translation needs 4 characters, but only 3 remain in the DeepL quota. ' +
+        'Please refer to the admin dashboard for the remaining limit.',
     );
     expect(window.confirm).not.toHaveBeenCalled();
     expect(global.fetch).toHaveBeenCalledTimes(1);

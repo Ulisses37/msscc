@@ -31,7 +31,8 @@ export async function requestDeepLTranslation(text: string): Promise<string | nu
     if (decision === 'block') {
       window.alert(
         `This translation needs ${requestedCharacters.toLocaleString()} characters, but only ` +
-          `${usage.remainingCharacters.toLocaleString()} remain in the DeepL quota for the current billing cycle. Please refer to the admin dashboard for the remaining limit.`,
+          `${usage.remainingCharacters.toLocaleString()} remain in the DeepL quota. ` +
+          'Please refer to the admin dashboard for the remaining limit.',
       );
       return null;
     }
