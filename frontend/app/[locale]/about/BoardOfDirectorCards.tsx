@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 interface DirectorCardProps {
@@ -23,12 +24,17 @@ export function OfficerCard({
   // A shared media area keeps details aligned when source portraits have different aspect ratios.
   return (
     <div className="min-w-0 w-full p-2 text-left align-middle">
-      <div className="mx-auto flex aspect-square w-full max-w-[17.5rem] items-end justify-center lg:max-w-64">
+      <div
+        className="relative mx-auto flex aspect-square w-full max-w-[17.5rem] items-end justify-center lg:max-w-64"
+      >
         {boardMemberImageURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={boardMemberImageURL}
             alt={t('portraitAlt', { name: boardMemberName })}
+            fill
+            sizes={
+              '(min-width: 1024px) 16rem, (min-width: 768px) 17.5rem, calc(100vw - 3rem)'
+            }
             className="size-full object-contain object-bottom"
           />
         ) : (
@@ -62,12 +68,15 @@ export function DirectorCard({
   return (
     <div className="min-w-0 w-full text-center">
       {/* Matching square frames crop varied uploads consistently and preserve the teal grid gutters. */}
-      <div className="mx-auto aspect-square w-full max-w-32 overflow-hidden sm:max-w-40 lg:max-w-48">
+      <div
+        className="relative mx-auto aspect-square w-full max-w-32 overflow-hidden sm:max-w-40 lg:max-w-48"
+      >
         {boardMemberImageURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={boardMemberImageURL}
             alt={t('portraitAlt', { name: boardMemberName })}
+            fill
+            sizes="(min-width: 1024px) 12rem, (min-width: 640px) 10rem, 8rem"
             className="size-full object-cover"
           />
         ) : (

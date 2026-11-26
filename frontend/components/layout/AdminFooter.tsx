@@ -10,19 +10,13 @@ export const AdminFooter = () => {
         <div className="text-caption font-medium sm:text-body-sm">
           © {new Date().getFullYear()} Admin Portal
         </div>
-        
+
         <nav aria-label="Admin footer navigation" className="flex flex-wrap justify-center gap-x-4 gap-y-1 sm:gap-x-6">
-          <Link 
-            href="/admin/documentation" 
+          <Link
+            href="/admin/documentation"
             className="text-caption !text-white transition-colors hover:underline sm:text-body-sm"
           >
             Documentation
-          </Link>
-          <Link 
-            href="/admin/help" 
-            className="text-caption !text-white transition-colors hover:underline sm:text-body-sm"
-          >
-            Help Support
           </Link>
         </nav>
       </div>

@@ -73,7 +73,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const [paymentState, setPaymentState] = useState<'ready' | 'confirming' | 'submitted'>('ready');
   const sessionRequestInFlight = useRef(false);
   const sessionRequestVersion = useRef(0);
-
+  const staticMediaIDMembershipForm = 2;
   const previewReceivedRef = usePreviewBlocks(setContentBlocks);
   const contentDisplayState = useDelayedFallback(contentBlocks.length);
 
@@ -174,7 +174,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const handleDownload = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/2/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/${staticMediaIDMembershipForm}/`,
       );
 
       if (!response.ok) {
