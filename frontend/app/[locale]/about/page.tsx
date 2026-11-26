@@ -51,7 +51,7 @@ export default function AboutPage() {
     };
 
     loadPageContent();
-  }, []);
+  }, [previewReceivedRef]);
 
   useEffect(() => {
     let cancelled = false;

@@ -79,7 +79,7 @@ export default function PartnersPage() {
     };
 
     loadPageContent();
-  }, []);
+  }, [previewReceivedRef]);
 
   useEffect(() => {
     const loadPartners = async () => {
