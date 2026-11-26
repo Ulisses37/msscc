@@ -18,7 +18,10 @@ export const PublicFooter = () => {
 
   return (
     <footer className="w-full bg-msscc-teal text-white">
-      <div className="my-3 mx-auto grid w-full gap-7 px-4 py-8 pb-6 sm:px-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-10 lg:px-8">
+      <div
+        className="my-3 mx-auto grid w-full max-w-content gap-7 px-4 py-8 pb-6
+          sm:px-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-10 lg:px-8"
+      >
         <section aria-labelledby="footer-about-heading">
           <h2 id="footer-about-heading" className="font-heading text-heading-3 text-white">
             {t('organizationName')}

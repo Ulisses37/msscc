@@ -5,6 +5,7 @@ import React, { useEffect, useState }from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';  // To be used if partner objects have links to their websites or profiles
+import Image from 'next/image';
 
 
 // Components
@@ -46,8 +47,12 @@ function PartnerLink({ name, href, imageUrl }: PartnerLinkProps) {
     >
       <span className="min-w-0 break-words">{name}</span>
       {imageUrl && (
-        <img
+        <Image
           src={imageUrl}
+          width={32}
+          height={32}
+          // Preserve direct access to storage URLs, which may be signed.
+          unoptimized
           alt=""
           aria-hidden="true"
           className="size-8 shrink-0 rounded-sm object-contain no-underline"
@@ -79,7 +84,7 @@ export default function PartnersPage() {
     };
 
     loadPageContent();
-  }, []);
+  }, [previewReceivedRef]);
 
   useEffect(() => {
     const loadPartners = async () => {

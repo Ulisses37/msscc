@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from "react";
+import Image from 'next/image';
 import { createPortal } from "react-dom";
 
 type ImageItem = {
@@ -233,8 +234,12 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                   aria-label={isProtected ? `${item.file_name} is protected by a static image` : `Select ${item.file_name}`}
                 />
                 {item.file_url ? (
-                  <img
+                  <Image
                     src={item.file_url}
+                    width={56}
+                    height={56}
+                    // Media previews must use their original storage URL, including signatures.
+                    unoptimized
                     alt={item.alt_text_en || item.file_name}
                     className="h-14 w-14 shrink-0 rounded-md border border-slate-200 object-cover"
                   />
@@ -329,8 +334,12 @@ export function ImageDeletionManager({ onClose, mobileLayout = false }: ImageDel
                     <td className="px-4 py-3">
                       <div className="flex min-w-0 items-center gap-3">
                         {item.file_url ? (
-                          <img
+                          <Image
                             src={item.file_url}
+                            width={40}
+                            height={40}
+                            // Media previews must use their original storage URL, including signatures.
+                            unoptimized
                             alt={item.alt_text_en || item.file_name}
                             className="h-10 w-10 shrink-0 rounded-md border border-slate-200 object-cover"
                           />

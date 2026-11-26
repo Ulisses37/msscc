@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShiftCard } from '@/components/admin/ShiftCard';
@@ -52,7 +52,7 @@ export default function VolunteerCreationPage() {
   const [exportError, setExportError] = useState('');
 
 // Fetch shifts for this event, reusable so it can be called again after creating a shift
-  const loadShifts = async () => {
+  const loadShifts = useCallback(async () => {
     try {
       const data = await getSlotsByEventId(Number(id));
       setShifts(data || []);
@@ -62,11 +62,11 @@ export default function VolunteerCreationPage() {
     } finally {
       setIsLoadingShifts(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     loadShifts();
-  }, [id]);
+  }, [loadShifts]);
 
   // Loads Event Name
   useEffect(() => {

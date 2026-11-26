@@ -34,7 +34,7 @@ export default function SupportPage() {
     };
 
     loadPageContent();
-  }, []);
+  }, [previewReceivedRef]);
 
   return (
     <main className="mx-auto max-w-content px-6 py-10">

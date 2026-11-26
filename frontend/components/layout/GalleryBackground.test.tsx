@@ -44,6 +44,8 @@ jest.mock('next/image', () => ({
   }) => {
     void fill;
     void priority;
+    // Keep a native image so tests can dispatch load/error events without Next's loader.
+    // eslint-disable-next-line @next/next/no-img-element
     return <img alt={props.alt ?? ''} {...props} />;
   },
 }));

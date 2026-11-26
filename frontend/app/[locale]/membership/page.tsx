@@ -169,7 +169,7 @@ function MembershipPageContent({ locale }: { locale: string }) {
     };
 
     loadPageContent();
-  }, []);
+  }, [previewReceivedRef]);
 
   const handleDownload = async () => {
     try {
