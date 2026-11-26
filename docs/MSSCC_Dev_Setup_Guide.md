@@ -326,6 +326,85 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
+### Check service configuration
+
+Run the standalone diagnostic from the repository root:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/check_services.py
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/check_services.py
+```
+
+The script checks only variables already available in its process environment. It does not load
+`.env` or `.env.local`, initialize Django, or contact a service or database. Merely filling in an
+environment file does not make those variables available to this script. Run it in an environment
+where your development configuration has already been supplied securely. Do not paste secrets into
+terminal commands or copy frontend secrets into backend environment files for this check.
+
+The report covers Resend email, mailing-list configuration, email development routing, backend
+Stripe configuration, object storage, announcement/reminder flags, and scheduler authentication.
+It displays variable names and statuses only, never values. `CONFIGURED` means required variables
+are present, not that credentials, permissions, sender domains, webhooks, or connectivity work.
+`PARTIAL` identifies incomplete or inconsistent configuration. `NOT CONFIGURED` identifies missing
+variables, while `DISABLED` identifies a disabled feature and lists any missing prerequisites.
+Missing or invalid service configuration is advisory and does not produce a failing exit status.
+
+Frontend configuration is not checked. Verify Google Maps, DeepL, and the Stripe publishable key
+separately in the running frontend. Django settings overrides are not verified. In particular,
+development settings force email dev routing on, so ensure `RESEND_DEV_ALERT_EMAIL` is configured
+even if the environment flag is off.
+Hosted storage checks also require `S3_PUBLIC_DOMAIN` when `DJANGO_SETTINGS_MODULE` identifies
+production settings. No new environment variables or dependencies are required.
+
+### Run all website seed commands
+
+After migrations, use `seed_all` to run website initialization in this order:
+`seed_pages`, `seed_static_media`, `seed_board_members`, `seed_partners`, and
+`populate_page_content`. Run from the repository root.
+
+Preview the command list without executing any seeds:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_all --dry-run
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_all --dry-run
+```
+
+This preview lists commands only. It does not validate source assets, database state, or storage
+access. Use individual commands' validation options described below when needed.
+
+The full batch writes to the configured database and can upload bundled media to object storage.
+Coordinate with the team before running against shared development infrastructure:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_all
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_all
+```
+
+The batch works when individual seeds have already run. Each command retains its existing skip
+and preservation rules, including the board template's count-based refill behavior. It does not
+reset data or rerun migrations. Commands use their default source paths; run them individually
+if you need custom media or document paths.
+
+Every command is attempted even if an earlier one fails. The summary lists successes and failures,
+and any failure produces a nonzero exit status. Completed commands are not rolled back. Check the
+logs, resolve the failure, then rerun the batch or affected commands. Only the explicitly listed
+commands run, never reminder emails, test-membership helpers, or cleanup commands.
+
 ### Seed required page records
 
 After migrations, seed the page records used by the admin page editor and public content pages.
@@ -436,6 +515,45 @@ backend/venv/bin/python backend/manage.py seed_board_members
 The seed data is maintained in `backend/board_members/management/board_member_seed_data.py`.
 Existing BoardMember records are preserved, and the command does not replenish directors after
 the initial empty-table initialization.
+
+### Seed partners, donors, and sponsors
+
+After migrations, preview the acknowledgments copied from the client's existing website.
+Run these commands from the repository root:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_partners --dry-run
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_partners --dry-run
+```
+
+After reviewing the preview, coordinate with the team before writing to the shared development
+database:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_partners
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_partners
+```
+
+The command creates 14 partners, nine donors, and five sponsors on an empty partner table.
+Seed data is maintained in `backend/partners/management/partner_seed_data.py`. Existing records
+with the same name and category are skipped without changing their fields, including manually
+edited links, amounts, ordering, and visibility. Matching is case-insensitive and accepts singular
+or plural category labels. Missing entries are created even when some records already exist.
+
+New records have no media asset and image display is disabled. Japanese names are left blank;
+category labels are bilingual. The required contribution amount is set to `0.00` as a technical
+placeholder, not a verified donation amount. No storage uploads or translation requests occur.
+The dry run validates missing records without writing to the database or storage.
 
 ### Populate the initial public page content
 
