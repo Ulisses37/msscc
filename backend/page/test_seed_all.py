@@ -7,6 +7,7 @@ from django.test import TestCase
 
 from board_members.models import BoardMember
 from content.models import Content
+from media.management.commands.seed_static_media import STATIC_MEDIA_SEEDS
 from media.models import MediaAsset, StaticImage
 from page.management.commands.seed_all import SEED_COMMANDS
 from page.models import Page
@@ -96,9 +97,11 @@ class SeedAllExistingDataTests(TestCase):
             file_type="image/png",
             file_size=1,
         )
-        for slot_id in range(3):
+        for seed in STATIC_MEDIA_SEEDS:
             StaticImage.objects.create(
-                static_image_id=slot_id, display_name=f"Existing {slot_id}", media_asset=asset
+                static_image_id=seed.static_image_id,
+                display_name=f"Existing {seed.static_image_id}",
+                media_asset=asset,
             )
 
         block = ParsedContentBlock(
