@@ -52,6 +52,13 @@ STATIC_MEDIA_SEEDS = (
         content_type="application/pdf",
         alt_text_en="Printable membership form",
     ),
+    StaticMediaSeed(
+        static_image_id=3,
+        display_name="Officer Default Image",
+        file_name="Officer_Default.png",
+        content_type="image/png",
+        alt_text_en="Officer Default",
+    ),
 )
 
 ACCEPTED_MEDIA_EXTENSIONS = tuple(
@@ -64,7 +71,7 @@ ACCEPTED_MEDIA_EXTENSIONS = tuple(
 class Command(BaseCommand):
     """Create the website's reserved static media slots."""
 
-    help = "Seed the Placeholder, Banner, and Printable Membership Form records."
+    help = "Seed the Placeholder, Banner, Printable Membership Form, and Officer Default records."
 
     def add_arguments(self, parser) -> None:
         """Register optional source paths and validation-only mode."""
@@ -94,6 +101,14 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--officer-default",
+            type=Path,
+            help=(
+                "Path or filename for the officer default image; the extension may be omitted "
+                "(defaults to backend/media/seed_data/Officer_Default.png)."
+            ),
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Validate assets and report actions without writing database or storage state.",
@@ -118,6 +133,7 @@ class Command(BaseCommand):
             0: self._resolve_path(options.get("placeholder"), STATIC_MEDIA_SEEDS[0]),
             1: self._resolve_path(options.get("banner"), STATIC_MEDIA_SEEDS[1]),
             2: self._resolve_path(options.get("membership_form"), STATIC_MEDIA_SEEDS[2]),
+            3: self._resolve_path(options.get("officer_default"), STATIC_MEDIA_SEEDS[3]),
         }
         pending_seeds = [
             seed

@@ -40,6 +40,11 @@ const NEW_OFFICER: BoardMember = {
   boardMemberCaptionJa: '',
 };
 
+const NEW_DIRECTOR: BoardMember = {
+  ...NEW_OFFICER,
+  boardMemberRoleEn: 'Director',
+};
+
 describe('MemberPopUp translation buttons', () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -187,5 +192,87 @@ describe('MemberPopUp translation buttons', () => {
       },
       null,
     );
+  });
+
+  it('shows required officer field errors after blur and enables Add when both are valid', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={NEW_OFFICER}
+        type="officer"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    const addButton = screen.getByRole('button', { name: 'Add' });
+    const nameInput = screen.getByLabelText('Name (English)');
+    const roleInput = screen.getByLabelText('Role (English)');
+
+    expect(addButton).toBeDisabled();
+
+    await user.click(nameInput);
+    await user.tab();
+    expect(nameInput).toHaveAccessibleDescription('Name (English) is required.');
+
+    await user.click(roleInput);
+    await user.tab();
+    expect(roleInput).toHaveAccessibleDescription('Role (English) is required.');
+
+    await user.type(nameInput, 'New Officer');
+    await user.type(roleInput, 'Secretary');
+
+    expect(addButton).toBeEnabled();
+  });
+
+  it('requires only an English name for directors', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={NEW_DIRECTOR}
+        type="director"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    const addButton = screen.getByRole('button', { name: 'Add' });
+    const nameInput = screen.getByLabelText('Name (English)');
+
+    expect(screen.queryByLabelText('Role (English)')).not.toBeInTheDocument();
+    expect(addButton).toBeDisabled();
+
+    await user.type(nameInput, 'New Director');
+
+    expect(addButton).toBeEnabled();
+  });
+
+  it('disables Save and shows an inline error after a required edit field is cleared', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemberPopUp
+        member={BOARD_MEMBER}
+        type="officer"
+        onUpdate={jest.fn()}
+        onClose={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    const saveButton = screen.getByRole('button', { name: 'Save' });
+    const roleInput = screen.getByLabelText('Role (English)');
+
+    expect(saveButton).toBeEnabled();
+
+    await user.clear(roleInput);
+    await user.tab();
+
+    expect(roleInput).toHaveAccessibleDescription('Role (English) is required.');
+    expect(saveButton).toBeDisabled();
   });
 });

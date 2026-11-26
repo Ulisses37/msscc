@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ImportImage } from '@/components/ui/ImportImage'
 import PostImage from '@/components/ui/PostImage'
 import { parseMediaUploadError } from '@/utils/mediaUploadError'
+import { validatePartnerWebsite } from '@/utils/partnerWebsiteValidation';
 import Image from 'next/image'
 
 import { primaryButtonClass, secondaryButtonClass, dangerButtonClass } from '@/components/layout/AdminButtonStyles'
@@ -190,11 +191,22 @@ export function CreatePartnerProp(
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaVisible, setMediaVisible] = useState(true);
-  const [websiteError, setWebsiteError] = useState<string | null>(null);
   const [contributionError, setContributionError] = useState<string>("");
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
+  const [isNameTouched, setIsNameTouched] = useState(false);
+  const [isWebsiteTouched, setIsWebsiteTouched] = useState(false);
 
   const CategoryTitle = PType.charAt(0).toUpperCase() + PType.slice(1)
+  const hasEnglishName = Boolean(partnerInfo.Name.trim());
+  const websiteValidation = validatePartnerWebsite(partnerInfo.Website, partnerInfo.Category === 'partner');
+  const nameError = isNameTouched && !hasEnglishName ? 'Name (English) is required.' : null;
+  const websiteError = isWebsiteTouched ? websiteValidation.error : null;
+  const isSubmitDisabled = isUploadingMedia
+    || Boolean(mediaError)
+    || orderError !== ''
+    || !hasEnglishName
+    || Boolean(websiteValidation.error)
+    || contributionError !== '';
 
   const handleMediaChange = (file: File | null) => {
     if (previewUrlRef.current) {
@@ -242,7 +254,6 @@ export function CreatePartnerProp(
         partnerInfo,
         mediaFile: selectedMediaFile,
         mediaVisible,
-        setWebsiteError,
         type: "create",
       });
     } catch (error) {
@@ -267,14 +278,20 @@ export function CreatePartnerProp(
 
         {/* Editable fields */}
         <div className="flex flex-col gap-4">
-          <label className={labelClass}>Name (English)
-            <input
-              type="text"
-              value={partnerInfo?.Name ?? ""}
-              onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
-              className={inputClass}
-            />
-          </label>
+          <div>
+            <label className={labelClass}>Name (English)
+              <input
+                type="text"
+                value={partnerInfo?.Name ?? ""}
+                onBlur={() => setIsNameTouched(true)}
+                onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
+                aria-describedby={nameError ? 'create-partner-name-error' : undefined}
+                aria-invalid={Boolean(nameError)}
+                className={inputClass}
+              />
+            </label>
+            {nameError && <p id="create-partner-name-error" className={errorTextClass}>{nameError}</p>}
+          </div>
           <label className={labelClass}>Name (Japanese)
             <input
               type="text"
@@ -288,11 +305,16 @@ export function CreatePartnerProp(
               <input
                 type="text"
                 value={partnerInfo?.Website ?? ""}
-                onChange={(e) => setInfo(prev => ({ ...prev, Website: e.target.value || null }))}
+                onBlur={() => setIsWebsiteTouched(true)}
+                onChange={(e) => setInfo(prev => ({ ...prev, Website: e.target.value }))}
+                aria-describedby={websiteError ? 'create-partner-website-error' : undefined}
+                aria-invalid={Boolean(websiteError)}
                 className={inputClass}
               />
             </label>
-            {websiteError && <p className={errorTextClass}>{websiteError}</p>}
+            {websiteError && (
+              <p id="create-partner-website-error" className={errorTextClass}>{websiteError}</p>
+            )}
           </div>
           <div>
             <label className={labelClass}>Display Order
@@ -374,7 +396,7 @@ export function CreatePartnerProp(
           <button
             type="button"
             onClick={handleCreateSubmit}
-            disabled={!!(isUploadingMedia || mediaError || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            disabled={isSubmitDisabled}
             className={primaryButtonClass}
           >
             Add
@@ -405,7 +427,6 @@ export function EditPartnerProp(
 }){
   const [partnerInfo, setInfo] = useState<PartnerProp>(partner);
   const [orderError, setOrderError] = useState<string>("");
-  const [, setWebsiteError] = useState<string>("");
   const [contributionError, setContributionError] = useState<string>("");
   const [currentDisplayOrder, setCurrentDisplayOrder] = useState<number | string>(partnerInfo.DisplayOrder);
   const [currentContribution, setCurrentContribution] = useState<number | string>(partnerInfo.ContributionAmount);
@@ -415,8 +436,19 @@ export function EditPartnerProp(
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [mediaVisible, setMediaVisible] = useState(partnerInfo.MediaVisible);
+  const [isNameTouched, setIsNameTouched] = useState(false);
+  const [isWebsiteTouched, setIsWebsiteTouched] = useState(false);
 
   const CategoryTitle = partnerInfo.Category.charAt(0).toUpperCase() + partnerInfo.Category.slice(1);
+  const hasEnglishName = Boolean(partnerInfo.Name.trim());
+  const websiteValidation = validatePartnerWebsite(partnerInfo.Website, partnerInfo.Category === 'partner');
+  const nameError = isNameTouched && !hasEnglishName ? 'Name (English) is required.' : null;
+  const websiteError = isWebsiteTouched ? websiteValidation.error : null;
+  const isSubmitDisabled = isUploadingMedia
+    || orderError !== ''
+    || !hasEnglishName
+    || Boolean(websiteValidation.error)
+    || contributionError !== '';
 
 
   const categoryOptions = [
@@ -465,7 +497,6 @@ export function EditPartnerProp(
         partnerInfo,
         mediaFile: selectedMediaFile,
         mediaVisible,
-        setWebsiteError,
         type: "update",
       });
     } catch (error) {
@@ -519,14 +550,20 @@ export function EditPartnerProp(
             </div>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row"> {/*Name pair*/}
-            <label className={`${labelClass} sm:flex-1`}>Name (English)
-              <input
-                type="text"
-                value={partnerInfo?.Name ?? ""}
-                onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
-                className={inputClass}
-              />
-            </label>
+            <div className="sm:flex-1">
+              <label className={labelClass}>Name (English)
+                <input
+                  type="text"
+                  value={partnerInfo?.Name ?? ""}
+                  onBlur={() => setIsNameTouched(true)}
+                  onChange={(e) => setInfo(prev => prev ? { ...prev, Name: e.target.value } : prev)}
+                  aria-describedby={nameError ? 'edit-partner-name-error' : undefined}
+                  aria-invalid={Boolean(nameError)}
+                  className={inputClass}
+                />
+              </label>
+              {nameError && <p id="edit-partner-name-error" className={errorTextClass}>{nameError}</p>}
+            </div>
             <label className={`${labelClass} sm:flex-1`}>Name (Japanese)
               <input
                 type="text"
@@ -638,10 +675,16 @@ export function EditPartnerProp(
               <input
                 type="text"
                 value={partnerInfo?.Website ?? ""}
+                onBlur={() => setIsWebsiteTouched(true)}
                 onChange={(e) => setInfo(prev => prev ? { ...prev, Website: e.target.value } : prev)}
+                aria-describedby={websiteError ? 'edit-partner-website-error' : undefined}
+                aria-invalid={Boolean(websiteError)}
                 className={inputClass}
               />
             </label>
+            {websiteError && (
+              <p id="edit-partner-website-error" className={errorTextClass}>{websiteError}</p>
+            )}
             <label className={`${checkboxLabelClass} mt-3`}>
               <input
                 type="checkbox"
@@ -658,7 +701,7 @@ export function EditPartnerProp(
           <button
             type="button"
             onClick={handleUpdateSubmit}
-            disabled={!!(isUploadingMedia || orderError != "" || (partnerInfo.Name == "" && partnerInfo.NameJP == "") || contributionError != '')}
+            disabled={isSubmitDisabled}
             className={primaryButtonClass}
           >
             Save
@@ -675,7 +718,6 @@ export function EditPartnerProp(
             onClick={async() => await validateAndSubmit(
               {
                 partnerInfo: partnerInfo,
-                setWebsiteError: setWebsiteError,
                 type: "delete",
               })}
             className={dangerButtonClass}
@@ -802,13 +844,11 @@ async function validateAndSubmit(
     partnerInfo,
     mediaFile,
     mediaVisible,
-    setWebsiteError,
     type,
   } : {
     partnerInfo : PartnerProp;
     mediaFile?: File | null;
     mediaVisible?: boolean;
-    setWebsiteError: (value: string) => void;
     type: string;
   }){
 
@@ -838,19 +878,21 @@ async function validateAndSubmit(
 
   if (partnerInfo.ContributionAmount < 0) return;
 
-  const website = partnerInfo.Website?.trim() ?? "";
+  if (!partnerInfo.Name.trim()) return;
 
-  // Website is required for partners, optional for donors/sponsors
-  if (partnerInfo.Category === "partner" && website === "") {
-    setWebsiteError("Please enter a valid URL");
-    return;
-  }
+  const websiteValidation = validatePartnerWebsite(
+    partnerInfo.Website,
+    partnerInfo.Category === 'partner',
+  );
 
-  partnerInfo.Website =
-    website === "" ? null : /^https?:\/\//i.test(website) ? website : `https://${website}`;
+  if (websiteValidation.error) return;
 
   await updatePartnerTable({
-    partner: partnerInfo,
+    partner: {
+      ...partnerInfo,
+      Name: partnerInfo.Name.trim(),
+      Website: websiteValidation.normalizedWebsite,
+    },
     submissionType: type,
     mediaFile,
     mediaVisible: mediaVisible ?? true,

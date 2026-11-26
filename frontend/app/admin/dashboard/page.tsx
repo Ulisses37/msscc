@@ -13,7 +13,14 @@ import { DonationEntry } from '@/components/admin/DonationDetailDrawer';
 import { MembershipEntry } from '@/components/admin/MembershipDetailDrawer';
 import { fetchDashboardFinancialRecords } from '@/services/financialRecordSearch';
 
-import { AvailablePages, EventCarousel, DonationCarousel, MembershipCarousel, CurrentAdmin } from './pageDisplay';
+import {
+  AvailablePages,
+  CurrentAdmin,
+  DonationCarousel,
+  EventCarousel,
+  MembershipCarousel,
+  PageCard,
+} from './pageDisplay';
 import { SiteAnalytics, MembershipCounter, FinanceCounter } from './analytics';
 import { ImageStorage } from './imageStorage';
 
@@ -59,6 +66,7 @@ export default function Dashboard() {
             .map(([page]) => (
               <AvailablePages key={page} CategoryTitle={page} />
             ))}
+          <PageCard PageTitle="Documentation" />
         </div>
 
         {/* Right Panel */}
