@@ -349,11 +349,11 @@ records or page content.
 
 ### Seed required static media
 
-After migrations, seed the reusable Placeholder, Banner, and Printable Membership Form media
-used by the public website. The command uploads `Placeholder.png`, `Banner.webp`, and
-`Printable_Membership_Form.pdf` from `backend/media/seed_data/` to the configured object storage
-and creates StaticImage IDs `0`, `1`, and `2`, respectively, when they are missing. Seeding does
-not require the frontend folder.
+After migrations, seed the reusable Placeholder, Banner, Printable Membership Form, and Officer
+Default Image media used by the public website. The command uploads `Placeholder.png`,
+`Banner.webp`, `Printable_Membership_Form.pdf`, and `Officer_Default.png` from
+`backend/media/seed_data/` to the configured object storage and creates StaticImage IDs `0`, `1`,
+`2`, and `3`, respectively, when they are missing. Seeding does not require the frontend folder.
 
 
 An override may omit its extension. The command searches the supported media extensions: `jpg`,
@@ -386,20 +386,21 @@ backend/venv/bin/python backend/manage.py seed_static_media
 ```
 
 The command is safe to run again: existing static media associations are preserved. To use assets
-from another location, pass `--placeholder <path-or-filename>` and
-`--banner <path-or-filename>`, and/or `--membership-form <path-or-filename>`.
+from another location, pass `--placeholder <path-or-filename>`, `--banner <path-or-filename>`,
+`--membership-form <path-or-filename>`, and/or `--officer-default <path-or-filename>`.
 
 Filename-only overrides are resolved within `backend/media/seed_data/`. For example, to use
-`NewPlaceholder.png`, `NewBanner.webp`, and `NewMembershipForm.pdf` from that directory:
+`NewPlaceholder.png`, `NewBanner.webp`, `NewMembershipForm.pdf`, and `NewOfficerDefault.png`
+from that directory:
 
 **Windows:**
 ```powershell
-backend\venv\Scripts\python.exe backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf
+backend\venv\Scripts\python.exe backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf --officer-default NewOfficerDefault.png
 ```
 
 **Mac:**
 ```bash
-backend/venv/bin/python backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf
+backend/venv/bin/python backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf --officer-default NewOfficerDefault.png
 ```
 
 ### Seed the Board of Directors template

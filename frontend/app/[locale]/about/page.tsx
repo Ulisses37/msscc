@@ -151,7 +151,7 @@ export default function AboutPage() {
 
       <section
         aria-labelledby="about-board-heading"
-        className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0"
+        className="min-h-screen w-full min-w-0 max-w-full bg-msscc-teal p-0 m-0 pb-2"
         data-testid="board-section"
       >
         {/* Smaller mobile headings and side padding prevent the title from overflowing at 320px. */}
@@ -177,7 +177,7 @@ export default function AboutPage() {
             {/* Four desktop columns let every fifth officer begin a directly aligned new row. */}
             <div
               data-testid="officer-grid"
-              className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-4 lg:gap-4 lg:px-6"
+              className="grid grid-cols-1 gap-y-8 px-4 text-center md:grid-cols-2 md:gap-x-6 md:gap-y-10 md:px-6 lg:grid-cols-4 lg:gap-4 lg:px-6 max-w-content mx-auto"
             >
               {boardMembers
                 .filter((member) => !member.isDirector)
