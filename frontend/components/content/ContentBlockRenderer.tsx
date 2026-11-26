@@ -64,8 +64,10 @@ export function ContentBlockRenderer({
         // Align the figure so the image and its caption move together.
         return (
           <figure className={alignmentClass}>
-            {/* Apply width to the image without constraining its caption. */}
+            {/* Media has no intrinsic dimensions in the API. Keep natural proportions
+                and percentage widths without imposing a fixed-height fill container. */}
             {block.media_url && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={block.media_url}
                 alt={getRichTextPlainText(content)}

@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 interface PartnerCardProps {
   name: string;
   imageUrl?: string;
@@ -20,8 +22,12 @@ export function PartnerCard({
           {name}
         </p>
         {imageUrl && (
-          <img
+          <Image
             src={imageUrl}
+            width={32}
+            height={32}
+            // Preserve direct access to storage URLs, which may be signed.
+            unoptimized
             alt=""
             aria-hidden="true"
             className="size-8 shrink-0 rounded-sm object-contain"

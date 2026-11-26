@@ -254,6 +254,8 @@ export function EventDetail({
             key={eventImage.id}
             className={`${alignmentClass} mt-6`}
           >
+            {/* Media dimensions are unavailable; preserve natural height and staff-set width. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={eventImage.mediaUrl}
               alt={getRichTextPlainText(caption) || title}

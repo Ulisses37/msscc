@@ -110,6 +110,8 @@ export default function ImageBlockInput({
       {/* Handle displaying the image */}
       {imageUrl && (
         <div className="mb-6">
+          {/* Local previews have no stored dimensions and must retain their natural size. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={imageUrl}
             alt="Selected image preview"
