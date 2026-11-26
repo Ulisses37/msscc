@@ -174,26 +174,28 @@ function MembershipPageContent({ locale }: { locale: string }) {
   const handleDownload = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/media/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/media/static-images/2/`,
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch media list');
+        throw new Error('Failed to fetch printable membership form');
       }
 
-      const items = await response.json();
+      const staticImage = await response.json() as {
+        media: { file_url: string | null } | null;
+      };
+      const fileUrl = staticImage.media?.file_url;
 
-      const formItem = items.find(
-        (item: { file_name: string; file_url: string }) =>
-          item.file_name === 'Printable_Membership_Form.pdf',
-      );
-
-      if (!formItem?.file_url) {
+      if (!fileUrl) {
         alert(t('printFormUnavailable'));
         return;
       }
 
-      const fileResponse = await fetch(formItem.file_url);
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) {
+        throw new Error('Failed to download printable membership form');
+      }
+
       const blob = await fileResponse.blob();
       const url = window.URL.createObjectURL(blob);
 

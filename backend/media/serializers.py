@@ -65,3 +65,12 @@ class StaticImageSerializer(serializers.ModelSerializer):
             "display_name",
             "media_asset",
         ]
+
+
+class StaticImageDetailSerializer(StaticImageSerializer):
+    """Include the related media metadata for a single static image."""
+
+    media = MediaFileSerializer(source="media_asset", read_only=True)
+
+    class Meta(StaticImageSerializer.Meta):
+        fields = [*StaticImageSerializer.Meta.fields, "media"]

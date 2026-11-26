@@ -45,12 +45,18 @@ STATIC_MEDIA_SEEDS = (
         content_type="image/webp",
         alt_text_en="Banner",
     ),
+    StaticMediaSeed(
+        static_image_id=2,
+        display_name="Printable Membership Form",
+        file_name="Printable_Membership_Form.pdf",
+        content_type="application/pdf",
+        alt_text_en="Printable membership form",
+    ),
 )
 
-ACCEPTED_IMAGE_EXTENSIONS = tuple(
+ACCEPTED_MEDIA_EXTENSIONS = tuple(
     extension
     for supported_media in SUPPORTED_MEDIA
-    if supported_media.kind == "image"
     for extension in supported_media.extensions
 )
 
@@ -58,7 +64,7 @@ ACCEPTED_IMAGE_EXTENSIONS = tuple(
 class Command(BaseCommand):
     """Create the website's reserved static media slots."""
 
-    help = "Seed the Placeholder and Banner static media records."
+    help = "Seed the Placeholder, Banner, and Printable Membership Form records."
 
     def add_arguments(self, parser) -> None:
         """Register optional source paths and validation-only mode."""
@@ -76,6 +82,15 @@ class Command(BaseCommand):
             help=(
                 "Path or filename for the banner image; the extension may be omitted "
                 "(defaults to backend/media/seed_data/Banner.webp)."
+            ),
+        )
+        parser.add_argument(
+            "--membership-form",
+            type=Path,
+            help=(
+                "Path or filename for the printable membership form; the extension may "
+                "be omitted (defaults to "
+                "backend/media/seed_data/Printable_Membership_Form.pdf)."
             ),
         )
         parser.add_argument(
@@ -102,6 +117,7 @@ class Command(BaseCommand):
         paths = {
             0: self._resolve_path(options.get("placeholder"), STATIC_MEDIA_SEEDS[0]),
             1: self._resolve_path(options.get("banner"), STATIC_MEDIA_SEEDS[1]),
+            2: self._resolve_path(options.get("membership_form"), STATIC_MEDIA_SEEDS[2]),
         }
         pending_seeds = [
             seed
@@ -124,7 +140,7 @@ class Command(BaseCommand):
         self._seed(slots, pending_seeds, prepared_media, already_linked_count)
 
     def _resolve_path(self, supplied_path: Path | None, seed: StaticMediaSeed) -> Path:
-        """Resolve a CLI path or filename, trying accepted image extensions."""
+        """Resolve a CLI path or filename, trying accepted media extensions."""
         default_directory = Path(settings.BASE_DIR) / "media" / "seed_data"
         if supplied_path is None:
             path = default_directory / seed.file_name
@@ -144,7 +160,7 @@ class Command(BaseCommand):
         extension_order = [Path(seed.file_name).suffix.lower()]
         extension_order.extend(
             extension
-            for extension in ACCEPTED_IMAGE_EXTENSIONS
+            for extension in ACCEPTED_MEDIA_EXTENSIONS
             if extension not in extension_order
         )
         for extension in extension_order:
