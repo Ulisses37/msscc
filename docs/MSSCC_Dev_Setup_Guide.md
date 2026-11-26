@@ -326,6 +326,42 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
+### Check service configuration
+
+Run the standalone diagnostic from the repository root:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/check_services.py
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/check_services.py
+```
+
+The script checks only variables already available in its process environment. It does not load
+`.env` or `.env.local`, initialize Django, or contact a service or database. Merely filling in an
+environment file does not make those variables available to this script. Run it in an environment
+where your development configuration has already been supplied securely. Do not paste secrets into
+terminal commands or copy frontend secrets into backend environment files for this check.
+
+The report covers Resend email, mailing-list configuration, email development routing, Stripe,
+Google Maps, DeepL, object storage, announcement/reminder flags, and scheduler authentication.
+It displays variable names and statuses only, never values. `CONFIGURED` means required variables
+are present, not that credentials, permissions, sender domains, webhooks, or connectivity work.
+`PARTIAL` identifies incomplete or inconsistent configuration. `NOT CONFIGURED` identifies missing
+variables, while `DISABLED` identifies a disabled feature and lists any missing prerequisites.
+Missing or invalid service configuration is advisory and does not produce a failing exit status.
+
+Absent frontend variables are `NOT CHECKED` by default because the backend cannot inspect a
+separate frontend deployment. When running with the frontend environment supplied, append
+`--frontend` to treat absent frontend variables as missing. Frontend build-time configuration and
+Django settings overrides are not verified. In particular, development settings force email dev
+routing on, so ensure `RESEND_DEV_ALERT_EMAIL` is configured even if the environment flag is off.
+Hosted storage checks also require `S3_PUBLIC_DOMAIN` when `DJANGO_SETTINGS_MODULE` identifies
+production settings. No new environment variables or dependencies are required.
+
 ### Run all website seed commands
 
 After migrations, use `seed_all` to run website initialization in this order:
