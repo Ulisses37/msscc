@@ -28,6 +28,11 @@ def write_image(path: Path, image_format: str) -> None:
     image.save(path, format=image_format)
 
 
+def write_pdf(path: Path) -> None:
+    """Create a minimal PDF accepted by the media validation pipeline."""
+    path.write_bytes(b"%PDF-1.7\nminimal document\n%%EOF\n")
+
+
 @override_settings(STORAGES=TEST_STORAGES)
 class SeedStaticMediaCommandTests(TestCase):
     """Verify safe initialization of the reserved static media slots."""
@@ -37,6 +42,7 @@ class SeedStaticMediaCommandTests(TestCase):
         self.asset_directory = Path(self.temporary_directory.name)
         write_image(self.asset_directory / "Placeholder.png", "PNG")
         write_image(self.asset_directory / "Banner.webp", "WEBP")
+        write_pdf(self.asset_directory / "Printable_Membership_Form.pdf")
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -47,6 +53,8 @@ class SeedStaticMediaCommandTests(TestCase):
             str(self.asset_directory / "Placeholder.png"),
             "--banner",
             str(self.asset_directory / "Banner.webp"),
+            "--membership-form",
+            str(self.asset_directory / "Printable_Membership_Form.pdf"),
             *extra,
         ]
 
@@ -60,26 +68,34 @@ class SeedStaticMediaCommandTests(TestCase):
                     "static_image_id", "display_name", "media_asset_id"
                 )
             ),
-            [(0, "Placeholder", 1), (1, "Banner", 2)],
+            [
+                (0, "Placeholder", 1),
+                (1, "Banner", 2),
+                (2, "Printable Membership Form", 3),
+            ],
         )
-        self.assertEqual(MediaAsset.objects.count(), 2)
+        self.assertEqual(MediaAsset.objects.count(), 3)
         self.assertEqual(
             set(MediaAsset.objects.values_list("file_name", flat=True)),
-            {"Placeholder.png", "Banner.webp"},
+            {
+                "Placeholder.png",
+                "Banner.webp",
+                "Printable_Membership_Form.pdf",
+            },
         )
 
         for media_asset in MediaAsset.objects.all():
             self.assertTrue(media_asset.file.storage.exists(media_asset.file.name))
-        self.assertIn("Created: 2; linked: 2; skipped: 0.", output.getvalue())
+        self.assertIn("Created: 3; linked: 3; skipped: 0.", output.getvalue())
 
     def test_command_is_idempotent(self) -> None:
         call_command("seed_static_media", *self.command_args(), stdout=StringIO())
         output = StringIO()
         call_command("seed_static_media", *self.command_args(), stdout=output)
 
-        self.assertEqual(StaticImage.objects.count(), 2)
-        self.assertEqual(MediaAsset.objects.count(), 2)
-        self.assertIn("Created: 0; linked: 0; skipped: 2.", output.getvalue())
+        self.assertEqual(StaticImage.objects.count(), 3)
+        self.assertEqual(MediaAsset.objects.count(), 3)
+        self.assertIn("Created: 0; linked: 0; skipped: 3.", output.getvalue())
 
     def test_command_accepts_filename_stems_and_supported_extensions(self) -> None:
         with TemporaryDirectory() as temporary_directory:
@@ -90,6 +106,7 @@ class SeedStaticMediaCommandTests(TestCase):
             default_assets.mkdir(parents=True)
             write_image(default_assets / "Placeholder.jpg", "JPEG")
             write_image(default_assets / "Banner.png", "PNG")
+            write_pdf(default_assets / "Printable_Membership_Form.pdf")
 
             with override_settings(BASE_DIR=backend_directory):
                 call_command(
@@ -98,11 +115,13 @@ class SeedStaticMediaCommandTests(TestCase):
                     "Placeholder",
                     "--banner",
                     "Banner.png",
+                    "--membership-form",
+                    "Printable_Membership_Form",
                 )
 
         self.assertEqual(
             set(MediaAsset.objects.values_list("file_name", flat=True)),
-            {"Placeholder.jpg", "Banner.png"},
+            {"Placeholder.jpg", "Banner.png", "Printable_Membership_Form.pdf"},
         )
 
     def test_command_preserves_existing_link_and_fills_missing_slot(self) -> None:
@@ -124,11 +143,13 @@ class SeedStaticMediaCommandTests(TestCase):
 
         placeholder = StaticImage.objects.get(static_image_id=0)
         banner = StaticImage.objects.get(static_image_id=1)
+        membership_form = StaticImage.objects.get(static_image_id=2)
         self.assertEqual(placeholder.display_name, "Custom Placeholder")
         self.assertEqual(placeholder.media_asset_id, existing.pk)
         self.assertIsNotNone(banner.media_asset_id)
-        self.assertEqual(MediaAsset.objects.count(), 2)
-        self.assertIn("Created: 1; linked: 1; skipped: 1.", output.getvalue())
+        self.assertIsNotNone(membership_form.media_asset_id)
+        self.assertEqual(MediaAsset.objects.count(), 3)
+        self.assertIn("Created: 2; linked: 2; skipped: 1.", output.getvalue())
 
     def test_command_links_existing_unlinked_slot_and_creates_missing_slot(self) -> None:
         StaticImage.objects.create(
@@ -141,11 +162,13 @@ class SeedStaticMediaCommandTests(TestCase):
 
         placeholder = StaticImage.objects.get(static_image_id=0)
         banner = StaticImage.objects.get(static_image_id=1)
+        membership_form = StaticImage.objects.get(static_image_id=2)
         self.assertEqual(placeholder.display_name, "Custom Placeholder")
         self.assertIsNotNone(placeholder.media_asset_id)
         self.assertIsNotNone(banner.media_asset_id)
-        self.assertEqual(MediaAsset.objects.count(), 2)
-        self.assertIn("Created: 1; linked: 2; skipped: 0.", output.getvalue())
+        self.assertIsNotNone(membership_form.media_asset_id)
+        self.assertEqual(MediaAsset.objects.count(), 3)
+        self.assertIn("Created: 2; linked: 3; skipped: 0.", output.getvalue())
 
     def test_dry_run_validates_without_writing(self) -> None:
         call_command("seed_static_media", *self.command_args("--dry-run"))
@@ -167,15 +190,20 @@ class SeedStaticMediaCommandTests(TestCase):
                     "static_image_id", "display_name", "media_asset_id"
                 )
             ),
-            [(0, "Placeholder", None), (1, "Banner", None)],
+            [
+                (0, "Placeholder", None),
+                (1, "Banner", None),
+                (2, "Printable Membership Form", None),
+            ],
         )
         self.assertEqual(MediaAsset.objects.count(), 0)
         persist_media_asset.assert_not_called()
-        self.assertIn("Created: 2; linked: 0; skipped: 0.", output.getvalue())
+        self.assertIn("Created: 3; linked: 0; skipped: 0.", output.getvalue())
 
     def test_empty_dry_run_does_not_require_source_assets(self) -> None:
         (self.asset_directory / "Placeholder.png").unlink()
         (self.asset_directory / "Banner.webp").unlink()
+        (self.asset_directory / "Printable_Membership_Form.pdf").unlink()
 
         output = StringIO()
         call_command(
@@ -188,6 +216,10 @@ class SeedStaticMediaCommandTests(TestCase):
         self.assertEqual(MediaAsset.objects.count(), 0)
         self.assertIn("Would create empty static media: Placeholder (0)", output.getvalue())
         self.assertIn("Would create empty static media: Banner (1)", output.getvalue())
+        self.assertIn(
+            "Would create empty static media: Printable Membership Form (2)",
+            output.getvalue(),
+        )
 
     def test_missing_asset_fails_before_writing(self) -> None:
         missing_path = self.asset_directory / "missing.png"
@@ -199,6 +231,8 @@ class SeedStaticMediaCommandTests(TestCase):
                 str(missing_path),
                 "--banner",
                 str(self.asset_directory / "Banner.webp"),
+                "--membership-form",
+                str(self.asset_directory / "Printable_Membership_Form.pdf"),
             )
 
         self.assertEqual(StaticImage.objects.count(), 0)
@@ -215,6 +249,8 @@ class SeedStaticMediaCommandTests(TestCase):
                 str(invalid_path),
                 "--banner",
                 str(self.asset_directory / "Banner.webp"),
+                "--membership-form",
+                str(self.asset_directory / "Printable_Membership_Form.pdf"),
             )
 
         self.assertEqual(MediaAsset.objects.count(), 0)
@@ -265,6 +301,7 @@ class SeedStaticMediaCommandTests(TestCase):
             default_assets.mkdir(parents=True)
             write_image(default_assets / "Placeholder.png", "PNG")
             write_image(default_assets / "Banner.webp", "WEBP")
+            write_pdf(default_assets / "Printable_Membership_Form.pdf")
 
             with override_settings(BASE_DIR=backend_directory):
                 call_command("seed_static_media")

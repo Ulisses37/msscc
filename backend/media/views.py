@@ -12,7 +12,11 @@ from .classification import classify_media
 from .models import MediaAsset, StaticImage
 from .persistence import MediaPersistenceError, persist_media_asset
 from .sanitization import MediaSanitizationError, sanitize_media
-from .serializers import MediaFileSerializer, StaticImageSerializer
+from .serializers import (
+    MediaFileSerializer,
+    StaticImageDetailSerializer,
+    StaticImageSerializer,
+)
 from .storage_usage import StorageQuotaExceededError, schedule_storage_usage_sync
 from .validation import validate_media
 
@@ -223,8 +227,8 @@ class StaticImageListView(generics.ListAPIView):
 class StaticImageDetailView(generics.RetrieveUpdateAPIView):
     """Retrieve or update a single static image."""
 
-    queryset = StaticImage.objects.all()
-    serializer_class = StaticImageSerializer
+    queryset = StaticImage.objects.select_related("media_asset")
+    serializer_class = StaticImageDetailSerializer
     lookup_field = "static_image_id"
 
 class MediaTotalSizeView(APIView):

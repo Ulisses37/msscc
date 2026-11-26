@@ -349,14 +349,15 @@ records or page content.
 
 ### Seed required static media
 
-After migrations, seed the reusable Placeholder and Banner media used by the public website. The
-command by default uploads `Placeholder.png` and `Banner.webp` from `backend/media/seed_data/`
-to the configured object storage and creates StaticImage IDs `0` and `1`, respectively, when
-they are missing. The frontend keeps its own copies; seeding does not require the frontend folder.
+After migrations, seed the reusable Placeholder, Banner, and Printable Membership Form media
+used by the public website. The command uploads `Placeholder.png`, `Banner.webp`, and
+`Printable_Membership_Form.pdf` from `backend/media/seed_data/` to the configured object storage
+and creates StaticImage IDs `0`, `1`, and `2`, respectively, when they are missing. Seeding does
+not require the frontend folder.
 
 
-Image extensions does not necessarily needs to be exact. However, filenames needs to be exact as declared.
-Accepted image extensions are (`jpg`, `jpeg`, `jfif`, `png`, `webp`, `bmp`, `tif`, `tiff`, and `gif`)
+An override may omit its extension. The command searches the supported media extensions: `jpg`,
+`jpeg`, `jfif`, `png`, `webp`, `bmp`, `tif`, `tiff`, `gif`, and `pdf`.
 
 
 Validate the source assets without writing to the database or storage:
@@ -386,20 +387,19 @@ backend/venv/bin/python backend/manage.py seed_static_media
 
 The command is safe to run again: existing static media associations are preserved. To use assets
 from another location, pass `--placeholder <path-or-filename>` and
-`--banner <path-or-filename>`. The extension may be omitted; the command searches the accepted
-image extensions (`jpg`, `jpeg`, `jfif`, `png`, `webp`, `bmp`, `tif`, `tiff`, and `gif`).
+`--banner <path-or-filename>`, and/or `--membership-form <path-or-filename>`.
 
 Filename-only overrides are resolved within `backend/media/seed_data/`. For example, to use
-`NewPlaceholder.png` and `NewBanner.webp` from that directory:
+`NewPlaceholder.png`, `NewBanner.webp`, and `NewMembershipForm.pdf` from that directory:
 
 **Windows:**
 ```powershell
-backend\venv\Scripts\python.exe backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp
+backend\venv\Scripts\python.exe backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf
 ```
 
 **Mac:**
 ```bash
-backend/venv/bin/python backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp
+backend/venv/bin/python backend/manage.py seed_static_media --placeholder NewPlaceholder.png --banner NewBanner.webp --membership-form NewMembershipForm.pdf
 ```
 
 ### Seed the Board of Directors template
