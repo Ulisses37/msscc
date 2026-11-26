@@ -436,6 +436,45 @@ The seed data is maintained in `backend/board_members/management/board_member_se
 Existing BoardMember records are preserved, and the command does not replenish directors after
 the initial empty-table initialization.
 
+### Seed partners, donors, and sponsors
+
+After migrations, preview the acknowledgments copied from the client's existing website.
+Run these commands from the repository root:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_partners --dry-run
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_partners --dry-run
+```
+
+After reviewing the preview, coordinate with the team before writing to the shared development
+database:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_partners
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_partners
+```
+
+The command creates 14 partners, nine donors, and five sponsors on an empty partner table.
+Seed data is maintained in `backend/partners/management/partner_seed_data.py`. Existing records
+with the same name and category are skipped without changing their fields, including manually
+edited links, amounts, ordering, and visibility. Matching is case-insensitive and accepts singular
+or plural category labels. Missing entries are created even when some records already exist.
+
+New records have no media asset and image display is disabled. Japanese names are left blank;
+category labels are bilingual. The required contribution amount is set to `0.00` as a technical
+placeholder, not a verified donation amount. No storage uploads or translation requests occur.
+The dry run validates missing records without writing to the database or storage.
+
 ### Populate the initial public page content
 
 After running `seed_pages`, use the page-content importer to add the bilingual text and images
