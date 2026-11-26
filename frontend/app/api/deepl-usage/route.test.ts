@@ -7,7 +7,7 @@
 
 import { getDeepLUsage } from '@/utils/deeplServer';
 
-import { GET } from './route';
+import { dynamic, GET } from './route';
 
 const TEST_API_KEY = 'non-production-test-key:fx';
 
@@ -16,6 +16,10 @@ jest.mock('@/utils/deeplServer', () => ({
 }));
 
 describe('GET /api/deepl-usage', () => {
+  it('requires request-time rendering instead of static generation', () => {
+    expect(dynamic).toBe('force-dynamic');
+  });
+
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });

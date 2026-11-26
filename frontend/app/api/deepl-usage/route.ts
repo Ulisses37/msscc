@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { getDeepLUsage } from '@/utils/deeplServer';
 
+export const dynamic = 'force-dynamic';
+
 /** Returns normalized DeepL usage while keeping provider credentials on the server. */
 export async function GET() {
   try {
