@@ -326,6 +326,50 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
+### Run all website seed commands
+
+After migrations, use `seed_all` to run website initialization in this order:
+`seed_pages`, `seed_static_media`, `seed_board_members`, `seed_partners`, and
+`populate_page_content`. Run from the repository root.
+
+Preview the command list without executing any seeds:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_all --dry-run
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_all --dry-run
+```
+
+This preview lists commands only. It does not validate source assets, database state, or storage
+access. Use individual commands' validation options described below when needed.
+
+The full batch writes to the configured database and can upload bundled media to object storage.
+Coordinate with the team before running against shared development infrastructure:
+
+**Windows:**
+```powershell
+backend\venv\Scripts\python.exe backend/manage.py seed_all
+```
+
+**Mac:**
+```bash
+backend/venv/bin/python backend/manage.py seed_all
+```
+
+The batch works when individual seeds have already run. Each command retains its existing skip
+and preservation rules, including the board template's count-based refill behavior. It does not
+reset data or rerun migrations. Commands use their default source paths; run them individually
+if you need custom media or document paths.
+
+Every command is attempted even if an earlier one fails. The summary lists successes and failures,
+and any failure produces a nonzero exit status. Completed commands are not rolled back. Check the
+logs, resolve the failure, then rerun the batch or affected commands. Only the explicitly listed
+commands run, never reminder emails, test-membership helpers, or cleanup commands.
+
 ### Seed required page records
 
 After migrations, seed the page records used by the admin page editor and public content pages.
