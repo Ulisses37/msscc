@@ -346,19 +346,18 @@ environment file does not make those variables available to this script. Run it 
 where your development configuration has already been supplied securely. Do not paste secrets into
 terminal commands or copy frontend secrets into backend environment files for this check.
 
-The report covers Resend email, mailing-list configuration, email development routing, Stripe,
-Google Maps, DeepL, object storage, announcement/reminder flags, and scheduler authentication.
+The report covers Resend email, mailing-list configuration, email development routing, backend
+Stripe configuration, object storage, announcement/reminder flags, and scheduler authentication.
 It displays variable names and statuses only, never values. `CONFIGURED` means required variables
 are present, not that credentials, permissions, sender domains, webhooks, or connectivity work.
 `PARTIAL` identifies incomplete or inconsistent configuration. `NOT CONFIGURED` identifies missing
 variables, while `DISABLED` identifies a disabled feature and lists any missing prerequisites.
 Missing or invalid service configuration is advisory and does not produce a failing exit status.
 
-Absent frontend variables are `NOT CHECKED` by default because the backend cannot inspect a
-separate frontend deployment. When running with the frontend environment supplied, append
-`--frontend` to treat absent frontend variables as missing. Frontend build-time configuration and
-Django settings overrides are not verified. In particular, development settings force email dev
-routing on, so ensure `RESEND_DEV_ALERT_EMAIL` is configured even if the environment flag is off.
+Frontend configuration is not checked. Verify Google Maps, DeepL, and the Stripe publishable key
+separately in the running frontend. Django settings overrides are not verified. In particular,
+development settings force email dev routing on, so ensure `RESEND_DEV_ALERT_EMAIL` is configured
+even if the environment flag is off.
 Hosted storage checks also require `S3_PUBLIC_DOMAIN` when `DJANGO_SETTINGS_MODULE` identifies
 production settings. No new environment variables or dependencies are required.
 

@@ -18,9 +18,7 @@ class ServiceResult:
     detail: str
 
 
-def check_services(
-    environment: Mapping[str, str], *, frontend: bool = False
-) -> list[ServiceResult]:
+def check_services(environment: Mapping[str, str]) -> list[ServiceResult]:
     """Inspect supplied variables without loading settings or contacting services."""
     results = []
 
@@ -37,21 +35,12 @@ def check_services(
         *,
         flag: str | None = None,
         default: bool = True,
-        frontend_only: bool = False,
         email_prerequisite: bool = False,
     ) -> None:
         flag_value = environment.get(flag, "").strip().lower() if flag else ""
         missing = [name for name in required if not present(name)]
         if flag_value and flag_value not in TRUE_VALUES | FALSE_VALUES:
             results.append(ServiceResult(service, "PARTIAL", f"Invalid boolean flag: {flag}"))
-        elif frontend_only and not frontend and not any(
-            name in environment for name in (*required, *((flag,) if flag else ()))
-        ):
-            results.append(
-                ServiceResult(
-                    service, "NOT CHECKED", "Requires frontend environment; use --frontend"
-                )
-            )
         elif flag and not enabled(flag, default):
             detail = f"{flag} is off; settings not verified"
             if missing:
@@ -98,14 +87,6 @@ def check_services(
         flag="STRIPE_ENABLED",
         default=present("STRIPE_SECRET_KEY"),
     )
-    record(
-        "Stripe frontend",
-        ("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",),
-        flag="NEXT_PUBLIC_PAYMENTS_ENABLED",
-        frontend_only=True,
-    )
-    record("Google Maps", ("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",), frontend_only=True)
-    record("DeepL", ("DEEPL_API_KEY",), frontend_only=True)
     storage_required = ("S3_ENDPOINT_URL", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY")
     if environment.get("DJANGO_SETTINGS_MODULE", "").strip() == "config.settings.production":
         storage_required += ("S3_PUBLIC_DOMAIN",)
@@ -129,24 +110,21 @@ def main(argv: Sequence[str] | None = None, *, output: TextIO | None = None) -> 
     parser = argparse.ArgumentParser(
         description="Report service environment configuration without network requests or Django."
     )
-    parser.add_argument(
-        "--frontend",
-        action="store_true",
-        help="Treat absent frontend variables as missing rather than not checked.",
-    )
-    arguments = parser.parse_args(argv)
+    parser.parse_args(argv)
     stream = output if output is not None else sys.stdout
     stream.write(
         "Service configuration report (process environment only)\n"
         "CONFIGURED means variables are present, not that credentials work.\n"
         "No Django settings or secret files loaded; no network or database requests.\n"
-        "Settings overrides and frontend build/deployment values are not verified.\n"
+        "Django settings overrides are not verified.\n"
         "Development settings force email dev routing on; check RESEND_DEV_ALERT_EMAIL.\n\n"
     )
-    for result in check_services(os.environ, frontend=arguments.frontend):
+    for result in check_services(os.environ):
         stream.write(f"{result.service:<25} {result.status:<15} {result.detail}\n")
     stream.write(
         "\nAdvisory report complete. No configuration values displayed.\n"
+        "Frontend configuration is not checked: Google Maps, DeepL, and the Stripe\n"
+        "publishable key must be verified separately.\n"
         "Disabled features may be intentional. Check provider dashboards and application\n"
         "behavior separately for permissions, domain verification, webhooks, and connectivity.\n"
     )

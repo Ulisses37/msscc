@@ -18,9 +18,6 @@ class CheckServicesTests(TestCase):
             "RESEND_WEBHOOK_SECRET",
             "STRIPE_SECRET_KEY",
             "STRIPE_WEBHOOK_SECRET",
-            "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
-            "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
-            "DEEPL_API_KEY",
             "S3_ENDPOINT_URL",
             "S3_BUCKET",
             "S3_ACCESS_KEY",
@@ -31,7 +28,7 @@ class CheckServicesTests(TestCase):
         environment = dict.fromkeys(names, "presence-only-sentinel")
         for flag in (
             "EMAIL_ENABLED", "EMAIL_SEND_TO_DEV", "STRIPE_ENABLED",
-            "NEXT_PUBLIC_PAYMENTS_ENABLED", "EVENT_ANNOUNCEMENTS_ENABLED",
+            "EVENT_ANNOUNCEMENTS_ENABLED",
             "MEMBERSHIP_REMINDERS_ENABLED",
         ):
             environment[flag] = "true"
@@ -41,9 +38,9 @@ class CheckServicesTests(TestCase):
         environment = self.complete_environment()
         environment["DJANGO_SETTINGS_MODULE"] = "config.settings.production"
 
-        results = check_services(environment, frontend=True)
+        results = check_services(environment)
 
-        self.assertEqual(len(results), 11)
+        self.assertEqual(len(results), 8)
         self.assertTrue(all(result.status == "CONFIGURED" for result in results))
 
     def test_empty_environment_is_reported_without_failure(self) -> None:
@@ -52,20 +49,22 @@ class CheckServicesTests(TestCase):
         self.assertEqual(results["Resend email"].status, "DISABLED")
         self.assertEqual(results["Stripe backend"].status, "DISABLED")
         self.assertEqual(results["Object storage"].status, "NOT CONFIGURED")
-        for service in ("Stripe frontend", "Google Maps", "DeepL"):
-            self.assertEqual(results[service].status, "NOT CHECKED")
 
-    def test_frontend_option_marks_missing_frontend_configuration(self) -> None:
-        results = {result.service: result for result in check_services({}, frontend=True)}
+    def test_frontend_variables_do_not_change_backend_results(self) -> None:
+        environment = self.complete_environment()
+        before = check_services(environment)
+        environment.update(
+            {
+                "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "presence-only-sentinel",
+                "NEXT_PUBLIC_PAYMENTS_ENABLED": "invalid-frontend-flag",
+                "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY": "presence-only-sentinel",
+                "DEEPL_API_KEY": "presence-only-sentinel",
+            }
+        )
 
-        for service in ("Stripe frontend", "Google Maps", "DeepL"):
-            self.assertEqual(results[service].status, "NOT CONFIGURED")
-
-    def test_present_frontend_variable_is_checked_without_frontend_option(self) -> None:
-        results = check_services({"DEEPL_API_KEY": "presence-only-sentinel"})
-
-        self.assertEqual(
-            next(row for row in results if row.service == "DeepL").status, "CONFIGURED"
+        self.assertEqual(check_services(environment), before)
+        self.assertTrue(
+            all(row.service not in {"Stripe frontend", "Google Maps", "DeepL"} for row in before)
         )
 
     def test_missing_webhook_key_reports_partial_instead_of_loading_django(self) -> None:
@@ -78,19 +77,17 @@ class CheckServicesTests(TestCase):
     def test_explicit_disable_is_preserved_even_with_complete_credentials(self) -> None:
         environment = self.complete_environment()
         environment["STRIPE_ENABLED"] = "false"
-        environment["NEXT_PUBLIC_PAYMENTS_ENABLED"] = "false"
         results = {result.service: result for result in check_services(environment)}
 
         self.assertEqual(results["Stripe backend"].status, "DISABLED")
-        self.assertEqual(results["Stripe frontend"].status, "DISABLED")
 
     def test_whitespace_values_are_missing(self) -> None:
-        results = check_services({"S3_ACCESS_KEY": " \t ", "DEEPL_API_KEY": " "})
+        results = check_services({"S3_ACCESS_KEY": " \t "})
 
-        for service in ("Object storage", "DeepL"):
-            self.assertEqual(
-                next(row for row in results if row.service == service).status, "NOT CONFIGURED"
-            )
+        self.assertEqual(
+            next(row for row in results if row.service == "Object storage").status,
+            "NOT CONFIGURED",
+        )
 
     def test_invalid_boolean_is_reported_without_echoing_value(self) -> None:
         results = check_services({"STRIPE_ENABLED": "invalid-private-value"})
@@ -127,7 +124,7 @@ class CheckServicesTests(TestCase):
         environment["UNRELATED_SECRET"] = "unrelated-private-value"
         output = StringIO()
         with patch.dict("os.environ", environment, clear=True):
-            self.assertEqual(main(["--frontend"], output=output), 0)
+            self.assertEqual(main([], output=output), 0)
 
         text = output.getvalue()
         for value in (
@@ -142,3 +139,4 @@ class CheckServicesTests(TestCase):
         with patch.dict("os.environ", {}, clear=True):
             self.assertEqual(main([], output=output), 0)
         self.assertIn("Advisory report complete", output.getvalue())
+        self.assertIn("Frontend configuration is not checked", output.getvalue())
