@@ -6,9 +6,9 @@ import { PartnerProp, PartnerTable, PartnerTableHeader, CreatePartnerProp, EditP
 import { addButtonClass } from '@/components/layout/AdminButtonStyles';
 
 const SECTIONS = [
-  { category: "partner", title: "Partners", addLabel: "Add", emptyLabel: "No partners found." },
-  { category: "donor", title: "Donors", addLabel: "Add", emptyLabel: "No donors found." },
-  { category: "sponsor", title: "Sponsors", addLabel: "Add", emptyLabel: "No sponsors found." },
+  { category: "Partner", title: "Partners", addLabel: "Add", emptyLabel: "No partners found." },
+  { category: "Donor", title: "Donors", addLabel: "Add", emptyLabel: "No donors found." },
+  { category: "Sponsor", title: "Sponsors", addLabel: "Add", emptyLabel: "No sponsors found." },
 ] as const;
 
 // Each table shows at most this many rows at a time.
@@ -16,7 +16,7 @@ const PAGE_SIZE = 20;
 
 export default function Partners(){
   const [partners, setPartners] = useState<PartnerProp[]>([]);
-  const [popUp, setPopUp] = useState<"partner" | "donor" | "sponsor" | null>(null);
+  const [popUp, setPopUp] = useState<"Partner" | "Donor" | "Sponsor" | null>(null);
   const [editPopUp, setEditPopUp] = useState<PartnerProp | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
