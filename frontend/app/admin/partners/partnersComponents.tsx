@@ -452,9 +452,9 @@ export function EditPartnerProp(
 
 
   const categoryOptions = [
-    { value: "partner", en: "partner", jp: "パートナー" },
-    { value: "sponsor", en: "sponsor", jp: "スポンサー" },
-    { value: "donor", en: "donor", jp: "寄付者" },
+    { value: "Partner", en: "Partner", jp: "パートナー" },
+    { value: "Sponsor", en: "Sponsor", jp: "スポンサー" },
+    { value: "Donor", en: "Donor", jp: "寄付者" },
   ];
 
   function handleCategoryChange(value: string) {
