@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import SupportForm from '@/components/ui/SupportForm';
 
 import { adminPageList, userPageList, canViewPage } from './pageDocumentation';
+import { adminPageListDeprecated, userPageListDeprecated, canViewPageDeprecated } from './deprecatedDocumentation';
 import PageAccordion from './PageAccordion';
 import { useAuth } from '@/context/AuthContext';
 
@@ -99,6 +100,39 @@ export default function AdminDocumentationPage() {
           </div>
       </div>
       )}
+
+      {/* User-Side Information pages used for reference when making style choices for actual pages.*/}
+      {/* Will be deleted before merging */}
+  <div className="rounded-md border-2 border-msscc-teal-light bg-msscc-teal-faint p-3 sm:p-4">
+    <div className="text-lg sm:text-heading-2">Deprectaed User-Side</div>
+      {userPageListDeprecated.map((page) => (
+        <PageAccordion
+          key={page.pageName}
+          pageName={page.pageName}
+          pageDescription={page.pageDescription}
+          pageInstructions={page.pageInstructions}
+          color="teal"
+        />
+     ))}
+  </div>
+
+  {/* Deprecated Admin-Side pages used for reference when making style choices for actual pages.*/}
+        {/* Will be deleted before merging */}
+  <div className="rounded-md border-2 border-msscc-pink-light bg-msscc-pink-faint p-3 sm:p-4">
+    <div className="text-lg sm:text-heading-2">Deprecated Admin-Side</div>
+          {user &&
+            adminPageListDeprecated
+            .filter((page) => canViewPageDeprecated(page, user))
+              .map((page) => (
+              <PageAccordion
+                key={page.pageName}
+                pageName={page.pageName}
+                pageDescription={page.pageDescription}
+                pageInstructions={page.pageInstructions}
+                color="pink"
+              />
+        ))}
+      </div>
     </div>
   );
 }
